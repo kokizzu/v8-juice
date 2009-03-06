@@ -55,4 +55,4 @@ As a general rule, i try to follow v8's naming conventions !CamelCaseWithLeading
 
 =Licensing=
 
-The code contains parts which are released under several licenses. The majority of it follows the same license as v8: the "new-style" BSD license. Much of it is Public Domain. In no case will GPL, or other virually-licensed (MPL, QPL, etc.), code be allowed in the tree (but is of course allowed for third-party plugins and such). The _LGPL_ is acceptable in certain contexts (e.g. plugins), but a less strict license is required for any core library code.
+The code contains parts which are released under several licenses. The majority of it follows the same license as v8: the "new-style" BSD license. Much of it is Public Domain. In no case will GPL, or other virually-licensed (MPL, QPL, etc.), code be allowed in the tree (but is of course allowed for third-party plugins and such). The _LGPL_ is acceptable in certain contexts (e.g. plugins), but a less strict license is required for any core library code. Permissive, non-viral licenses such as Apache, MIT, zlib, etc., are generally acceptable for core library code.
