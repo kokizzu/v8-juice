@@ -52,7 +52,7 @@ namespace convert {
     Handle<Value> SetupAddon( Handle<Object> gl )
     {
 
-	SetupSprintf( gl );
+	//SetupSprintf( gl );
 #define ADDFUNC(JSF,NF) gl->Set(String::New(# JSF), FunctionTemplate::New(NF)->GetFunction() )
 	ADDFUNC(escape_js_string,v8_escape_js);
 	ADDFUNC(quote_js_string,v8_quote_js);
