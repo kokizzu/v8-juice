@@ -1,0 +1,19 @@
+#summary Contributing to this project
+
+Anyone is welcomed to contribute to this project - just get in touch. Coders, documenters, commentors, code reviewers, bug submitters, etc.... they're all welcomed. Even marketing people and armchair code analysts.
+
+Particular areas where help is currently sought are:
+
+  * Porting the build tree to scons, for platform portability
+
+==Contributing code==
+
+Potential contributors must be willing to follow a very simple set of guidelines:
+
+New code _must be documented_. The documentation belongs in the header files (e.g. doxygen style). Commenting of implementation code (the `.cc` or `.cpp` files) is left to personal judgement and taste - there are no rules. Any function, class, typedef, or macro which is not documented cannot be part of a public API. Internal/private functions/types/macros must also be documented if they are used in more than one implementation file.
+
+(And because of that rule, this library, at one week old, already has more API docs than v8 does.)
+
+Nobody's asking for doctorate-level documentation, but some description of what the code does is a must. The existing API docs are good guideline (though sometimes there's admittedly a bit more documentation than is strictly necessary).
+
+Other than that, i'm pretty much open to anything.
