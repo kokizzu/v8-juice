@@ -1,3 +1,28 @@
 #summary JS bindings for ncurses
 
-TODO: port from: http://fossil.wanderinghorse.net/repos/v8-addons/index.cgi/wiki?name=addon-ncurses
+==The ncurses bindings==
+
+The ncurses bindings wrap up a great deal of the ncurses API for use in JavaScript, with currently (3 March 2009) over 120 bound functions.
+
+The advantages of writing curses apps in JS instead of C include:
+
+  *  MUCH faster development of curses UIs, as the whole compile/link cycle goes away.
+  *  The event model of curses (keypress) ties in very well with JavaScript, where it is trivial to bind the keypresses to event handlers.
+
+These bindings are a direct port of the "original" bindings, which where implemented for SpiderMonkey and are described here:
+http://spiderape.sourceforge.net/plugins/ncurses
+
+Interesting features:
+  *  Over 120 bound functions.
+  *  Provides routines which can "capture" std::cout and std::cerr, redirecting all data sent to them to a curses window of the user's choice. This means that if your print() implementation uses std::cout for output, it will work more or less normally in  ncurses mode (normally it would hose the screen state).
+
+
+TODOs:
+  *  lots more testing, in particular with the PANEL/PAD APIs.
+  *  Utility routines/classes, e.g. dialog boxes, basic user input routines, scrollable areas, etc.
+  *  Maybe an OO wrapper, but there are no immediate plans to do so.
+
+ncurses features i have no plans for implementing:
+  *  The FORMS and MENU sub-libraries will not be implemented.
+  *  Terminal resize handling. That's a can of worms i don't want to open.
+  *  The wide-char ncurses API. Maybe someday, but not soon.
