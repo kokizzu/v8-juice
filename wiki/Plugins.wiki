@@ -1,3 +1,105 @@
 #summary Plugins API
 
-TODO
+=The Plugins API=
+
+This is an API for loading DLLs with the intend of adding functionality to a running JS engine.
+
+==C++-side==
+
+From C++ code, you need to do the following...
+
+{{{
+#include <v8/v8-plugin.h>
+...
+// when you initialize your JS global object, add this function:
+  gl->Set(String::New("loadPlugin"), v8::p3::plugin::LoadPlugin );
+}}}
+
+That's all you need to do to enable the plugins support.
+
+On Linux systems (and probably other Unices), your application must be linked with the `-export-dynamic` (also known as `-rdyanmic`) flag, or DLLs may not be able to load properly.
+
+Now, in the code which you want to link as a DLL you need to add a few small bits of code. First, we will assume you have a function with this signature:
+
+{{{
+Handle<Value> SetupMyAddon( Handle<Object> target );
+}}}
+
+which should add the plugin's functionality, treating the given target object as the logical global object (whether it is or not is up to the caller). On success it should return a non-exception.
+
+Now we set up a trigger which will call that init routine whenever the DLL is opened:
+
+{{{
+static void InitPlugin() {
+  using v8::p3::plugin::LoadPluginScope;
+  LoadPluginScope * sc = LoadPluginScope::Current();
+  if( ! sc ) {
+      // This means that InitPlugin() was not called via
+      // v8::p3::plugin::LoadModule()
+      return;
+   }
+   sc->SetReturnValue( SetupAddon( sc->Target() ) );
+}
+static bool dll_initializer = (InitPlugin(),true);
+}}}
+
+Now, whenever loadPlugin("MyPlugin") opens the DLL, the initialization code will be run automatically and it can set up its JS state.
+
+==JS-side==
+
+{{{
+loadPlugin("MyPlugin");
+var p2 = {};
+loadPlugin("MyOtherPlugin",p2); // will pass p2 as the target object
+}}}
+
+loadPlugin() will throw on error and the exception will explain the problem, which is normally one of:
+
+  * No plugin could be found in the current plugins search path.
+  * A plugin was found but opening it failed (e.g. missing DLL symbols are sometimes problematic).
+  * The DLL initialization code threw an exception.
+
+==DLLs are _never_ unloaded==
+
+Even if the DLL init code throws an exception, DLLs are _never_ unloaded. It cannot be safely done. Period. Don't argue with me on this. i'm right, for once, so let me be right.
+
+Here's a pasted-in email which goes into a bit more detail about my fanatical beliefs on this topic:
+
+  On Thu, Mar 5, 2009 at 6:15 PM, Slide xxxxxxxxx wrote:
+  > I was reading your article "Classloading in C++: Bringing classloading
+  > into the 21st century" and was wondering if your classloader scheme
+  > also supports unloading of shared library and unregistering the class
+  > from the loader.
+  
+  Hi, Alex!
+  
+  That's a good question: my basic philosphical view is that unloading
+  is NEVER safe in the generic sense. Merely opening a DLL can trigger
+  abitrary code via static initialization, and that code can allocate
+  resources which may not get cleaned up when the DLL is unloaded (they
+  may also load other DLLs and then not close them (and they can't do so
+  safely because they can't know who's using the resources in that
+  DLL)). Doing even the most basic cleanup requires doing some symbol
+  lookup in the DLL to find the dtor function, cast it to the type you
+  want, and call it (which technically has undefined results if you cast
+  to a function pointer derived from a dlsym() `void *`, though it's
+  likely to work on most platforms). Even with such a system in place,
+  it's not generically impossible to rule out that the DLL has allocated
+  resources inside the main application which would no longer be valid
+  if the DLL is closed. When we consider that a DLL can itself open
+  other DLLs, and those DLLs may feed data or offer services to the main
+  application, the problem gets worse.
+  
+  So, the short answer is, i've never added unload support. The first
+  variant i worked on did, and our app crashed continually when we
+  unloaded DLLs, so we quickly removed it. After thinking about it for
+  several years, i'm 100% convinced that no generic framework can make
+  any safety guarantees for an unload, and even the most rigorous
+  approaches to DLL unload can fail if any single init routine allocates
+  memory outside of the DLL's address (e.g. registered a classloading
+  callback function in the main app) and fails to clean it up. If any
+  client of that DLL managed to copy a pointer which was, unbeknownst to
+  that client, generated from a DLL, the client will crash when he then
+  references that pointer. It's just not safe.
+  
+  (The article here's referring to is here: [http://wanderinghorse.net/computing/papers/]
