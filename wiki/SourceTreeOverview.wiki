@@ -1,6 +1,8 @@
 #summary Overview of the source tree
 #labels Phase-Implementation
 
+=Directory structure=
+
 The source tree has a relatively elaborate setup, with ease-of-expansion being a primary goal. It's based primarily off of the tree used in the libs11n project, and this structure has proven to be very flexible over the years.
 
 It's laid out like this and ordered more or less by their dependencies:
@@ -16,8 +18,6 @@ src/              All source code is under here...
     +-- plugins/  Plugins go under here
       +-- sqlite3/
       +-- ncurses/
-      +-- whio/
-      +-- sprintf/
       ...
   +-- client/     Library client apps go under here
     +-- shell/    JS shell with juice functionality added on
@@ -31,8 +31,28 @@ doc/              Docs go here
 
 Any directories not listed there are probably part of the build process, or tools used by that process, and are not considered part of the library.
 
+=Header files=
+
 When including headers in implementation files, the preferred syntax is:
 {{{
 #include <v8/some_header.h> // or .hpp, or .hh, or whatever
 }}}
 and the build process should add `-Isrc/include` to the precompiler flags.
+
+=Namespaces=
+
+The main library is in the `v8::juice` namespace. Code written for that library "should" be put in that namespace or a sub-namespace. Plugins and whatnot are free to use their own choice namespaces, and namespaces are encouraged to avoid collisions.
+
+=Coding standards, naming conventions, etc.=
+
+There are not many.
+
+Coding style is a personal choice, and anyone who takes the time and effort to contribute is more than welcomed to use whatever style they like. 4-space, 8-space, or N-space indention, with tabs, without tabs, or whatever.
+
+Naming conventions:
+
+As a general rule, i try to follow v8's naming conventions !CamelCaseWithLeadingCapital). Occasionally (or more often), code will be imported from other open-source sources, and that code does not always get changed just to accommodate naming conventions, especially if it will not be part of the public API.
+
+=Licensing=
+
+The code contains parts which are released under several licenses. The majority of it follows the same license as v8: the "new-style" BSD license. Much of it is Public Domain. In no case will GPL, or other virually-licensed (MPL, QPL, etc.), code be allowed in the tree (but is of course allowed for third-party plugins and such). The _LGPL_ is acceptable in certain contexts (e.g. plugins), but a less strict license is required for any core library code.
