@@ -1,0 +1,5 @@
+#summary JS Bindings for SQLite3
+
+TODO: port from:
+
+http://fossil.wanderinghorse.net/repos/v8-addons/index.cgi/wiki?name=addon-sqlite3
