@@ -76,41 +76,43 @@ Even if the DLL init code throws an exception, DLLs are _never_ unloaded. It can
 
 Here's a pasted-in email which goes into a bit more detail about my fanatical beliefs on this topic:
 
-  On Thu, Mar 5, 2009 at 6:15 PM, Slide xxxxxxxxx wrote:
-  > I was reading your article "Classloading in C++: Bringing classloading
-  > into the 21st century" and was wondering if your classloader scheme
-  > also supports unloading of shared library and unregistering the class
-  > from the loader.
-  
-  Hi, Alex!
-  
-  That's a good question: my basic philosphical view is that unloading
-  is NEVER safe in the generic sense. Merely opening a DLL can trigger
-  abitrary code via static initialization, and that code can allocate
-  resources which may not get cleaned up when the DLL is unloaded (they
-  may also load other DLLs and then not close them (and they can't do so
-  safely because they can't know who's using the resources in that
-  DLL)). Doing even the most basic cleanup requires doing some symbol
-  lookup in the DLL to find the dtor function, cast it to the type you
-  want, and call it (which technically has undefined results if you cast
-  to a function pointer derived from a dlsym() `void *`, though it's
-  likely to work on most platforms). Even with such a system in place,
-  it's not generically impossible to rule out that the DLL has allocated
-  resources inside the main application which would no longer be valid
-  if the DLL is closed. When we consider that a DLL can itself open
-  other DLLs, and those DLLs may feed data or offer services to the main
-  application, the problem gets worse.
-  
-  So, the short answer is, i've never added unload support. The first
-  variant i worked on did, and our app crashed continually when we
-  unloaded DLLs, so we quickly removed it. After thinking about it for
-  several years, i'm 100% convinced that no generic framework can make
-  any safety guarantees for an unload, and even the most rigorous
-  approaches to DLL unload can fail if any single init routine allocates
-  memory outside of the DLL's address (e.g. registered a classloading
-  callback function in the main app) and fails to clean it up. If any
-  client of that DLL managed to copy a pointer which was, unbeknownst to
-  that client, generated from a DLL, the client will crash when he then
-  references that pointer. It's just not safe.
-  
-  (The article here's referring to is here: [http://wanderinghorse.net/computing/papers/]
+{{{
+On Thu, Mar 5, 2009 at 6:15 PM, Slide xxxxxxxxx wrote:
+> I was reading your article "Classloading in C++: Bringing classloading
+> into the 21st century" and was wondering if your classloader scheme
+> also supports unloading of shared library and unregistering the class
+> from the loader.
+
+Hi, Alex!
+
+That's a good question: my basic philosphical view is that unloading
+is NEVER safe in the generic sense. Merely opening a DLL can trigger
+abitrary code via static initialization, and that code can allocate
+resources which may not get cleaned up when the DLL is unloaded (they
+may also load other DLLs and then not close them (and they can't do so
+safely because they can't know who's using the resources in that
+DLL)). Doing even the most basic cleanup requires doing some symbol
+lookup in the DLL to find the dtor function, cast it to the type you
+want, and call it (which technically has undefined results if you cast
+to a function pointer derived from a dlsym() `void *`, though it's
+likely to work on most platforms). Even with such a system in place,
+it's not generically impossible to rule out that the DLL has allocated
+resources inside the main application which would no longer be valid
+if the DLL is closed. When we consider that a DLL can itself open
+other DLLs, and those DLLs may feed data or offer services to the main
+application, the problem gets worse.
+
+So, the short answer is, i've never added unload support. The first
+variant i worked on did, and our app crashed continually when we
+unloaded DLLs, so we quickly removed it. After thinking about it for
+several years, i'm 100% convinced that no generic framework can make
+any safety guarantees for an unload, and even the most rigorous
+approaches to DLL unload can fail if any single init routine allocates
+memory outside of the DLL's address (e.g. registered a classloading
+callback function in the main app) and fails to clean it up. If any
+client of that DLL managed to copy a pointer which was, unbeknownst to
+that client, generated from a DLL, the client will crash when he then
+references that pointer. It's just not safe.
+
+(The article here's referring to is here: [http://wanderinghorse.net/computing/papers/]
+}}}
