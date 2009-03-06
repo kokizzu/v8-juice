@@ -9,7 +9,8 @@ It's laid out like this and ordered more or less by their dependencies:
 src/              All source code is under here...
   +-- include/
     +-- v8/
-      +-- juice/  Headers go somewhere under here
+      +-- juice/  Public API headers go somewhere under here
+                  (private headers are normally in the source dir)
   +-- lib/
     +-- juice/    The core library
     +-- plugins/  Plugins go under here
