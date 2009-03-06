@@ -7,14 +7,14 @@
 #  include <dlfcn.h> // this actually has a different name on some platforms!
 #endif // v8_p3_plugin_CONFIG_HAVE_LIBLTDL
 
-namespace v8 { namespace p3 { namespace plugin {
+namespace v8 { namespace juice { namespace plugin {
 
     std::string open( const std::string & basename, std::string & errmsg )
     {
 	std::string where = FindPlugin( basename );
 	if( where.empty() )
 	{
-	    errmsg = std::string("v8::p3::plugin::open(")
+	    errmsg = std::string("v8::juice::plugin::open(")
 		+ basename
 		+ std::string( "): No DLL found.")
 		;

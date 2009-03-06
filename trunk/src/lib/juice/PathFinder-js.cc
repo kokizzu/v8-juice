@@ -3,18 +3,18 @@
 
 #include <iostream>
 
-#include <v8/PathFinder.h>
+#include <v8/juice/PathFinder.h>
 #include <v8.h>
-#include <v8/v8-convert.h>
-#include <v8/v8-plugin.h>
-#include <v8/v8-cleanup.h>
+#include <v8/juice/v8-convert.h>
+#include <v8/juice/v8-plugin.h>
+#include <v8/juice/v8-cleanup.h>
 
 #include <iostream> /* only for debuggering */
 #ifndef CERR
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
 
-namespace v8 { namespace p3 {
+namespace v8 { namespace juice {
     using namespace ::v8::bind;
     using namespace ::v8::convert;
 #define JSTR(X) String::New(X)
@@ -28,7 +28,7 @@ namespace v8 { namespace p3 {
 	if( pf )
 	{
 	    UnbindNative( pf_bind_cx(), obj, pf );
-	    if( pf != &::v8::p3::plugin::PluginPath() )
+	    if( pf != &::v8::juice::plugin::PluginPath() )
 	    {
 		delete pf;
 	    }
@@ -36,7 +36,7 @@ namespace v8 { namespace p3 {
     }
 
     /**
-       Destructor for use with v8::p3::cleanup::AddToCleanup().
+       Destructor for use with v8::juice::cleanup::AddToCleanup().
        obj MUST be-a (PathFinder*).
     */
     static void pf_cleanup( void * obj )
@@ -46,7 +46,7 @@ namespace v8 { namespace p3 {
 
     static void pf_dtor(Persistent< Value > object, void *parameter)
     {
-	::v8::p3::cleanup::RemoveFromCleanup(parameter);
+	::v8::juice::cleanup::RemoveFromCleanup(parameter);
 	pf_cleanup(parameter);
 	object.Dispose();
 	object.Clear();
@@ -54,9 +54,9 @@ namespace v8 { namespace p3 {
 
     static Persistent<Object> pf_wrap( Handle<Object> _self, PathFinder * value )
     {
-	if( value != &::v8::p3::plugin::PluginPath() )
+	if( value != &::v8::juice::plugin::PluginPath() )
 	{
-	    ::v8::p3::cleanup::AddToCleanup(value, pf_cleanup);
+	    ::v8::juice::cleanup::AddToCleanup(value, pf_cleanup);
 	}
 	BindNative( pf_bind_cx(), value, value );
 	Persistent<Object> self( Persistent<Object>::New(_self) );
@@ -189,8 +189,8 @@ namespace v8 { namespace p3 {
 	Handle<Function> pffunc( ctor->GetFunction() );
 	target->Set(String::New("PathFinder"), pffunc );
 
-	// Install an instance wrapping the v8::p3::plugin::PluginPath() shared object:
-	Handle<Value> pfex( External::New( &::v8::p3::plugin::PluginPath() ) );
+	// Install an instance wrapping the v8::juice::plugin::PluginPath() shared object:
+	Handle<Value> pfex( External::New( &::v8::juice::plugin::PluginPath() ) );
 
 	Handle<Object> shared = Object::New();
 	pffunc->Set(String::New("shared"), shared );

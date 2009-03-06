@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include <v8/PathFinder.h>
+#include <v8/juice/PathFinder.h>
 
 #ifndef WIN32
 #  define WIN32 0
@@ -16,7 +16,7 @@
 #  include <unistd.h>
 #endif
 
-namespace v8 { namespace p3 {
+namespace v8 { namespace juice {
 
 
     PathFinder::~PathFinder()
