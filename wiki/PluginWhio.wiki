@@ -1,3 +1,28 @@
 #summary I/O device bindings for JS
 
-TODO: port from: http://fossil.wanderinghorse.net/repos/v8-addons/index.cgi/wiki?name=addon-whio
+=The whio plugin=
+
+The whio plugin adds i/o support to JS. It gets its name from the i/o library it is based on: http://fossil.wanderinghorse.net/repos/whio/
+
+This plugins provides:
+
+  * Class whio.IODevice, which models random-access devices. The back-end supports, in principal, a wide variety of data stores, but v8's class construction mechanism makes it unduly difficult to add the support needed for, e.g., in-memory i/o devices or client-provided back-ends (like [http://fossil.wanderinghorse.net/repos/whefs/ whefs], which i had planned to add bindings for).
+
+==C++ usage==
+
+TODO
+
+==JS usage==
+
+{{{
+var dev = new whio.IODevice("/path/to/file", true); // true= Write-mode
+dev.truncate(0);
+dev.write("Hi, world!");
+...
+dev.close();
+}}}
+
+==TODOs==
+
+  * IOStream class, for sequential streams. We can then add whio.stdout and whio.stderr shared objects.
+  * Make the vals from whio_rc.XXX available via whio.rc.XXX.
