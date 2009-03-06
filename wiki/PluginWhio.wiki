@@ -1,0 +1,3 @@
+#summary I/O device bindings for JS
+
+TODO: port from: http://fossil.wanderinghorse.net/repos/v8-addons/index.cgi/wiki?name=addon-whio
