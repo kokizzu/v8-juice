@@ -1,5 +1,17 @@
 #summary JS Bindings for SQLite3
 
-TODO: port from:
+=The sqlite3 bindings=
 
-http://fossil.wanderinghorse.net/repos/v8-addons/index.cgi/wiki?name=addon-sqlite3
+The sqlite3 bindings wrap about 60 sqlite3 functions for use in JavaScript, providing access to database files from script code.
+
+All of the most significant features of sqlite3 are supported except:
+
+  *  Custom collation sequences (no plans to implement these)
+  *  Custom authorization functions (also no plans)
+  *  The BLOB-related functions are missing. There would seem to be relatively few safe (in terms of type conversion) ways to use this from JS.
+  *  The UTF16 functions are missing, as v8 does not directly support UTF16 (only in a roundabout manner).
+
+Everything else one would "normally" need from script code is scriptable, including custom SQL functions via `sqlite3_create_function()`. The API provides native-side access to the DB handles created from script code, so clients can extend their script-side DBs using functionality not provided by these bindings.
+
+These bindings are a direct port of the "original" bindings, which where implemented for SpiderMonkey and are described here:
+http://spiderape.sourceforge.net/plugins/sqlite/
