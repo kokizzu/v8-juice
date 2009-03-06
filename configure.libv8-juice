@@ -11,15 +11,17 @@ toc2_export PACKAGE_DESCRIPTION="Add-ons for the Google v8 JavaScript engine"
 
 toc2_export v8juice_CONFIG_PURE_ISO=${pure_iso-0}
 
-#if [[ x0 != ${v8juice_CONFIG_PURE_ISO} ]]; then
-#    toc2_source_test user_is_stephan_beal
+if [[ x0 != ${v8juice_CONFIG_PURE_ISO} ]]; then
+    toc2_test user_is_stephan_beal
     # ^^^ don't ask. Must come before gnu_cpp_tools test.
-#fi
+fi
 
 toc2_test_require gnu_cpp_tools
 
 echo "Looking for libv8 headers and libraries..."
 
+########################################################################
+# Look for v8.h and libv8*.{a,so}
 v8home="${v8_prefix-${prefix}}"
 v8incpath="${v8home}/include:${v8home}/include/v8:${prefix}/include:${prefix}/include/v8:/usr/include:/usr/include/v8:/usr/local/include:/usr/local/include/v8"
 toc2_test find_header v8.h ${v8incpath} || {
@@ -29,7 +31,7 @@ toc2_test find_header v8.h ${v8incpath} || {
     echo "Try passing --v8-prefix=/prefix/of/v8/installation" 
     toc2_die 127 "Missing required v8.h ${TOC2_EMOTICON_GRIEF}"
 }
-toc2_export V8_HOME="$(dirname ${TOC2_FIND_RESULT})"
+toc2_export V8_HOME="$(dirname $(dirname ${TOC2_FIND_RESULT}))"
 v8h="${TOC2_FIND_RESULT}"
 v8incdir="$(dirname ${v8h})"
 v8cppflags="-I${v8incdir}"
@@ -51,14 +53,17 @@ if [[ x = "x${v8lib}" ]]; then
 fi
 echo "Found v8 lib: ${v8lib}"
 v8libpath=$(dirname ${v8lib})
-v8libldflags="-L${v8libpath} -l$(echo ${v8lib} | sed -e 's/.*libv8/v8/;s/\.*//')"
-echo "Using link flags: ${v8libldflags}"
+v8ldflags="-L${v8libpath} -l$(echo ${v8lib} | sed -e 's/.*libv8/v8/;s/\.*//')"
+echo "Using v8 link flags: ${v8ldflags}"
+
+toc2_export V8_CPPFLAGS="${v8cppflags}"
+toc2_export V8_LDFLAGS="${v8ldflags}"
 
 
 if [[ x0 = "x${v8juice_CONFIG_PURE_ISO}" ]]; then
     configure_enable_plugins=${configure_enable_plugins-1}
     if test x0 != "x${configure_enable_plugins-1}"; then
-	toc2_test libdl || toc2_test libltdl # 2007.04.30: prefer libdl over libltdl
+	toc2_test libdl || toc2_test libltdl
 	if test x = "x${LDADD_DL}"; then
 	    toc2_boldecho "Plugins support is being disabled. No DLL loader found."
 	    toc2_export v8juice_CONFIG_ENABLE_PLUGINS=0
@@ -82,6 +87,7 @@ toc2_export v8juice_CONFIG_HAVE_LIBDL=${HAVE_LIBDL-0}
 # accumulate -I and -L/-l entries here:
 includes_path=
 ldadd="${LDADD_DL}" # LDADD_DL is exported by the ltdl/dl tests
+toc2_export LD_LDFLAGS="${ldadd}"
 ############################################################
 
 toc2_export v8juice_CONFIG_DLL_EXTENSION=".so:.dynlib" # .dynlib is for Darwin systems.

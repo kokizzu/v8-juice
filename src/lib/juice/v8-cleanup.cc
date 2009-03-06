@@ -1,8 +1,8 @@
-#include <v8/v8-cleanup.h>
+#include <v8/juice/v8-cleanup.h>
 
 #include <map>
 
-namespace v8 { namespace p3 { namespace cleanup {
+namespace v8 { namespace juice { namespace cleanup {
 
     typedef std::pair<void *, Destructor> GCEntry;
     typedef std::map<void const *,GCEntry> GCMap;

@@ -1,16 +1,16 @@
-#include <v8/v8-plugin.h>
-#include <v8/PathFinder.h>
+#include <v8/juice/v8-plugin.h>
+#include <v8/juice/PathFinder.h>
 
 #include "v8-plugin-config.h"
 
 namespace v8 {
-namespace p3 {
+namespace juice {
 namespace plugin {
 
     std::string open( const std::string & basename, std::string & errmsg ); // defined in one of the platform-specific files
 
     using namespace ::v8;
-    using ::v8::p3::PathFinder;
+    using ::v8::juice::PathFinder;
 
     PathFinder & PluginPath()
     {
