@@ -59,6 +59,17 @@ loadPlugin() will throw on error and the exception will explain the problem, whi
   * A plugin was found but opening it failed (e.g. missing DLL symbols are sometimes problematic).
   * The DLL initialization code threw an exception.
 
+==The plugins search path==
+
+From native code, you can use the PluginsPath() function to get access to a PathFinder object which is used to do the actual searches for plugins. The plugins path is accessible via JS code if it has been explicitly added using (TODO: i don't have the API in front of me at the moment). Once it is added to the JS engine, the plugins path is accessible via tje shared JS object `PathFinder.shared.plugins` (in fact, it is the same native instance returned by the PluginPath() function):
+
+{{{
+print(PathFinder.shared.plugins.path_string);
+print(PathFinder.shared.plugins.path_array);
+print(PathFinder.shared.plugins.find("MyPlugin"));
+  // ^^^ searches for MyPlugin.(dll|so) but does not open it
+}}}
+
 ==DLLs are _never_ unloaded==
 
 Even if the DLL init code throws an exception, DLLs are _never_ unloaded. It cannot be safely done. Period. Don't argue with me on this. i'm right, for once, so let me be right.
