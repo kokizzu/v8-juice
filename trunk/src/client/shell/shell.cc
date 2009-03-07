@@ -261,7 +261,6 @@ int main(int argc, char* argv[]) {
 	global->Set(v8::String::New("quit"), v8::FunctionTemplate::New(Quit));
 	// Bind the 'version' function
 	global->Set(v8::String::New("version"), v8::FunctionTemplate::New(Version));
-	global->Set(v8::String::New("MyVar"), v8::juice::convert::CastToJS( 42.32 ) );
 
 	// Create a new execution environment containing the built-in
 	// functions

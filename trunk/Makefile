@@ -12,9 +12,8 @@ subdirs: $(addprefix subdir-,$(package.subdirs))
 package.install.bin-scripts = $(package.name)-config
 package.install.pkgconfig = $(package.name).pc
 
-package.dist_files += ChangeLog INSTALL INSTALL.nobuildfiles LICENSE.$(package.name) \
-	README.src README.SVN README.WIN32 \
-	configure configure.$(package.name) postconfig.$(package.name) \
+package.dist_files += ChangeLog INSTALL LICENSE \
+	configure configure.$(package.name) \
 	toc2.$(package.name).make.at toc2.$(package.name).help \
 	find_toc2.sh
 

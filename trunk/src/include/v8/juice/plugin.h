@@ -276,6 +276,57 @@ namespace plugin {
     */
     PathFinder & PluginPath();
 
+    /**
+       Callback type for plugins initialized via PluginStaticInit().
+
+       This routine should treat the given target as the logical
+       global object, installing its new content there. It should
+       return a non-exception on success.
+    */
+    typedef Handle<Value> (*PluginInitFunction)( Handle<Object> target );
+
+    namespace Detail
+    {
+	/**
+	   Intended to be called only via the static initialization
+	   phase of app/DLL startup in order to register a plugin.
+	   
+	   Normally this is not called directly, but via
+	   V8_JUICE_PLUGIN_STATIC_INIT().
+
+	   This function returns true if it was able to pass on the call
+	   to f(). It does not analyze that return value, but passes it
+	   back to the LoadPlugin() caller who triggered the plugin
+	   load.
+	*/
+	bool PluginStaticInit( PluginInitFunction f );
+    }
+
+    /** \def V8_JUICE_PLUGIN_STATIC_INIT
+
+        V8_JUICE_PLUGIN_STATIC_INIT is a convenience macro to set up
+        the skeleton code needed for initializing a plugin using this
+        framework. It is not required - it is simply convenient in
+        some cases.
+
+	To use it, simply call it from somewhere in your
+	implementation code and pass it the name of a function, which
+	must have the same signature as PluginInitFunction.
+
+	\code
+	Handle<Value> (*)( Handle<Object> target )
+	\endcode
+
+	Example:
+
+	\code
+	V8_JUICE_PLUGIN_STATIC_INIT(SetupMyPlugin);
+	\endcode
+    */
+#define V8_JUICE_PLUGIN_STATIC_INIT(INIT_FUNC) \
+    static bool static_initializer_for_ ## INIT_FUNC = (::v8::juice::plugin::Detail::PluginStaticInit(INIT_FUNC),true)
+
+
 }}} // namespaces
 
 #endif /* WANDERINGHORSE_NET_GOOGLE_V8_P3_PLUGIN_H_INCLUDED_ */
