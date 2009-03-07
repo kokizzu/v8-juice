@@ -1,0 +1,22 @@
+#summary Configuring and building the source tree
+
+Caveat #1: the current build tree will ONLY work on GNU platforms, or Unix-like platforms which host GNU toolsets (including GNU-compatible versions of the basic system tools, gcc, and GNU Make 3.81). It won't compile as-is (or will compile but not link) on Cygwin or Mac platforms (i only have Linux boxes, so that's what my build tools target). i would really like to port (or get someone else to port) the tree to scons at some point (for platform compatibility), but i have no experience with scons. Once the tree is restructured how i want it, i'll revisit scons (which can live in parallel with my own personal favourite, Make).
+
+That said...
+
+The build is fairly conventional:
+
+{{{
+./configure
+make
+make install # doesn't yet work
+}}}
+
+The following configuration options are often helpful or necessary:
+
+  * `--prefix=/dir` is the installation prefix and the default place under which it will look for v8 and any additional libraries (e.g. those needed by plugins).
+  * `--v8-home=/top/install/dir/of/v8` tells configure to look for v8 under the given dir. It expects to find `include/v8.h` and `lib/libv8(_g).(a|so)`.
+  * `--enable-debug` turns on debugging options and tries to link against `libv8_g` instead of `libv8` (but will use the latter if it can't find the former).
+  * `--help` shows many more options which you'll never need.
+
+See SourceTreeOverview for info on how the tree is laid out.
