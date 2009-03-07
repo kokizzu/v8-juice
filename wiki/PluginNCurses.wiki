@@ -1,4 +1,5 @@
 #summary JS bindings for ncurses
+#labels Phase-UserDocs
 
 ==The ncurses bindings==
 
