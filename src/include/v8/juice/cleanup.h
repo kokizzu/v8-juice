@@ -75,13 +75,18 @@ namespace cleanup {
     /**
        Adds the given object to "cleanup list", such that
        Cleanup() will destroy obj by calling dtor(obj).
+
+       Normally this should be called from a wrapped class'
+       constructor, and RemoveFromCleanup() would be called either
+       it's dtor or in its related weak pointer callback (where
+       exactly depends on how the code is structured).
     */
     void AddToCleanup( void * obj, Destructor dtor );
 
     /**
-       Adds obj to the cleanup list (see the 2-arg overload
-       of this function). The destructor simply calls
-       (delete obj), so that must be legal for T.
+       Convenience overload which adds obj to the cleanup list (see
+       the 2-arg overload of this function) using a cleanup function
+       which simply calls (delete obj).
     */
     template <typename T>
     void AddToCleanup( T * obj )
