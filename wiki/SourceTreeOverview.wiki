@@ -1,9 +1,9 @@
 #summary Overview of the source tree
 #labels Phase-Implementation
 
-=Directory structure=
-
 The source tree has a relatively elaborate setup, with ease-of-expansion being a primary goal. It's based primarily off of the tree used in the libs11n project, and this structure has proven to be very flexible over the years.
+
+=Directory structure=
 
 It's laid out like this and ordered more or less by their dependencies:
 
@@ -35,9 +35,11 @@ Any directories not listed there are probably part of the build process, or tool
 
 When including headers in implementation files, the preferred syntax is:
 {{{
-#include <v8/some_header.h> // or .hpp, or .hh, or whatever
+#include <v8/juice/some_header.h> // or .hpp, or .hh, or whatever
 }}}
 and the build process should add `-Isrc/include` to the precompiler flags.
+
+The exact file extension for header files is up for debate. When in doubt, stick with v8's convention (`.h` for headers and `.cc` for sources), but "borrowed code" often has other extensions. (Someone can go rename them if this really bothers them!)
 
 =Namespaces=
 
