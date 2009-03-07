@@ -1,4 +1,4 @@
-#include <v8/juice/v8-cleanup.h>
+#include <v8/juice/cleanup.h>
 
 #include <map>
 

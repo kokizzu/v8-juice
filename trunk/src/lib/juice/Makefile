@@ -7,9 +7,9 @@ HEADERS =
 OBJECTS = $(addsuffix .o,\
 	PathFinder \
 	PathFinder-js \
-	v8-cleanup \
-	v8-convert \
-	v8-plugin \
+	cleanup \
+	convert \
+	plugin \
 	)
 #package.dist_files += $(wildcard *.at) $(HEADERS)
 #package.distclean_files += s11n_config.hpp

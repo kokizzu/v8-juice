@@ -1,7 +1,7 @@
-#include <v8/juice/v8-plugin.h>
+#include <v8/juice/plugin.h>
 #include <v8/juice/PathFinder.h>
 
-#include "v8-plugin-config.h"
+#include "plugin-config.h"
 
 namespace v8 {
 namespace juice {
@@ -141,8 +141,8 @@ namespace plugin {
 
 #if ! PLUGIN_USE_NOOP
 #    if v8_p3_plugin_CONFIG_HAVE_LIBLTDL || v8_p3_plugin_CONFIG_HAVE_LIBDL
-#      include "v8-plugin.dl.cpp"
+#      include "plugin.dl.cpp"
 #    elif defined(WIN32)
-#      include "v8-plugin.win32.cpp"
+#      include "plugin.win32.cpp"
 #    endif
 #endif // WIN32?
