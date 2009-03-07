@@ -14,7 +14,7 @@ make install # doesn't yet work
 
 The following configuration options are often helpful or necessary:
 
-  * `--prefix=/dir` is the installation prefix and the default place under which it will look for v8 and any additional libraries (e.g. those needed by plugins).
+  * `--prefix=/dir` is the installation prefix and the default place under which it will look for v8 and any additional libraries (e.g. those needed by plugins). Using `--prefix=$HOME` is often a good choice, and is the only way a non-root user will be able to install.
   * `--v8-home=/top/install/dir/of/v8` tells configure to look for v8 under the given dir. It expects to find `include/v8.h` and `lib/libv8(_g).(a|so)`.
   * `--enable-debug` turns on debugging options and tries to link against `libv8_g` instead of `libv8` (but will use the latter if it can't find the former).
   * `--help` shows many more options which you'll never need.
