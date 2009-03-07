@@ -1,6 +1,6 @@
 #summary sprintf() for JS
 
-(This is now part of [PlugingStringFuncs the stringfuncs plugin].)
+(This is now part of [PluginStringFuncs the stringfuncs plugin].)
 
 =sprintf() for JavaScript=
 
