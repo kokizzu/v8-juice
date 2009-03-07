@@ -1580,15 +1580,6 @@ namespace sq3 {
 #undef JS_WRAPPER
 
 
-    namespace {
-	static void InitPlugin()
-	{
-	    using v8::juice::plugin::LoadPluginScope;
-	    LoadPluginScope * sc = LoadPluginScope::Current();
-	    if( ! sc ) return; // not called by LoadModule()
-	    sc->SetReturnValue( SetupAddon( sc->Target() ) );
-	}
-	static bool dll_initializer = (InitPlugin(),true);
-    }
+    V8_JUICE_PLUGIN_STATIC_INIT( SetupAddon );
 
 }}} /* namespaces */

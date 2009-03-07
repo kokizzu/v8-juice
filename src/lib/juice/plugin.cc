@@ -1,6 +1,15 @@
 #include <v8/juice/plugin.h>
 #include <v8/juice/PathFinder.h>
 
+/**
+   Set to 1 to use a no-op plugin (non-)loader (just for testing
+   purposes, or when no plugin loader is implemented for this platform).
+*/
+#if v8_juice_CONFIG_ENABLE_PLUGINS
+#  define PLUGIN_USE_NOOP 0
+#else
+#  define PLUGIN_USE_NOOP 1
+#endif
 
 namespace v8 {
 namespace juice {
@@ -92,17 +101,7 @@ namespace plugin {
 	}
 	String::AsciiValue av( argv[0] );
 	std::string dllname = *av ? *av : "";
-#if 0
-	TryCatch tryer;
-	Handle<Value> rv = LoadPlugin( dllname, tgt );
-	if( rv.IsEmpty() )
-	{
-	    ThrowException( tryer.Exception() );
-	}
-	return rv;
-#else
 	return LoadPlugin( dllname, tgt );
-#endif
     }
 
 
@@ -113,9 +112,27 @@ namespace plugin {
 	return PluginPath().find( basename );
     }
 
+
+    bool Detail::PluginStaticInit( PluginInitFunction f )
+    {
+	LoadPluginScope * sc = f ? LoadPluginScope::Current() : 0;
+	if( ! sc ) return false;
+	try
+	{
+	    sc->SetReturnValue( f( sc->Target() ) );
+	}
+	catch(...)
+	{}
+	return true;
+    }
+
 #if PLUGIN_USE_NOOP
     std::string open( const std::string & basename, std::string & errmsg )
     {
+	if(0)
+	{ // only here to avoid a "static function defined but not used" warning
+	    FindPlugin( basename );
+	}
 	errmsg = std::string("s11n::plugin::open(")
 	    + basename
 	    + std::string( "): not implemented on this platform." )
@@ -134,3 +151,5 @@ namespace plugin {
 #      include "plugin.win32.cpp"
 #    endif
 #endif // WIN32?
+
+#undef PLUGIN_USE_NOOP

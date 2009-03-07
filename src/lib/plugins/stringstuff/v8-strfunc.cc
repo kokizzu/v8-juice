@@ -68,16 +68,6 @@ namespace str {
 	return SetupSprintf(gl);
     }
 
-    namespace {
-	static void InitPlugin()
-	{
-	    using v8::juice::plugin::LoadPluginScope;
-	    LoadPluginScope * sc = LoadPluginScope::Current();
-	    if( ! sc ) return; // not called by LoadModule()
-	    sc->SetReturnValue( SetupPlugin( sc->Target() ) );
-	}
-	static bool dll_initializer = (InitPlugin(),true);
-    }
-
+    V8_JUICE_PLUGIN_STATIC_INIT(SetupPlugin);
 
 }}}} // namespaces

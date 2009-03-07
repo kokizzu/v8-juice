@@ -1,6 +1,7 @@
 #!/do/not/make
 #^^^ only to help emacs out.
 
+package.dist_files += $(wildcard *.cpp *.cc *.c *.h *.hpp *.at)
 package.clean_files += $(wildcard *.o *~)
 
 # Debian policy requires that DLLs be built with -fPIC:
