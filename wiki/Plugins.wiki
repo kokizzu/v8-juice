@@ -1,4 +1,5 @@
 #summary Plugins API
+#labels Phase-UserDocs
 
 =The Plugins API=
 
