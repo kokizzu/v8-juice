@@ -1,7 +1,6 @@
 #include <v8/juice/plugin.h>
 #include <v8/juice/PathFinder.h>
 
-#include "plugin-config.h"
 
 namespace v8 {
 namespace juice {
@@ -14,20 +13,9 @@ namespace plugin {
 
     PathFinder & PluginPath()
     {
-#if defined(WIN32)
-	static char const * ext = ".dll";
-#else
-	static char const * ext = ".so";
-#endif
-	static char const * pathsep = ":";
-	static PathFinder bob(".",//path
-			      ext,
-			      pathsep);
-	if( bob.empty() )
-	{
-	    bob.add_path( v8_p3_plugin_CONFIG_PLUGINS_PATH );
-	    bob.add_extension( v8_p3_plugin_CONFIG_DLL_EXTENSION );
-	}
+	static PathFinder bob(v8_juice_plugin_CONFIG_PLUGINS_PATH,
+			      v8_juice_plugin_CONFIG_DLL_EXTENSIONS,
+			      v8_juice_plugin_CONFIG_PATH_SEPARATOR);
 	return bob;
     }
 
@@ -140,7 +128,7 @@ namespace plugin {
 }}} // namespaces
 
 #if ! PLUGIN_USE_NOOP
-#    if v8_p3_plugin_CONFIG_HAVE_LIBLTDL || v8_p3_plugin_CONFIG_HAVE_LIBDL
+#    if v8_juice_plugin_CONFIG_HAVE_LIBLTDL || v8_juice_plugin_CONFIG_HAVE_LIBDL
 #      include "plugin.dl.cpp"
 #    elif defined(WIN32)
 #      include "plugin.win32.cpp"
