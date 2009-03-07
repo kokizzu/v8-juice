@@ -480,12 +480,40 @@ namespace convert {
 	    }
 	};
 
+#if 0 // 
 	/**
-	   Behaves like the std::string specialization, to avoid problems
-	   related to the lifetimes of pointed-to strings.
+	   Nonono! This will Cause Grief when used together with CastFromJS()
+	   because the returned pointer will refer to a now-dead std::string
+	   after the return.
+
+	   This specialization requires that a single copy per
+	   conversion be used. Do not use a shared/static instance for
+	   conversions! To enforce this, the operator()() is
+	   non-const.
 	*/
 	template <>
+	struct to_native_f<char const *>
+	{
+	private:
+	    std::string kludge;
+	    public:
+	    typedef char const * result_type;
+	    result_type operator()( ValueHandle const & h )
+	    {
+		this->kludge = to_native_f<std::string>()( h );
+		return this->kludge.c_str();
+	    }
+	    result_type operator()( BindKeyType, ValueHandle const & h )
+	    {
+		return this->operator()( h );
+	    }
+	};
+#else
+	/** Not great, but a happy medium. */
+	template <>
 	struct to_native_f<char const *> : to_native_f<std::string> {};
+#endif
+
     }
 #endif // !DOXYGEN
 
@@ -499,7 +527,8 @@ namespace convert {
     typename Detail::to_native_f<NT>::result_type CastFromJS( ::v8::juice::bind::BindKeyType cx, ValueHandle const & h )
     {
 	typedef Detail::to_native_f<NT> F;
-	return (typename Detail::to_native_f<NT>::result_type) F()( cx, h );
+	typedef typename Detail::to_native_f<NT>::result_type RT;
+	return (RT) F()( cx, h );
 	// ^^^ that cast is to try to support returning void (MS compilers are known
 	// to require a cast for that).
     }
@@ -512,7 +541,8 @@ namespace convert {
     typename Detail::to_native_f<NT>::result_type CastFromJS( ValueHandle const & h )
     {
 	typedef Detail::to_native_f<NT> F;
-	return (typename Detail::to_native_f<NT>::result_type) F()( h );
+	typedef typename Detail::to_native_f<NT>::result_type RT;
+	return (RT) F()( h );
 	// ^^^ that cast is to try to support returning void (MS compilers are known
 	// to require a cast for that).
     }
@@ -751,6 +781,71 @@ namespace convert {
     */
     ::v8::Handle< ::v8::Value > SetupAddon( ::v8::Handle< ::v8::Object > target );
 				       
+
+    /**
+       See InvocationCallbackToArgv for details.
+    */
+    typedef ::v8::Handle< ::v8::Value > (*InvocationCallbackWithArray)( Handle<Object> self, int argc, Handle<Value> argv[] );
+
+
+    /**
+       A helper to allow re-use of certain JS/C++ functions. It's a bit of
+       a long story...
+
+       v8 defines the basic JS/C++ callback type as
+       InvocationCallback, which takes a v8::Arguments list as its
+       only argument. Since client code cannot create their own
+       Arguments lists (only v8 can do that), it is impossible to
+       re-use a subset of the arguments and pass them to another
+       InvocationHandler. Such forwarding is often useful when
+       implementing related functions which share a common basis, but
+       v8's callback convention makes it impossible.
+
+       So now the workaround:
+
+       Instead of defining a callback as an InvocationCallback, it can
+       be defined as a InvocationCallbackWithArray, and this type can
+       be used to do the conversion.  For example:
+
+       \code
+       myobj->Set(String::New("func"), InvocationCallbackToArgv<MyCallback>::call );
+       \endcode
+
+       This is of course less efficient than directly calling an
+       InvocationCallback, because we must synthesize an array of
+       Value handles.
+
+       The optional skipArgN parameter tells call() than it should skip
+       over the first N arguments in the list, which can be useful when
+       stripping a first argument for personal use then passing on the
+       rest of the args.
+    */
+    template <InvocationCallbackWithArray proxy, int skipArgN = 0>
+    struct InvocationCallbackToArgv
+    {
+	/**
+	   Synthesizes an array of Value handles and calls
+	   proxy(argv.This(),argCount,argsArray). If skipArgN is
+	   greater than or equal to argv.Length() then
+	   proxy(argv.This(),0,0) is called.
+	*/
+	static ::v8::Handle< ::v8::Value > call( ::v8::Arguments const & argv )
+	{
+	    typedef Handle<Value> HV;
+	    if( skipArgN >= argv.Length() )
+	    { // Is this sensible? Should we throw instead? Hmm.
+		return proxy( argv.This(), 0, 0 );
+	    }
+	    const int argc = argv.Length() - skipArgN;
+	    std::vector< HV > vec( static_cast<size_t>(argc), Null() );
+	    int pos = 0;
+	    for( int i = skipArgN; i < argc; ++i, ++pos )
+	    {
+		vec[pos] = argv[i];
+	    }
+	    return proxy( argv.This(), argc, &vec[0] );
+	}
+    };
 
 }}} /* namespaces */
 
