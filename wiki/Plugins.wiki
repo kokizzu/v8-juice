@@ -26,7 +26,9 @@ Now, in the code which you want to link as a DLL you need to add a few small bit
 Handle<Value> SetupMyAddon( Handle<Object> target );
 }}}
 
-which should add the plugin's functionality, treating the given target object as the logical global object (whether it is or not is up to the caller). On success it should return a non-exception.
+(That exact signature is not required - it's just a common convention.)
+
+which should add the plugin's functionality, treating the given target object as the logical global object (whether it is or is not the real global object is up to the caller). On success it should return a non-exception.
 
 Now we set up a trigger which will call that init routine whenever the DLL is opened:
 
@@ -44,12 +46,13 @@ static void InitPlugin() {
 static bool dll_initializer = (InitPlugin(),true);
 }}}
 
-Now, whenever loadPlugin("!MyPlugin") opens the DLL, the initialization code will be run automatically and it can set up its JS state.
+Now, whenever loadPlugin("!MyPlugin") opens the DLL, the initialization code will be run automatically and it can set up its JS state. Optionally, we can pass an Object as a second argument to loadPlugin(), and that object will be used as the local global object.
 
 ==JS-side==
 
 {{{
 loadPlugin("MyPlugin");
+// or:
 var p2 = {};
 loadPlugin("MyOtherPlugin",p2); // will pass p2 as the target object
 }}}
@@ -62,7 +65,9 @@ loadPlugin() will throw on error and the exception will explain the problem, whi
 
 ==The plugins search path==
 
-From native code, you can use the PluginsPath() function to get access to a PathFinder object which is used to do the actual searches for plugins. The plugins path is accessible via JS code if it has been explicitly added using (TODO: i don't have the API in front of me at the moment). Once it is added to the JS engine, the plugins path is accessible via tje shared JS object `PathFinder.shared.plugins` (in fact, it is the same native instance returned by the PluginPath() function):
+From native code, you can use the PluginsPath() function to get access to a PathFinder object which is used to do the actual searches for plugins. The plugins path is accessible via JS code if it has been explicitly added using (TODO: i don't have the API in front of me at the moment). Once it is added to the JS engine, the plugins path is accessible via the shared JS object `PathFinder.shared.plugins` (in fact, it is the same native instance returned by the PluginPath() function).
+
+For example:
 
 {{{
 print(PathFinder.shared.plugins.path_string);
@@ -73,7 +78,7 @@ print(PathFinder.shared.plugins.find("MyPlugin"));
 
 ==DLLs are _never_ unloaded==
 
-Even if the DLL init code throws an exception, DLLs are _never_ unloaded. It cannot be safely done. Period. Don't argue with me on this. i'm right, for once, so let me be right.
+Even if the DLL init code throws an exception, DLLs are _never_ unloaded. It cannot be safely done. Period. Don't argue with me on this. i'm right, for once, so just let me be right.
 
 Here's a pasted-in email which goes into a bit more detail about my fanatical beliefs on this topic:
 
