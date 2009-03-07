@@ -6,13 +6,10 @@ package.clean_files += $(wildcard *.o *~)
 
 # Debian policy requires that DLLs be built with -fPIC:
 CXXFLAGS += -fPIC
-ifeq (1,$(LIBV8JUICE_HAS_CPP0X))
-CXXFLAGS += -std=gnu++0x
-endif
 
-#package.install.package_headers.dest := $(prefix)/include/s11n.net/s11n
-#package.install.headers.dest = $(package.install.package_headers.dest)
-#package.install.package_dlls.dest := $(prefix)/lib/s11n
+package.install.package_headers.dest := $(prefix)/include/v8/juice
+package.install.headers.dest = $(package.install.package_headers.dest)
+package.install.package_dlls.dest := $(prefix)/lib/v8/juice
 
 ############################################################
 # we fudge the linker args for clients which live in this source tree,
@@ -22,7 +19,11 @@ LIBV8JUICE_CLIENT_INTREE_LDADD = -L$(toc2.top_srcdir)/src/lib/juice \
 				$(LIBV8JUICE_CLIENT_LDADD) $(LD_LDFLAGS)
 ############################################################
 
-INCLUDES := -I. -I$(toc2.top_srcdir)/src/include $(INCLUDES)
+########################################################################
+# Reminder: for the INCLUDES we do this $(shell) hackery so that emacs'
+# jump-to-error mode can find the files. It has trouble with the
+# relative paths.
+INCLUDES := -I. -I$(shell cd $(toc2.top_srcdir); pwd)/src/include $(INCLUDES)
 CPPFLAGS += $(INCLUDES) $(V8_CPPFLAGS)
 
 # PACKAGE_VERSION_DOTTED := $(shell echo $(package.version) | perl -pe 's|(\d\d\d\d)(\d\d)(\d\d)|$$1.$$2.$$3|')
@@ -34,35 +35,35 @@ endif
 
 ########################################################################
 # toc2's deps generation is a bit broken, so we'll use this instead...
-# To disable deps generation, set ShakeNMake.USE_MKDEPS=0
-ShakeNMake.USE_MKDEPS := 1
-#$(warning ShakeNMake.USE_MKDEPS=$(ShakeNMake.USE_MKDEPS));
-ifeq (1,$(ShakeNMake.USE_MKDEPS))
-ShakeNMake.CISH_SOURCES ?= $(wildcard *.cpp *.c *.c++ *.cc *.h *.hpp *.h++ *.hh)
-#$(warning ShakeNMake.CISH_SOURCES=$(ShakeNMake.CISH_SOURCES))
-ifneq (,$(ShakeNMake.CISH_SOURCES))
-ShakeNMake.CISH_DEPS_FILE := .make.c_deps
-ShakeNMake.BINS.MKDEP = gcc -E -MM $(CPPFLAGS) $(INCLUDES)
-package.clean_files += $(ShakeNMake.CISH_DEPS_FILE)
-$(ShakeNMake.CISH_DEPS_FILE): $(PACKAGE.MAKEFILE) $(ShakeNMake.MAKEFILE) $(ShakeNMake.CISH_SOURCES)
-	@touch $@; test x = "x$(ShakeNMake.CISH_SOURCES)" && exit 0; \
-	$(ShakeNMake.BINS.MKDEP) $(ShakeNMake.CISH_SOURCES) 2>/dev/null > $@
+# To disable deps generation, set toc2.c.USE_MKDEPS=0
+toc2.c.USE_MKDEPS := 1
+#$(warning toc2.c.USE_MKDEPS=$(toc2.c.USE_MKDEPS));
+ifeq (1,$(toc2.c.USE_MKDEPS))
+toc2.c.CISH_SOURCES ?= $(wildcard *.cpp *.c *.c++ *.cc *.h *.hpp *.h++ *.hh)
+#$(warning toc2.c.CISH_SOURCES=$(toc2.c.CISH_SOURCES))
+ifneq (,$(toc2.c.CISH_SOURCES))
+toc2.c.CISH_DEPS_FILE := .make.c_deps
+toc2.c.BINS.MKDEP = gcc -E -MM $(CPPFLAGS) $(INCLUDES)
+package.clean_files += $(toc2.c.CISH_DEPS_FILE)
+$(toc2.c.CISH_DEPS_FILE): $(PACKAGE.MAKEFILE) $(toc2.c.MAKEFILE) $(toc2.c.CISH_SOURCES)
+	@touch $@; test x = "x$(toc2.c.CISH_SOURCES)" && exit 0; \
+	$(toc2.c.BINS.MKDEP) $(toc2.c.CISH_SOURCES) 2>/dev/null > $@
 # normally we also want:
-#  || $(ShakeNMake.BINS.RM) -f $@ 2>/dev/null
+#  || $(toc2.c.BINS.RM) -f $@ 2>/dev/null
 # because we don't want a bad generated makefile to kill the build, but gcc -E
 # is returning 1 when some generated files do not yet exist.
-deps: $(ShakeNMake.CISH_DEPS_FILE)
+deps: $(toc2.c.CISH_DEPS_FILE)
 
 ifneq (,$(strip $(filter distclean clean,$(MAKECMDGOALS))))
 # $(warning Skipping C/C++ deps generation.)
-# ABSOLUTEBOGO := $(shell $(ShakeNMake.BINS.RM) -f $(ShakeNMake.CISH_DEPS_FILE))
+# ABSOLUTEBOGO := $(shell $(toc2.c.BINS.RM) -f $(toc2.c.CISH_DEPS_FILE))
 else
 #$(warning Including C/C++ deps.)
--include $(ShakeNMake.CISH_DEPS_FILE)
+-include $(toc2.c.CISH_DEPS_FILE)
 endif
 
 endif
-# ^^^^ ifneq(,$(ShakeNMake.CISH_SOURCES))
+# ^^^^ ifneq(,$(toc2.c.CISH_SOURCES))
 endif
-# ^^^^ end $(ShakeNMake.USE_MKDEPS)
+# ^^^^ end $(toc2.c.USE_MKDEPS)
 ########################################################################
