@@ -15,7 +15,7 @@ $(error PLUGIN_OBJECTS must be defined before including this file!)
 endif
 
 package.dist_files += $(wildcard *.cpp *.cc *.h *.hpp)
-
+package.install.dlls.dest := $(package.install.package_dlls.dest)# override so plugins get installed here
 ########################################################################
 # Build DLL...
 PLUGIN_DLL_NAME := v8-juice-$(PLUGIN_NAME)
@@ -24,6 +24,7 @@ $(PLUGIN_DLL_NAME).DLL.VERSION := $(V8JUICE_VERSION_DOTTED)
 $(PLUGIN_DLL_NAME).DLL.OBJECTS := $(PLUGIN_OBJECTS)
 $(PLUGIN_DLL_NAME).DLL.LDADD ?= $(PLUGIN_LDADD)
 include $(toc2.dirs.makefiles)/c-dlls.make
+package.install.dlls += $($(PLUGIN_DLL_NAME).DLL)
 all: $($(PLUGIN_DLL_NAME).DLL)
 # end DLL rules
 ########################################################################
