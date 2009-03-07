@@ -25,7 +25,7 @@ From C++ code, you need to do the following...
 
 That's all you need to do to enable the plugins support.
 
-On Linux systems (and probably other Unices), your application must be linked with the `-export-dynamic` (also known as `-rdyanmic`) flag, or DLLs may not be able to load properly (they won't be able to see the native LoadPlugin API provided by the application!).
+On Linux systems (and probably other Unices), your application must be linked with the `-export-dynamic` (also known as `-rdynamic`) flag, or DLLs may not be able to load properly (they won't be able to see the native LoadPlugin API provided by the application!).
 
 Now, in the code which you want to link as a DLL you need to add a few small bits of code. First, we will assume you have a function with this signature:
 
