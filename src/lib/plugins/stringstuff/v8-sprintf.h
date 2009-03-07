@@ -26,8 +26,7 @@ namespace str {
        If passed fewer arguments than there are format specifiers, it will
        throw a JS-side exception.
 
-
-       CURRENT (documented) PRINTF EXTENSIONS:
+       PRINTF EXTENSIONS:
 
        %%h (HTML) works like %s but converts certain characters (like '<' and '&' to
        their HTML escaped equivalents.
@@ -65,6 +64,14 @@ namespace str {
 
        - The %%n specifier is not supported, as we have no intuitive way
        of getting the value back to the caller.
+    */
+    ::v8::Handle< ::v8::Value > sprintf( int argc, Handle<Value> argv[] );
+
+    /**
+       A v8::InvocationCallback function for registration with JS code. See the
+       two-arg overload for the complete docs. Two forms of this function are
+       provided so that we can re-use the main sprintf() implementation from
+       other routines.
     */
     ::v8::Handle< ::v8::Value > sprintf( ::v8::Arguments const & argv );
 

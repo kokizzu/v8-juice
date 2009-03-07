@@ -29,8 +29,10 @@ custom-fit/efficient solution.
 
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 #include "v8-sprintf.h"
+//#include <v8/juice/convert.h>
 
 namespace v8 {
 namespace juice {
@@ -49,8 +51,9 @@ typedef long double LONGDOUBLE_TYPE;
 #endif
 
 /*
-   If WHPRINTF_OMIT_SIZE is defined to a true value, then
-   the %n specifier is disabled.
+   If WHPRINTF_OMIT_SIZE is defined to a true value, then the %n
+   specifier is disabled. It can't work for us in JS code, so this
+   should always be true for this particular copy of this code.
 */
 #ifndef WHPRINTF_OMIT_SIZE
 #  define WHPRINTF_OMIT_SIZE 1
@@ -664,7 +667,7 @@ static long spech_sqlstring_main( int xtype,
         int needQuote;
         char q = ((xtype==etSQLESCAPE3)?'"':'\'');   /* Quote character */
         char const * escarg = (char const *) varg;
-	char * bufpt = 0;
+	//char * bufpt = 0;
         isnull = escarg==0;
         if( isnull ) escarg = (xtype==etSQLESCAPE2 ? "NULL" : "(NULL)");
         for(i=n=0; (ch=escarg[i])!=0; i++){
@@ -673,8 +676,9 @@ static long spech_sqlstring_main( int xtype,
         needQuote = !isnull && xtype==etSQLESCAPE2;
         n += i + 1 + needQuote*2;
 	// FIXME: use a static buffer here instead of malloc()! Shame on you!
-	bufpt = (char *)malloc( n );
-	if( ! bufpt ) return -1;
+	//bufpt = (char *)malloc( n );
+	//if( ! bufpt ) return -1;
+	WHPRINTF_CHARARRAY(bufpt,n);
         j = 0;
         if( needQuote ) bufpt[j++] = q;
         for(i=0; (ch=escarg[i])!=0; i++){
@@ -684,7 +688,8 @@ static long spech_sqlstring_main( int xtype,
         if( needQuote ) bufpt[j++] = q;
         bufpt[j] = 0;
 	long ret = pf( pfArg, bufpt, j );
-	free( bufpt );
+	WHPRINTF_CHARARRAY_FREE(bufpt);
+	//free( bufpt );
 	return ret;
 }
 
@@ -746,6 +751,8 @@ static long spech_sqlstring3( whprintf_appender pf,
 
    Known change history (most historic info has been lost):
 
+   March 2009: ported to use the v8 javascript API for input.
+
    10 Feb 2008 by Stephan Beal: refactored to remove the 'useExtended'
    flag (which is now always on). Added the whprintf_appender typedef to
    make this function generic enough to drop into other source trees
@@ -754,8 +761,7 @@ static long spech_sqlstring3( whprintf_appender pf,
    31 Oct 2008 by Stephan Beal: refactored the et_info lookup to be
    constant-time instead of linear.
 */
-
-::v8::Handle< ::v8::Value > sprintf( ::v8::Arguments const & argv )
+::v8::Handle< ::v8::Value > sprintf( int argc, Handle<Value> argv[] )
 {
     using namespace ::v8;
     //HandleScope sentry; // causes segfaults for me!
@@ -811,6 +817,7 @@ static long spech_sqlstring3( whprintf_appender pf,
   int nsd;                   /* Number of significant digits returned */
 #endif
 
+  //HandleScope v8_scope; // causes a kuh-rash.
 
   /* WHPRINTF_RETURN, WHPRINTF_CHECKERR, and WHPRINTF_SPACES
      are internal helpers.
@@ -845,7 +852,7 @@ do{				       \
       WHPRINTF_CHECKERR(0);
       break;
     }
-    if( argpos >= argv.Length() )
+    if( argpos >= argc )
     {
 	obuf.str("");
 	obuf << "Not enough arguments for format specifier #"<<argpos;
@@ -1214,7 +1221,7 @@ do{				       \
         break;
       case etCHARLIT:
       case etCHARX: {
-	  Local<Value> arg = NEXT_ARG;
+	  Handle<Value> arg = NEXT_ARG;
 	  char check = 0;
 	  {
 	      if( arg->IsString() )
@@ -1333,6 +1340,27 @@ do{				       \
 #undef CSTR
 } /* End of function sprintf(). Whew. */
 
+#if 0
+::v8::Handle< ::v8::Value > sprintf( Handle<Object>, int argc, Handle<Value> argv[] )
+{
+    return sprintf( argc, argv );
+}
+#endif
+::v8::Handle< ::v8::Value > sprintf( ::v8::Arguments const & argv )
+{
+#if 0
+    return v8::juice::convert::InvocationCallbackToArgv<sprintf,0>::call(argv);
+#else
+    typedef Handle<Value> HV;
+    const int argc = argv.Length();
+    std::vector< HV > vec( static_cast<size_t>(argc), Null() );
+    for( int i = 0; i < argc; ++i )
+    {
+	vec[i] = argv[i];
+    }
+    return sprintf( argc, &vec[0] );
+#endif
+}
 
 #undef WHPRINTF_SPACES
 #undef WHPRINTF_CHECKERR
@@ -1346,7 +1374,6 @@ do{				       \
 
 ::v8::Handle< ::v8::Value > SetupSprintf( ::v8::Handle< Object > tgt )
 {
-	HandleScope sentry;
 #define ADDFUNC(F) tgt->Set(String::New(# F), FunctionTemplate::New(F)->GetFunction() )
 	ADDFUNC(sprintf);
 #undef ADDFUNC
