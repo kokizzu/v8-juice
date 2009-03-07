@@ -45,7 +45,8 @@ Handle<Value> SetupPathFinderClass(const Handle<Object> target );
 
    On Linux (and maybe other Unix) platforms it is important to link
    any application using this API with the -export-dynamic (or
-   -rdyanamic) flag, or else DLL loading will silently fail.
+   -rdyanamic) flag, or else DLL loading will likely fail (the DLLs
+   won't be able to see the callback function they need!).
 
    TODO:
 
@@ -63,8 +64,8 @@ namespace plugin {
        Tries to dynamically load a DLL using the given dll name. The
        name need not have a file extension (a platform-specific
        extension will be used if needed) or directory element(s) (or
-       it may have a relative path). It will be sought using a lookup
-       path.
+       it may have a relative path). It will be sought using the lookup
+       path defined by the PluginPath() object.
 
        The library search path can be inspected and modified using
        the PluginPath() function.
@@ -262,10 +263,7 @@ namespace plugin {
 	   LoadPlugin().
 	*/
 	Handle<Value> ReturnValue() const;
-	/**
-	   LoadPlugin() is the only place we can instantiate these
-	   objects.
-	*/
+	// LoadPlugin() is the only place we can instantiate these objects.
 	friend Handle< Value > LoadPlugin( std::string const &, Handle< Object > );
     };
 

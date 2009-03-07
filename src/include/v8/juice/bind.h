@@ -1,17 +1,16 @@
 #if !defined(CODE_GOOGLE_COM_P_V8_V8_BIND_H_INCLUDED)
 #define CODE_GOOGLE_COM_P_V8_V8_BIND_H_INCLUDED 1
-
-/**
-   A mini-framework for binding C++ natives to v8 (JavaScript engine)
-   script-side objects in a type-safe manner (the v8 API only covers
-   (void *) natively).
-
-   v8: http://code.google.com/p/v8/
-
-   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
-
-   License: same as v8 (see below)
-*/
+////////////////////////////////////////////////////////////////////////
+//    A mini-framework for binding C++ natives to v8 (JavaScript engine)
+//    script-side objects in a type-safe manner (the v8 API only covers
+//    (void *) natively).
+//
+//    v8: http://code.google.com/p/v8/
+//
+//    Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
+//
+//    License: same as v8 (see below)
+////////////////////////////////////////////////////////////////////////
 // Copyright 2007-2008 the V8 project authors. All rights reserved.
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -38,13 +37,16 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+////////////////////////////////////////////////////////////////////////
 
 //#include <cstdint> // arg! Requires C++0x!
 //#include <stdint.h> // hope the client's platform is recent!
 #include <v8.h>
 #include <string>
 #include <map>
+/**
+   The v8 namespace is the primary namespace of Google's v8 engine.
+*/
 namespace v8 {
 namespace juice {
 /**

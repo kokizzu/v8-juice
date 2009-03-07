@@ -4,8 +4,9 @@
 namespace v8 { namespace juice {
 /**
    "Supplemental", client-side garbage collection routines, to work
-   around certain deficiencies in v8's GC (namely that it's never guaranteed
-   to be called by the time the engine shuts down. Ever.).
+   around certain deficiencies in v8's GC (namely that it's never
+   guaranteed to be called by the time the engine shuts down, and
+   there's no way to force it to be called).
 */
 namespace cleanup {
 

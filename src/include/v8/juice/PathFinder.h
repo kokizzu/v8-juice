@@ -150,8 +150,11 @@ namespace v8 { namespace juice {
 	static std::string basename( const std::string & );
 
 	/**
-	   Returns a platform-dependent path separator. This
-	   is set when the class is compiled.
+	   Returns a platform-dependent directory separator. This
+	   is set when the class is compiled:
+
+	   Windows: '\\'
+	   Everyone else: '/'
 	*/
 	static std::string dir_separator();
 
