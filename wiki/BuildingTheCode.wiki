@@ -1,9 +1,13 @@
 #summary Configuring and building the source tree
 #labels Phase-UserDocs,Phase-Implementation
 
+=Requirements and prerequisites=
+
 Caveat #1: the current build tree will ONLY work on GNU platforms, or Unix-like platforms which host GNU toolsets (including GNU-compatible versions of the basic system tools, gcc, and GNU Make 3.81). It won't compile as-is (or will compile but not link) on Cygwin or Mac platforms (i only have Linux boxes, so that's what my build tools target). i would really like to port (or get someone else to port) the tree to scons at some point (for platform compatibility), but i have no experience with scons. Once the tree is restructured how i want it, i'll revisit scons (which can live in parallel with my own personal favourite, Make).
 
-That said...
+The sources have only two hard dependencies: [http://code.google.com/p/v8/ Google v8] and the STL (which comes with all sane C++ compilers and is also available separately via projects like [http://stlport.sourceforge.net STLPort]). For plugins to work it needs (on Unix platforms) libdl or libltdl. (For Windows platforms the DLL support needs no additional libraries.)
+
+=Configuring and compiling=
 
 The build is fairly conventional:
 
