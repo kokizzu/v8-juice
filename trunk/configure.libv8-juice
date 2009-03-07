@@ -6,8 +6,8 @@
 
 toc2_add_config PACKAGE_RELEASE_CODENAME="Approved by Me"
 toc2_export PACKAGE_VERSION_HEX="$PACKAGE_VERSION_HEX"
-
 toc2_export PACKAGE_DESCRIPTION="Add-ons for the Google v8 JavaScript engine"
+toc2_export V8JUICE_VERSION_DOTTED := $(shell echo $(package.version) | perl -pe 's|(\d\d\d\d)(\d\d)(\d\d)|$$1.$$2.$$3|')
 
 toc2_export v8juice_CONFIG_PURE_ISO=${pure_iso-0}
 
