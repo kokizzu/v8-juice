@@ -1,0 +1,13 @@
+#summary Informal summary of differences between versions.
+#labels Featured,Phase-UserDocs
+
+=v8-juice ChangeLog=
+
+This is the informal ChangeLog for the v8-juice project. Newest items
+are at the top. Dates written extra large are release dates.
+
+----
+
+*2009 March 6*
+
+Started porting in the original source tree to Google Code.
