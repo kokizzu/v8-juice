@@ -41,7 +41,14 @@ echo "Using v8 CPPFLAGS: ${v8cppflags}"
 
 echo "Searching for v8 library:"
 v8libpath="${v8home}/lib:${prefix}/lib:/usr/lib:/usr/local/lib"
-for lib in libv8.so libv8.a libv8_g.a libv8_g.so; do
+
+if [[ x1 = ${configure_enable_debug-0} ]]; then
+    # Prefer libv8_g over libv8
+    liblist="libv8_g.a libv8_g.so libv8.a libv8.so"
+else
+    liblist="libv8.a libv8.so libv8_g.a libv8_g.so"
+fi
+for lib in $liblist; do
     toc2_find_in_path ${lib} ${v8libpath} && break
 done
 v8lib=${TOC2_FIND_RESULT}
@@ -53,13 +60,15 @@ if [[ x = "x${v8lib}" ]]; then
 fi
 echo "Found v8 lib: ${v8lib}"
 v8libpath=$(dirname ${v8lib})
-v8ldflags="-L${v8libpath} -l$(echo ${v8lib} | sed -e 's/.*libv8/v8/;s/\.*//')"
+v8ldflags="-L${v8libpath} -l$(echo ${v8lib} | sed -e 's/.*libv8/v8/;s/\..*//') -lpthread"
 echo "Using v8 link flags: ${v8ldflags}"
 
 toc2_export V8_CPPFLAGS="${v8cppflags}"
 toc2_export V8_LDFLAGS="${v8ldflags}"
 
 
+########################################################################
+# older mess from libs11n source tree...
 if [[ x0 = "x${v8juice_CONFIG_PURE_ISO}" ]]; then
     configure_enable_plugins=${configure_enable_plugins-1}
     if test x0 != "x${configure_enable_plugins-1}"; then
@@ -130,7 +139,7 @@ toc2_test doxygen
     toc2_export LIBV8JUICE_LDADD="${ldadd}"
     toc2_test_require PACKAGE_NAME-config \
         PACKAGE_PREFIX=LIBV8JUICE_ \
-        CLIENT_LDADD="$(${removeDupes} -ls11n -L${prefix}/lib)" \
+        CLIENT_LDADD="$(${removeDupes} -lv8-juice -L${prefix}/lib)" \
         CLIENT_INCLUDES="$(${removeDupes} ${includes_path})"
 
     # import the PACKAGE_NAME-config info to ease life for code under ./src/client/*

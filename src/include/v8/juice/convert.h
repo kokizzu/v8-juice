@@ -44,7 +44,7 @@
 #include <list>
 #include <vector>
 #include <map>
-#include "v8-bind.h"
+#include "bind.h"
 namespace v8 {
 
 /**

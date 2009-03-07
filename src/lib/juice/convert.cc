@@ -1,6 +1,4 @@
-
-#include <v8/juice/v8-convert.h>
-#include <v8/juice/v8-sprintf.h>
+#include <v8/juice/convert.h>
 #include <string>
 namespace v8 {
 namespace convert {

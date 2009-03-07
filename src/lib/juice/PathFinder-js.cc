@@ -5,9 +5,9 @@
 
 #include <v8/juice/PathFinder.h>
 #include <v8.h>
-#include <v8/juice/v8-convert.h>
-#include <v8/juice/v8-plugin.h>
-#include <v8/juice/v8-cleanup.h>
+#include <v8/juice/convert.h>
+#include <v8/juice/plugin.h>
+#include <v8/juice/cleanup.h>
 
 #include <iostream> /* only for debuggering */
 #ifndef CERR
