@@ -121,7 +121,7 @@ toc2_test doxygen
     toc2_export LIBV8JUICE_LDADD="${ldadd}"
     toc2_test_require PACKAGE_NAME-config \
         PACKAGE_PREFIX=LIBV8JUICE_ \
-        CLIENT_LDADD="$(${removeDupes} -lv8-juice -L${prefix}/lib)" \
+        CLIENT_LDADD="$(${removeDupes} -L${prefix}/lib -lv8-juice)" \
         CLIENT_INCLUDES="$(${removeDupes} ${includes_path})"
 
     # import the PACKAGE_NAME-config info to ease life for code under ./src/client/*
