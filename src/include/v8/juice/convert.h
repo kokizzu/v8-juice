@@ -1,6 +1,6 @@
 #if !defined(CODE_GOOGLE_COM_P_V8_V8_CONVERT_H_INCLUDED)
 #define CODE_GOOGLE_COM_P_V8_V8_CONVERT_H_INCLUDED 1
-/**
+/*
    A min-framework to simplify casting between v8 JavaScript and
    C++ native objects. Requires the v8-bind.h header.
 
@@ -320,7 +320,7 @@ namespace convert {
 	    }
 	    result_type operator()( ValueHandle const & h ) const
 	    {
-		return this->operator()( 0, h );
+		return;
 	    }
 	};
 
@@ -499,7 +499,9 @@ namespace convert {
     typename Detail::to_native_f<NT>::result_type CastFromJS( ::v8::juice::bind::BindKeyType cx, ValueHandle const & h )
     {
 	typedef Detail::to_native_f<NT> F;
-	return F()( cx, h );
+	return (typename Detail::to_native_f<NT>::result_type) F()( cx, h );
+	// ^^^ that cast is to try to support returning void (MS compilers are known
+	// to require a cast for that).
     }
 
     /**
@@ -510,7 +512,9 @@ namespace convert {
     typename Detail::to_native_f<NT>::result_type CastFromJS( ValueHandle const & h )
     {
 	typedef Detail::to_native_f<NT> F;
-	return F()( h );
+	return (typename Detail::to_native_f<NT>::result_type) F()( h );
+	// ^^^ that cast is to try to support returning void (MS compilers are known
+	// to require a cast for that).
     }
 
     /** Convenience instance of to_native_f. */
