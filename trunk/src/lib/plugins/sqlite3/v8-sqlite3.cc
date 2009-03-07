@@ -81,45 +81,45 @@
 #define JS_WRAPPER(FN) static ::v8::Handle< ::v8::Value > FN( const ::v8::Arguments & argv )
 
 namespace v8 {
-    namespace convert {
-	/**
-	   Custom JS/C++ cast operators...
-	 */
-	namespace Detail
-	{
-	    template <>
-	    struct to_js_f<sqlite3_int64>
-	    {
-		ValueHandle operator()( sqlite3_int64 v ) const
-		{
-		    return Number::New( v );
-		}
-	    };
-
-	    template <>
-	    struct to_native_f<sqlite3_int64>
-	    {
-		typedef sqlite3_int64 result_type;
-		result_type operator()( ::v8::bind::BindKeyType cx, ValueHandle const & h ) const
-		{
-		    return h->IsNumber()
-			? h->IntegerValue()
-			: 0;
-		}
-		result_type operator()( ValueHandle const & h ) const
-		{
-		    return this->operator()( 0, h );
-		}
-	    };
-	}
-    }
-
 namespace juice {
+namespace convert {
+    /**
+       Custom JS/C++ cast operators...
+    */
+    namespace Detail
+    {
+	template <>
+	struct to_js_f<sqlite3_int64>
+	{
+	    ValueHandle operator()( sqlite3_int64 v ) const
+	    {
+		return Number::New( v );
+	    }
+	};
+
+	template <>
+	struct to_native_f<sqlite3_int64>
+	{
+	    typedef sqlite3_int64 result_type;
+	    result_type operator()( bind::BindKeyType cx, ValueHandle const & h ) const
+	    {
+		return h->IsNumber()
+		    ? h->IntegerValue()
+		    : 0;
+	    }
+	    result_type operator()( ValueHandle const & h ) const
+	    {
+		return this->operator()( 0, h );
+	    }
+	};
+    }
+} // namespace convert
+
 namespace sq3 {
 
+    namespace bind = ::v8::juice::bind;
     using namespace ::v8;
-    using namespace ::v8::bind;
-    using namespace ::v8::convert;
+    using namespace ::v8::juice::convert;
 
     JS_WRAPPER(sq3_callback_noop)
     {
@@ -238,7 +238,7 @@ namespace sq3 {
 		   encoding(SQLITE_UTF8),
 		   userFuncs()
 	{
-	    ::v8::bind::BindNative( DBInfo::bind_context, this, this );
+	    bind::BindNative( DBInfo::bind_context, this, this );
 	}
 	/**
 	   Unbinds this object from the JS/native bindings. Does not
@@ -246,7 +246,7 @@ namespace sq3 {
 	*/
 	~DBInfo()
 	{
-	    ::v8::bind::UnbindNative( DBInfo::bind_context, this, this );
+	    bind::UnbindNative( DBInfo::bind_context, this, this );
 	    if( dbh )
 	    {
 		//CERR << "Closing sqlite3 handle @"<<dbh<<'\n';
@@ -260,7 +260,7 @@ namespace sq3 {
 	*/
 	static DBInfo * GetNative( Handle<Value> const id )
 	{
-	    return ::v8::bind::GetBoundNative<DBInfo>( DBInfo::bind_context, id );
+	    return bind::GetBoundNative<DBInfo>( DBInfo::bind_context, id );
 	}
 
 	/**
@@ -268,7 +268,7 @@ namespace sq3 {
 	*/
 	static sqlite3_stmt * GetStatement( Handle<Value> const id )
 	{
-	    return ::v8::bind::GetBoundNative<sqlite3_stmt>( DBInfo::bind_context, id );
+	    return bind::GetBoundNative<sqlite3_stmt>( DBInfo::bind_context, id );
 	}
 
 	/**
@@ -277,7 +277,7 @@ namespace sq3 {
 	*/
 	void AddStatement( sqlite3_stmt * st )
 	{
-	    ::v8::bind::BindNative( DBInfo::bind_context, st, st );
+	    bind::BindNative( DBInfo::bind_context, st, st );
 	    DBInfo::stmt[st] = this;
 	}
 
@@ -289,7 +289,7 @@ namespace sq3 {
 	void RemoveStatement( sqlite3_stmt * st )
 	{
 	    DBInfo::stmt.erase(st);
-	    ::v8::bind::UnbindNative( DBInfo::bind_context, st, st );
+	    bind::UnbindNative( DBInfo::bind_context, st, st );
 	    return;
 	}
 
@@ -324,12 +324,12 @@ namespace sq3 {
 	if( ! stmt ) return RV
 #define STMT_ARG_THROW(HND) STMT_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_stmt handle!")))
 
-#define SQCX_ARG(HND) sqlite3_context * sqcx = GetBoundNative<sqlite3_context>( DBInfo::bind_context, HND )
+#define SQCX_ARG(HND) sqlite3_context * sqcx = bind::GetBoundNative<sqlite3_context>( DBInfo::bind_context, HND )
 #define SQCX_ARG_OR(HND,RV) SQCX_ARG(HND);	\
 	if( ! sqcx ) return RV
 #define SQCX_ARG_THROW(HND) SQCX_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_context handle!")))
 
-#define SQVAL_ARG(HND) sqlite3_value * sqval = GetBoundNative<sqlite3_value>( DBInfo::bind_context, HND )
+#define SQVAL_ARG(HND) sqlite3_value * sqval = bind::GetBoundNative<sqlite3_value>( DBInfo::bind_context, HND )
 #define SQVAL_ARG_OR(HND,RV) SQVAL_ARG(HND);	\
 	if( ! sqval ) return RV
 #define SQVAL_ARG_THROW(HND) SQVAL_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_value handle!")))
@@ -488,7 +488,6 @@ namespace sq3 {
     JS_WRAPPER(sq3_close)
     {
 	ASSERTARGS(sqlite3_close,(argv.Length()==1));
-	using namespace ::v8::bind;
 	DB_ARG( argv[0] );
 	delete db;
 	return Handle<Value>();
@@ -497,7 +496,6 @@ namespace sq3 {
     JS_WRAPPER(sq3_prepare)
     {
 	ASSERTARGS(sqlite3_prepare,(argv.Length()==2));
-	using namespace ::v8::bind;
 	DB_ARG( argv[0] );
 	String::Utf8Value asc( argv[1] );
 	char const * sql = *asc;
@@ -673,7 +671,7 @@ namespace sq3 {
     {
 	ASSERTARGS(sqlite3_bind_null,(argv.Length()==2));
 	STMT_ARG_THROW(argv[0]);
-	int ndx = ::v8::convert::CastFromJS<int>( argv[1] );
+	int ndx = CastFromJS<int>( argv[1] );
 	if( 0 == ndx )
 	{
 	    return Integer::New( SQLITE_RANGE );
@@ -687,8 +685,8 @@ namespace sq3 {
 	/** SQFUNC( sth, int index, Type val ) **/			\
 	ASSERTARGS(sqlite3_bind_ ## FN ,(argv.Length()==3));		\
 	STMT_ARG_THROW(argv[0]);					\
-	int index = ::v8::convert::CastFromJS<int>( argv[1] );		\
-	Type val = ::v8::convert::CastFromJS<Type>( argv[2] );		\
+	int index = CastFromJS<int>( argv[1] );		\
+	Type val = CastFromJS<Type>( argv[2] );		\
 	int rc = ::sqlite3_bind_ ## FN( stmt, index, val );		\
 	return Integer::New(rc);					\
 	}
@@ -703,7 +701,6 @@ namespace sq3 {
 	const int argc = argv.Length();
 	ASSERTARGS(sqlite3_bind_text,((argc==3) || (argc==4)));
 	STMT_ARG_THROW(argv[0]);
-	using namespace ::v8::convert;
 	int ndx = CastFromJS<int>( argv[1] );
 	if( 0 == ndx )
 	{
@@ -721,7 +718,6 @@ namespace sq3 {
 	const int argc = argv.Length();
 	ASSERTARGS(sqlite3_bind_text,((argc==2) || (argc==3)));
 	STMT_ARG_THROW(argv[0]);
-	using namespace ::v8::convert;
 	int ndx = CastFromJS<int>( argv[1] );
 	if( 0 == ndx )
 	{
@@ -753,7 +749,7 @@ namespace sq3 {
 	const int argc = argv.Length();
 	ASSERTARGS(sqlite3_bind_parameter_name,(argc==1));
 	STMT_ARG_THROW(argv[0]);
-	return ::v8::convert::CastToJS( sqlite3_bind_parameter_count( stmt ) );
+	return CastToJS( sqlite3_bind_parameter_count( stmt ) );
     }
 
     JS_WRAPPER(sq3_bind_parameter_index)
@@ -762,7 +758,7 @@ namespace sq3 {
 	ASSERTARGS(sqlite3_bind_parameter_index,(argc==2));
 	STMT_ARG_THROW(argv[0]);
 	String::Utf8Value asc( argv[1] );
-	return ::v8::convert::CastToJS<int>( sqlite3_bind_parameter_index( stmt, *asc ) );
+	return CastToJS<int>( sqlite3_bind_parameter_index( stmt, *asc ) );
     }
 
     JS_WRAPPER(sq3_bind_parameter_name)
@@ -782,8 +778,8 @@ namespace sq3 {
     {									\
 	ASSERTARGS(sqlite3 ## FN,(2==argv.Length()));			\
 	STMT_ARG_THROW(argv[0]);					\
-	int index = ::v8::convert::CastFromJS<int>( argv[1] );		\
-	return ::v8::convert::CastToJS( ::sqlite3_ ## FN( stmt, index ) ); \
+	int index = CastFromJS<int>( argv[1] );		\
+	return CastToJS( ::sqlite3_ ## FN( stmt, index ) ); \
     }
 
     SQ3_COLUMN_FUNC_IMPL(column_bytes,int);
@@ -1078,7 +1074,7 @@ namespace sq3 {
 	//jsval sqcxjv = ape::bind::get_next_resource_id<sqlite3_context>( fi->context );
 	//ape::bind::scoped_binder<sqlite3_context> scx_sentry( fi->context, sqcxjv, *context );
 	Handle<External> sqcxjv = External::New( context );
-	ScopedBinder<sqlite3_context> scx_sentry( DBInfo::bind_context, context, context );
+	bind::ScopedBinder<sqlite3_context> scx_sentry( DBInfo::bind_context, context, context );
 
 	typedef Handle<Value> HV;
 	typedef std::vector< HV > VecT;
@@ -1088,7 +1084,7 @@ namespace sq3 {
 	{
 	    sqlite3_value * val = argv[i];
 	    valvec[i] = External::New( val );
-	    BindNative( DBInfo::bind_context, val, val );
+	    bind::BindNative( DBInfo::bind_context, val, val );
 	}
 	//#define CLEANUP for( int i = 0; i < argc; ++i ) ape::bind::unbind_native< ::sqlite3_value >( fi->context, valvec[i], argv[i] );
 	//#define CLEANUP for( int i = 0; i < argc; ++i ) unbind_impl( fi->context, argv[i] );
@@ -1133,7 +1129,7 @@ namespace sq3 {
 	for( int i = 0; i < argc; ++i )
 	{
 	    sqlite3_value * val = argv[i];
-	    UnbindNative<sqlite3_value>( DBInfo::bind_context, val, val );
+	    bind::UnbindNative<sqlite3_value>( DBInfo::bind_context, val, val );
 	}
 	if( fi->return_val.IsEmpty() )
 	{

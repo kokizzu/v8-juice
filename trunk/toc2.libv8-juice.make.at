@@ -29,3 +29,39 @@ CPPFLAGS += $(INCLUDES) $(V8_CPPFLAGS)
 ifneq (,$(wildcard *.cpp *.hpp *.cc *.h))
   include $(toc2.dirs.makefiles)/toc2-c.make
 endif
+
+
+########################################################################
+# toc2's deps generation is a bit broken, so we'll use this instead...
+# To disable deps generation, set ShakeNMake.USE_MKDEPS=0
+ShakeNMake.USE_MKDEPS := 1
+#$(warning ShakeNMake.USE_MKDEPS=$(ShakeNMake.USE_MKDEPS));
+ifeq (1,$(ShakeNMake.USE_MKDEPS))
+ShakeNMake.CISH_SOURCES ?= $(wildcard *.cpp *.c *.c++ *.cc *.h *.hpp *.h++ *.hh)
+#$(warning ShakeNMake.CISH_SOURCES=$(ShakeNMake.CISH_SOURCES))
+ifneq (,$(ShakeNMake.CISH_SOURCES))
+ShakeNMake.CISH_DEPS_FILE := .make.c_deps
+ShakeNMake.BINS.MKDEP = gcc -E -MM $(CPPFLAGS) $(INCLUDES)
+package.clean_files += $(ShakeNMake.CISH_DEPS_FILE)
+$(ShakeNMake.CISH_DEPS_FILE): $(PACKAGE.MAKEFILE) $(ShakeNMake.MAKEFILE) $(ShakeNMake.CISH_SOURCES)
+	@touch $@; test x = "x$(ShakeNMake.CISH_SOURCES)" && exit 0; \
+	$(ShakeNMake.BINS.MKDEP) $(ShakeNMake.CISH_SOURCES) 2>/dev/null > $@
+# normally we also want:
+#  || $(ShakeNMake.BINS.RM) -f $@ 2>/dev/null
+# because we don't want a bad generated makefile to kill the build, but gcc -E
+# is returning 1 when some generated files do not yet exist.
+deps: $(ShakeNMake.CISH_DEPS_FILE)
+
+ifneq (,$(strip $(filter distclean clean,$(MAKECMDGOALS))))
+# $(warning Skipping C/C++ deps generation.)
+# ABSOLUTEBOGO := $(shell $(ShakeNMake.BINS.RM) -f $(ShakeNMake.CISH_DEPS_FILE))
+else
+#$(warning Including C/C++ deps.)
+-include $(ShakeNMake.CISH_DEPS_FILE)
+endif
+
+endif
+# ^^^^ ifneq(,$(ShakeNMake.CISH_SOURCES))
+endif
+# ^^^^ end $(ShakeNMake.USE_MKDEPS)
+########################################################################
