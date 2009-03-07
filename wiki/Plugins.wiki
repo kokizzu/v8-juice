@@ -109,6 +109,5 @@ callback function in the main app) and fails to clean it up. If any
 client of that DLL managed to copy a pointer which was, unbeknownst to
 that client, generated from a DLL, the client will crash when he then
 references that pointer. It's just not safe.
-
-(The article here's referring to is here: [http://wanderinghorse.net/computing/papers/]
 }}}
+(The article here's referring to is here: [http://wanderinghorse.net/computing/papers/])
