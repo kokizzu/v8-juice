@@ -26,7 +26,6 @@ dev.close();
 
 ==TODOs==
 
-  * InStream and OutStream classes, for sequential streams. We can then add whio.stdout and whio.stderr shared objects.
   * Make the vals from whio_rc.XXX available via whio.rc.XXX. whio_rc.SizeTError needs special handling due to (potentially) different sizes in the underlying numeric types.
 
 
@@ -34,7 +33,7 @@ dev.close();
 
 ==whio.IODevice==
 
-IODevice represents a random-access i/o device, optionally with read-only or read/write access.
+IODevice represents a random-access i/o device, with read-only or read/write access.
 
 || Function  || Notes ||
 || new IODevice(string file,bool writeMode) || Opens the given file for read and (if writeMode is true) write ||
@@ -70,7 +69,7 @@ OutStream represents a write-only stream.
 
 || Function  || Notes ||
 || new OutStream(string file[, bool truncate=false]) || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
-|| string read(int length) || Throws an exception - InStreams cannot write ||
+|| string read(int length) || Throws an exception - OutStreams cannot read. ||
 || int write(string data [,int lenght]) || As for whio.IODevice.write() ||
 || void close() || As for whio.IODevice.close() ||
 || int flush() || As for whio.IODevice.flush() ||
