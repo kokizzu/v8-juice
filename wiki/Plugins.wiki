@@ -36,7 +36,7 @@ Now we set up a trigger which will call that init routine whenever the DLL is op
 V8_JUICE_PLUGIN_STATIC_INIT(SetupMyAddon);
 }}}
 
-Now, whenever loadPlugin("!MyPlugin") opens the DLL, the initialization code will be run automatically and it can set up its JS state. Optionally, we can pass an Object as a second argument to loadPlugin(), and that object will be used as the local global object.
+Now, whenever loadPlugin("!MyPlugin") opens the DLL, the initialization code will be run automatically and it can set up its JS state. Optionally, we can pass an Object as a second argument to loadPlugin(), and that object will be used as the local global object. Multiple plugins may live inside a single DLL, and the above macro needs to be called one time per plugin initialization function.
 
 ==JS-side==
 
