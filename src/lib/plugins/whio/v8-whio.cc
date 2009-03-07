@@ -18,8 +18,8 @@
 #endif
 
 namespace v8 { namespace juice { namespace whio {
-    using namespace ::v8::bind;
-    using namespace ::v8::convert;
+    namespace bind = ::v8::juice::bind;
+    using namespace ::v8::juice::convert;
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
     static const void * bind_cx() { static const int x=42;return &x;}
@@ -30,7 +30,7 @@ namespace v8 { namespace juice { namespace whio {
 	//CERR << "dev_cleanup( void@"<<obj<<",  dev@"<<dev<<")\n";
 	if( dev )
 	{
-	    UnbindNative( bind_cx(), obj, dev );
+	    bind::UnbindNative( bind_cx(), obj, dev );
 	    dev->api->finalize(dev);
 	}
     }
@@ -55,7 +55,7 @@ namespace v8 { namespace juice { namespace whio {
     static Persistent<Object> dev_wrap( Handle<Object> _self, whio_dev * value )
     {
 	::v8::juice::cleanup::AddToCleanup(value, dev_cleanup);
-	BindNative( bind_cx(), value, value );
+	bind::BindNative( bind_cx(), value, value );
 	Persistent<Object> self( Persistent<Object>::New(_self) );
 	self.MakeWeak( value, dev_dtor );
 	self->SetInternalField(0,External::New(value));
@@ -112,7 +112,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	if( v.IsEmpty() || ! v->IsObject() ) return 0;
 	Local<Object> o( Object::Cast( *v ) );
-	return GetBoundNative<whio_dev>( bind_cx(), o->GetInternalField(0) );
+	return bind::GetBoundNative<whio_dev>( bind_cx(), o->GetInternalField(0) );
     }
 
 #define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS(FUNC "(): argument assertion failed: " # COND)

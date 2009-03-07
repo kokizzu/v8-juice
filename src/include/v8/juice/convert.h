@@ -46,6 +46,7 @@
 #include <map>
 #include "bind.h"
 namespace v8 {
+namespace juice {
 
 /**
    The convert namespace encapsulates routines and types for converting
@@ -264,7 +265,7 @@ namespace convert {
 
     namespace Detail
     {
-	using ::v8::bind::BindKeyType;
+	using ::v8::juice::bind::BindKeyType;
 	/**
 	   Base interface for converting from native objects to JS
 	   objects. By default it uses GetBoundNative() to find
@@ -279,9 +280,9 @@ namespace convert {
 	    {
 		// 	    External * ex = External::Cast( *jv );
 		// 	    //CERR << "ex == " << ex << " data="<<(ex?ex->Value():0)<<"\n";
-		// 	    return ex ? ::v8::bind::GetBoundNative<type>( *ex ) : 0;
+		// 	    return ex ? ::v8::juice::bind::GetBoundNative<type>( *ex ) : 0;
 		// requires specialization
-		return ::v8::bind::GetBoundNative<JST>( cx, jv );
+		return ::v8::juice::bind::GetBoundNative<JST>( cx, jv );
 		//return 0;
 	    }
 	    result_type operator()( ValueHandle const & h ) const
@@ -492,7 +493,7 @@ namespace convert {
        function must be given the proper context key.
     */
     template <typename NT>
-    typename Detail::to_native_f<NT>::result_type CastFromJS( ::v8::bind::BindKeyType cx, ValueHandle const & h )
+    typename Detail::to_native_f<NT>::result_type CastFromJS( ::v8::juice::bind::BindKeyType cx, ValueHandle const & h )
     {
 	typedef Detail::to_native_f<NT> F;
 	return F()( cx, h );
@@ -534,7 +535,7 @@ namespace convert {
        consistency with the other FwdToFuncN() functions.
     */
     template <typename ReturnT, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc0( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc0( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 0 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 0 arguments!"));
 	return CastToJS( func() );
@@ -547,7 +548,7 @@ namespace convert {
 
        This routine will only work with types which work with
        CastFromJS() and CastToJS(). Native types will by default be
-       sought using ::v8::bind::GetBoundNative(), using the given
+       sought using ::v8::juice::bind::GetBoundNative(), using the given
        binder context as he first parameter to that function. For the
        "standard" POD types, the converter will normally ignore the cx
        parameter, and 0 can safely be passed.
@@ -590,7 +591,7 @@ namespace convert {
        someday, maybe not.
     */
     template <typename ReturnT, typename A1, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc1( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc1( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 1 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 1 argument!"));
 	return CastToJS( func( CastFromJS<A1>( cx, argv[0] ) ) );
@@ -600,7 +601,7 @@ namespace convert {
        Identical to FwdToFunc1(), but for functions taking 2 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc2( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc2( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 2 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 2 arguments!"));
 	return CastToJS( func(
@@ -612,7 +613,7 @@ namespace convert {
        Identical to FwdToFunc1(), but for functions taking 3 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc3( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc3( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 3 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 3 arguments!"));
 	return CastToJS( (ReturnT) func(
@@ -626,7 +627,7 @@ namespace convert {
        Identical to FwdToFunc1(), but for functions taking 4 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc4( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc4( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 4 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 4 arguments!"));
 	return CastToJS( (ReturnT) func(
@@ -641,7 +642,7 @@ namespace convert {
        Identical to FwdToFunc1(), but for functions taking 5 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc5( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc5( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 5 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 5 arguments!"));
 	return CastToJS( (ReturnT) func(
@@ -657,7 +658,7 @@ namespace convert {
        Identical to FwdToFunc1(), but for functions taking 6 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc6( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc6( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 6 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 6 arguments!"));
 	return CastToJS( (ReturnT) func(
@@ -674,7 +675,7 @@ namespace convert {
        Identical to FwdToFunc1(), but for functions taking 7 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc7( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc7( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 7 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 7 arguments!"));
 	return CastToJS( (ReturnT) func(
@@ -692,7 +693,7 @@ namespace convert {
        Identical to FwdToFunc1(), but for functions taking 8 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc8( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc8( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 8 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 8 arguments!"));
 	return CastToJS( (ReturnT) func(
@@ -713,7 +714,7 @@ namespace convert {
        has a function or two which take this many arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc9( ::v8::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc9( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 9 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 9 arguments!"));
 	return CastToJS( (ReturnT) func(
@@ -744,6 +745,6 @@ namespace convert {
     ::v8::Handle< ::v8::Value > SetupAddon( ::v8::Handle< ::v8::Object > target );
 				       
 
-}} /* namespaces */
+}}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_CONVERT_H_INCLUDED */

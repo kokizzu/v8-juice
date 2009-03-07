@@ -15,8 +15,8 @@
 #endif
 
 namespace v8 { namespace juice {
-    using namespace ::v8::bind;
-    using namespace ::v8::convert;
+    using namespace ::v8::juice::bind;
+    using namespace ::v8::juice::convert;
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
     static const void * pf_bind_cx() { static const int x=7;return &x;}

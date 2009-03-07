@@ -45,6 +45,7 @@
 #include <v8/juice/cleanup.h>
 //#include <v8/juice/v8-classwrap.h> // failed experiment
 
+namespace bind = ::v8::juice::bind;
 
 void RunShell(v8::Handle<v8::Context> context);
 bool ExecuteString(v8::Handle<v8::String> source,
@@ -77,7 +78,7 @@ static struct MyData
 
 int my_test( V8CxH & cx )
 {
-    using namespace v8::convert;
+    using namespace v8::juice::convert;
     using namespace v8;
     v8::HandleScope handle_scope;
     V8LObject gl = cx->Global();
@@ -111,8 +112,8 @@ struct my_native
 };
 int my_bind_test2( V8CxH & cx )
 {
-    using namespace v8::convert;
-    using namespace v8::bind;
+    using namespace v8::juice::convert;
+    using namespace v8::juice::bind;
     using namespace v8;
     v8::HandleScope handle_scope;
     V8LObject gl = cx->Global();
@@ -134,8 +135,8 @@ int my_bind_test2( V8CxH & cx )
 
 int my_bind_test( V8CxH & cx )
 {
-    using namespace v8::convert;
-    using namespace v8::bind;
+    using namespace v8::juice::convert;
+    using namespace v8::juice::bind;
     using namespace v8;
     v8::HandleScope handle_scope;
     my_native mynat;
@@ -260,7 +261,7 @@ int main(int argc, char* argv[]) {
 	global->Set(v8::String::New("quit"), v8::FunctionTemplate::New(Quit));
 	// Bind the 'version' function
 	global->Set(v8::String::New("version"), v8::FunctionTemplate::New(Version));
-	global->Set(v8::String::New("MyVar"), v8::convert::CastToJS( 42.32 ) );
+	global->Set(v8::String::New("MyVar"), v8::juice::convert::CastToJS( 42.32 ) );
 
 	// Create a new execution environment containing the built-in
 	// functions
@@ -275,7 +276,7 @@ int main(int argc, char* argv[]) {
 	    //iv = v8::juice::sq3::SetupAddon( context->Global() );
 	    //iv = v8::juice::nc::SetupAddon( context->Global(), false );
 	    iv = v8::juice::SetupPathFinderClass( context->Global() );
-	    iv = v8::convert::SetupAddon( context->Global() );
+	    //iv = v8::juice::convert::SetupAddon( context->Global() );
 	    //COUT << "SetupAddon() == " << v8::convert::CastFromJS<std::string>( iv ) << '\n';
 	}
 	if(1)

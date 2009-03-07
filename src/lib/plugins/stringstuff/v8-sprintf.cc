@@ -33,7 +33,9 @@ custom-fit/efficient solution.
 #include "v8-sprintf.h"
 
 namespace v8 {
-namespace convert {
+namespace juice {
+namespace plugin {
+namespace str {
 
 
 typedef long double LONGDOUBLE_TYPE;
@@ -756,7 +758,6 @@ static long spech_sqlstring3( whprintf_appender pf,
 ::v8::Handle< ::v8::Value > sprintf( ::v8::Arguments const & argv )
 {
     using namespace ::v8;
-    using namespace ::v8::convert;
     //HandleScope sentry; // causes segfaults for me!
     //  whprintf_appender pfAppend,          /* Accumulate results here */
     //  void * pfAppendArg,                /* Passed as first arg to pfAppend. */
@@ -1346,12 +1347,13 @@ do{				       \
 ::v8::Handle< ::v8::Value > SetupSprintf( ::v8::Handle< Object > tgt )
 {
 	HandleScope sentry;
-#define ADDFUNC(F) tgt->Set(String::New(# F), FunctionTemplate::New(::v8::convert::F)->GetFunction() )
+#define ADDFUNC(F) tgt->Set(String::New(# F), FunctionTemplate::New(F)->GetFunction() )
 	ADDFUNC(sprintf);
+#undef ADDFUNC
 	return tgt;
 }
 
 
 
 
-}} // namespaces
+}}}} // namespaces

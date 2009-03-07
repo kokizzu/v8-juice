@@ -76,26 +76,9 @@
 namespace v8 {
 namespace juice {
 namespace nc {
-
     using namespace ::v8;
-    using namespace ::v8::bind;
-    using namespace ::v8::convert;
-    struct ncurses_shutter_downer
-    {
-	ncurses_shutter_downer( bool /* ignored */ )
-	{}
-	~ncurses_shutter_downer()
-	{
-	    if( stdscr )
-	    {
-		::echo();
-		::clear();
-		::endwin();
-		stdscr = 0;
-	    }
-	}
-    };
-
+    using namespace ::v8::juice::convert;
+    namespace bind = ::v8::juice::bind;
 
     /**
        A shared place to store WINDOW-to-T mappings.
@@ -153,8 +136,8 @@ namespace nc {
 	      ncObj( Object::Cast( *(Context::GetCurrent()->Global()->Get(String::New("ncurses"))) ) )
 	{
 	    this->SetWindow(w);
-	    ::v8::bind::BindNative( NCWrapper::bind_context, this, this );
-	    ::v8::bind::BindNative( 0, this, this ); // So CastFromJS() will work
+	    bind::BindNative( NCWrapper::bind_context, this, this );
+	    bind::BindNative( 0, this, this ); // So CastFromJS() will work
 	}
 
 	/**
@@ -163,8 +146,8 @@ namespace nc {
 	*/
 	~NCWrapper()
 	{
-	    UnbindNative( NCWrapper::bind_context, this, this );
-	    UnbindNative( 0, this, this );
+	    bind::UnbindNative( NCWrapper::bind_context, this, this );
+	    bind::UnbindNative( 0, this, this );
 	    if( this->pnl )
 	    {
 		PANEL * p = this->pnl;
@@ -191,8 +174,8 @@ namespace nc {
 	    if( this->win == w ) return true;
 	    if( this->win )
 	    {
-		UnbindNative( NCWrapper::bind_context, this, this->win );
-		UnbindNative( 0, this->win, this->win );
+		bind::UnbindNative( NCWrapper::bind_context, this, this->win );
+		bind::UnbindNative( 0, this->win, this->win );
 		{ // KLUDGE #1: remove stream-to-window redirects:
 		    WindowStreamMap & str = captured_streams();
 		    typedef WindowStreamMap::iterator WIT;
@@ -212,8 +195,8 @@ namespace nc {
 		this->jsval = External::New(this);
 		::keypad( w, true );
 		::meta( w, true );
-		BindNative( 0, this, this->win ); // So default CastFromJS() will work
-		return BindNative( NCWrapper::bind_context, this, this->win );
+		bind::BindNative( 0, this, this->win ); // So default CastFromJS() will work
+		return bind::BindNative( NCWrapper::bind_context, this, this->win );
 	    }
 	    this->jsval = External::New(0);
 	    return true;
@@ -224,14 +207,14 @@ namespace nc {
 	    if( this->pnl == p ) return true;
 	    if( this->pnl )
 	    {
-		UnbindNative( 0, this, this->pnl );
-		UnbindNative( NCWrapper::bind_context, this, this->pnl );
+		bind::UnbindNative( 0, this, this->pnl );
+		bind::UnbindNative( NCWrapper::bind_context, this, this->pnl );
 	    }
 	    this->pnl = p;
 	    if( this->pnl )
 	    {
-		BindNative( 0, this, this->pnl ); // So default CastFromJS() will work
-		return BindNative( NCWrapper::bind_context, this, this->pnl );
+		bind::BindNative( 0, this, this->pnl ); // So default CastFromJS() will work
+		return bind::BindNative( NCWrapper::bind_context, this, this->pnl );
 	    }
 	    return true;
 	}
@@ -241,7 +224,7 @@ namespace nc {
 	*/
 	static NCWrapper * GetNative( Handle<Value> const id )
 	{
-	    return ::v8::bind::GetBoundNative<NCWrapper>( NCWrapper::bind_context, id );
+	    return bind::GetBoundNative<NCWrapper>( NCWrapper::bind_context, id );
 	}
 
     };

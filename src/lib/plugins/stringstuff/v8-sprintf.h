@@ -5,7 +5,9 @@
 #include <v8.h>
 
 namespace v8 {
-namespace convert {
+namespace juice {
+namespace plugin {
+namespace str {
 
     /**
        This function installs a JS-side sprintf() function into the
@@ -67,6 +69,6 @@ namespace convert {
     ::v8::Handle< ::v8::Value > sprintf( ::v8::Arguments const & argv );
 
 
-}} // namespaces
+}}}} // namespaces
 
 #endif /* WANDERINGHORSE_NET_GOOGLE_V8_P3_PRINTF_H_INCLUDED_ */

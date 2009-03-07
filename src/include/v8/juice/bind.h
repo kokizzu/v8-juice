@@ -46,6 +46,7 @@
 #include <string>
 #include <map>
 namespace v8 {
+namespace juice {
 /**
    The bind namespace holds functions and types for binding JS-side values
    to native values in a type-safe manner. For starters, see BindNative().
@@ -334,6 +335,6 @@ namespace bind {
 	NT * native;
     };
 
-}} /* namespaces */
+}}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_BIND_H_INCLUDED */
