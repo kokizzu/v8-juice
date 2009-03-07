@@ -8,14 +8,11 @@ The whio plugin adds i/o support to JS. It gets its name from the i/o library it
 This plugins provides:
 
   * Class whio.IODevice, which models random-access devices. The back-end supports, in principal, a wide variety of data stores, but v8's class construction mechanism makes it unduly difficult to add the support needed for, e.g., in-memory i/o devices or client-provided back-ends (like [http://fossil.wanderinghorse.net/repos/whefs/ whefs], which i had planned to add bindings for).
+  * TODO: Classes whio.InStream and whio.OutStream, which model sequential-access devices.
 
 ==C++ usage==
 
 When using the plugins API, you don't need to do anything C++-side to use this addon - simply load it described [Plugins on the plugins wiki page].
-
-If you're not using the plugins API, then...
-
-TODO
 
 ==JS usage==
 
@@ -29,5 +26,5 @@ dev.close();
 
 ==TODOs==
 
-  * IOStream class, for sequential streams. We can then add whio.stdout and whio.stderr shared objects.
-  * Make the vals from whio_rc.XXX available via whio.rc.XXX.
+  * InStream and OutStream classes, for sequential streams. We can then add whio.stdout and whio.stderr shared objects.
+  * Make the vals from whio_rc.XXX available via whio.rc.XXX. whio_rc.SizeTError needs special handling due to (potentially) different sizes in the underlying numeric types.
