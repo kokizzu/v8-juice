@@ -26,24 +26,14 @@ Now, in the code which you want to link as a DLL you need to add a few small bit
 Handle<Value> SetupMyAddon( Handle<Object> target );
 }}}
 
-(That exact signature is not required - it's just a common convention.)
+That exact signature is not technically required, but it is a convenient convention and it required by the macro-based plugin initialization approach shown below.
 
-which should add the plugin's functionality, treating the given target object as the logical global object (whether it is or is not the real global object is up to the caller). On success it should return a non-exception.
+That routine should add the plugin's functionality, treating the given target object as the logical global object (whether it is or is not the real global object is up to the caller). On success it should return a non-exception.
 
-Now we set up a trigger which will call that init routine whenever the DLL is opened:
+Now we set up a trigger which will call that init routine whenever the DLL is opened by adding the following macro somewhere in our implementation file (it doesn't matter where, as long as it's got file/namespace scope):
 
 {{{
-static void InitPlugin() {
-  using v8::p3::plugin::LoadPluginScope;
-  LoadPluginScope * sc = LoadPluginScope::Current();
-  if( ! sc ) {
-      // This means that InitPlugin() was not called via
-      // v8::p3::plugin::LoadModule()
-      return;
-   }
-   sc->SetReturnValue( SetupAddon( sc->Target() ) );
-}
-static bool dll_initializer = (InitPlugin(),true);
+V8_JUICE_PLUGIN_STATIC_INIT(SetupMyAddon);
 }}}
 
 Now, whenever loadPlugin("!MyPlugin") opens the DLL, the initialization code will be run automatically and it can set up its JS state. Optionally, we can pass an Object as a second argument to loadPlugin(), and that object will be used as the local global object.
