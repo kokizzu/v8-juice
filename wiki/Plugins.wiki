@@ -3,22 +3,22 @@
 
 =The Plugins API=
 
-This is an API for loading DLLs with the intend of adding functionality to a running JS engine.
+This is an API for loading DLLs with the intent of adding functionality to a running JS engine.
 
 ==C++-side==
 
 From C++ code, you need to do the following...
 
 {{{
-#include <v8/v8-plugin.h>
+#include <v8/juice/plugin.h>
 ...
 // when you initialize your JS global object, add this function:
-  gl->Set(String::New("loadPlugin"), v8::p3::plugin::LoadPlugin );
+  gl->Set(String::New("loadPlugin"), v8::juice::plugin::LoadPlugin );
 }}}
 
 That's all you need to do to enable the plugins support.
 
-On Linux systems (and probably other Unices), your application must be linked with the `-export-dynamic` (also known as `-rdyanmic`) flag, or DLLs may not be able to load properly.
+On Linux systems (and probably other Unices), your application must be linked with the `-export-dynamic` (also known as `-rdyanmic`) flag, or DLLs may not be able to load properly (they won't be able to see the native LoadPlugin API provided by the application!).
 
 Now, in the code which you want to link as a DLL you need to add a few small bits of code. First, we will assume you have a function with this signature:
 
@@ -55,7 +55,7 @@ loadPlugin() will throw on error and the exception will explain the problem, whi
 
 ==The plugins search path==
 
-From native code, you can use the PluginsPath() function to get access to a PathFinder object which is used to do the actual searches for plugins. The plugins path is accessible via JS code if it has been explicitly added using (TODO: i don't have the API in front of me at the moment). Once it is added to the JS engine, the plugins path is accessible via the shared JS object `PathFinder.shared.plugins` (in fact, it is the same native instance returned by the PluginPath() function).
+From native code, you can use the PluginsPath() function to get access to a v8::juice::PathFinder object which is used to do the actual searches for plugins. The plugins path is accessible via JS code if it has been explicitly added using (see v8::juice::plugin::SetupPathFinderClass()). Once it is added to the JS engine, the plugins path is accessible via the shared JS object `PathFinder.shared.plugins` (in fact, it is the same native instance returned by the PluginPath() function).
 
 For example:
 
