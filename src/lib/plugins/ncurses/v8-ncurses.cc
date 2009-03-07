@@ -64,6 +64,7 @@
 #include <v8.h>
 #include <v8/juice/convert.h>
 #include <v8/juice/plugin.h>
+#include <v8/juice/cleanup.h>
 #include "ncmode.hpp"
 #include "nccolors.hpp"
 #include "ncstream.hpp"
@@ -79,6 +80,7 @@ namespace nc {
     using namespace ::v8;
     using namespace ::v8::juice::convert;
     namespace bind = ::v8::juice::bind;
+    namespace juice = ::v8::juice;
 
     /**
        A shared place to store WINDOW-to-T mappings.
@@ -107,6 +109,11 @@ namespace nc {
     }
 
     /**
+       Arbitrary opaque pointer for use with BindToNative() and friends.
+    */
+    static void const * bind_cx() { static int bob = 13; return &bob; }
+
+    /**
     */
     class NCWrapper
     {
@@ -116,9 +123,15 @@ namespace nc {
 	NCMode nc_sentry;
 	Local< Value > jsval;
 	Handle<Object> ncObj; // the 'ncurses' JS object
-	static void const * bind_context;
 	static NCWrapper * StdScr;
 	
+	/**
+	   For use with juice::cleanup::AddToCleanup()
+	*/
+	static void cleanup_dtor( void * obj )
+	{
+	    delete static_cast<NCWrapper*>( obj );
+	}
 	/**
 	   TODOs:
 
@@ -136,8 +149,9 @@ namespace nc {
 	      ncObj( Object::Cast( *(Context::GetCurrent()->Global()->Get(String::New("ncurses"))) ) )
 	{
 	    this->SetWindow(w);
-	    bind::BindNative( NCWrapper::bind_context, this, this );
+	    bind::BindNative( bind_cx(), this, this );
 	    bind::BindNative( 0, this, this ); // So CastFromJS() will work
+	    juice::cleanup::AddToCleanup( this, cleanup_dtor );
 	}
 
 	/**
@@ -146,7 +160,8 @@ namespace nc {
 	*/
 	~NCWrapper()
 	{
-	    bind::UnbindNative( NCWrapper::bind_context, this, this );
+	    juice::cleanup::RemoveFromCleanup( this );
+	    bind::UnbindNative( bind_cx(), this, this );
 	    bind::UnbindNative( 0, this, this );
 	    if( this->pnl )
 	    {
@@ -174,7 +189,7 @@ namespace nc {
 	    if( this->win == w ) return true;
 	    if( this->win )
 	    {
-		bind::UnbindNative( NCWrapper::bind_context, this, this->win );
+		bind::UnbindNative( bind_cx(), this, this->win );
 		bind::UnbindNative( 0, this->win, this->win );
 		{ // KLUDGE #1: remove stream-to-window redirects:
 		    WindowStreamMap & str = captured_streams();
@@ -196,7 +211,7 @@ namespace nc {
 		::keypad( w, true );
 		::meta( w, true );
 		bind::BindNative( 0, this, this->win ); // So default CastFromJS() will work
-		return bind::BindNative( NCWrapper::bind_context, this, this->win );
+		return bind::BindNative( bind_cx(), this, this->win );
 	    }
 	    this->jsval = External::New(0);
 	    return true;
@@ -208,13 +223,13 @@ namespace nc {
 	    if( this->pnl )
 	    {
 		bind::UnbindNative( 0, this, this->pnl );
-		bind::UnbindNative( NCWrapper::bind_context, this, this->pnl );
+		bind::UnbindNative( bind_cx(), this, this->pnl );
 	    }
 	    this->pnl = p;
 	    if( this->pnl )
 	    {
 		bind::BindNative( 0, this, this->pnl ); // So default CastFromJS() will work
-		return bind::BindNative( NCWrapper::bind_context, this, this->pnl );
+		return bind::BindNative( bind_cx(), this, this->pnl );
 	    }
 	    return true;
 	}
@@ -224,12 +239,10 @@ namespace nc {
 	*/
 	static NCWrapper * GetNative( Handle<Value> const id )
 	{
-	    return bind::GetBoundNative<NCWrapper>( NCWrapper::bind_context, id );
+	    return bind::GetBoundNative<NCWrapper>( bind_cx(), id );
 	}
 
     };
-    static int bogo_placeholder;
-    void const * NCWrapper::bind_context = &bogo_placeholder;
     NCWrapper * NCWrapper::StdScr = 0;
 
 
@@ -599,14 +612,14 @@ namespace nc {
     {
 	ASSERTARGS("nc_wclear",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, ::wclear, argv );
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), ::wclear, argv );
     }
 
     JS_WRAPPER(nc_wclrtobot)
     {
 	ASSERTARGS("nc_wclrtobot",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, wclrtobot, argv);
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), wclrtobot, argv);
     }
 
 
@@ -614,28 +627,28 @@ namespace nc {
     {
 	ASSERTARGS("nc_wclrtoeol",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, wclrtoeol, argv);
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), wclrtoeol, argv);
     }
 
     JS_WRAPPER(nc_wdelch)
     {
 	ASSERTARGS("nc_wdelch",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, wdelch, argv);
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), wdelch, argv);
     }
 
     JS_WRAPPER(nc_wdeleteln)
     {
 	ASSERTARGS("nc_wdeleteln",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, wdeleteln, argv);
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), wdeleteln, argv);
     }
 
     JS_WRAPPER(nc_wechochar)
     {
 	ASSERTARGS("nc_wechochar",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW*,chtype>( NCWrapper::bind_context, wechochar, argv );
+	return FwdToFunc2<int,WINDOW*,chtype>( bind_cx(), wechochar, argv );
     }
 
     JS_WRAPPER(nc_doupdate)
@@ -656,14 +669,14 @@ namespace nc {
     {
 	ASSERTARGS("nc_redrawwin",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, ::redrawwin, argv );
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), ::redrawwin, argv );
     }
 
     JS_WRAPPER(nc_wredrawln)
     {
 	ASSERTARGS("nc_wredrawln",(3==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc3<int,WINDOW *,int,int>( NCWrapper::bind_context, ::wredrawln, argv );
+	return FwdToFunc3<int,WINDOW *,int,int>( bind_cx(), ::wredrawln, argv );
     }
 
 
@@ -671,7 +684,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_werase",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, ::werase, argv );
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), ::werase, argv );
     }
 
     JS_WRAPPER(nc_wborder)
@@ -825,20 +838,20 @@ namespace nc {
     JS_WRAPPER(nc_meta)
     {
 	ASSERTARGS("nc_meta",(2==argc));
-	return FwdToFunc2<int,WINDOW *,bool>( NCWrapper::bind_context, ::meta, argv );
+	return FwdToFunc2<int,WINDOW *,bool>( bind_cx(), ::meta, argv );
     }
 
     JS_WRAPPER(nc_wmove)
     {
 	ASSERTARGS("nc_wmove",(3==argc));
-	return FwdToFunc3<int,WINDOW *,int,int>( NCWrapper::bind_context, ::wmove, argv );
+	return FwdToFunc3<int,WINDOW *,int,int>( bind_cx(), ::wmove, argv );
     }
 
     JS_WRAPPER(nc_wresize)
     {
 	ASSERTARGS("nc_wresize",(3==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc3<int,WINDOW *, int, int>( NCWrapper::bind_context, wresize, argv );
+	return FwdToFunc3<int,WINDOW *, int, int>( bind_cx(), wresize, argv );
     }
 
 
@@ -855,14 +868,14 @@ namespace nc {
     JS_WRAPPER(nc_overlay)
     {
 	ASSERTARGS("nc_overlay",(2==argc));
-	return FwdToFunc2<int,const WINDOW*,WINDOW *>( NCWrapper::bind_context, ::overlay, argv );
+	return FwdToFunc2<int,const WINDOW*,WINDOW *>( bind_cx(), ::overlay, argv );
     }
 
 
     JS_WRAPPER(nc_overwrite)
     {
 	ASSERTARGS("nc_overwrite",(2==argc));
-	return FwdToFunc2<int,const WINDOW*,WINDOW *>( NCWrapper::bind_context, ::overwrite, argv );
+	return FwdToFunc2<int,const WINDOW*,WINDOW *>( bind_cx(), ::overwrite, argv );
     }
 
     JS_WRAPPER(nc_copywin)
@@ -870,7 +883,7 @@ namespace nc {
 	ASSERTARGS("nc_copywin",(9==argc));
 	WR_ARG(argv[0]);
 	WR_ARG_N(1);
-	return FwdToFunc9<int,const WINDOW*,WINDOW*,int,int,int,int,int,int,int>( NCWrapper::bind_context, copywin, argv );
+	return FwdToFunc9<int,const WINDOW*,WINDOW*,int,int,int,int,int,int,int>( bind_cx(), copywin, argv );
     }
 
 
@@ -884,7 +897,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_clearok",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW *,bool>( NCWrapper::bind_context, ::clearok, argv );
+	return FwdToFunc2<int,WINDOW *,bool>( bind_cx(), ::clearok, argv );
     }
 
     JS_WRAPPER(nc_box)
@@ -900,42 +913,42 @@ namespace nc {
     {
 	ASSERTARGS("nc_whline",(3==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc3<int,WINDOW *, chtype, int>( NCWrapper::bind_context, ::whline, argv );
+	return FwdToFunc3<int,WINDOW *, chtype, int>( bind_cx(), ::whline, argv );
     }
 
     JS_WRAPPER(nc_wvline)
     {
 	ASSERTARGS("nc_wvline",(3==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc3<int,WINDOW *, chtype, int>( NCWrapper::bind_context, ::wvline, argv );
+	return FwdToFunc3<int,WINDOW *, chtype, int>( bind_cx(), ::wvline, argv );
     }
 
     JS_WRAPPER(nc_mvwhline)
     {
 	ASSERTARGS("nc_mvwhline",(5==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc5<int,WINDOW *, int, int, chtype, int>( NCWrapper::bind_context, ::mvwhline, argv );
+	return FwdToFunc5<int,WINDOW *, int, int, chtype, int>( bind_cx(), ::mvwhline, argv );
     }
 
     JS_WRAPPER(nc_mvwvline)
     {
 	ASSERTARGS("nc_mvwvline",(5==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc5<int,WINDOW *, int, int, chtype, int>( NCWrapper::bind_context, ::mvwvline, argv );
+	return FwdToFunc5<int,WINDOW *, int, int, chtype, int>( bind_cx(), ::mvwvline, argv );
     }
 
     JS_WRAPPER(nc_touchline)
     {
 	ASSERTARGS("nc_touchline",(3==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc3<int,WINDOW *, int, int>( NCWrapper::bind_context, ::touchline, argv );
+	return FwdToFunc3<int,WINDOW *, int, int>( bind_cx(), ::touchline, argv );
     }
 
     JS_WRAPPER(nc_touchwin)
     {
 	ASSERTARGS("nc_touchwin",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, ::touchwin, argv );
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), ::touchwin, argv );
     }
 
     JS_WRAPPER(nc_scrl)
@@ -948,56 +961,56 @@ namespace nc {
     {
 	ASSERTARGS("nc_scroll",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, ::scroll, argv );
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), ::scroll, argv );
     }
 
     JS_WRAPPER(nc_scrollok)
     {
 	ASSERTARGS("nc_scrollok",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW *,bool>( NCWrapper::bind_context, ::scrollok, argv );
+	return FwdToFunc2<int,WINDOW *,bool>( bind_cx(), ::scrollok, argv );
     }
 
 
     JS_WRAPPER(nc_wscrl)
     {
 	ASSERTARGS("nc_wscrl",(2==argc));
-	return FwdToFunc2<int,WINDOW *,int>( NCWrapper::bind_context, ::wscrl, argv );
+	return FwdToFunc2<int,WINDOW *,int>( bind_cx(), ::wscrl, argv );
     }
 
     JS_WRAPPER(nc_pechochar)
     {
 	ASSERTARGS("nc_pechochar",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW *, chtype>( NCWrapper::bind_context, ::pechochar, argv );
+	return FwdToFunc2<int,WINDOW *, chtype>( bind_cx(), ::pechochar, argv );
     }
 
     JS_WRAPPER(nc_pnoutrefresh)
     {
 	ASSERTARGS("nc_pnoutrefresh",(7==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc7<int,WINDOW*,int,int,int,int,int,int>( NCWrapper::bind_context, ::pnoutrefresh, argv );
+	return FwdToFunc7<int,WINDOW*,int,int,int,int,int,int>( bind_cx(), ::pnoutrefresh, argv );
     }
 
     JS_WRAPPER(nc_prefresh)
     {
 	ASSERTARGS("nc_prefresh",(7==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc7<int,WINDOW *,int,int,int,int,int,int>( NCWrapper::bind_context, ::prefresh, argv );
+	return FwdToFunc7<int,WINDOW *,int,int,int,int,int,int>( bind_cx(), ::prefresh, argv );
     }
 
     JS_WRAPPER(nc_wstandend)
     {
 	ASSERTARGS("nc_wstandend",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, ::wstandend, argv );
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), ::wstandend, argv );
     }
 
     JS_WRAPPER(nc_wstandout)
     {
 	ASSERTARGS("nc_wstandout",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, ::wstandout, argv );
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), ::wstandout, argv );
     }
 
     JS_WRAPPER(nc_wsyncdown)
@@ -1012,8 +1025,12 @@ namespace nc {
     {
 	ASSERTARGS("nc_wsyncup",(1==argc));
 	WR_ARG(argv[0]);
+#if 1
 	::wsyncup( wr->win );
 	return Undefined();
+#else
+	return FwdToFunc1<void,WINDOW*>( bind_cx(), ::wsyncup, argv );
+#endif
     }
 
     JS_WRAPPER(nc_wtimeout)
@@ -1028,7 +1045,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_wtouchln",(4==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc4<int,WINDOW *,int,int,int>( NCWrapper::bind_context, ::wtouchln, argv );
+	return FwdToFunc4<int,WINDOW *,int,int,int>( bind_cx(), ::wtouchln, argv );
     }
 
     JS_WRAPPER(nc_idcok)
@@ -1043,7 +1060,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_idlok",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW *, bool>( NCWrapper::bind_context, ::idlok, argv );
+	return FwdToFunc2<int,WINDOW *, bool>( bind_cx(), ::idlok, argv );
     }
 
     JS_WRAPPER(nc_immedok)
@@ -1071,7 +1088,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_wsetscrreg",(3==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc3<int,WINDOW *,int,int>( NCWrapper::bind_context, ::wsetscrreg, argv );
+	return FwdToFunc3<int,WINDOW *,int,int>( bind_cx(), ::wsetscrreg, argv );
     }
 
     JS_WRAPPER(nc_beep)
@@ -1157,14 +1174,14 @@ namespace nc {
     {
 	ASSERTARGS("nc_mvwinch",(3==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc3<chtype,WINDOW *,int,int>( NCWrapper::bind_context, ::mvwinch, argv );
+	return FwdToFunc3<chtype,WINDOW *,int,int>( bind_cx(), ::mvwinch, argv );
     }
 
     JS_WRAPPER(nc_keypad)
     {
 	ASSERTARGS("nc_mvwinch",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW *,bool>( NCWrapper::bind_context, ::keypad, argv );
+	return FwdToFunc2<int,WINDOW *,bool>( bind_cx(), ::keypad, argv );
     }
 
     JS_WRAPPER(nc_mvwchgat)
@@ -1205,7 +1222,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_wenclose",(3==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc3<bool,WINDOW const *,int,int>( NCWrapper::bind_context, wenclose, argv );
+	return FwdToFunc3<bool,WINDOW const *,int,int>( bind_cx(), wenclose, argv );
     }
 
     JS_WRAPPER(nc_mouseinterval)
@@ -1365,14 +1382,14 @@ namespace nc {
     {
 	ASSERTARGS("nc_wgetch",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<int,WINDOW *>( NCWrapper::bind_context, wgetch, argv );
+	return FwdToFunc1<int,WINDOW *>( bind_cx(), wgetch, argv );
     }
 
     JS_WRAPPER(nc_wbkgd)
     {
 	ASSERTARGS("nc_wbkgd",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW *,chtype>( NCWrapper::bind_context, wbkgd, argv );
+	return FwdToFunc2<int,WINDOW *,chtype>( bind_cx(), wbkgd, argv );
 	//chtype c = CastFromJS<chtype>( argv[1] );
 	//return IntToJS( wbkgd( w->win, c ) );
     }
@@ -1417,14 +1434,14 @@ namespace nc {
     {
 	ASSERTARGS("nc_waddch",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW*,chtype>( NCWrapper::bind_context, waddch, argv );
+	return FwdToFunc2<int,WINDOW*,chtype>( bind_cx(), waddch, argv );
     }
 
     JS_WRAPPER(nc_mvwaddch)
     {
 	ASSERTARGS("nc_mvwaddch",(4==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc4<int,WINDOW*,int,int,chtype>( NCWrapper::bind_context, mvwaddch, argv );
+	return FwdToFunc4<int,WINDOW*,int,int,chtype>( bind_cx(), mvwaddch, argv );
     }
 
     JS_WRAPPER(nc_wbkgdset)
@@ -1439,7 +1456,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_getbkgd",(1==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc1<chtype,WINDOW *>( NCWrapper::bind_context, getbkgd, argv );
+	return FwdToFunc1<chtype,WINDOW *>( bind_cx(), getbkgd, argv );
     }
 
 
@@ -1564,19 +1581,19 @@ namespace nc {
     {
 	ASSERTARGS("nc_wattroff",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW *, int>( NCWrapper::bind_context, wattroff, argv );
+	return FwdToFunc2<int,WINDOW *, int>( bind_cx(), wattroff, argv );
     }
     JS_WRAPPER(nc_wattron)
     {
 	ASSERTARGS("nc_wattron",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW *, int>( NCWrapper::bind_context, wattron, argv );
+	return FwdToFunc2<int,WINDOW *, int>( bind_cx(), wattron, argv );
     }
     JS_WRAPPER(nc_wattrset)
     {
 	ASSERTARGS("nc_wattrset",(2==argc));
 	WR_ARG(argv[0]);
-	return FwdToFunc2<int,WINDOW *, int>( NCWrapper::bind_context, wattrset, argv );
+	return FwdToFunc2<int,WINDOW *, int>( bind_cx(), wattrset, argv );
     }
 
     JS_WRAPPER(nc_getpary)
@@ -1714,21 +1731,21 @@ namespace nc {
     {
 	ASSERTARGS("nc_move_panel",(3==argc));
 	PNL_ARG(argv[0]);
-	return FwdToFunc3<int,PANEL*,int,int>( NCWrapper::bind_context, ::move_panel, argv );
+	return FwdToFunc3<int,PANEL*,int,int>( bind_cx(), ::move_panel, argv );
     }
 
     JS_WRAPPER(nc_panel_above)
     {
 	ASSERTARGS("nc_panel_above",(1==argc));
 	PNL_ARG(argv[0]);
-	return FwdToFunc1<PANEL*,PANEL const *>( NCWrapper::bind_context, ::panel_above, argv );
+	return FwdToFunc1<PANEL*,PANEL const *>( bind_cx(), ::panel_above, argv );
     }
 
     JS_WRAPPER(nc_panel_below)
     {
 	ASSERTARGS("nc_panel_below",(1==argc));
 	PNL_ARG(argv[0]);
-	return FwdToFunc1<PANEL*,PANEL const *>( NCWrapper::bind_context, ::panel_below, argv );
+	return FwdToFunc1<PANEL*,PANEL const *>( bind_cx(), ::panel_below, argv );
     }
 
 
