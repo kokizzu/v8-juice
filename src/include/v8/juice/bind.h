@@ -64,6 +64,8 @@ namespace bind {
        of functions.
     */
     typedef void const * BindKeyType;
+
+#if ! defined(DOXYGEN)
     /**
        Internal library details.
     */
@@ -124,7 +126,7 @@ namespace bind {
 	};
 
     }
-
+#endif // !DOXYGEN
 
     /**
        Associates obj with the given key in the given context (an

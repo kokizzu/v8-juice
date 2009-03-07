@@ -57,6 +57,7 @@ namespace convert {
     /** Convenience typedef. */
     typedef Handle<Value> ValueHandle;
 
+#if ! defined(DOXYGEN)
     /** Internal library details. */
     namespace Detail
     {
@@ -224,7 +225,7 @@ namespace convert {
 	    }
 	};
     }
-
+#endif // !DOXYGEN
 
     /**
        "Casts" v to a JS value using Detail::to_js_f<T>.
@@ -263,6 +264,7 @@ namespace convert {
     /** Convenience instance of to_js_f. */
     static const Detail::to_js_f<std::string> StdStringToJS = Detail::to_js_f<std::string>();
 
+#if ! defined(DOXYGEN)
     namespace Detail
     {
 	using ::v8::juice::bind::BindKeyType;
@@ -485,6 +487,7 @@ namespace convert {
 	template <>
 	struct to_native_f<char const *> : to_native_f<std::string> {};
     }
+#endif // !DOXYGEN
 
     /**
        Converts h to an object of type NT, using Detail::to_native_f<NT> to do
