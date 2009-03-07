@@ -24,14 +24,16 @@ dev.write("Hi, world!");
 dev.close();
 }}}
 
+See below for the complete class and function list.
+
 ==TODOs==
 
   * Make the vals from whio_rc.XXX available via whio.rc.XXX. whio_rc.SizeTError needs special handling due to (potentially) different sizes in the underlying numeric types.
 
 
-=JS API=
+=JS API for the whio classes=
 
-==whio.IODevice==
+==Class whio.IODevice==
 
 IODevice represents a random-access i/o device, with read-only or read/write access.
 
@@ -50,7 +52,7 @@ IODevice represents a random-access i/o device, with read-only or read/write acc
 || `int size()` || Returns the current size of the device. ||
 || `int rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
 
-==whio.InStream==
+==Class whio.InStream==
 
 InStream represents a read-only stream.
 
@@ -63,7 +65,7 @@ InStream represents a read-only stream.
 || `bool isGood()`  || Returns true if the stream is in a usable state. ||
 
 
-==whio.OutStream==
+==Class whio.OutStream==
 
 OutStream represents a write-only stream.
 
