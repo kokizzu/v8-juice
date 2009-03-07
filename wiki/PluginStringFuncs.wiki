@@ -1,4 +1,4 @@
-#summary Pluging with supplementing string utilities
+#summary Plugin providing supplementing string utilities
 
 This plugin provides the following JS-side functions:
 
