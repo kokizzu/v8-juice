@@ -1,4 +1,5 @@
 #summary Contributing to this project
+#labels Phase-UserDocs,Phase-Implementation
 
 Anyone is welcomed to contribute to this project - just get in touch. Coders, documenters, commentors, code reviewers, bug submitters, etc.... they're all welcomed. Even marketing people and armchair code analysts.
 
