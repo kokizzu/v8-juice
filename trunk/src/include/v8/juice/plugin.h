@@ -3,6 +3,7 @@
 
 #include <string>
 #include <v8.h>
+#include <v8/juice/plugin-config.h>
 
 namespace v8 {
 namespace juice {
@@ -71,6 +72,11 @@ namespace plugin {
        If a DLL is found but opening fails for some reason,
        this routine throws a JS exception with platform-specific
        error message.
+
+       It is (theoretically) safe for plugins to load other plugins
+       during their loading process, as long as they fetch (and copy)
+       the LoadPluginScope::Current() pointer before loading additional
+       plugins. See LoadPluginScope for details.
 
        Thread safety notes:
 
@@ -192,7 +198,7 @@ namespace plugin {
 
        - On Linux (and maybe other Unix platforms), the application
        must be linked with the -export-dynamic (or -rdynamic) option,
-       or DLL loading will silently fail.
+       or DLL loading will likely fail.
     */
     class LoadPluginScope
     {
