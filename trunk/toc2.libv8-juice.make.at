@@ -9,7 +9,7 @@ CXXFLAGS += -fPIC
 
 package.install.package_headers.dest := $(prefix)/include/v8/juice
 package.install.headers.dest = $(package.install.package_headers.dest)
-package.install.package_dlls.dest := $(prefix)/lib/v8/juice
+package.install.package_dlls.dest := $(prefix)/lib/v8/juice# use this one for plugin DLLs
 
 ############################################################
 # we fudge the linker args for clients which live in this source tree,
@@ -25,8 +25,6 @@ LIBV8JUICE_CLIENT_INTREE_LDADD = -L$(toc2.top_srcdir)/src/lib/juice \
 # relative paths.
 INCLUDES := -I. -I$(shell cd $(toc2.top_srcdir); pwd)/src/include $(INCLUDES)
 CPPFLAGS += $(INCLUDES) $(V8_CPPFLAGS)
-
-# PACKAGE_VERSION_DOTTED := $(shell echo $(package.version) | perl -pe 's|(\d\d\d\d)(\d\d)(\d\d)|$$1.$$2.$$3|')
 
 ifneq (,$(wildcard *.cpp *.hpp *.cc *.h))
   include $(toc2.dirs.makefiles)/toc2-c.make
