@@ -17,6 +17,10 @@ namespace cleanup {
     */
     typedef void (*Destructor)( void * obj );
 
+#if ! defined(DOXYGEN)
+    /**
+       Internal implementation details.
+    */
     namespace Detail
     {
 	/**
@@ -25,29 +29,37 @@ namespace cleanup {
 	template <typename T>
 	struct DestructorGen
 	{
-	static void dtor( void * obj )
+	    static void dtor( void * obj )
 	    {
-	    T * t = obj ? static_cast<T*>( obj ) : 0;
-	    if( t )
-	    {
-		delete t;
-	    }
+		T * t = obj ? static_cast<T*>( obj ) : 0;
+		if( t )
+		{
+		    delete t;
+		}
 	    }
 	};
     }
+#endif // !DOXYGEN
 
     /**
-	Client apps can create one of these in a scope right above the
-	scope in which their JS Context lives. The idea is that the context
-	is allowed to go out of scope, and only then do we try to clean up.
-	This allows us to go through the normal v8 channels up until the
-	last dying moments of the context, and if the context isn't cleaned
-	up, we can take over where it left off.
+       A sentry for cleaning up any mess left by v8's innefectual
+       garbage collector.
 
-	It is never a good idea to have more than one of these active
-	at any time, as that will cause unwanted, premature deletions.
-	Only use one per application (not per JS context!).
-   */
+       Client apps can create one of these in a scope right above the
+       scope in which their main (first) JS Context lives. When this
+       object goes out of scope, all objects registered via
+       AddToCleanup() will be destroyed. The idea is that the context
+       is allowed to go out of scope, and only then do we try to
+       clean up. This allows us to go through the normal v8 channels
+       up until the last dying moments of the context, and if the
+       context isn't cleaned up, we can take over where it left off.
+
+       It is never a good idea to have more than one of these active
+       at any time, as that will cause unwanted, premature deletions.
+       Only use one per application (not per JS context!). This class
+       does not enforce that limit because there might be unusual
+       cases where we'll want more than one.
+    */
     class CleanupSentry
     {
     public:
@@ -83,8 +95,8 @@ namespace cleanup {
     void RemoveFromCleanup( void const * obj );
 
     /**
-       Destroys all objects which have been added by AddToCleanup() and clears
-       the internal cleanup list.
+       Destroys all objects which have been added by AddToCleanup()
+       and clears the internal cleanup list.
     */
     void Cleanup();
 

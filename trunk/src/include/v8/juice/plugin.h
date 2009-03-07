@@ -277,14 +277,16 @@ namespace plugin {
     PathFinder & PluginPath();
 
     /**
-       Callback type for plugins initialized via PluginStaticInit().
+       Callback type for plugins initialized via
+       V8_JUICE_PLUGIN_STATIC_INIT().
 
        This routine should treat the given target as the logical
-       global object, installing its new content there. It should
-       return a non-exception on success.
+       global object, install its new content there, and return a
+       non-exception on success.
     */
     typedef Handle<Value> (*PluginInitFunction)( Handle<Object> target );
 
+#if !defined(DOXYGEN)
     namespace Detail
     {
 	/**
@@ -301,6 +303,7 @@ namespace plugin {
 	*/
 	bool PluginStaticInit( PluginInitFunction f );
     }
+#endif // !DOXYGEN
 
     /** \def V8_JUICE_PLUGIN_STATIC_INIT
 
@@ -311,20 +314,27 @@ namespace plugin {
 
 	To use it, simply call it from somewhere in your
 	implementation code and pass it the name of a function, which
-	must have the same signature as PluginInitFunction.
+	must have the same signature as the PluginInitFunction
+	typedef:
 
 	\code
 	Handle<Value> (*)( Handle<Object> target )
 	\endcode
+
+	The function name may be namespace-qualified.
 
 	Example:
 
 	\code
 	V8_JUICE_PLUGIN_STATIC_INIT(SetupMyPlugin);
 	\endcode
+
+	This macro may be used multiple times in a single
+	implementation file as long as it is passed a different
+	function name on each call.
     */
 #define V8_JUICE_PLUGIN_STATIC_INIT(INIT_FUNC) \
-    static bool static_initializer_for_ ## INIT_FUNC = (::v8::juice::plugin::Detail::PluginStaticInit(INIT_FUNC),true)
+    static bool INIT_FUNC ## _static_initializer  = (::v8::juice::plugin::Detail::PluginStaticInit(INIT_FUNC),true)
 
 
 }}} // namespaces
