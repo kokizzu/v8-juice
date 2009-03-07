@@ -5,7 +5,7 @@ include toc2.make
 package.subdirs = src
 ifneq (,$(strip $(filter dist testdist clean distclean uninstall install,$(MAKECMDGOALS))))
 # only build these package.subdirs when running certain targets
-      package.subdirs += toc2
+      package.subdirs += doc toc2
 endif
 subdirs: $(addprefix subdir-,$(package.subdirs))
 
