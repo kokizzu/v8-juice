@@ -8,7 +8,7 @@ The whio plugin adds i/o support to JS. It gets its name from the i/o library it
 This plugins provides:
 
   * Class whio.IODevice, which models random-access devices. The back-end supports, in principal, a wide variety of data stores, but v8's class construction mechanism makes it unduly difficult to add the support needed for, e.g., in-memory i/o devices or client-provided back-ends (like [http://fossil.wanderinghorse.net/repos/whefs/ whefs], which i had planned to add bindings for).
-  * TODO: Classes whio.InStream and whio.OutStream, which model sequential-access devices.
+  * Classes whio.InStream and whio.OutStream, which model sequential-access devices.
 
 ==C++ usage==
 
@@ -28,3 +28,50 @@ dev.close();
 
   * InStream and OutStream classes, for sequential streams. We can then add whio.stdout and whio.stderr shared objects.
   * Make the vals from whio_rc.XXX available via whio.rc.XXX. whio_rc.SizeTError needs special handling due to (potentially) different sizes in the underlying numeric types.
+
+
+=JS API=
+
+==whio.IODevice==
+
+IODevice represents a random-access i/o device, optionally with read-only or read/write access.
+
+|| Function  || Notes ||
+|| new IODevice(string file,bool writeMode) || Opens the given file for read and (if writeMode is true) write ||
+|| int write(string[,length=string.lenght) || Writes up to length bytes. Returns number of bytes written. ||
+|| string read(length) || Reads, at most, length bytes and returns the result as a string ||
+|| void close() || Closes the device. Do not use the object after calling this. ||
+|| int error() || Returns a platform-specific non-0 value if the device has an error state. ||
+|| int clearError() || Tries to clear any error state and EOF marker. Returns 0 on success. ||
+|| bool eof() || Returns true if the device is at (or past) its EOF. ||
+|| int tell() || Returns the current position within the underlying device. ||
+|| int seek(int offset, int whence) || Sets the current position to offset, relative to whence, which must be one of whio.SEEK_SET, whio.SEET_CUR, or whio.SEEK_END. Returns the new position. ||
+|| int flush() || Tries to flush any existing write data. Returns 0 on success. ||
+|| int truncate(int length) || Truncates the device to the given length. Returns 0 on success. ||
+|| int size() || Returns the current size of the device. ||
+|| int rewind()|| Rewinds the internal device pointer. Returns 0 on success. ||
+
+==whio.InStream==
+
+InStream represents a read-only stream.
+
+|| Function  || Notes ||
+|| new InStream(string file) || Opens the given file in read mode. ||
+|| string read(int length) || As for whio.IODevice.read() ||
+|| int write(string data [,int lenght]) || Throws an exception - InStreams cannot write ||
+|| void close() || As for whio.IODevice.close() ||
+|| int flush() || As for whio.IODevice.flush() ||
+|| bool isGood()  || Returns true if the stream is in a usable state. ||
+
+
+==whio.OutStream==
+
+OutStream represents a write-only stream.
+
+|| Function  || Notes ||
+|| new OutStream(string file[, bool truncate=false]) || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
+|| string read(int length) || Throws an exception - InStreams cannot write ||
+|| int write(string data [,int lenght]) || As for whio.IODevice.write() ||
+|| void close() || As for whio.IODevice.close() ||
+|| int flush() || As for whio.IODevice.flush() ||
+|| bool isGood()  || Returns true if the stream is in a usable state. ||
