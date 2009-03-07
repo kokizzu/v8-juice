@@ -7,7 +7,7 @@ That said...
 The build is fairly conventional:
 
 {{{
-./configure
+./configure ... options (see below) ...
 make
 make install # doesn't yet work
 }}}
