@@ -8,6 +8,8 @@ OBJECTS = $(addsuffix .o,\
 	cleanup \
 	convert \
 	plugin \
+	juice \
+	whprintf \
 	)
 
 ########################################################################
