@@ -25,10 +25,10 @@ ifeq (,$(toc2.bins.doxygen))
   $(error The variable toc2.bins.doxygen must be set before including this file.)
 endif
 
-doxygen.doxyfile = Doxyfile
+doxygen.doxyfile := Doxyfile
 doxygen.dirs.out ?= html
-doxygen.doxyfile.at = Doxyfile.at
-doxygen.index = Doxygen-index.txt
+doxygen.doxyfile.at := Doxyfile.at
+doxygen.index := $(wildcard Doxygen-index.txt)
 package.dist_files += $(doxygen.doxyfile.at) $(doxygen.index)
 
 doxygen.install-dir.basename ?= $(PACKAGE_NAME)-$(PACKAGE_VERSION)-doxygen
@@ -68,7 +68,7 @@ $(doxygen.doxyfile): $(doxygen.makefile) $(doxygen.doxyfile.at) $(toc2.files.mak
 		$(doxygen.flags.atparse) \
 	)
 
-toc2.doxygen.clean_files = $(doxygen.doxyfile) $(doxygen.dirs.out) latex
+toc2.doxygen.clean_files := $(doxygen.doxyfile) $(doxygen.dirs.out) latex
 $(call toc2.call.define-cleanup-set,toc2.doxygen)
 
 package.install.doxygen.dest = $(DESTDIR)$(package.install.docs.dest)
