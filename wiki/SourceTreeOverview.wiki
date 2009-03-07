@@ -31,6 +31,8 @@ doc/              Docs go here
 
 Any directories not listed there are probably part of the build process, or tools used by that process, and are not considered part of the library.
 
+Dependencies between directories always run in one direction only. That is, circular dependencies between two directories are not allowed. Circular deps only cause Grief and Frustration at some point. Implementation files which directly depend on each other are always put in the same directory.
+
 =Header files=
 
 When including headers in implementation files, the preferred syntax is:
@@ -47,13 +49,15 @@ The main library is in the `v8::juice` namespace. Code written for that library 
 
 =Coding standards, naming conventions, etc.=
 
-There are not many.
+These are conventions, not rules. And there are not many of them.
 
-Coding style is a personal choice, and anyone who takes the time and effort to contribute is more than welcomed to use whatever style they like. 4-space, 8-space, or N-space indention, with tabs, without tabs, or whatever.
+Coding style is a personal choice, and anyone who takes the time and effort to contribute is more than welcomed to use whatever style they like. 4-space, 8-space, or N-space indention, with tabs, without tabs, or whatever. If it compiles and links, i'm happy.
 
 Naming conventions:
 
-As a general rule, i try to follow v8's naming conventions !CamelCaseWithLeadingCapital). Occasionally (or more often), code will be imported from other open-source sources, and that code does not always get changed just to accommodate naming conventions, especially if it will not be part of the public API.
+As a general rule, i try to follow v8's naming conventions !CamelCaseWithLeadingCapital). Occasionally (or more often) code will be imported from other open-source sources, and that code does not always get changed just to accommodate naming conventions, especially if it will not be part of the public API.
+
+Core library code will always go in the `v8::juice` namespace or a sub-namespace. Global-scope code is never allowed except as private/static details in an implementation file (and even then a namespace, even an anonymous one, is strongly preferred).
 
 =Licensing=
 
