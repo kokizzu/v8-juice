@@ -147,8 +147,8 @@ toc2_test doxygen
     removeDupes=${TOC2_HOME}/bin/removeDupeArgs
     export ldadd
     export includes_path
-    ldadd="$(${removeDupes} ${ldadd} ${LIBZFSTREAM_CLIENT_LDADD})"
-    includes_path="$(${removeDupes} ${includes_path} -I${prefix}/include ${LIBZFSTREAM_CLIENT_INCLUDES})"
+    ldadd="$(${removeDupes} ${ldadd})"
+    includes_path="$(${removeDupes} ${includes_path} -I${prefix}/include)"
     toc2_export INCLUDES="${INCLUDES} ${includes_path}"
     toc2_export LIBV8JUICE_LDADD="${ldadd}"
     toc2_test_require PACKAGE_NAME-config \
