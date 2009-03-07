@@ -24,6 +24,8 @@ LIBV8JUICE_CLIENT_INTREE_LDADD = -L$(toc2.top_srcdir)/src/lib/juice \
 INCLUDES := -I. -I$(toc2.top_srcdir)/src/include $(INCLUDES)
 CPPFLAGS += $(INCLUDES) $(V8_CPPFLAGS)
 
+# PACKAGE_VERSION_DOTTED := $(shell echo $(package.version) | perl -pe 's|(\d\d\d\d)(\d\d)(\d\d)|$$1.$$2.$$3|')
+
 ifneq (,$(wildcard *.cpp *.hpp *.cc *.h))
   include $(toc2.dirs.makefiles)/toc2-c.make
 endif
