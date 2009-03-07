@@ -1,4 +1,5 @@
 #summary JS Bindings for SQLite3
+#labels Phase-UserDocs
 
 =The sqlite3 bindings=
 
