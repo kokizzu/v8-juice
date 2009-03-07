@@ -14,7 +14,7 @@ The build is fairly conventional:
 {{{
 ./configure ... options (see below) ...
 make
-make install # doesn't yet work
+make install # installs under the path defined by --prefix=/path
 }}}
 
 My default build options is `make -j2` for parallel building, so the tree is believed to build okay with parallel builds (if it doesn't, please file a bug report). That said, certain parts of the tree enforce that certain directory branches are built before others, so certain branches may not allow parallelization.
