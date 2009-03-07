@@ -1288,6 +1288,13 @@ namespace sq3 {
 	return CastToJS( rc );
     }
 
+    JS_WRAPPER(sq3_value_type)
+    {
+	ASSERTARGS(sqlite3_value_type,(1==argv.Length()));
+	SQVAL_ARG_THROW(argv[0]);
+	return CastToJS( ::sqlite3_value_type( sqval ) );
+    }
+
     JS_WRAPPER(sq3_value_int)
     {
 	ASSERTARGS(sqlite3_value_int,(1==argv.Length()));
@@ -1498,6 +1505,7 @@ namespace sq3 {
 	ADDFUNC(exec);
 	ADDFUNC(escape_sql);
 	ADDFUNC(quote_sql);
+	ADDFUNC(value_type);
 	ADDFUNC(value_int);
 	ADDFUNC(value_int64);
 	ADDFUNC(value_double);

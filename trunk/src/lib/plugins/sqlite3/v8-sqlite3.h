@@ -428,6 +428,7 @@ namespace sq3 {
     V8_BINDING ::v8::Handle< ::v8::Value > sqlite3_value_int64( ::v8::Arguments const & );
     V8_BINDING ::v8::Handle< ::v8::Value > sqlite3_value_double( ::v8::Arguments const & );
     V8_BINDING ::v8::Handle< ::v8::Value > sqlite3_value_text( ::v8::Arguments const & );
+    V8_BINDING ::v8::Handle< ::v8::Value > sqlite3_value_type( ::v8::Arguments const & );
     V8_BINDING ::v8::Handle< ::v8::Value > sqlite3_result_int( ::v8::Arguments const & );
     V8_BINDING ::v8::Handle< ::v8::Value > sqlite3_result_int64( ::v8::Arguments const & );
     V8_BINDING ::v8::Handle< ::v8::Value > sqlite3_result_double( ::v8::Arguments const & );
