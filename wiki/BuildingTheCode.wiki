@@ -21,6 +21,6 @@ The following configuration options are often helpful or necessary:
   * `--v8-home=/top/install/dir/of/v8` tells configure to look for v8 under the given dir. It expects to find `include/v8.h` and `lib/libv8(_g).(a|so)`.
   * `--enable-debug` turns on debugging options and tries to link against `libv8_g` instead of `libv8` (but will use the latter if it can't find the former).
   * `--help` shows many more options which you'll never need.
-  * `--disable-plugins` is silly, but go ahead if you want to disable the build of the plugins. Specific plugins might not get compiled because their plugin-specific prerequisites are not mit (e.g. libsqlite3 or libncurses).
+  * `--disable-plugins` is silly, but go ahead if you want to disable the build of the plugins. Plugins are automatically disabled if neither `-ldl` or `-lltdl` are found. Specific plugins might not get compiled because their plugin-specific prerequisites are not met (e.g. libsqlite3 or libncurses).
 
 See SourceTreeOverview for info on how the tree is laid out.
