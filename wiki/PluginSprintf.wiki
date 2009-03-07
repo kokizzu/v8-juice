@@ -1,5 +1,7 @@
 #summary sprintf() for JS
 
+(This is now part of [PlugingStringFuncs the stringfuncs plugin].)
+
 =sprintf() for JavaScript=
 
 The files `v8-sprintf.{h,cc}` contain an implementation of sprintf() for JS. It is in the v8::convert namespace, but is independent of that code - those two files can be plugged in to arbitrary v8-based source trees.
