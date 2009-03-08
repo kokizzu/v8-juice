@@ -10,11 +10,11 @@ This plugins provides:
   * Class whio.IODevice, which models random-access devices. The back-end supports, in principal, a wide variety of data stores, but v8's class construction mechanism makes it unduly difficult to add the support needed for, e.g., in-memory i/o devices or client-provided back-ends (like [http://fossil.wanderinghorse.net/repos/whefs/ whefs], which i had planned to add bindings for).
   * Classes whio.InStream and whio.OutStream, which model sequential-access devices.
 
-==C++ usage==
+=C++ usage=
 
 When using the plugins API, you don't need to do anything C++-side to use this addon - simply load it described [Plugins on the plugins wiki page].
 
-==JS usage==
+=JS usage=
 
 {{{
 var dev = new whio.IODevice("/path/to/file", true); // true= Write-mode
@@ -35,7 +35,7 @@ See below for the complete class and function list.
 
 ==Class whio.IODevice==
 
-IODevice represents a random-access i/o device, with read-only or read/write access.
+IODevice represents a random-access i/o device, with read-only or read/write access. It is modelled very closely on conventional C-based APIs and will be familiar to anyone who's worked with any of them.
 
 || Function  || Notes ||
 || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
@@ -47,11 +47,22 @@ IODevice represents a random-access i/o device, with read-only or read/write acc
 || `int clearError()` || Tries to clear any error state and EOF marker. Returns 0 on success. ||
 || `bool eof()` || Returns true if the device is at (or past) its EOF. ||
 || `int tell()` || Returns the current position within the underlying device. ||
-|| `int seek(int offset, int whence)` || Sets the current position to offset, relative to whence, which must be one of `whio.SEEK_SET`, `whio.SEET_CUR`, or `whio.SEEK_END`. Returns the new position. ||
+|| `int seek(int offset, int whence)` || Sets the current position to offset, relative to whence, which must be one of `whio.IODevice.SEEK_SET`, `whio.IODevice.SEET_CUR`, or `whio.IODevice.SEEK_END`. Returns the new position. ||
 || `int flush()` || Tries to flush any existing write data. Returns 0 on success. ||
 || `int truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
 || `int size()` || Returns the current size of the device. ||
 || `int rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
+
+
+===SEEK_SET and friends.===
+
+`whio.IODevice.seek()` is semantically identical to the C function `fseek()`, and requires a second argument with one of these values:
+
+  * `whio.IODevice.SEEK_SET` means to move to that absolute position.
+  * `whio.IODevice.SEEK_CUR` means to move relative to the current position.
+  * `whio.IODevice.SEEK_END` means to move relative to the end of the device.
+
+they are analogous to the C-standard constants of the same names, and are described in the man pages for `fseek()`.
 
 ==Class whio.InStream==
 
@@ -78,7 +89,9 @@ OutStream represents a write-only stream.
 || `int flush()` || As for whio.IODevice.flush() ||
 || `bool isGood()`  || As for whio.InStream.isGood() ||
 
-==Tips and tricks==
+=Tips and tricks=
+
+==stdin and stdout==
 
 On Unix platforms you can open standard input and output like this:
 
