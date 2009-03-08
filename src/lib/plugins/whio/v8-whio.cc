@@ -31,7 +31,7 @@ namespace v8 { namespace juice { namespace whio {
     //namespace juice = ::v8::juice;
     using namespace ::v8::juice::convert;
 #define JSTR(X) String::New(X)
-#define TOSS(X) return juice::ThrowException(X)
+#define TOSS(X) return ::v8::ThrowException(JSTR(X)) /*juice::ThrowException(X)*/
 
     /**
        Internal binding context for BindNative() and friends.
@@ -93,52 +93,132 @@ namespace v8 { namespace juice { namespace whio {
     }
 
     /**
-       ctor for IODevice class.
-    */
-    static Handle<Value> dev_ctor(const Arguments& argv)
-    {
-	if (!argv.IsConstructCall()) 
-	{
-	    return ThrowException(String::New("Cannot call whio_dev constructor as function!"));
-	}
+       Constructor for the native half of IODevice objects.
+       
+       Curiously, it may not be static because then
+       it can't be used as a template type parameter (see
+       combined_ctor()). Weird.
 
-	const int argc = argv.Length();
-	if( (1 == argc) && argv[0]->IsExternal() )
-	{ // called by internal init routine which already allocated a whio_dev:
-	    External * ex = External::Cast( *argv[0] );
-	    if( ex )
-	    {
-		return dev_wrap( argv.This(), static_cast<whio_dev*>(ex->Value()) );
-	    }
-	    else
-	    {
-		return juice::ThrowException("First argument to ctor failed External::Cast()");
-	    }
-	}
+       The exception argument should be set to a value from
+       ThrowException() if a detailed error message can be reported,
+       otherwise simply return 0 to indicate failure.
+
+       JS arguments:
+
+       IODevice:
+
+       - (string filename, bool writeMode)
+     */
+    whio_dev * dev_construct( int argc, Handle<Value> argv[], Handle<Value> & exception )
+    {
+	whio_dev * dev = 0;
 	if( 2 == argc )
-	{ // (string filename, bool writeMode)
+	{
 	    std::string fname = JSToStdString(argv[0]);
 	    bool writeMode = JSToBool(argv[1]);
 	    char const * mode = (writeMode) ? "w+b" : "rb";
-	    whio_dev * dev = whio_dev_for_filename( fname.c_str(), mode );
-	    //CERR << "whio_dev_for_filename('"<<fname<<"','"<<mode<<"') dev@"<<dev<<'\n';
+	    dev = whio_dev_for_filename( fname.c_str(), mode );
+	}
+	else
+	{
+	    exception = ThrowException(JSTR("Not enough arguments for the constructor!"));
+	}
+	return dev;
+    }
+
+    /**
+       Constructor for the native half of InStream and OutStream
+       objects.
+
+       This cannot be static, as explained in dev_construct().
+
+       Note that the writeMode arg is only a template do that we can
+       get match the func signature required by combined_ctor().
+
+       Accepted JS args:
+
+       InStream: (writeMode==false)
+
+       - (string filename)
+
+       OutStream (writeMode==true):
+
+       - (string filename [,bool truncate=true])
+    */
+    template <bool writeMode>
+    whio_stream * stream_construct( int argc, Handle<Value> argv[], Handle<Value> & exception )
+    {
+	HandleScope boo;
+	whio_stream * dev = 0;
+	if( argc > 0 )
+	{ // (string filename [, truncate=true])
+	    std::string fname = JSToStdString(argv[0]);
+	    bool trunc = (argc>1) ? argv[1]->BooleanValue() : true;
+	    char const * mode = (writeMode) ? (trunc ? "wb" : "ab") : "rb";
+	    dev = whio_stream_for_filename( fname.c_str(), mode );
+	    if(0)
+	    {
+		/* Weird: i'm getting what appears to be stack
+		 corruption when i go through juice::ThrowException()
+		 here: */
+		exception =
+		    ThrowException(JSTR("Just testing!"))
+		    //juice::ThrowException("Just testing at %s:%d!","here",__LINE__)
+		    ;
+	    }
+	    //CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
+	}
+	else
+	{
+	    exception = ThrowException(JSTR("Not enough arguments for the constructor!"));
+	}
+	return dev;
+    }
+
+    /**
+       ctor for IODevice, InStream, and OutStream classes. This common
+       ctor simply forwards all arguments to Func(), which must return
+       a (T*) on success (transfering ownership to us), or 0 on error.
+
+       T must be whio_dev or whio_stream.
+    */
+    template <
+	typename T,
+	/* constructor proxy: */
+	T * (*Func)(int,Handle<Value>[], Handle<Value> &)
+	>
+    static Handle<Value> combined_ctor(const Arguments& argv)
+    {
+	if (!argv.IsConstructCall()) 
+	{
+	    return ThrowException(String::New("Cannot call this constructor as function!"));
+	}
+	const int argc = argv.Length();
+	if( argc > 0 )
+	{
+	    std::vector< Handle<Value> > av(argc,Null());
+	    for( int i = 0; i < argc; ++i ) av[i] = argv[i];
+	    Handle<Value> check( Undefined() );
+	    T * dev = Func( argc, &av[0], check );
+	    //check = juice::ThrowException("Just testing at %s:%d!","here",__LINE__);
+	    if( check.IsEmpty() ) // initializer threw
+	    {
+		if( dev )
+		{
+		    dev->api->finalize(dev);
+		    dev = 0;
+		}
+		return check;
+	    }
 	    if( ! dev )
 	    {
-		return juice::ThrowException("whio_dev_for_filename('%s','%s') failed!",
-					     fname.c_str(), mode );
+		return ThrowException(JSTR("open failed!"));
 	    }
 	    return dev_wrap( argv.This(), dev );
 	}
-	//return argv.This(); // we use this so the pseudo-ctors can get a proper instance 
 	TOSS("Invalid arguments!");
-	/**
-	   Cases to handle:
-
-	   - filename
-	   - ":memory:" special filename (sqlite3-style)
-	   - read or write mode
-	*/
     }
+
     /**
        Casts v to (T*). T must be one of whio_dev or whio_stream.
     */
@@ -148,6 +228,7 @@ namespace v8 { namespace juice { namespace whio {
 	if( v.IsEmpty() || ! v->IsObject() ) return 0;
 	Local<Object> o( Object::Cast( *v ) );
 	T * obj = bind::GetBoundNative<T>( bind_cx(), o->GetInternalField(0) );
+	//?? if( ! T ) T = bind::GetBoundNative<T>( bind_cx(), v );
 #if 0
 	if( obj )
 	{
@@ -167,7 +248,6 @@ namespace v8 { namespace juice { namespace whio {
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
 #define DEVTHIS(T) DEVHT(T,argv.This())
 
-
     /**
        write() impl for DevT, which must be one of whio_dev or whio_stream.
 
@@ -179,7 +259,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	if( ! allowWrite )
 	{
-	    return juice::ThrowException("This device does not allow writing!");
+	    TOSS("This device does not allow writing!");
 	}
 	else
 	{
@@ -210,7 +290,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	if( ! allowRead )
 	{
-	    return juice::ThrowException("This device does not allow reading!");
+	    TOSS("This device does not allow reading!");
 	}
 	else
 	{
@@ -361,56 +441,6 @@ namespace v8 { namespace juice { namespace whio {
     }
 #endif
 
-    /**
-       ctor for InStream (if writeMode==false) and OutStream (if writeMode==true).
-    */
-    template <bool writeMode>
-    static Handle<Value> stream_ctor(const Arguments& argv)
-    { 
-	/**
-	   TODO:
-
-	   ctor( whio_dev ) = whio_stream_for_dev(). The problem here is the
-	   lifetime of the parent device.
-
-	   Figure out how to consolidate this with the dev_dtor(), as it's 95%
-	   the same code.
-	*/
-	if (!argv.IsConstructCall()) 
-	{
-	    return ThrowException(String::New("Cannot call whio_stream constructor as function!"));
-	}
-
-	const int argc = argv.Length();
-	if( (1 == argc) && argv[0]->IsExternal() )
-	{ // called by internal init routine which already allocated a whio_stream:
-	    External * ex = External::Cast( *argv[0] );
-	    if( ex )
-	    {
-		return dev_wrap( argv.This(), static_cast<whio_stream*>(ex->Value()) );
-	    }
-	    else
-	    {
-		return juice::ThrowException("First argument to ctor failed External::Cast()");
-	    }
-	}
-	if( argc >=1 )
-	{ // (string filename [, truncate=true])
-	    std::string fname = JSToStdString(argv[0]);
-	    bool trunc = (argc>1) ? argv[1]->BooleanValue() : true;
-	    char const * mode = (writeMode) ? (trunc ? "wb" : "ab") : "rb";
-	    whio_stream * dev = whio_stream_for_filename( fname.c_str(), mode );
-	    //CERR << "whio_stream_for_filename('"<<fname<<"','"<<mode<<"') dev@"<<dev<<'\n';
-	    if( ! dev )
-	    {
-		return juice::ThrowException("whio_stream_for_filename('%s','%s') failed!",
-					     fname.c_str(), mode );
-	    }
-	    return dev_wrap( argv.This(), dev );
-	}
-	//return argv.This(); // we use this so the pseudo-ctors can get a proper instance 
-	TOSS("Invalid arguments!");
-    }
 
     /** whio_stream_api::isgood(). */
     static Handle<Value> stream_isgood(const Arguments& argv)
@@ -435,7 +465,8 @@ namespace v8 { namespace juice { namespace whio {
 	/** Reminder: code order is very important here. See:
 	   http://code.google.com/p/v8/issues/detail?id=262
 	*/
-	Handle<FunctionTemplate> devCtorTmpl = FunctionTemplate::New(dev_ctor);
+	Handle<FunctionTemplate> devCtorTmpl =
+	    FunctionTemplate::New(combined_ctor< whio_dev, &dev_construct >);
 	Local<ObjectTemplate> devInst = devCtorTmpl->InstanceTemplate();
 	devInst->SetInternalFieldCount(1);
 	Handle<Function> devCtor( devCtorTmpl->GetFunction() ); // MUST come after devInst->SetInteralFieldCount()
@@ -463,7 +494,11 @@ namespace v8 { namespace juice { namespace whio {
 
 
 	// InStream class:
-	Handle<FunctionTemplate> istrCtorTmpl = FunctionTemplate::New(stream_ctor<false>);
+	Handle<FunctionTemplate> istrCtorTmpl =
+	    FunctionTemplate::New(combined_ctor<
+				  whio_stream,
+				  &stream_construct<false> // okay, that looks weird.
+				  >);
 	Local<ObjectTemplate> istrInst = istrCtorTmpl->InstanceTemplate();
 	istrInst->SetInternalFieldCount(1);
 	Handle<Function> istrCtor( istrCtorTmpl->GetFunction() );
@@ -477,7 +512,11 @@ namespace v8 { namespace juice { namespace whio {
 #undef FUNC
 
 	// OutStream class:
-	Handle<FunctionTemplate> ostrCtorTmpl = FunctionTemplate::New(stream_ctor<true>);
+	Handle<FunctionTemplate> ostrCtorTmpl =
+	    FunctionTemplate::New(combined_ctor<
+				  whio_stream,
+				  &stream_construct<true>
+				  >);
 	Local<ObjectTemplate> ostrInst = ostrCtorTmpl->InstanceTemplate();
 	ostrInst->SetInternalFieldCount(1);
 	Handle<Function> ostrCtor( ostrCtorTmpl->GetFunction() );
