@@ -40,6 +40,7 @@ IODevice represents a random-access i/o device, with read-only or read/write acc
 || Function  || Notes ||
 || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
 || `new IODevice(":memory:" [, int startingSize=0])` || Opens a read/write i/o device which uses RAM as its storage. It starts out at the given size and grows on demand. ||
+|| `new IODevice(IODevice,int lower,int upper)`|| Creates a new IODevice which acts as a proxy for a subset of the original device's range. This is described in more detail below. The parent device must outlive the new device. ||
 || `int write(string[,length=string.lenght`) || Writes up to length bytes. Returns number of bytes written. ||
 || `string read(length)` || Reads, at most, length bytes and returns the result as a string ||
 || `void close()` || Closes the device. Do not use the object after calling this. ||
@@ -63,6 +64,33 @@ IODevice represents a random-access i/o device, with read-only or read/write acc
   * `whio.IODevice.SEEK_END` means to move relative to the end of the device.
 
 they are analogous to the C-standard constants of the same names, and are described in the man pages for `fseek()`.
+
+===Subdevices===
+
+The IODevice class has a constructor with the signature `new IODevice(int lower, int upper)` which us to create "subdevices". A subdevice is a proxy which wraps up a certain range of bytes inside of another IODevice object. This is covered in gross detail in the source file `whio_amalgamation.h` (search for subdevice) and is clarified a bit at [http://fossil.wanderinghorse.net/repos/whio/ the whio home page]. In short:
+
+Consider an IODevice pointing to 100 bytes of storage (somewhere - we don't care where). We can create a subdevice which fences off some amount of that storage. The subdevice is a full-fledged i/o device, but it cannot read or write outside of the bounds it is assigned. For example:
+
+{{{
+var origin = new whio.IODevice(":memory:");
+origin.write("012345679"); // 10 bytes long
+var subdev = new whio.IODevice(origin, 4, 7 ); // fence bytes [4,7)
+subdev.write("abcdefghij"); // will only write first 3 bytes
+origin.rewind();
+print(origin.read(10));
+subdev.close();
+origin.close();
+}}}
+
+The output of that script is:
+{{{
+0123abc79
+}}}
+
+Note that the upper bound is equivalent to EOF, or "one past the end", and is not accessible to the subdevice.
+
+Subdevices have some obscure uses, but probably not many which JS applications can make use of.
+
 
 ==Class whio.InStream==
 
