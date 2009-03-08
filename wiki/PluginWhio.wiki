@@ -35,7 +35,7 @@ See below for the complete class and function list.
 
 =JS API for the whio classes=
 
-==Class whio.IODevice==
+==IODevice Class==
 
 IODevice represents a random-access i/o device, with read-only or read/write access. It is modelled very closely on conventional C-based APIs and will be familiar to anyone who's worked with any of them.
 
@@ -102,7 +102,7 @@ Subdevices also get an extra function:
 || `int rebound( int lower, int upper )` || Changes the subdevice's lower and upper bounds, relative to the parent. Returns 0 on success. ||
 
 
-==Class whio.InStream==
+==InStream Class==
 
 InStream represents a read-only stream.
 
@@ -116,7 +116,7 @@ InStream represents a read-only stream.
 || `bool isGood()`  || Returns true if the stream is in a usable state. ||
 
 
-==Class whio.OutStream==
+==OutStream Class==
 
 OutStream represents a write-only stream.
 
@@ -141,7 +141,7 @@ var stdin = new whio.InStream("/dev/stdin");
 stdout.write("hi, world!\n");
 }}}
 
-Note, however, that you shouldn't mix such usage with, e.g. `print()`, or other routines which read/write stdin/stdout, as that may garble your output.
+Note, however, that you shouldn't mix such usage with, e.g. `print()`, or other routines which read/write stdin/stdout, as that may garble your output. Note that calling `close()` on such devices will not close the stdin/stdout associated with the application.
 
 ==Use in-memory IODevices as buffers==
 
