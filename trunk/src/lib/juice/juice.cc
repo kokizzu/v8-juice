@@ -7,6 +7,9 @@ namespace v8 { namespace juice {
 
     using namespace v8;
 
+    /** Callback for use with whprintf(). arg must be-a
+	(std::ostream*).
+     */
     static long ostream_appender( void * arg,
 				  char const * data,
 				  long n )
@@ -32,7 +35,7 @@ namespace v8 { namespace juice {
 	std::ostringstream os;
 	::whprintf( ostream_appender, &os, format, vargs );
 	va_end(vargs);
-	return ThrowException(String::New(os.str().data(),static_cast<int>(os.str().size())));
+	return ::v8::ThrowException(String::New(os.str().c_str(),static_cast<int>(os.str().size())));
     }
 
 }}
