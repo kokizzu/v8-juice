@@ -132,3 +132,15 @@ stdout.write("hi, world!\n");
 }}}
 
 Note, however, that you shouldn't mix such usage with, e.g. `print()`, or other routines which read/write stdin/stdout, as that may garble your output.
+
+==Use in-memory IODevices as buffers==
+
+You don't need files to use IODevices:
+
+{{{
+var dev = new whio.IODevice(":memory:");
+}}}
+
+Creates an i/o device which uses RAM as storage, growing as necessary. It works just like a file-based i/o device, and can be used to buffer arbitrary data in memory. To specify a starting size of the device, pass it as the optional second parameter.
+
+While it may not be immediately obvious, this is one easy way to buffer large amounts of text for later output, and "should" be more efficient than using string concatenation to build up very large strings.
