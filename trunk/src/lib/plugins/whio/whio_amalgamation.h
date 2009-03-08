@@ -1,4 +1,4 @@
-/* auto-generated on Sat Mar  7 19:32:28 CET 2009. Do not edit! */
+/* auto-generated on Sun Mar  8 07:54:04 CET 2009. Do not edit! */
 #define WHEFS_AMALGAMATION_BUILD 1
 #if ! defined __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS 1
@@ -1410,28 +1410,6 @@ whio.whio_dev_finalize(f)
 */
 int whio_dev_fetch_free_data( whio_fetch_result * r );
 
-
-/**
-   This routine only works on devices created with
-   whio_dev_subdev_create() (or equivalent). It re-sets the lower and
-   upper bounds of the subdevice (as described in
-   whio_dev_subdev_create()) and re-sets the cursor to the new lower bound.
-
-   This routine does no bounds checking on the parent device.
-
-   On success, whio_rc.OK is returned, otherwise:
-
-   - whio_rc.ArgError = !dev or upperBound is not 0 but is less than lowerBound.
-
-   - whio_rc.TypeError = dev's type-id does not match (it is not a subdev device).
-
-   - whio_rc.InternalError = dev is not mapped to a parent device (this theoretically
-   cannot happen unless client code muddles with dev->impl.data).
-
-   @see whio_dev_subdev_create()
-*/
-int whio_dev_subdev_rebound( whio_dev * dev, whio_size_t lowerBound, whio_size_t upperBound );
-
 /** @enum whio_dev_ioctls
   This is the collection of "known" ioctl values for use as the second
   argument to whio_dev::ioctl(). The documentation for each entry
@@ -1905,6 +1883,29 @@ whio_dev * whio_dev_for_memmap_ro( const void * mem, whio_size_t size );
    @endcode
 */
 whio_dev * whio_dev_subdev_create( whio_dev * parent, whio_size_t lowerBound, whio_size_t upperBound );
+
+
+
+/**
+   This routine only works on devices created with
+   whio_dev_subdev_create() (or equivalent). It re-sets the lower and
+   upper bounds of the subdevice (as described in
+   whio_dev_subdev_create()) and re-sets the cursor to the new lower bound.
+
+   This routine does no bounds checking on the parent device.
+
+   On success, whio_rc.OK is returned, otherwise:
+
+   - whio_rc.ArgError = !dev or upperBound is not 0 but is less than lowerBound.
+
+   - whio_rc.TypeError = dev's type-id does not match (it is not a subdev device).
+
+   - whio_rc.InternalError = dev is not mapped to a parent device (this theoretically
+   cannot happen unless client code muddles with dev->impl.data).
+
+   @see whio_dev_subdev_create()
+*/
+int whio_dev_subdev_rebound( whio_dev * dev, whio_size_t lowerBound, whio_size_t upperBound );
 
 
 /**
