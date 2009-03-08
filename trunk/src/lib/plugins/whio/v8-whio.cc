@@ -33,6 +33,8 @@ namespace v8 { namespace juice { namespace whio {
 #define JSTR(X) String::New(X)
 #define TOSS(X) return ::v8::ThrowException(JSTR(X)) /*juice::ThrowException(X)*/
 
+#define WHIO_RTFM "RTFM: " v8_juice_HOME_PAGE "/wiki/PluginWhio"
+
     /**
        Internal binding context for BindNative() and friends.
     */
@@ -116,8 +118,6 @@ namespace v8 { namespace juice { namespace whio {
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
 #define DEVTHIS(T) DEVHT(T,argv.This())
 
-    //#define DEVHN(T,N,H) T * dev ## N = dev_cast<T>( H )
-    //#define DEVHTN(T,N,H) DEVHN(T,N,H); if( ! dev ) TOSS("Handle is-not-a " # T "!")
 
     /**
        whio_dev_subdev_rebound() wrapper. It will only work with
@@ -182,6 +182,7 @@ namespace v8 { namespace juice { namespace whio {
 		else
 		{
 		    self->Set(JSTR("canWrite"), Boolean::New(true) );
+		    self->Set(JSTR("canRead"), Boolean::New(true) );
 		}
 		return dev;
 	    }
@@ -194,6 +195,7 @@ namespace v8 { namespace juice { namespace whio {
 		{
 		    self->Set(JSTR("fileName"), argv[0], v8::ReadOnly );
 		    self->Set(JSTR("canWrite"), Boolean::New(writeMode) );
+		    self->Set(JSTR("canRead"), Boolean::New(true) );
 		}
 		return dev;
 	    }
@@ -220,12 +222,13 @@ namespace v8 { namespace juice { namespace whio {
 			      FunctionTemplate::New(dev_rebound)->GetFunction());
 		    self->Set(JSTR("ioDevice"),par, v8::ReadOnly);
 		    self->Set(JSTR("canWrite"), par->Get(JSTR("canWrite")), v8::ReadOnly );
+		    self->Set(JSTR("canRead"), par->Get(JSTR("canRead")), v8::ReadOnly );
 		}
 		return dev;
 	    }
 	}
 	exception = "Invalid arguments for IODevice constructor. "
-	    "RTFM: http://code.google.com/p/v8-juice/wiki/PluginWhio";
+	    WHIO_RTFM;
 	return 0;
     }
 
@@ -279,8 +282,9 @@ namespace v8 { namespace juice { namespace whio {
 	    }
 	    self->Set(JSTR("fileName"), argv[0], v8::ReadOnly );
 	    self->Set(JSTR("canWrite"), Boolean::New(writeMode), v8::ReadOnly );
+	    self->Set(JSTR("canRead"), Boolean::New(writeMode ? false : true) );
+	    CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
 	    return dev;
-	    //CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
 	}
 	whio_dev * iod = dev_cast<whio_dev>(argv[0]);
 	if( iod )
@@ -307,12 +311,20 @@ namespace v8 { namespace juice { namespace whio {
 	    else
 	    {
 		self->Set(JSTR("ioDevice"), par, v8::ReadOnly );
-		self->Set(JSTR("canWrite"), par->Get(JSTR("canWrite")), v8::ReadOnly );
+		if( writeMode )
+		{
+		    self->Set(JSTR("canWrite"), par->Get(JSTR("canWrite")), v8::ReadOnly );
+		    self->Set(JSTR("canRead"), Boolean::New(false) );
+		}
+		else
+		{
+		    self->Set(JSTR("canWrite"), Boolean::New(false), v8::ReadOnly );
+		    self->Set(JSTR("canRead"), Boolean::New(true) );
+		}
 	    }
 	    return dev;
 	}
-	exception = "Invalid arguments for stream constructor. "
-	    "RTFM: http://code.google.com/p/v8-juice/wiki/PluginWhio";
+	exception = "Invalid arguments for stream constructor. " WHIO_RTFM;
 	return 0;
     }
 
@@ -556,15 +568,181 @@ namespace v8 { namespace juice { namespace whio {
 	    os << " fileName:'"<<JSToStdString(self->Get(key))<<"',";
 	}
 	key = JSTR("canWrite");
-	os << " canWrite:"<< (JSToBool(self->Get(key)) ? "true" : "false");
+	os << " canWrite:"<< (JSToStdString(self->Get(key))) << ',';
+	key = JSTR("canRead");
+	os << " canRead:"<< (JSToStdString(self->Get(key)));
 
 	os <<"]";
 	return CastToJS( os.str() );
+    }
+
+
+    template <typename FromT, typename ToT>
+    static Handle<Value> filter( FromT * src,
+				 ToT * dest,
+				 Handle<Object> destJObj,
+				 Handle<Function> callback,
+				 Handle<Value> userData )
+    {
+	enum { bufSize = 1024 * 16 };
+	whio_size_t rdsz = 0;
+	std::vector<unsigned char> rbuf(bufSize,0);
+	typedef Handle<Value> HV;
+	const unsigned int argc = 4;
+	std::vector<HV> vec(argc,Null());
+	vec[3] = userData;
+	bool isEnd = false;
+	whio_size_t total = 0;
+	while( 0 != (rdsz = src->api->read( src, &rbuf[0], bufSize)) )
+	{
+	    if( rdsz < bufSize ) isEnd = true;
+	    vec[0] = destJObj;
+	    vec[1] = String::New( reinterpret_cast<char const*>(&rbuf[0]), static_cast<int>( rdsz ) );
+	    vec[2] = Boolean::New( isEnd );
+	    Local<Value> rv = callback->Call( destJObj/*???*/, argc, &vec[0] );
+	    if( rv.IsEmpty() ) return rv;
+	    whio_size_t check = CastFromJS<whio_size_t>(rv);
+	    total += check;
+	    if( check != rdsz )
+	    {
+		std::ostringstream msg;
+		msg << "filter() callback returned "<<check<<" for a write request of "<<rdsz<<"\n";
+		TOSS(msg.str().c_str());
+	    }
+	    if( isEnd ) break;
+	}
+	if( (total>0) && (0 == rdsz) && !isEnd )
+	{ // we hit a block boundary. Let callback know, in case it wants to do something like flush a zlib buffer.
+	    vec[0] = destJObj;
+	    vec[1] = String::New( "" );
+	    vec[2] = Boolean::New( true );
+	    Local<Value> rv = callback->Call( destJObj/*???*/, argc, &vec[0] );
+	    if( rv.IsEmpty() ) return rv;
+	}
+	return CastToJS( total );
+    }
+
+#define DEVHN(T,N,H) T * dev ## N = dev_cast<T>( H )
+#define DEVHTN(T,N,H) DEVHN(T,N,H); if( ! dev ) TOSS("Handle is-not-a " # T "!")
+
+    /**
+       JS usage:
+
+       Signature:
+
+       \code
+       int (IODevice|InStream).filter( OStream|IODevice target,
+                                       Function callback
+                                       [, mixed userData = undefined] );
+       \endcode
+
+       The callback signature is:
+
+       \code
+       int callback(OutStream out,
+                    string data,
+		    bool isEnd,
+		    mixed userData );
+       \endcode
+
+       filter() reads the 'this' object until EOF, in blocks of an
+       unspecified size. Each block is passed to the callback function,
+       which is presumed to do some sort of filtering on the data.
+
+       The callback should:
+
+       - Perform any translation of the input data it wants to do and
+       write it out to the destination stream. If it cannot
+       (e.g. target not writable, or write fails), it should throw.
+
+       - Return the number of bytes consumed (not output, which might
+       be very different). On success, data.length should be returned,
+       and any other value will cause filter() to abort. When
+       returning an error value, you must simply ensure that it is
+       some value other than data.length 0 is only an error when
+       data.length is not 0.
+
+       - Be prepared to be called multiple times, as the data is read
+       in blocks. If the callback needs persistent data, it can be
+       passed as the third argument to filter() and the callback will
+       get it.
+
+       - If the isEnd parameter is true then this will be the last call for
+       this filter loop. If needed, the callack can check this and perform
+       any necessary actions (e.g. flushing a zlib stream, for example).
+       It IS possible that the callback gets called with an empty data
+       parameter and (isEnd==true), which simply means the last call to
+       read data returned 0 bytes.
+
+       - The callback must not close the output destination.
+
+       filter() returns the total number of bytes it thinks
+       where consumed. This number depends on the callback
+       returning valid values. In general, no assumptions can
+       be made about the state of the two streams on error.
+       On success, this stream will be at EOF.
+    */
+    static Handle<Value> filter(const Arguments& argv)
+    {
+	ARGS("filter",(argc==2 || argc==3));
+	/**
+	 filter(IOObj dest, Function callback [, mixed userdata = undefined])
+
+	 function callback(OutStream out, string data, bool isEnd);
+
+	 callback should return the number of bytes processed (need not be the
+	 same number as output), or 0 on error or if length==0 (which can happen
+	 at the end of the stream).
+      */
+	whio_dev * srcD = dev_cast<whio_dev>( argv.This() );
+	whio_stream * srcS = srcD ? 0 : dev_cast<whio_stream>( argv.This() );
+	if( ! srcD && !srcS ) TOSS("Could not determine source object type!");
+	HandleScope sentry;
+	Handle<Value> destV( argv[0] );
+
+	if( argv.This() == destV ) TOSS("Object cannot be both the source and target for a filter!");
+
+	whio_dev * destD = dev_cast<whio_dev>( destV );
+	whio_stream * destS = destD ? 0 : dev_cast<whio_stream>( destV );
+	if( ! destD && !destS ) TOSS("First argument is-not-a i/o stream or device!");
+
+	Local<Object> destO( Object::Cast(*destV) );
+	{
+	    Local<String> key( String::New("canWrite") );
+	    if( ! destO->Has(key)
+		|| ! destO->Get(key)->BooleanValue() )
+	    {
+		TOSS("Destination stream/device does not seem to be writable!");
+	    }
+	}
+
+	//CERR << "Filter: srcD="<<srcD<<", srcS="<<srcS<<", destD="<<destD<<", destS="<<destS<<'\n';
+
+	if( ! argv[1]->IsFunction() ) TOSS("Second argument must be-a Function!");
+	Handle<Function> func( Function::Cast(*argv[1]) );
+	Handle<Value> udata;
+	if( argc>2 ) udata =argv[2];
+	else udata =Undefined();
+	//whio_size_t len = (argc>2) ? CastFromJS<whio_size_t>(argv[2]) : 0U;
+	if( srcD )
+	{
+	    return ( destD )
+		? filter( srcD, destD, destO, func, udata )
+		: filter( srcD, destS, destO, func, udata );
+	}
+	else
+	{
+	    return ( destD )
+		? filter( srcS, destD, destO, func, udata )
+		: filter( srcS, destS, destO, func, udata );
+	}
     }
     
 #undef DEVHT
 #undef DEVHV
 #undef DEVH
+#undef DEVHN
+#undef DEVHNT
 #undef DEVTHIS
 
     /**
@@ -580,6 +758,13 @@ namespace v8 { namespace juice { namespace whio {
     char const * strings::InStream = "InStream";
     char const * strings::OutStream = "OutStream";
 
+    /**
+       Adds to target object:
+
+       - whio.IODevice
+       - whio.InStream
+       - whio.OutStream
+    */
     Handle<Value> SetupWhioClasses(const Handle<Object> target )
     {
 	HandleScope v8scope;
@@ -598,7 +783,17 @@ namespace v8 { namespace juice { namespace whio {
 	devInst->Set("SEEK_SET",Integer::New(SEEK_SET));
 	devInst->Set("SEEK_END",Integer::New(SEEK_END));
 	devInst->Set("SEEK_CUR",Integer::New(SEEK_CUR));
-	
+
+	if(0)
+	{ // a test
+	    Handle<Object> dev = devCtorTmpl->PrototypeTemplate()->NewInstance();
+	    if( dev.IsEmpty() ) return dev; // pass on exception
+	    /**
+	       Doh:
+	       ./test.js:5: TypeError: undefined is not a constructor
+	       new whio.IODevice(fname, true );
+	    */
+	}
 
 	// IODevice class:
 	whio->Set(JSTR(strings::IODevice), devCtor);
@@ -616,6 +811,7 @@ namespace v8 { namespace juice { namespace whio {
 	FUNC("truncate",dev_truncate);
 	FUNC("size",dev_size);
 	FUNC("rewind",dev_rewind);
+	FUNC("filter",filter);
 #undef FUNC
 
 
@@ -625,17 +821,24 @@ namespace v8 { namespace juice { namespace whio {
 				  whio_stream,
 				  &stream_construct<false> // okay, that looks weird.
 				  >);
+	if(1)
+	{
+	    //istrCtorTmpl->Inherit( devCtorTmpl );
+	    Local<ObjectTemplate> proto = istrCtorTmpl->PrototypeTemplate();
+	    proto->Set("read", FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
+	}
 	Local<ObjectTemplate> istrInst = istrCtorTmpl->InstanceTemplate();
 	istrInst->SetInternalFieldCount(1);
 	Handle<Function> istrCtor( istrCtorTmpl->GetFunction() );
 	whio->Set(JSTR(strings::InStream), istrCtor);
 	istrInst->Set(JSTR("write"), FunctionTemplate::New( dev_write<whio_stream,false> )->GetFunction() );
-	istrInst->Set(JSTR("read"), FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
+	//istrInst->Set(JSTR("read"), FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
 	istrInst->Set(JSTR("toString"), FunctionTemplate::New( to_string<whio_stream,strings::InStream> )->GetFunction() );
 #define FUNC(N,F) istrInst->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
 	FUNC("close",dev_close<whio_stream>);
 	FUNC("flush",dev_flush<whio_stream>);
 	FUNC("isGood",stream_isgood);
+	FUNC("filter",filter);
 #undef FUNC
 
 	// OutStream class:
@@ -657,6 +860,10 @@ namespace v8 { namespace juice { namespace whio {
 	FUNC("isGood",stream_isgood);
 #undef FUNC
 
+	
+
+
+
 	return whio;
     }
 
@@ -664,7 +871,9 @@ namespace v8 { namespace juice { namespace whio {
 #undef JSTR
 #undef TOSS
 #undef ARGS
+#undef WHIO_RTFM
 
+    /** Plugin initializer for v8-juice. */
     V8_JUICE_PLUGIN_STATIC_INIT(SetupWhioClasses);
 
 }}} // namespaces

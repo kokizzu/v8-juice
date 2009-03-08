@@ -156,4 +156,81 @@ function tryBadStream()
 
 tryBadStream();
 
+function tryStreamFilter()
+{
+    // callback for use with filter()
+    var cb = function(out,data,isEnd,udata) {
+        if( 0 == data.length ) return 0;
+	//print('data.length =',data.length,'isEnd =',isEnd);
+	udata.hits += 1;
+	udata.lastIn = data.length;
+        var xl = data.replace(/([1357])/g,'$1*');
+	var rc = out.write(xl,xl.length);
+	if( rc != xl.length )
+	{
+	    throw new Error("Requested write of "+xl.length+" but got only "+rc+" :(!");
+	}
+	if( isEnd ) out.write("\n",1);
+	return data.length;
+    };
+    var dev = new whio.IODevice(":memory:");
+    for( var i = 0; i < 10; ++i )
+    {
+	dev.write("0123456789");
+    }
+    var os = new whio.OutStream("/dev/stdout");
+    dev.rewind();
+    var is = new whio.InStream(dev);
+    print('dev =',dev);
+    print('os =',os);
+    print('is =',is);
+    os.write("filter() test:\n");
+    var ud = {hits:0,lastIn:0};
+    var ex = null;
+    try
+    {
+	dev.filter(os, cb, ud);
+	dev.rewind();
+	is.filter(os, cb, ud);
+	//is.filter(is, cb, ud); // should throw
+	//dev.filter(is, cb, ud); // should throw
+    }
+    catch(e) { ex = e; }
+    finally
+    { // Because of the 'is'--uses-->'dev' relationship, 'is' must close first:
+	is.close();
+	dev.close();
+	os.write("\n");
+	os.close();
+	if( ex ) throw ex;
+    }
+    print('userData.lastIn='+ud.lastIn, 'userData.hits='+ud.hits);
+}
+tryStreamFilter();
+
+function tryTypeInfo()
+{
+    print("Typeinfo:");
+    var dev = new whio.IODevice('/dev/stdout',true);
+    var os = new whio.OutStream('/dev/stdout');
+    var is = new whio.InStream('/dev/stdin');
+    var f = function(o,F) {
+        var ack;
+// 	if( F instanceof String ) F = eval(F);
+// 	print(o,'instanceof',F,'==',o instanceof F);
+	print(o,'instanceof',F,'==',o instanceof (( 'string' == typeof F) ? eval(F) : F));
+    };
+    f(dev,'whio.IODevice');
+    f(is,'whio.InStream');
+    f(is,'whio.IODevice');
+    f(os,'whio.OutStream');
+    f(os,'whio.InStream');
+    f(os,'whio.IODevice');
+    is.close();
+    os.close();
+    dev.close();
+    print
+}
+tryTypeInfo();
+
 print(":-D");
