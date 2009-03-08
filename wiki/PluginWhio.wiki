@@ -76,3 +76,15 @@ OutStream represents a write-only stream.
 || `void close()` || As for whio.IODevice.close() ||
 || `int flush()` || As for whio.IODevice.flush() ||
 || `bool isGood()`  || As for whio.InStream.isGood() ||
+
+==Tips and tricks==
+
+On Unix platforms you can open standard input and output like this:
+
+{{{
+var stdout = new whio.OutStream("/dev/stdout");
+var stdin = new whio.InStream("/dev/stdin");
+stdout.write("hi, world!\n");
+}}}
+
+Note, however, that you shouldn't mix such usage with, e.g. `print()`, or other routines which read/write stdin/stdout, as that may garble your output.
