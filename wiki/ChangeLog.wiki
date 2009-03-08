@@ -7,6 +7,14 @@ This is the informal ChangeLog for the v8-juice project. Newest items
 are at the top. Dates written extra large are release dates.
 
 ----
+*2009 March 8*
+
+  * Started adding `extra-plugins` repository for plugins with licenses which may not allow them to live in the main tree.
+  * Added new plugin: [PluginReadline]
+
+=2009 March 7=
+
+  * Released the first tarball.
 
 *2009 March 6*
 
