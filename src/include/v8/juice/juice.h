@@ -14,6 +14,11 @@ namespace v8 {
 	using ::v8::Value;
 
 	/**
+	   Do not use - it can lead to stack corruption
+	   in some cases for unknown reasons. It's only
+	   in the public API so i can use the existing client
+	   code to track down the problem.
+
 	   A convenience function to throw a v8 exception from a
 	   printf-style formatted string.
 
