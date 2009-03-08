@@ -19,6 +19,7 @@ When using the plugins API, you don't need to do anything C++-side to use this a
 =JS usage=
 
 {{{
+load_plugin('v8-juice-whio');
 var dev = new whio.IODevice("/path/to/file", true); // true= Write-mode
 dev.truncate(0);
 dev.write("Hi, world!");
@@ -35,11 +36,43 @@ See below for the complete class and function list.
 
 =JS API for the whio classes=
 
+
+
+==!InStream Class==
+
+InStream represents a read-only stream.
+
+|| Function or Property || Notes ||
+|| `new InStream(string file)` || Opens the given file in read mode. ||
+|| `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
+|| `string read(int length)` || As for whio.IODevice.read() ||
+|| `int write(string data [,int lenght])` || Throws an exception - InStreams cannot write ||
+|| `void close()` || As for whio.IODevice.close() ||
+|| `int flush()` || As for whio.IODevice.flush() ||
+|| `bool isGood()`  || Returns true if the stream is in a usable state. ||
+|| `IODevice ioDevice` || Only for objects created with the InStream(IODevice) constructor, this points to the subdevice's pointed-to device. ||
+
+
+==!OutStream Class==
+
+OutStream represents a write-only stream.
+
+|| Function or Property || Notes ||
+|| `new OutStream(string file[, bool truncate=false])` || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
+|| `new OutStream(IODevice)` || As for InStream(IODevice). If the device is not writable, no write operations on the new object will succeed.||
+|| `string read(int length)` || Throws an exception - OutStreams cannot read. ||
+|| `int write(string data [,int lenght])` || As for whio.IODevice.write() ||
+|| `void close()` || As for whio.IODevice.close() ||
+|| `int flush()` || As for whio.IODevice.flush() ||
+|| `bool isGood()`  || As for whio.InStream.isGood() ||
+|| `IODevice ioDevice` || Only for objects created with the OutStream(IODevice) constructor, this points to the subdevice's pointed-to device. ||
+
+
 ==IODevice Class==
 
 IODevice represents a random-access i/o device, with read-only or read/write access. It is modelled very closely on conventional C-based APIs and will be familiar to anyone who's worked with any of them.
 
-|| Function  || Notes ||
+|| Function or Property  || Notes ||
 || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
 || `new IODevice(":memory:" [, int startingSize=0])` || Opens a read/write i/o device which uses RAM as its storage. It starts out at the given size and grows on demand. ||
 || `new IODevice(IODevice,int lower,int upper)`|| Creates a new IODevice which acts as a proxy for a subset of the original device's range. This is described in more detail below. The parent device must outlive the new device. ||
@@ -55,9 +88,10 @@ IODevice represents a random-access i/o device, with read-only or read/write acc
 || `int truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
 || `int size()` || Returns the current size of the device. ||
 || `int rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
+|| `IODevice ioDevice` || Only for devices created with the IODevice(IODevice,int,int) constructor, this points to the subdevice's pointed-to device. ||
 
 
-===SEEK_SET and friends.===
+===SEEK_SET and friends===
 
 `whio.IODevice.seek()` is semantically identical to the C function `fseek()`, and requires a second argument with one of these values:
 
@@ -101,33 +135,9 @@ Subdevices also get an extra function:
 
 || `int rebound( int lower, int upper )` || Changes the subdevice's lower and upper bounds, relative to the parent. Returns 0 on success. ||
 
+And a new property:
 
-==InStream Class==
-
-InStream represents a read-only stream.
-
-|| Function  || Notes ||
-|| `new InStream(string file)` || Opens the given file in read mode. ||
-|| `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
-|| `string read(int length)` || As for whio.IODevice.read() ||
-|| `int write(string data [,int lenght])` || Throws an exception - InStreams cannot write ||
-|| `void close()` || As for whio.IODevice.close() ||
-|| `int flush()` || As for whio.IODevice.flush() ||
-|| `bool isGood()`  || Returns true if the stream is in a usable state. ||
-
-
-==OutStream Class==
-
-OutStream represents a write-only stream.
-
-|| Function  || Notes ||
-|| `new OutStream(string file[, bool truncate=false])` || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
-|| `new OutStream(IODevice)` || As for InStream(IODevice). If the device is not writable, no write operations on the new object will succeed.||
-|| `string read(int length)` || Throws an exception - OutStreams cannot read. ||
-|| `int write(string data [,int lenght])` || As for whio.IODevice.write() ||
-|| `void close()` || As for whio.IODevice.close() ||
-|| `int flush()` || As for whio.IODevice.flush() ||
-|| `bool isGood()`  || As for whio.InStream.isGood() ||
+|| `IODevice ioDevice` || This points to the subdevice's pointed-to device. ||
 
 =Tips and tricks=
 
@@ -154,3 +164,5 @@ var dev = new whio.IODevice(":memory:");
 Creates an i/o device which uses RAM as storage, growing as necessary. It works just like a file-based i/o device, and can be used to buffer arbitrary data in memory. To specify a starting size of the device, pass it as the optional second parameter.
 
 While it may not be immediately obvious, this is one easy way to buffer large amounts of text for later output, and "should" be more efficient than using string concatenation to build up very large strings.
+
+If you want to ensure sequential, write-only access to a buffer until you are ready to send it, simply wrap up the IODevice in an !OutStream using `new OutStream(myDevice)`.
