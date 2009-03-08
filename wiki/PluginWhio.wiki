@@ -300,11 +300,15 @@ function tryStreamFilter()
 	//dev.filter(is, cb, ud); // should throw
     }
     catch(e) { ex = e; }
+    finally
+    { // Because of the 'is'--uses-->'dev' relationship, 'is' must close first:
+	is.close();
+	dev.close();
+	os.write("\n");
+	os.close();
+	if( ex ) throw ex;
+    }
     print('userData.lastIn='+ud.lastIn, 'userData.hits='+ud.hits);
-    is.close();
-    os.close();
-    dev.close();
-    if( ex ) throw ex;
 }
 tryStreamFilter();
 }}}
