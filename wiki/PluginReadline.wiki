@@ -1,0 +1,53 @@
+#summary Plugin for minimal GNU Readline or BSD Editine support
+#labels Phase-UserDocs
+
+The readline plugin provides a minimal API for reading user input from the keyboard. It can be configured (via compile-time options) to use GNU Readline, BSD Editline, or plain stdin as its input source. The programming interface is the same, however.
+
+=Getting the plugin=
+
+This plugin, due to its licensing (mixed-license with a GPL component), is stored as an add-on in a separate source tree. It's in the `extra-plugins` Subversion tree. Visit this page for instructions:
+
+http://code.google.com/p/v8-juice/source/checkout
+
+and check out the `extra-plugins` directory instead of `trunk`.
+
+=Building/installing=
+
+First, you must have `libv8-juice-config` in your `$PATH` (it is installed by the v8-juice install process). You also need libreadline development files on your system or you need to edit `Readline_config.hpp` to configure it for libedit or stdin as an input source, and change the linker args in the Makefile accordingly.
+
+Then:
+
+{{{
+~> make
+~> make install
+}}}
+
+It will install to the default v8-juice plugins directory.
+
+=Example usage=
+
+
+{{{
+var my = {};
+load_plugin('v8-juice-readline',my);
+if( my.readline.loadHistory(fn) ) {
+    print("Loaded history file",fn);
+} else {
+    print("Couldn't load history file",fn);
+}
+var s;
+while( undefined != (s = my.readline.read("Enter something (Ctrl-D quits): ")) )
+{
+    print("Result:",s);
+}
+print(""); // kludge: ensure a newline after Ctrl-D
+print("Done!");
+// history will be auto-saved at shutdown
+}}}
+
+That demonstrates all of the functions except for `clearHistory()`, which clears the history list.
+
+Points of note:
+
+  * An application only has only one input terminal and therefore only one shared instance of readline.
+  * If loadHistory() is ever called then the history will be saved automatically at shutdown. If saveHistory() is ever called, the name set there will be used for auto-save.
