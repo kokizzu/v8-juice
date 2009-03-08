@@ -11,9 +11,10 @@ http://code.google.com/p/v8-juice/source/browse/
 ----
 *2009 March 8*
 
-  * Started adding `extra-plugins` repository for plugins with licenses which may not allow them to live in the main tree.
-  * Added new plugin: [PluginReadline]
+  * Started adding `extra-plugins` repository for plugins with hard dependencies on external/3rd-party software. Moved sqlite3/ncurses plugins into that tree.
+  * Added new plugin: [PluginReadline readline]
   * Several little improvements/additions to the [PluginWhio I/O classes].
+
 
 ==2009 March 7==
 
