@@ -11,10 +11,9 @@ http://code.google.com/p/v8-juice/source/browse/
 ----
 *2009 March 8*
 
-  * Started adding `extra-plugins` repository for plugins with hard dependencies on external/3rd-party software. Moved sqlite3/ncurses plugins into that tree.
+  * Added [http://code.google.com/p/v8-juice/source/browse/#svn/extra-plugins extra-plugins] directory to svn, for plugins with hard dependencies on external/3rd-party software. Moved sqlite3/ncurses plugins into that tree.
   * Added new plugin: [PluginReadline readline]
   * Several little improvements/additions to the [PluginWhio I/O classes].
-
 
 ==2009 March 7==
 
