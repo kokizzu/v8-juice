@@ -50,6 +50,7 @@ See below for the complete class and function list.
 || `void close()` || Closes the stream. Do not use the object after calling this. ||
 || `int flush()` || As for `IODevice.flush()` ||
 || `bool isGood()`  || Returns true if the stream is in a usable state. ||
+|| `int filter( (OutStream|IODevice) dest, Function callback )`  || Described in much more detail below. ||
 || *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
 || `string fileName` || Only for objects which are associated with a file. ||
@@ -97,6 +98,7 @@ time).
 || `int truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
 || `int size()` || Returns the current size of the device. ||
 || `int rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
+|| `int filter( (OutStream|IODevice) dest, Function callback )`  || Described in much more detail below. ||
 || *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for devices created with the `IODevice(IODevice,int,int)` constructor, this points to the subdevice's pointed-to device. ||
 || `string fileName` || Only for objects which are associated with a file. ||
@@ -195,3 +197,114 @@ Creates an i/o device which uses RAM as storage, growing as necessary. It works 
 While it may not be immediately obvious, this is one easy way to buffer large amounts of text for later output, and "should" be more efficient than using string concatenation to build up very large strings.
 
 If you want to ensure sequential, write-only access to a buffer until you are ready to send it, simply wrap up the IODevice in an !OutStream using `new OutStream(myDevice)`.
+
+==Filtering a stream==
+
+This library his very basic support for stream filtering. Not because
+it might actually be useful, but because i thought it'd be interesting to code.
+
+Only !InStreams and IODevices can be filtered, and they get an extra member
+method called `filter()`. It has the following signature:
+
+{{{
+int filter( OStream|IODevice target,
+            Function callback
+           [, mixed userData = undefined );
+}}}
+
+       The callback signature is:
+
+{{{
+int callback(OutStream out,
+             string data,
+             bool isEnd,
+             mixed userData );
+}}}
+
+filter() reads the 'this' object until EOF, in blocks of an
+unspecified size. Each block is passed to the callback function,
+which is presumed to do some sort of filtering on the data.
+
+filter() returns the total number of bytes it thinks where
+consumed. This number depends on the callback returning valid
+values. In general, no assumptions can be made about the state of the
+two streams on error.  On success, this stream will be at EOF.
+
+The callback should:
+
+Perform any translation of the input data it wants to do and
+write it out to the destination stream. If it cannot
+(e.g. target not writable, or write fails), it should throw.
+
+Return the number of bytes consumed (not output, which might
+be very different). On success, data.length should be returned,
+and any other value will cause filter() to abort. When
+returning an error value, you must simply ensure that it is
+some value other than data.length 0 is only an error when
+data.length is not 0.
+
+Be prepared to be called multiple times, as the data is read
+in blocks. If the callback needs persistent data, it can be
+passed as the third argument to filter() and the callback will
+t it.
+
+If the isEnd parameter is true then this will be the last call for
+this filter loop. If needed, the callack can check this and perform
+y necessary actions (e.g. flushing a zlib stream, for example).
+It IS possible that the callback gets called with an empty data
+parameter and (isEnd==true), which simply means the last call to
+read data returned 0 bytes.
+
+The callback must not close the output destination.
+
+Below is a rather long example of using filter(). It itsn't as complex
+to use as this example implies, but this was test code while i was
+implementing filter(), so it shows more than most would need to see.
+
+{{{
+function tryStreamFilter()
+{
+    // callback for use with filter()
+    var cb = function(out,data,isEnd,udata) {
+        if( 0 == data.length ) return 0;
+	udata.hits += 1;
+        var xl = data.replace(/([1357])/g,'$1*'); // some arbitrary transformation
+	var rc = out.write(xl,xl.length);
+	if( rc != xl.length )
+	{
+	    throw new Error("Requested write of "+xl.length+" but got only "+rc+" :(!");
+	}
+	if( isEnd ) out.write("\n",1);
+	return data.length;
+    };
+    var dev = new whio.IODevice(":memory:");
+    for( var i = 0; i < 10; ++i )
+    {
+	dev.write("0123456789");
+    }
+    var os = new whio.OutStream("/dev/stdout");
+    dev.rewind();
+    var is = new whio.InStream(dev);
+    print('dev =',dev);
+    print('os =',os);
+    print('is =',is);
+    os.write("filter() test:\n");
+    var ud = {hits:0,lastIn:0};
+    var ex = null;
+    try
+    {
+	dev.filter(os, cb, ud);
+	dev.rewind();
+	is.filter(os, cb, ud);
+	//is.filter(is, cb, ud); // should throw
+	//dev.filter(is, cb, ud); // should throw
+    }
+    catch(e) { ex = e; }
+    print('userData.lastIn='+ud.lastIn, 'userData.hits='+ud.hits);
+    is.close();
+    os.close();
+    dev.close();
+    if( ex ) throw ex;
+}
+tryStreamFilter();
+}}}
