@@ -1,6 +1,8 @@
 #summary I/O device bindings for JS
 #labels Phase-UserDocs
 
+<wiki:toc max_depth="3" />
+
 =The whio plugin=
 
 The whio plugin adds i/o support to JS. It gets its name from the i/o library it is based on: http://fossil.wanderinghorse.net/repos/whio/
@@ -67,9 +69,13 @@ they are analogous to the C-standard constants of the same names, and are descri
 
 ===Subdevices===
 
-The IODevice class has a constructor with the signature `new IODevice(int lower, int upper)` which us to create "subdevices". A subdevice is a proxy which wraps up a certain range of bytes inside of another IODevice object. This is covered in gross detail in the source file `whio_amalgamation.h` (search for subdevice) and is clarified a bit at [http://fossil.wanderinghorse.net/repos/whio/ the whio home page]. In short:
+The IODevice class has a constructor with the signature `new IODevice(IODevice dev,int lower, int upper)` which used to create "subdevices". A subdevice is a proxy which wraps up a certain range of bytes inside of another IODevice object. This is covered in gross detail in the source file `[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whio_amalgamation.h?r=117 whio_amalgamation.h]` (search for "subdev_create"), and here's a short demonstration:
 
-Consider an IODevice pointing to 100 bytes of storage (somewhere - we don't care where). We can create a subdevice which fences off some amount of that storage. The subdevice is a full-fledged i/o device, but it cannot read or write outside of the bounds it is assigned. For example:
+Here's one explanation of what subdevices are for:
+
+Consider an IODevice pointing to 100 bytes of storage (somewhere - we don't care where). We can create a subdevice which fences off some amount of that storage. The subdevice is a full-fledged i/o device, but it cannot read or write outside of the bounds it is assigned to.
+
+For example:
 
 {{{
 var origin = new whio.IODevice(":memory:");
@@ -90,6 +96,10 @@ The output of that script is:
 Note that the upper bound is equivalent to EOF, or "one past the end", and is not accessible to the subdevice.
 
 Subdevices have some obscure uses, but probably not many which JS applications can make use of.
+
+Subdevices also get an extra function:
+
+|| `int rebound( int lower, int upper )` || Changes the subdevice's lower and upper bounds, relative to the parent. Returns 0 on success. ||
 
 
 ==Class whio.InStream==
