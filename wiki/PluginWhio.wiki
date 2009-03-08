@@ -42,44 +42,46 @@ See below for the complete class and function list.
 
 !InStream represents a read-only stream.
 
-|| Function or Property || Notes ||
+|| *Functions* || *Notes* ||
 || `new InStream(string file)` || Opens the given file in read mode. ||
 || `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
 || `string read(int length)` || As for `IODevice.read()` ||
 || `int write(string data [,int lenght])` || Throws an exception - InStreams cannot write ||
-|| `void close()` || As for `IODevice.close()` ||
+|| `void close()` || Closes the stream. Do not use the object after calling this. ||
 || `int flush()` || As for `IODevice.flush()` ||
 || `bool isGood()`  || Returns true if the stream is in a usable state. ||
+|| *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
-
+|| `string fileName` || Only for objects which are associated with a file. ||
+|| `bool canWrite` || Always false for !InStreams. ||
 
 ==!OutStream Class==
 
-OutStream represents a write-only stream.
+!OutStream represents a write-only stream.
 
-|| Function or Property || Notes ||
+|| *Functions* || *Notes* ||
 || `new OutStream(string file[, bool truncate=false])` || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
 || `new OutStream(IODevice)` || As for InStream(IODevice). If the device is not writable, no write operations on the new object will succeed.||
 || `string read(int length)` || Throws an exception - !OutStreams cannot read. ||
 || `int write(string data [,int lenght])` || As for `IODevice.write()` ||
-|| `void close()` || As for `IODevice.close()` ||
+|| `void close()` || Closes the stream. Do not use the object after calling this. ||
 || `int flush()` || As for `IODevice.flush()` ||
-|| `bool isGood()`  || As for `InStream.isGood()` ||
+|| `bool isGood()`  || Returns true if the stream is in a usable state. ||
+|| *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for objects created with the `OutStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
-
+|| `string fileName` || Only for objects which are associated with a file. ||
+|| `bool canWrite` || Always true for !OutStreams. ||
 
 ==IODevice Class==
 
 IODevice represents a random-access i/o device, with read-only or
-read/write access. It is modelled very closely on conventional C-based
-APIs and will be familiar to anyone who's worked with any of them.
+read/write access. When we say "device", we're normally referring to
+a file, but the concept of i/o device is more abstract than that, and
+can essentially mean any data source or destination to which we have
+random access (the ability to access any point in the data at any
+time).
 
-When we say "device", we're normally referring to a file, but the
-concept of i/o device is more abstract than that, and can essentially
-mean any data source or destination to which we have random access
-(the ability to access any point in the data at any time).
-
-|| Function or Property  || Notes ||
+|| *Functions*  || *Notes* ||
 || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
 || `new IODevice(":memory:" [, int startingSize=0])` || Opens a read/write i/o device which uses RAM as its storage. It starts out at the given size and grows on demand. ||
 || `new IODevice(IODevice,int lower,int upper)`|| Creates a new IODevice which acts as a proxy for a subset of the original device's range. This is described in more detail below. The parent device must outlive the new device. ||
@@ -91,11 +93,14 @@ mean any data source or destination to which we have random access
 || `bool eof()` || Returns true if the device is at (or past) its EOF. ||
 || `int tell()` || Returns the current position within the underlying device. ||
 || `int seek(int offset[, int whence=IODevice.SEEK_SET])` || Sets the current position to offset, relative to whence, which must be one of `whio.IODevice.SEEK_SET`, `whio.IODevice.SEET_CUR`, or `whio.IODevice.SEEK_END`. Returns the new position. ||
-|| `int flush()` || Tries to flush any existing write data. Returns 0 on success. ||
+|| `int flush()` || Tries to flush any existing write data, if applicable. Some device types might to other handling here. Returns 0 on success. ||
 || `int truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
 || `int size()` || Returns the current size of the device. ||
 || `int rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
+|| *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for devices created with the `IODevice(IODevice,int,int)` constructor, this points to the subdevice's pointed-to device. ||
+|| `string fileName` || Only for objects which are associated with a file. ||
+|| `bool canWrite` || True if the object was not opened for read/write, else false. ||
 
 
 ===SEEK_SET and friends===
