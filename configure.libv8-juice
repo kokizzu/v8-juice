@@ -5,6 +5,7 @@
 # be run directly.
 
 toc2_add_config PACKAGE_RELEASE_CODENAME="Approved by Me"
+toc2_add_config PACKAGE_URL="http://code.google.com/p/v8-juice"
 toc2_export PACKAGE_VERSION_HEX="$PACKAGE_VERSION_HEX"
 toc2_export PACKAGE_DESCRIPTION="Add-ons for the Google v8 JavaScript engine"
 toc2_export V8JUICE_VERSION_DOTTED=$(echo $(PACKAGE_VERSION) | perl -pe 's|(\d\d\d\d)(\d\d)(\d\d)|$1.$2.$3|')
