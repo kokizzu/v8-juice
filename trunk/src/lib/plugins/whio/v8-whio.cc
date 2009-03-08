@@ -110,6 +110,28 @@ namespace v8 { namespace juice { namespace whio {
     }
 
 
+#define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS(FUNC "(): argument assertion failed: " # COND)
+#define DEVH(T,H) T * dev = dev_cast<T>( H )
+#define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer has already been destroyed!")
+#define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
+#define DEVTHIS(T) DEVHT(T,argv.This())
+
+    //#define DEVHN(T,N,H) T * dev ## N = dev_cast<T>( H )
+    //#define DEVHTN(T,N,H) DEVHN(T,N,H); if( ! dev ) TOSS("Handle is-not-a " # T "!")
+
+    /**
+       whio_dev_subdev_rebound() wrapper. It will only work with
+       devices created using whio_dev_subdev_create().
+    */
+    static Handle<Value> dev_rebound(const Arguments& argv)
+    {
+	ARGS("rebound",(argc==2));
+	DEVTHIS(whio_dev);
+	whio_size_t low = CastFromJS<whio_size_t>( argv[0] );
+	whio_size_t high = CastFromJS<whio_size_t>( argv[1] );
+	return CastToJS( whio_dev_subdev_rebound( dev, low, high ) );
+    }
+
     /**
        Constructor for the native half of IODevice objects.
        
@@ -126,12 +148,16 @@ namespace v8 { namespace juice { namespace whio {
 
        JS arguments:
 
-       IODevice:
+       IODevice ctor args:
 
-       - (string filename, bool writeMode)
-       - (":memory:" [, int initialSize])
+       - (string filename, bool writeMode)  = file
+       - (":memory:" [, int initialSize])   = in-memory buffer
+       - (IODevice, int lower, int upper)   = subdevice
      */
-    whio_dev * dev_construct( int argc, Handle<Value> argv[], std::string & exception )
+    whio_dev * dev_construct( Local<Object> self,
+			      int argc,
+			      Handle<Value> argv[],
+			      std::string & exception )
     {
 	whio_dev * dev = 0;
 	if( 0 == argc )
@@ -153,6 +179,10 @@ namespace v8 { namespace juice { namespace whio {
 			<<sz<<" bytes!";
 		    exception = msg.str();
 		}
+		else
+		{
+		    self->Set(JSTR("canWrite"), Boolean::New(true) );
+		}
 		return dev;
 	    }
 	    else if( 2 == argc )
@@ -160,12 +190,18 @@ namespace v8 { namespace juice { namespace whio {
 		bool writeMode = JSToBool(argv[1]);
 		char const * mode = (writeMode) ? "w+b" : "rb";
 		dev = whio_dev_for_filename( fname.c_str(), mode );
+		if( dev )
+		{
+		    self->Set(JSTR("fileName"), argv[0], v8::ReadOnly );
+		    self->Set(JSTR("canWrite"), Boolean::New(writeMode) );
+		}
 		return dev;
 	    }
 	}
-	if( 3 == argc )
+	if( (3 == argc) && argv[0]->IsObject() )
 	{ // (IODevice,lower,upper)
-	    whio_dev * iod = dev_cast<whio_dev>(argv[0]);
+	    Local<Object> par( Object::Cast(*argv[0]) );
+	    whio_dev * iod = dev_cast<whio_dev>(par);
 	    if( iod )
 	    {
 		whio_size_t low = CastFromJS<whio_size_t>(argv[1]);
@@ -174,9 +210,16 @@ namespace v8 { namespace juice { namespace whio {
 		if( ! dev )
 		{
 		    std::ostringstream msg;
-		    msg << "Creationg of subdevice for range ("
+		    msg << "Creation of subdevice for range ("
 			<<low<<","<<high<<") failed!";
 		    exception = msg.str();
+		}
+		else
+		{
+		    self->Set(JSTR("rebound"),
+			      FunctionTemplate::New(dev_rebound)->GetFunction());
+		    self->Set(JSTR("ioDevice"),par, v8::ReadOnly);
+		    self->Set(JSTR("canWrite"), par->Get(JSTR("canWrite")), v8::ReadOnly );
 		}
 		return dev;
 	    }
@@ -209,7 +252,10 @@ namespace v8 { namespace juice { namespace whio {
        - (IODevice)
     */
     template <bool writeMode>
-    whio_stream * stream_construct( int argc, Handle<Value> argv[], std::string & exception )
+    whio_stream * stream_construct( Local<Object> self,
+				    int argc,
+				    Handle<Value> argv[],
+				    std::string & exception )
     {
 	if( argc < 1 )
 	{
@@ -231,18 +277,37 @@ namespace v8 { namespace juice { namespace whio {
 		exception = msg.str();
 		return 0;
 	    }
+	    self->Set(JSTR("fileName"), argv[0], v8::ReadOnly );
+	    self->Set(JSTR("canWrite"), Boolean::New(writeMode), v8::ReadOnly );
 	    return dev;
 	    //CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
 	}
 	whio_dev * iod = dev_cast<whio_dev>(argv[0]);
 	if( iod )
-	{
+	{ // ctor(IODevice)
+	    Local<Object> par( Object::Cast(*argv[0]) );
+	    if( writeMode )
+	    { // try a basic sanity check...
+		Local<Value> parRW( par->Get(JSTR("canWrite")) );
+		if( writeMode && !parRW->BooleanValue() )
+		{
+		    std::ostringstream msg;
+		    msg << "Cannot create output stream for device because it says it is read-only!";
+		    exception = msg.str();
+		    return 0;
+		}
+	    }
 	    dev = whio_stream_for_dev( iod, false );
 	    if( ! dev )
 	    {
 		std::ostringstream msg;
 		msg << "whio_stream_for_dev( @"<<iod<<", false ) failed!";
 		exception = msg.str();
+	    }
+	    else
+	    {
+		self->Set(JSTR("ioDevice"), par, v8::ReadOnly );
+		self->Set(JSTR("canWrite"), par->Get(JSTR("canWrite")), v8::ReadOnly );
 	    }
 	    return dev;
 	}
@@ -261,7 +326,7 @@ namespace v8 { namespace juice { namespace whio {
     template <
 	typename T,
 	/* constructor proxy: */
-	T * (*Func)(int,Handle<Value>[], std::string &)
+	T * (*Func)(Local<Object>, int, Handle<Value>[], std::string &)
 	>
     static Handle<Value> combined_ctor(const Arguments& argv)
     {
@@ -275,7 +340,7 @@ namespace v8 { namespace juice { namespace whio {
 	    std::vector< Handle<Value> > av(argc,Null());
 	    for( int i = 0; i < argc; ++i ) av[i] = argv[i];
 	    std::string err;
-	    T * dev = Func( argc, &av[0], err );
+	    T * dev = Func( argv.This(), argc, &av[0], err );
 	    //err = juice::ThrowException("Just testing at %s:%d!","here",__LINE__);
 	    if( ! err.empty() )
 	    {
@@ -295,12 +360,6 @@ namespace v8 { namespace juice { namespace whio {
 	TOSS("Invalid arguments!");
     }
 
-
-#define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS(FUNC "(): argument assertion failed: " # COND)
-#define DEVH(T,H) T * dev = dev_cast<T>( H )
-#define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer has already been destroyed!")
-#define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
-#define DEVTHIS(T) DEVHT(T,argv.This())
 
     /**
        write() impl for DevT, which must be one of whio_dev or whio_stream.
@@ -428,6 +487,7 @@ namespace v8 { namespace juice { namespace whio {
 	      break;
 	  default:
 	      TOSS("The second argument to seek() must be one of SEEK_SET, SEEK_CUR, or SEEK_END!");
+	      break;
 	};
 	return UInt64ToJS( dev->api->seek( dev, pos, whence) );
     }
@@ -474,28 +534,6 @@ namespace v8 { namespace juice { namespace whio {
 	return Int32ToJS( whio_dev_rewind( dev ) );
     }
 
-#if 0
-    static Handle<Value> dev_for_file(const Arguments& argv)
-    {
-	ARGS("forFile",(argc==2));
-	std::string fname = JSToStdString(argv[0]);
-	bool writeMode = JSToBool(argv[1]);
-	char const * mode = (writeMode) ? "w+b" : "rb";
-	whio_dev * dev = whio_dev_for_filename( fname.c_str(), mode );
-	if( ! dev )
-	{
-
-	    return juice::ThrowException( "whio_dev_for_filename('%s','%s') failed!",
-					  fname.c_str(), mode );
-	}
-	// how the hell to get the proper IODevice instance/ctor from here?
-	Handle<Function> ctor( Function::Cast( *argv.Holder() ) );
-	Handle<Object> self = ctor->NewInstance();// hope this doesn't call the ctor!
-	return dev_wrap( self, dev );
-    }
-#endif
-
-
     /** whio_stream_api::isgood(). */
     static Handle<Value> stream_isgood(const Arguments& argv)
     {
@@ -504,11 +542,44 @@ namespace v8 { namespace juice { namespace whio {
 	return BoolToJS( dev->api->isgood(dev) );
     }
 
+    template <typename T,char const *&N>
+    static Handle<Value> to_string(const Arguments& argv)
+    {
+	ARGS("toString",(0==argc));
+	std::ostringstream os;
+	Local<Object> self = argv.This();
+	os << "[object "<<N;
 
+	Local<String> key(JSTR("fileName"));
+	if( self->Has(key) )
+	{
+	    os << " fileName:'"<<JSToStdString(self->Get(key))<<"',";
+	}
+	key = JSTR("canWrite");
+	os << " canWrite:"<< (JSToBool(self->Get(key)) ? "true" : "false");
+
+	os <<"]";
+	return CastToJS( os.str() );
+    }
+    
 #undef DEVHT
 #undef DEVHV
 #undef DEVH
 #undef DEVTHIS
+
+    /**
+       Strings which are used as template parameters...
+    */
+    struct strings
+    {
+	static char const * IODevice;
+	static char const * InStream;
+	static char const * OutStream;
+    };
+    char const * strings::IODevice = "IODevice";
+    char const * strings::InStream = "InStream";
+    char const * strings::OutStream = "OutStream";
+
     Handle<Value> SetupWhioClasses(const Handle<Object> target )
     {
 	HandleScope v8scope;
@@ -527,12 +598,13 @@ namespace v8 { namespace juice { namespace whio {
 	devInst->Set("SEEK_SET",Integer::New(SEEK_SET));
 	devInst->Set("SEEK_END",Integer::New(SEEK_END));
 	devInst->Set("SEEK_CUR",Integer::New(SEEK_CUR));
-
+	
 
 	// IODevice class:
-	whio->Set(JSTR("IODevice"), devCtor);
+	whio->Set(JSTR(strings::IODevice), devCtor);
 	devInst->Set(JSTR("write"), FunctionTemplate::New( dev_write<whio_dev,true> )->GetFunction() );
 	devInst->Set(JSTR("read"), FunctionTemplate::New( dev_read<whio_dev,true> )->GetFunction() );
+	devInst->Set(JSTR("toString"), FunctionTemplate::New( to_string<whio_dev,strings::IODevice> )->GetFunction() );
 #define FUNC(N,F) devInst->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
 	FUNC("close",dev_close<whio_dev>);
 	FUNC("error",dev_error);
@@ -556,9 +628,10 @@ namespace v8 { namespace juice { namespace whio {
 	Local<ObjectTemplate> istrInst = istrCtorTmpl->InstanceTemplate();
 	istrInst->SetInternalFieldCount(1);
 	Handle<Function> istrCtor( istrCtorTmpl->GetFunction() );
-	whio->Set(JSTR("InStream"), istrCtor);
+	whio->Set(JSTR(strings::InStream), istrCtor);
 	istrInst->Set(JSTR("write"), FunctionTemplate::New( dev_write<whio_stream,false> )->GetFunction() );
 	istrInst->Set(JSTR("read"), FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
+	istrInst->Set(JSTR("toString"), FunctionTemplate::New( to_string<whio_stream,strings::InStream> )->GetFunction() );
 #define FUNC(N,F) istrInst->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
 	FUNC("close",dev_close<whio_stream>);
 	FUNC("flush",dev_flush<whio_stream>);
@@ -574,9 +647,10 @@ namespace v8 { namespace juice { namespace whio {
 	Local<ObjectTemplate> ostrInst = ostrCtorTmpl->InstanceTemplate();
 	ostrInst->SetInternalFieldCount(1);
 	Handle<Function> ostrCtor( ostrCtorTmpl->GetFunction() );
-	whio->Set(JSTR("OutStream"), ostrCtor);
+	whio->Set(JSTR(strings::OutStream), ostrCtor);
 	ostrInst->Set(JSTR("write"), FunctionTemplate::New( dev_write<whio_stream,true> )->GetFunction() );
 	ostrInst->Set(JSTR("read"), FunctionTemplate::New( dev_read<whio_stream,false> )->GetFunction() );
+	ostrInst->Set(JSTR("toString"), FunctionTemplate::New( to_string<whio_stream,strings::OutStream> )->GetFunction() );
 #define FUNC(N,F) ostrInst->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
 	FUNC("close",dev_close<whio_stream>);
 	FUNC("flush",dev_flush<whio_stream>);
