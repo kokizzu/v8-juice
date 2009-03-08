@@ -69,7 +69,7 @@ they are analogous to the C-standard constants of the same names, and are descri
 
 ===Subdevices===
 
-The IODevice class has a constructor with the signature `new IODevice(IODevice dev,int lower, int upper)` which used to create "subdevices". A subdevice is a proxy which wraps up a certain range of bytes inside of another IODevice object. This is covered in gross detail in the source file `[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whio_amalgamation.h?r=117 whio_amalgamation.h]` (search for "subdev_create"), and here's a short demonstration:
+The IODevice class has a constructor with the signature `new IODevice(IODevice dev,int lower, int upper)` which used to create "subdevices". A subdevice is a proxy which wraps up a certain range of bytes inside of another IODevice object. This is covered in gross detail in the source file [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whio_amalgamation.h?r=117 whio_amalgamation.h] (search for "subdev_create"), and here's a short demonstration:
 
 Here's one explanation of what subdevices are for:
 
