@@ -83,6 +83,13 @@ namespace nc {
     namespace juice = ::v8::juice;
 
     /**
+       kludge to work around an uncertain type size:
+       chtype is defined in ncurses.h, but we're going
+       to shadow it for CastTo/FromJS() purposes.
+    */
+    typedef uint32_t chtype;
+
+    /**
        A shared place to store WINDOW-to-T mappings.
     */
     template <typename T>
@@ -306,7 +313,7 @@ namespace nc {
 	    NCWrapper * wr = binders()[rp] = new NCWrapper( w );
 	    Handle<Value> argv[] = {
 	    wr->jsval,
-	    IntToJS(l)
+	    Int32ToJS(l)
 	    };
 	    TryCatch tryer;
 	    func->Call( jobj, 2, argv );
@@ -497,7 +504,7 @@ namespace nc {
     JS_WRAPPER(nc_flushinp)
     {
 	ASSERTARGS("nc_flushinp",(0==argc));
-	return IntToJS( ::flushinp() );
+	return Int32ToJS( ::flushinp() );
     }
 
     JS_WRAPPER(nc_halfdelay)
@@ -543,7 +550,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_subpad",(5==argc));
 	WR_ARG(argv[0]);
-#define MYINT(N) int i ## N = JSToInt(argv[N])
+#define MYINT(N) int i ## N = JSToInt32(argv[N])
 	MYINT(1);
 	MYINT(2);
 	MYINT(3);
@@ -564,10 +571,10 @@ namespace nc {
 	ASSERTARGS("nc_subwin",(5==argc));
 	int pos = 0;
 	WR_ARG(argv[pos++]);
-	int a1 = JSToInt( argv[pos++] );
-	int a2 = JSToInt( argv[pos++] );
-	int a3 = JSToInt( argv[pos++] );
-	int a4 = JSToInt( argv[pos++] );
+	int a1 = JSToInt32( argv[pos++] );
+	int a2 = JSToInt32( argv[pos++] );
+	int a3 = JSToInt32( argv[pos++] );
+	int a4 = JSToInt32( argv[pos++] );
 	// We can't use FwdToFunc5() here because the returned WINDOW isn't yet bound:
 	WINDOW * sub = subwin( wr->win, a1, a2, a3, a4 );
 	if( ! sub )
@@ -584,10 +591,10 @@ namespace nc {
 	ASSERTARGS("nc_derwin",(5==argc));
 	int pos = 0;
 	WR_ARG(argv[pos++]);
-	int a1 = JSToInt( argv[pos++] );
-	int a2 = JSToInt( argv[pos++] );
-	int a3 = JSToInt( argv[pos++] );
-	int a4 = JSToInt( argv[pos++] );
+	int a1 = JSToInt32( argv[pos++] );
+	int a2 = JSToInt32( argv[pos++] );
+	int a3 = JSToInt32( argv[pos++] );
+	int a4 = JSToInt32( argv[pos++] );
 	// We can't use FwdToFunc5() here because the returned WINDOW isn't yet bound:
 	WINDOW * sub = derwin( wr->win, a1, a2, a3, a4 );
 	if( ! sub )
@@ -605,7 +612,7 @@ namespace nc {
 	ASSERTARGS("nc_delwin",(1==argc));
 	WR_ARG(argv[0]);
 	delete wr;
-	return IntToJS(OK);
+	return Int32ToJS(OK);
     }
 
     JS_WRAPPER(nc_wclear)
@@ -692,15 +699,15 @@ namespace nc {
 	ASSERTARGS("nc_wborder",((argc>0) && (9>=argc)));
 	WR_ARG(argv[0]);
 	int pos = 0;
-	int a1 = (argc>1) ? JSToInt( argv[pos++] ) : 0;
-	int a2 = (argc>2) ? JSToInt( argv[pos++] ) : 0;
-	int a3 = (argc>3) ? JSToInt( argv[pos++] ) : 0;
-	int a4 = (argc>4) ? JSToInt( argv[pos++] ) : 0;
-	int a5 = (argc>5) ? JSToInt( argv[pos++] ) : 0;
-	int a6 = (argc>6) ? JSToInt( argv[pos++] ) : 0;
-	int a7 = (argc>7) ? JSToInt( argv[pos++] ) : 0;
-	int a8 = (argc>8) ? JSToInt( argv[pos++] ) : 0;
-	return IntToJS( wborder(wr->win,a1,a2,a3,a4,a5,a6,a7,a8) );
+	int a1 = (argc>1) ? JSToInt32( argv[pos++] ) : 0;
+	int a2 = (argc>2) ? JSToInt32( argv[pos++] ) : 0;
+	int a3 = (argc>3) ? JSToInt32( argv[pos++] ) : 0;
+	int a4 = (argc>4) ? JSToInt32( argv[pos++] ) : 0;
+	int a5 = (argc>5) ? JSToInt32( argv[pos++] ) : 0;
+	int a6 = (argc>6) ? JSToInt32( argv[pos++] ) : 0;
+	int a7 = (argc>7) ? JSToInt32( argv[pos++] ) : 0;
+	int a8 = (argc>8) ? JSToInt32( argv[pos++] ) : 0;
+	return Int32ToJS( wborder(wr->win,a1,a2,a3,a4,a5,a6,a7,a8) );
     }
 
     /**
@@ -716,7 +723,7 @@ namespace nc {
 	{
 	    // todo???: prefresh()
 	    //JS_ReportWarning(cx,"nc_wrefresh() was passed a PAD. This is not legal." );
-	    //return IntToJS(OK);
+	    //return Int32ToJS(OK);
 	    return OK;
 	}
 	else if( wr->pnl )
@@ -742,9 +749,9 @@ namespace nc {
 	    
 	    WR_ARG(argv[i]);
 	    int rc = do_wrefresh(wr);
-	    if( OK != rc ) return IntToJS(rc);
+	    if( OK != rc ) return Int32ToJS(rc);
 	}
-	return IntToJS(OK);
+	return Int32ToJS(OK);
     }
 
     JS_WRAPPER(nc_color_pair)
@@ -798,41 +805,41 @@ namespace nc {
     {
 	ASSERTARGS("nc_wheight",(1==argc));
 	WR_ARG(argv[0]);
-	return IntToJS( wr->win->_maxy+1 );
+	return Int32ToJS( wr->win->_maxy+1 );
     }
     JS_WRAPPER(nc_wwidth)
     {
 	ASSERTARGS("nc_wwidth",(1==argc));
 	WR_ARG(argv[0]);
-	return IntToJS( wr->win->_maxx+1 );
+	return Int32ToJS( wr->win->_maxx+1 );
     }
 
     JS_WRAPPER(nc_wmaxx)
     {
 	ASSERTARGS("nc_wmaxx",(1==argc));
 	WR_ARG(argv[0]);
-	return IntToJS( wr->win->_maxx );
+	return Int32ToJS( wr->win->_maxx );
     }
 
     JS_WRAPPER(nc_wmaxy)
     {
 	ASSERTARGS("nc_wmaxy",(1==argc));
 	WR_ARG(argv[0]);
-	return IntToJS( wr->win->_maxy );
+	return Int32ToJS( wr->win->_maxy );
     }
 
     JS_WRAPPER(nc_wbegy)
     {
 	ASSERTARGS("nc_wbegy",(1==argc));
 	WR_ARG(argv[0]);
-	return IntToJS( wr->win->_begy );
+	return Int32ToJS( wr->win->_begy );
     }
 
     JS_WRAPPER(nc_wbegx)
     {
 	ASSERTARGS("nc_wbegy",(1==argc));
 	WR_ARG(argv[0]);
-	return IntToJS( wr->win->_begx );
+	return Int32ToJS( wr->win->_begx );
     }
 
     JS_WRAPPER(nc_meta)
@@ -862,7 +869,7 @@ namespace nc {
 	{
 	    delete NCWrapper::GetNative( argv[i] );
 	}
-	return IntToJS(OK);
+	return Int32ToJS(OK);
     }
 
     JS_WRAPPER(nc_overlay)
@@ -904,9 +911,9 @@ namespace nc {
     {
 	ASSERTARGS("nc_box",((argc>=1) && (argc<=3)));
 	WR_ARG(argv[0]);
-	chtype vch = (argc>1) ? JSToLong(argv[1]) : 0;
-	chtype hch = (argc>2) ? JSToLong(argv[2]) : 0;
-	return IntToJS( box( wr->win, vch, hch ) );
+	chtype vch = (argc>1) ? JSToInt64(argv[1]) : 0;
+	chtype hch = (argc>2) ? JSToInt64(argv[2]) : 0;
+	return Int32ToJS( box( wr->win, vch, hch ) );
     }
 
     JS_WRAPPER(nc_whline)
@@ -1037,7 +1044,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_wtimeout",(2==argc));
 	WR_ARG(argv[0]);
-	::wtimeout( wr->win, JSToInt(argv[1]) );
+	::wtimeout( wr->win, JSToInt32(argv[1]) );
 	return Undefined();
     }
 
@@ -1094,13 +1101,13 @@ namespace nc {
     JS_WRAPPER(nc_beep)
     {
 	ASSERTARGS("nc_beep",(0==argc));
-	return IntToJS( ::beep() );
+	return Int32ToJS( ::beep() );
     }
 
     JS_WRAPPER(nc_flash)
     {
 	ASSERTARGS("nc_flash",(0==argc));
-	return IntToJS( ::flash() );
+	return Int32ToJS( ::flash() );
     }
 
     JS_WRAPPER(nc_has_colors)
@@ -1118,27 +1125,27 @@ namespace nc {
     JS_WRAPPER(nc_raw)
     {
 	ASSERTARGS("nc_raw",(0==argc));
-	return IntToJS( ::raw() );
+	return Int32ToJS( ::raw() );
     }
 
     JS_WRAPPER(nc_noraw)
     {
 	ASSERTARGS("nc_noraw",(0==argc));
-	return IntToJS( ::noraw() );
+	return Int32ToJS( ::noraw() );
     }
 
     JS_WRAPPER(nc_getcury)
     {
 	ASSERTARGS("nc_getcury",(1==argc));
 	WR_ARG(argv[0]);
-	return IntToJS( getcury(wr->win) );
+	return Int32ToJS( getcury(wr->win) );
     }
 
     JS_WRAPPER(nc_getcurx)
     {
 	ASSERTARGS("nc_getcurx",(1==argc));
 	WR_ARG(argv[0]);
-	return IntToJS( getcurx(wr->win) );
+	return Int32ToJS( getcurx(wr->win) );
     }
 
     JS_WRAPPER(nc_getcuryx)
@@ -1146,7 +1153,7 @@ namespace nc {
 	ASSERTARGS("nc_getcuryx",(1==argc));
 	WR_ARG(argv[0]);
 	Handle<Object> obj = Object::New();
-#define OSET(K,V) obj->Set(String::New(# K), IntToJS(V) )
+#define OSET(K,V) obj->Set(String::New(# K), Int32ToJS(V) )
 	OSET( "y", getcury( wr->win ) );
 	OSET( "x", getcurx( wr->win ) );
 #undef OSET
@@ -1155,12 +1162,12 @@ namespace nc {
 
     JS_WRAPPER(nc_screen_width)
     {
-	return IntToJS( screen_width() );
+	return Int32ToJS( screen_width() );
     }
 
     JS_WRAPPER(nc_screen_height)
     {
-	return IntToJS( screen_height() );
+	return Int32ToJS( screen_height() );
     }
 
     JS_WRAPPER(nc_winch)
@@ -1188,22 +1195,22 @@ namespace nc {
     {
 	ASSERTARGS("nc_mvwchgat",(6==argc));
 	WR_ARG(argv[0]);
-	int y = JSToInt( argv[1] );
-	int x = JSToInt( argv[2] );
-	int n = JSToInt( argv[3] );
-	int attr = JSToInt( argv[4] );
-	short color = JSToShort( argv[5] );
-	return IntToJS( mvwchgat(wr->win,y,x,n,attr,color,0) );
+	int y = JSToInt32( argv[1] );
+	int x = JSToInt32( argv[2] );
+	int n = JSToInt32( argv[3] );
+	int attr = JSToInt32( argv[4] );
+	short color = JSToInt16( argv[5] );
+	return Int32ToJS( mvwchgat(wr->win,y,x,n,attr,color,0) );
     }
 
     JS_WRAPPER(nc_wchgat)
     {
 	ASSERTARGS("nc_wchgat",(4==argc));
 	WR_ARG(argv[0]);
-	int n = JSToInt( argv[1] );
-	int attr = JSToInt( argv[2] );
-	short color = JSToShort( argv[3] );
-	return IntToJS( wchgat(wr->win,n,attr,color,0) );
+	int n = JSToInt32( argv[1] );
+	int attr = JSToInt32( argv[2] );
+	short color = JSToInt16( argv[3] );
+	return Int32ToJS( wchgat(wr->win,n,attr,color,0) );
     }
 
     JS_WRAPPER(nc_napms)
@@ -1250,7 +1257,7 @@ namespace nc {
 	}
 	else
 	{
-	    mmask_t arg = JSToLong( argv[0] );
+	    mmask_t arg = JSToInt64( argv[0] );
 	    mret = mousemask( arg, NULL );
 	}
 	return CastToJS( mret );
@@ -1276,15 +1283,15 @@ namespace nc {
 	getmouse(&evt);
 	Handle<Object> obj = Object::New();
 #define OSET(K,V) obj->Set(String::New(# K), V)
-	OSET( "y", IntToJS(evt.y) );
-	OSET( "x", IntToJS(evt.x) );
-	OSET( "z", IntToJS(evt.z) );
-	OSET( "id", IntToJS(evt.id) );
-	OSET( "bstate", IntToJS(evt.bstate) );
-	OSET( "x", IntToJS(evt.x) );
-	OSET( "z", IntToJS(evt.z) );
-	OSET( "id", IntToJS(evt.id) );
-	OSET( "bstate", IntToJS(evt.bstate) );
+	OSET( "y", Int32ToJS(evt.y) );
+	OSET( "x", Int32ToJS(evt.x) );
+	OSET( "z", Int32ToJS(evt.z) );
+	OSET( "id", Int32ToJS(evt.id) );
+	OSET( "bstate", Int32ToJS(evt.bstate) );
+	OSET( "x", Int32ToJS(evt.x) );
+	OSET( "z", Int32ToJS(evt.z) );
+	OSET( "id", Int32ToJS(evt.id) );
+	OSET( "bstate", Int32ToJS(evt.bstate) );
 #undef OSET
 	return obj;
 #endif // NCURSES_MOUSE_VERSION
@@ -1320,16 +1327,16 @@ namespace nc {
 	WR_ARG(argv[0]);
 	std::string s( JSToStdString(argv[1]) );
 	WINDOW * w = wr->win;
-	return IntToJS( nc_addvstr_impl( w, getcury(w), getcurx(w), s, -1 ) );
+	return Int32ToJS( nc_addvstr_impl( w, getcury(w), getcurx(w), s, -1 ) );
     }
     JS_WRAPPER(nc_waddvnstr)
     {
 	ASSERTARGS("nc_waddvnstr",(3==argc));
 	WR_ARG(argv[0]);
 	std::string s = JSToStdString( argv[1] );
-	int n = JSToInt( argv[2] );
+	int n = JSToInt32( argv[2] );
 	WINDOW * w = wr->win;
-	return IntToJS( nc_addvstr_impl( w, getcury(w), getcurx(w), s, n ) );
+	return Int32ToJS( nc_addvstr_impl( w, getcury(w), getcurx(w), s, n ) );
     }
 
     JS_WRAPPER(nc_mvwaddvstr)
@@ -1337,10 +1344,10 @@ namespace nc {
 	ASSERTARGS("nc_mvwaddvstr",(4==argc));
 	WR_ARG(argv[0]);
 	WINDOW * w = wr->win;
-	int y = JSToInt(argv[1]);
-	int x = JSToInt(argv[2]);
+	int y = JSToInt32(argv[1]);
+	int x = JSToInt32(argv[2]);
 	std::string s( JSToStdString(argv[3]) );
-	return IntToJS( nc_addvstr_impl( w, y, x, s, -1 ) );
+	return Int32ToJS( nc_addvstr_impl( w, y, x, s, -1 ) );
     }
 
     JS_WRAPPER(nc_mvwaddvnstr)
@@ -1348,13 +1355,13 @@ namespace nc {
 	ASSERTARGS("nc_mvwaddvnstr",(5==argc));
 	WR_ARG(argv[0]);
 	WINDOW * w = wr->win;
-	int y = JSToInt(argv[1]);
-	int x = JSToInt(argv[2]);
+	int y = JSToInt32(argv[1]);
+	int x = JSToInt32(argv[2]);
 	std::string str( JSToStdString(argv[3]) );
-	int n = JSToInt(argv[4]);
+	int n = JSToInt32(argv[4]);
 	int slen = static_cast<int>( str.size() );
 	if( (n < 0) || (n>slen) ) n = slen;
-	return IntToJS( nc_addvstr_impl( w, y, x, str.c_str(), n ) );
+	return Int32ToJS( nc_addvstr_impl( w, y, x, str.c_str(), n ) );
     }
 
 
@@ -1363,7 +1370,7 @@ namespace nc {
 	ASSERTARGS("nc_waddstr",(2==argc));
 	WR_ARG(argv[0]);
 	std::string str = JSToStdString(argv[1]);
-	return IntToJS( waddstr( wr->win, str.c_str() ) );
+	return Int32ToJS( waddstr( wr->win, str.c_str() ) );
     }
 
     JS_WRAPPER(nc_waddnstr)
@@ -1371,10 +1378,10 @@ namespace nc {
 	ASSERTARGS("nc_waddnstr",(3==argc));
 	WR_ARG(argv[0]);
 	std::string str = JSToStdString(argv[1]);
-	int n = JSToInt(argv[3]);
+	int n = JSToInt32(argv[3]);
 	int slen = static_cast<int>( str.size() );
 	if( (n < 0) || (n>slen) ) n = slen;
-	return IntToJS( waddnstr( wr->win, str.c_str(), n ) );
+	return Int32ToJS( waddnstr( wr->win, str.c_str(), n ) );
     }
 
 
@@ -1391,7 +1398,7 @@ namespace nc {
 	WR_ARG(argv[0]);
 	return FwdToFunc2<int,WINDOW *,chtype>( bind_cx(), wbkgd, argv );
 	//chtype c = CastFromJS<chtype>( argv[1] );
-	//return IntToJS( wbkgd( w->win, c ) );
+	//return Int32ToJS( wbkgd( w->win, c ) );
     }
 
     /**
@@ -1416,18 +1423,18 @@ namespace nc {
 	{
 	    std::string s( JSToStdString(argv[i]) );
 	    rc = ::waddstr( w, s.c_str() );
-	    if( OK != rc ) return IntToJS(rc);
+	    if( OK != rc ) return Int32ToJS(rc);
 	    if( i < (argc-1) )
 	    {
 		rc = waddch(w,' ');
-		if( OK != rc ) return IntToJS(rc);
+		if( OK != rc ) return Int32ToJS(rc);
 	    }
 	}
 	rc = waddch(w,'\n');
 	// Use do_wrefresh() instead of wrefresh() in case wr is
 	// associated with a panel, because do_wrefresh() handles that
 	// case:
-	return IntToJS( do_wrefresh(wr) );
+	return Int32ToJS( do_wrefresh(wr) );
     }
 
     JS_WRAPPER(nc_waddch)
@@ -1480,8 +1487,8 @@ namespace nc {
     {
 	ASSERTARGS("nc_mvwgetstr",(3==argc));
 	WR_ARG(argv[0]);
-	int y = JSToInt( argv[1] );
-	int x = JSToInt( argv[2] );
+	int y = JSToInt32( argv[1] );
+	int x = JSToInt32( argv[2] );
 	int wid = wr->win->_maxx+1;
 	int ht = wr->win->_maxy+1;
 	int sz = wid * ht;
@@ -1498,9 +1505,9 @@ namespace nc {
     {
 	ASSERTARGS("nc_mvwgetnstr",(4==argc));
 	WR_ARG(argv[0]);
-	int y = JSToInt( argv[1] );
-	int x = JSToInt( argv[2] );
-	int n = JSToInt( argv[3] );
+	int y = JSToInt32( argv[1] );
+	int x = JSToInt32( argv[2] );
+	int n = JSToInt32( argv[3] );
 	int wid = wr->win->_maxx+1;
 	int ht = wr->win->_maxy+1;
 	int sz = wid * ht;
@@ -1560,21 +1567,21 @@ namespace nc {
     {
 	ASSERTARGS("nc_mvwaddnstr",(5==argc));
 	WR_ARG(argv[0]);
-	int i1 = JSToInt(argv[1]);
-	int i2 = JSToInt(argv[2]);
+	int i1 = JSToInt32(argv[1]);
+	int i2 = JSToInt32(argv[2]);
 	std::string str( JSToStdString( argv[3] ) );
-	int i3 = JSToInt(argv[4]);
-	return IntToJS( mvwaddnstr( wr->win, i1, i2, str.c_str(), i3 ) );
+	int i3 = JSToInt32(argv[4]);
+	return Int32ToJS( mvwaddnstr( wr->win, i1, i2, str.c_str(), i3 ) );
     }
 
     JS_WRAPPER(nc_mvwaddstr)
     {
 	ASSERTARGS("nc_mvwaddstr",(4==argc));
 	WR_ARG(argv[0]);
-	int i1 = JSToInt(argv[1]);
-	int i2 = JSToInt(argv[2]);
+	int i1 = JSToInt32(argv[1]);
+	int i2 = JSToInt32(argv[2]);
 	std::string str( JSToStdString( argv[3] ) );
-	return IntToJS( mvwaddstr( wr->win, i1, i2, str.c_str() ) );
+	return Int32ToJS( mvwaddstr( wr->win, i1, i2, str.c_str() ) );
     }
 
     JS_WRAPPER(nc_wattroff)
@@ -1603,7 +1610,7 @@ namespace nc {
 	int y = -1;
 	int x = -1;
 	getparyx( wr->win, y, x );
-	return IntToJS( y );
+	return Int32ToJS( y );
     }
 
 
@@ -1614,7 +1621,7 @@ namespace nc {
 	int y = -1;
 	int x = -1;
 	getparyx( wr->win, y, x );
-	return IntToJS( x );
+	return Int32ToJS( x );
     }
 
     JS_WRAPPER(nc_getparyx)
@@ -1626,8 +1633,8 @@ namespace nc {
 	getparyx( wr->win, y, x );
 	Handle<Object> obj = Object::New();
 #define OSET(K,V) obj->Set(String::New(# K), V)
-	OSET( "y", IntToJS(y) );
-	OSET( "x", IntToJS(x) );
+	OSET( "y", Int32ToJS(y) );
+	OSET( "x", Int32ToJS(x) );
 	return obj;
 #undef OSET
     }
@@ -1640,7 +1647,7 @@ namespace nc {
 	getbegyx( wr->win, y, x );
 	getmaxyx( wr->win, h, w );
 	Handle<Object> obj = Object::New();
-#define OSET(K,V) obj->Set(String::New(# K), IntToJS(V) )
+#define OSET(K,V) obj->Set(String::New(# K), Int32ToJS(V) )
 	OSET( "y", y );
 	OSET( "x", x );
 	OSET( "w", w );
@@ -1657,7 +1664,7 @@ namespace nc {
 	int x = -1;
 	getmaxyx( wr->win, x, y );
 	Handle<Object> obj = Object::New();
-#define OSET(K,V) obj->Set(String::New(# K), IntToJS(V) )
+#define OSET(K,V) obj->Set(String::New(# K), Int32ToJS(V) )
 	OSET( "y", y );
 	OSET( "x", x );
 	return obj;
@@ -1681,14 +1688,14 @@ namespace nc {
 	PNL_ARG(argv[0]);
 	PANEL * p = wr->pnl;
 	wr->SetPanel(0);
-	return IntToJS( del_panel( p ) );
+	return Int32ToJS( del_panel( p ) );
     }
 
     JS_WRAPPER(nc_hide_panel)
     {
 	ASSERTARGS("nc_hide_panel",(1==argc));
 	PNL_ARG(argv[0]);
-	return IntToJS( hide_panel( wr->pnl ) );
+	return Int32ToJS( hide_panel( wr->pnl ) );
     }
 
     JS_WRAPPER(nc_panel_hidden)
@@ -1702,21 +1709,21 @@ namespace nc {
     {
 	ASSERTARGS("nc_bottom_panel",(1==argc));
 	PNL_ARG(argv[0]);
-	return IntToJS( bottom_panel( wr->pnl ) );
+	return Int32ToJS( bottom_panel( wr->pnl ) );
     }
 
     JS_WRAPPER(nc_top_panel)
     {
 	ASSERTARGS("nc_top_panel",(1==argc));
 	PNL_ARG(argv[0]);
-	return IntToJS( top_panel( wr->pnl ) );
+	return Int32ToJS( top_panel( wr->pnl ) );
     }
 
     JS_WRAPPER(nc_show_panel)
     {
 	ASSERTARGS("nc_show_panel",(1==argc));
 	PNL_ARG(argv[0]);
-	return IntToJS( show_panel( wr->pnl ) );
+	return Int32ToJS( show_panel( wr->pnl ) );
     }
 
     JS_WRAPPER(nc_panel_window)
@@ -1752,14 +1759,14 @@ namespace nc {
     JS_WRAPPER(nc_KEY_F)
     {
 	ASSERTARGS("KEY_F",(1==argc));
-	return IntToJS( KEY_F( JSToInt( argv[0] ) ) );
+	return Int32ToJS( KEY_F( JSToInt32( argv[0] ) ) );
     }
 
     JS_WRAPPER(nc_has_key)
     {
 	ASSERTARGS("nc_has_key",(1==argc));
 #if defined(NCURSES_VERSION)
-	return BoolToJS( (0 == has_key( JSToInt( argv[0] ) )) ? false : true );
+	return BoolToJS( (0 == has_key( JSToInt32( argv[0] ) )) ? false : true );
 #else
 	return ThrowException(String::New("nc_has_key() requires Ncurses!"));
 #endif
@@ -1771,7 +1778,7 @@ namespace nc {
     {
 	ASSERTARGS("nc_capture_cout/cerr",((argc>0) && (argc<3)));
 	WR_ARG(argv[0]);
-	long attr = (argc>1) ? JSToInt(argv[1]) : 0L;
+	long attr = (argc>1) ? JSToInt32(argv[1]) : 0L;
 	captured_streams().insert( ::std::make_pair( wr->win, new nc_window_streambuf(wr->win,os,attr) ) );
 	return BoolToJS(true);
     }
@@ -1805,13 +1812,13 @@ namespace nc {
 	    }
 	    str.erase( head, stet );
 	}
-	return IntToJS( undid );
+	return Int32ToJS( undid );
     }
 
     JS_WRAPPER(nc_ripoffline)
     {
 	ASSERTARGS("nc_ripoffline",(argc==2));
-	int l = JSToInt(argv[0]);
+	int l = JSToInt32(argv[0]);
 	if( 0 == l )
 	{
 	    return ThrowException(String::New("nc_ripoffline(): first argument must be a non-zero integer."));
@@ -1832,7 +1839,7 @@ namespace nc {
 	    os << "nc_ripoffline(): ::ripoffline("<<l<<",Function) failed with code "<<rc<<"!";
 	    return ThrowException(String::New( os.str().c_str(), static_cast<int>(os.str().size()) ));
 	}
-	return IntToJS(OK);
+	return Int32ToJS(OK);
     }
 
 

@@ -82,38 +82,6 @@
 
 namespace v8 {
 namespace juice {
-namespace convert {
-    /**
-       Custom JS/C++ cast operators...
-    */
-    namespace Detail
-    {
-	template <>
-	struct to_js_f<sqlite3_int64>
-	{
-	    ValueHandle operator()( sqlite3_int64 v ) const
-	    {
-		return Number::New( v );
-	    }
-	};
-
-	template <>
-	struct to_native_f<sqlite3_int64>
-	{
-	    typedef sqlite3_int64 result_type;
-	    result_type operator()( bind::BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return h->IsNumber()
-		    ? h->IntegerValue()
-		    : 0;
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return this->operator()( 0, h );
-	    }
-	};
-    }
-} // namespace convert
 
 namespace sq3 {
 
