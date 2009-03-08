@@ -1,9 +1,9 @@
-#summary Plugins API
+#summary Extending v8 with plugins
 #labels Phase-UserDocs,Featured
 
 =The Plugins API=
 
-This is an API for loading DLLs with the intent of adding functionality to a running JS engine.
+v8-juice provides an API for loading DLLs with the intent of adding functionality to a running JS engine.
 
 List of current plugins (in alphabetical order):
 
@@ -12,6 +12,10 @@ List of current plugins (in alphabetical order):
   * [PluginSQLite3 sqlite3]: sqlite3 bindings
   * [PluginStringFuncs stringstuff]: supplemental string functions
   * [PluginWhio whio]: i/o device and stream classes
+
+The plugins which are "standalone" (have no hard dependencies on external/third-party software other than v8) are in the core source tree under [http://code.google.com/p/v8-juice/source/browse/trunk/src/#src/lib/plugins src/lib/plugins]. Those which have external dependencies live in [http://code.google.com/p/v8-juice/source/browse/#svn/extra-plugins the extra-plugins repository].
+
+Of your copy of juice is configured without plugins, the API for loading plugins will still be there (for consistency and binary compatibility), but they won't do anything useful.
 
 ==C++-side==
 
@@ -73,6 +77,16 @@ print(PathFinder.shared.plugins.pathArray);
 print(PathFinder.shared.plugins.find("MyPlugin"));
   // ^^^ searches for MyPlugin.(dll|so) but does not open it
 }}}
+
+
+The default plugins search path is:
+{{{
+.
+PREFIX/lib/v8/juice/JUICE_VERSION
+PREFIX/lib/v8/juice
+}}}
+
+Where `PREFIX` is the installation prefix (see [BuildingTheCode]) and `JUICE_VERSION` is the version of the library (set during the configuration process).
 
 ==DLLs are _never_ unloaded==
 
