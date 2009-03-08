@@ -93,15 +93,36 @@ namespace v8 { namespace juice { namespace whio {
     }
 
     /**
+       Casts v to (T*). T must be one of whio_dev or whio_stream.
+    */
+    template <typename T>
+    static T * dev_cast( Handle< Value > const & v )
+    {
+	if( v.IsEmpty() ) return 0;
+	if( ! v->IsObject() )
+	{
+	    return v->IsExternal()
+		? bind::GetBoundNative<T>( bind_cx(), v )
+		: 0;
+	}
+	Local<Object> o( Object::Cast( *v ) );
+	return bind::GetBoundNative<T>( bind_cx(), o->GetInternalField(0) );
+    }
+
+
+    /**
        Constructor for the native half of IODevice objects.
        
        Curiously, it may not be static because then
        it can't be used as a template type parameter (see
        combined_ctor()). Weird.
 
-       The exception argument should be set to a value from
-       ThrowException() if a detailed error message can be reported,
-       otherwise simply return 0 to indicate failure.
+       The exception argument should be set to a non-empty value if a
+       detailed error message can be reported, otherwise simply return
+       0 to indicate failure. If the string is non-empty when this
+       function returns, combined_ctor() will throw on our behalf with
+       that message (and will destroy the returned object if it is not
+       0).
 
        JS arguments:
 
@@ -110,21 +131,27 @@ namespace v8 { namespace juice { namespace whio {
        - (string filename, bool writeMode)
        - (":memory:" [, int initialSize])
      */
-    whio_dev * dev_construct( int argc, Handle<Value> argv[], Handle<Value> & exception )
+    whio_dev * dev_construct( int argc, Handle<Value> argv[], std::string & exception )
     {
 	whio_dev * dev = 0;
-	if( argc > 0 )
+	if( 0 == argc )
+	{
+	    exception = "Not enough arguments for the constructor!";
+	}
+	//char const * dontknow = "Don't know how to handle the given constructor arguments!";
+	if( argv[0]->IsString() )
 	{
 	    std::string fname = JSToStdString(argv[0]);
 	    if( ":memory:" == fname )
 	    { // (":memory:" [,int size])
-		//uint32_t sz = (argc > 1) ? JSToUInt32(argv[1]) : 0;
 		whio_size_t sz = (argc > 1) ? CastFromJS<whio_size_t>(argv[1]) : 0;
-		//whio_size_t sz = (argc > 1) ? JSToInt32(argv[1]) : 0;
 		dev = whio_dev_for_membuf( sz, 1.25 );
 		if( ! dev )
 		{
-		    exception = ThrowException(JSTR("Could not create in-memory i/o device of the requested size!"));
+		    std::ostringstream msg;
+		    msg << "Could not create in-memory i/o device of "
+			<<sz<<" bytes!";
+		    exception = msg.str();
 		}
 		return dev;
 	    }
@@ -135,15 +162,28 @@ namespace v8 { namespace juice { namespace whio {
 		dev = whio_dev_for_filename( fname.c_str(), mode );
 		return dev;
 	    }
-	    exception = ThrowException(JSTR("Invalid arguments for IODevice constructor. "
-					    "RTFM: http://code.google.com/p/v8-juice/wiki/PluginWhio"));
-	    return 0;
 	}
-	else
-	{
-	    exception = ThrowException(JSTR("Not enough arguments for the constructor!"));
+	if( 3 == argc )
+	{ // (IODevice,lower,upper)
+	    whio_dev * iod = dev_cast<whio_dev>(argv[0]);
+	    if( iod )
+	    {
+		whio_size_t low = CastFromJS<whio_size_t>(argv[1]);
+		whio_size_t high = CastFromJS<whio_size_t>(argv[2]);
+		dev = whio_dev_subdev_create( iod, low, high );
+		if( ! dev )
+		{
+		    std::ostringstream msg;
+		    msg << "Creationg of subdevice for range ("
+			<<low<<","<<high<<") failed!";
+		    exception = msg.str();
+		}
+		return dev;
+	    }
 	}
-	return dev;
+	exception = "Invalid arguments for IODevice constructor. "
+	    "RTFM: http://code.google.com/p/v8-juice/wiki/PluginWhio";
+	return 0;
     }
 
     /**
@@ -164,35 +204,51 @@ namespace v8 { namespace juice { namespace whio {
        OutStream (writeMode==true):
 
        - (string filename [,bool truncate=true])
+
+       Both types:
+       - (IODevice)
     */
     template <bool writeMode>
-    whio_stream * stream_construct( int argc, Handle<Value> argv[], Handle<Value> & exception )
+    whio_stream * stream_construct( int argc, Handle<Value> argv[], std::string & exception )
     {
+	if( argc < 1 )
+	{
+	    exception = "Not enough arguments for the constructor!";
+	    return 0;
+	}
 	HandleScope boo;
 	whio_stream * dev = 0;
-	if( argc > 0 )
-	{ // (string filename [, truncate=true])
+	if( argv[0]->IsString() )
+	{// (string filename [, truncate=true])
 	    std::string fname = JSToStdString(argv[0]);
 	    bool trunc = (argc>1) ? argv[1]->BooleanValue() : true;
 	    char const * mode = (writeMode) ? (trunc ? "wb" : "ab") : "rb";
 	    dev = whio_stream_for_filename( fname.c_str(), mode );
-	    if(0)
+	    if(!dev)
 	    {
-		/* Weird: i'm getting what appears to be stack
-		 corruption when i go through juice::ThrowException()
-		 here: */
-		exception =
-		    ThrowException(JSTR("Just testing!"))
-		    //juice::ThrowException("Just testing at %s:%d!","here",__LINE__)
-		    ;
+		std::ostringstream msg;
+		msg << "Could not open file ["<<fname<<"] using mode '"<<mode<<"'!";
+		exception = msg.str();
+		return 0;
 	    }
+	    return dev;
 	    //CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
 	}
-	else
+	whio_dev * iod = dev_cast<whio_dev>(argv[0]);
+	if( iod )
 	{
-	    exception = ThrowException(JSTR("Not enough arguments for the constructor!"));
+	    dev = whio_stream_for_dev( iod, false );
+	    if( ! dev )
+	    {
+		std::ostringstream msg;
+		msg << "whio_stream_for_dev( @"<<iod<<", false ) failed!";
+		exception = msg.str();
+	    }
+	    return dev;
 	}
-	return dev;
+	exception = "Invalid arguments for stream constructor. "
+	    "RTFM: http://code.google.com/p/v8-juice/wiki/PluginWhio";
+	return 0;
     }
 
     /**
@@ -205,7 +261,7 @@ namespace v8 { namespace juice { namespace whio {
     template <
 	typename T,
 	/* constructor proxy: */
-	T * (*Func)(int,Handle<Value>[], Handle<Value> &)
+	T * (*Func)(int,Handle<Value>[], std::string &)
 	>
     static Handle<Value> combined_ctor(const Arguments& argv)
     {
@@ -218,42 +274,27 @@ namespace v8 { namespace juice { namespace whio {
 	{
 	    std::vector< Handle<Value> > av(argc,Null());
 	    for( int i = 0; i < argc; ++i ) av[i] = argv[i];
-	    Handle<Value> check( Undefined() );
-	    T * dev = Func( argc, &av[0], check );
-	    //check = juice::ThrowException("Just testing at %s:%d!","here",__LINE__);
-	    if( check.IsEmpty() ) // initializer threw
+	    std::string err;
+	    T * dev = Func( argc, &av[0], err );
+	    //err = juice::ThrowException("Just testing at %s:%d!","here",__LINE__);
+	    if( ! err.empty() )
 	    {
 		if( dev )
 		{
 		    dev->api->finalize(dev);
 		    dev = 0;
 		}
-		return check;
+		TOSS(err.c_str());
 	    }
 	    if( ! dev )
 	    {
-		return ThrowException(JSTR("open failed!"));
+		TOSS("Opening the stream failed for an unspecified reason!");
 	    }
 	    return dev_wrap( argv.This(), dev );
 	}
 	TOSS("Invalid arguments!");
     }
 
-    /**
-       Casts v to (T*). T must be one of whio_dev or whio_stream.
-    */
-    template <typename T>
-    static T * dev_cast( Local< Value > v )
-    {
-	if( v.IsEmpty() || ! v->IsObject() )
-	{
-	    return 0;
-	    //?? return bind::GetBoundNative<T>( bind_cx(), v );
-	}
-	Local<Object> o( Object::Cast( *v ) );
-	T * obj = bind::GetBoundNative<T>( bind_cx(), o->GetInternalField(0) );
-	return obj;
-    }
 
 #define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS(FUNC "(): argument assertion failed: " # COND)
 #define DEVH(T,H) T * dev = dev_cast<T>( H )
@@ -377,7 +418,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("seek",((argc==1) || (argc==2)));
 	DEVTHIS(whio_dev);
-	uint32_t pos = JSToUInt64( argv[0] );
+	int32_t pos = JSToUInt32( argv[0] );
 	const int whence = (argc>1) ? JSToInt32( argv[1] ) : SEEK_SET;
 	switch( whence )
 	{

@@ -60,9 +60,53 @@ function tryMemory()
     print("Buffer size:",dev.size());
     dev.truncate(1024 * 1024);
     print("Grown buffer size:",dev.size());
-    dev.truncate(256 * 1024);
+    dev.truncate(10);
     print("Shrunk buffer size:",dev.size());
+
+    dev.rewind();
+    var ostr = new whio.OutStream( dev );
+    var istr = new whio.InStream( dev );
+    ostr.write("Hi from the stream!");
+    dev.seek( 10 );
+    print("Read back:",istr.read(10));
+    dev.seek( 10 );
+    ostr.write("xxx");
+    dev.seek(10);
+    print("Read back:",istr.read(10));
+    ostr.close();
+    istr.close();
+    print("Buffer size:",dev.size());
     dev.close();
+    //new whio.InStream( dev ); // should throw.
 }
 
 tryMemory();
+
+function trySubdev()
+{
+    var fn = "subdev.out";
+    var dev = new whio.IODevice(fn,true);
+    for( var i = 0; i < 10; ++i )
+    {
+	dev.write(".........+");
+    }
+    var sub = new whio.IODevice(dev,10,20);
+    for( var i = 0; i < 3; ++i )
+    {
+	if( 10 != sub.write("0123456789") ) break;
+    }
+    sub.close();
+    dev.close();
+    print("Check file",fn,"for subdevice test.");
+
+    var dev = new whio.IODevice(":memory:");
+    dev.write("012345679");
+    var sub = new whio.IODevice(dev, 4, 7 );
+    sub.write("abcdefghij");
+    dev.rewind();
+    print(dev.read(10));
+    sub.close();
+    dev.close();
+
+}
+trySubdev();
