@@ -4,7 +4,9 @@
 =v8-juice ChangeLog=
 
 This is the informal ChangeLog for the v8-juice project. Newest items
-are at the top. Dates written extra large are release dates. This contains only a high-level list of changes. The exact list of changes can be fished out of our source code repository at: [/source/browse/]
+are at the top. Dates written extra large are release dates. This contains only a high-level list of changes. The exact list of changes can be fished out of our source code repository at:
+
+http://code.google.com/p/v8-juice/source/browse/
 
 ----
 *2009 March 8*
