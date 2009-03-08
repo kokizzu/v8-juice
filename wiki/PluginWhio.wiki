@@ -39,6 +39,7 @@ IODevice represents a random-access i/o device, with read-only or read/write acc
 
 || Function  || Notes ||
 || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
+|| `new IODevice(":memory:" [, int startingSize=0])` || Opens a read/write i/o device which uses RAM as its storage. It starts out at the given size and grows on demand. ||
 || `int write(string[,length=string.lenght`) || Writes up to length bytes. Returns number of bytes written. ||
 || `string read(length)` || Reads, at most, length bytes and returns the result as a string ||
 || `void close()` || Closes the device. Do not use the object after calling this. ||
