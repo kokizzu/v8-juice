@@ -1,4 +1,4 @@
-#summary I/O device bindings for JS
+#summary I/O classes for JS
 #labels Phase-UserDocs
 
 <wiki:toc max_depth="3" />
