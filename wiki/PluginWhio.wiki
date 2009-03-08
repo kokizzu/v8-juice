@@ -70,6 +70,7 @@ InStream represents a read-only stream.
 
 || Function  || Notes ||
 || `new InStream(string file)` || Opens the given file in read mode. ||
+|| `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
 || `string read(int length)` || As for whio.IODevice.read() ||
 || `int write(string data [,int lenght])` || Throws an exception - InStreams cannot write ||
 || `void close()` || As for whio.IODevice.close() ||
@@ -83,6 +84,7 @@ OutStream represents a write-only stream.
 
 || Function  || Notes ||
 || `new OutStream(string file[, bool truncate=false])` || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
+|| `new OutStream(IODevice)` || As for InStream(IODevice). If the device is not writable, no write operations on the new object will succeed.||
 || `string read(int length)` || Throws an exception - OutStreams cannot read. ||
 || `int write(string data [,int lenght])` || As for whio.IODevice.write() ||
 || `void close()` || As for whio.IODevice.close() ||
