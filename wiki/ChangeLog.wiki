@@ -12,7 +12,7 @@ are at the top. Dates written extra large are release dates.
   * Started adding `extra-plugins` repository for plugins with licenses which may not allow them to live in the main tree.
   * Added new plugin: [PluginReadline]
 
-=2009 March 7=
+==2009 March 7==
 
   * Released the first tarball.
 
