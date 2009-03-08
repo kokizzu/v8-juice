@@ -1,5 +1,5 @@
 #summary Configuring and building the source tree
-#labels Phase-UserDocs,Phase-Implementation
+#labels Phase-UserDocs,Phase-Implementation,Featured
 
 =Requirements and prerequisites=
 
