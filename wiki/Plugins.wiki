@@ -5,12 +5,13 @@
 
 This is an API for loading DLLs with the intent of adding functionality to a running JS engine.
 
-List of current plugins:
+List of current plugins (in alphabetical order):
 
-  * [PluginNCurses ncurses bindings]
-  * [PluginSQLite3 sqlite3 bindings]
-  * [PluginWhio i/o stream classes]
-  * [PluginStringFuncs supplemental string functions]
+  * [PluginNCurses ncurses]: ncurses bindings
+  * [PluginReadline readline]: minimalistic GNU Readline/BSD Editline wrapper
+  * [PluginSQLite3 sqlite3]: sqlite3 bindings
+  * [PluginStringFuncs stringstuff]: supplemental string functions
+  * [PluginWhio whio]: i/o device and stream classes
 
 ==C++-side==
 
