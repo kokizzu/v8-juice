@@ -223,6 +223,7 @@ namespace convert {
 	{
 	    ValueHandle operator()( std::string const & v ) const
 	    {
+		/** This use of v.data() instead of v.c_str() is highly arguable. */
 		return String::New( v.data(), static_cast<int>( v.size() ) );
 	    }
 	};
