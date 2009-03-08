@@ -1,53 +1,56 @@
 load_plugin('v8-juice-whio');
 
-var fname = "iodev.out";
-var dev = //whio.IODevice.forFile("/etc/passwd", false );
-    new whio.IODevice(fname, true );
+function tryOne() {
+    var fname = "iodev.out";
+    var dev = //whio.IODevice.forFile("/etc/passwd", false );
+	new whio.IODevice(fname, true );
 
-for( var i = 0; i < 10; ++i )
-{
-    dev.write( "Line #"+(i+1)+"\n" );
-}
-//dev.truncate( 16 );
-dev.close();
-
-dev = new whio.IODevice(fname,false);
-dev.seek( 5, whio.IODevice.SEEK_CUR );
-dev.seek( 10, whio.IODevice.SEEK_CUR );
-var rdSize = 13;
-var rdRC = 0;
-while( 0 != (rdRC = dev.read(rdSize)) ) {
-    print('rdRC.length =',rdRC.length,'data=['+rdRC+']');
-    if( rdRC < rdSize ) break;
-}
-print("File size:",dev.size());
-dev.close();
-
-if( 1 ) {
-    var ostr = new whio.OutStream(fname);
     for( var i = 0; i < 10; ++i )
     {
-	ostr.write( "This is line #"+i+'\n');
+	dev.write( "Line #"+(i+1)+"\n" );
     }
-    print("ostr =",ostr);
-    ostr.close();
-    //ostr.write("ouch"); // should throw
-    var istr = new whio.InStream(fname);
-    rdSize = 200;
-    while( 0 != (rdRC = istr.read(rdSize)) ) {
+    //dev.truncate( 16 );
+    print('dev.isGood() ==',dev.isGood());
+    dev.close();
+
+    dev = new whio.IODevice(fname,false);
+    dev.seek( 5, whio.IOBase.SEEK_CUR );
+    dev.seek( 10, whio.IODevice.SEEK_CUR );
+    var rdSize = 13;
+    var rdRC = 0;
+    while( 0 != (rdRC = dev.read(rdSize)) ) {
 	print('rdRC.length =',rdRC.length,'data=['+rdRC+']');
 	if( rdRC < rdSize ) break;
     }
-    istr.close();
+    print("File size:",dev.size());
+    dev.close();
+
+    if( 1 ) {
+	var ostr = new whio.OutStream(fname);
+	for( var i = 0; i < 10; ++i )
+	{
+	    ostr.write( "This is line #"+i+'\n');
+	}
+	print("ostr =",ostr);
+	ostr.close();
+	//ostr.write("ouch"); // should throw
+	var istr = new whio.InStream(fname);
+	rdSize = 200;
+	while( 0 != (rdRC = istr.read(rdSize)) ) {
+	    print('rdRC.length =',rdRC.length,'data=['+rdRC+']');
+	    if( rdRC < rdSize ) break;
+	}
+	istr.close();
+    }
+
+    if(1) {
+	var os = new whio.OutStream("/dev/stdout");
+	os.write("Hi, world!\n");
+	os.close();
+    }
+    print("Output is in file",fname);
 }
 
-if(1) {
-    var os = new whio.OutStream("/dev/stdout");
-    os.write("Hi, world!\n");
-    os.close();
-}
-
-print("Output is in file",fname);
 
 function tryMemory()
 {
@@ -81,7 +84,7 @@ function tryMemory()
     //new whio.InStream( dev ); // should throw.
 }
 
-tryMemory();
+
 
 function trySubdev()
 {
@@ -128,7 +131,6 @@ function trySubdev()
     dev.close();
 
 }
-trySubdev();
 
 function tryBadStream()
 {
@@ -154,7 +156,6 @@ function tryBadStream()
     throw new Error("You shouldn't have gotten this far!");
 }
 
-tryBadStream();
 
 function tryStreamFilter()
 {
@@ -206,7 +207,6 @@ function tryStreamFilter()
     }
     print('userData.lastIn='+ud.lastIn, 'userData.hits='+ud.hits);
 }
-tryStreamFilter();
 
 function tryTypeInfo()
 {
@@ -220,17 +220,42 @@ function tryTypeInfo()
 // 	print(o,'instanceof',F,'==',o instanceof F);
 	print(o,'instanceof',F,'==',o instanceof (( 'string' == typeof F) ? eval(F) : F));
     };
-    f(dev,'whio.IODevice');
-    f(is,'whio.InStream');
-    f(is,'whio.IODevice');
-    f(os,'whio.OutStream');
-    f(os,'whio.InStream');
-    f(os,'whio.IODevice');
+    if(0) {
+	f(dev,'whio.IODevice');
+	f(dev,'whio.IOBase');
+	f(is,'whio.InStream');
+	f(is,'whio.IODevice');
+	f(is,'whio.IOBase');
+	//is.write("hi"); // should throw
+	//os.read(1); // should throw;
+	f(os,'whio.OutStream');
+	f(os,'whio.IOBase');
+	f(os,'whio.InStream');
+	f(os,'whio.IODevice');
+    }
+    var sar = [os,is,dev];
+    for( var ks in sar  )
+    {
+	var strdev = sar[ks];
+	var types = ['whio.IODevice','whio.IOBase','whio.InStream','whio.OutStream'];
+	for( kt in types )
+	{
+	    f(strdev,types[kt]);
+	    print(ks+'.isGood() ==',strdev.isGood());
+	}
+    }
     is.close();
     os.close();
     dev.close();
     print
 }
-tryTypeInfo();
+
+tryOne();
+tryMemory();
+trySubdev();
+tryBadStream();
+//tryStreamFilter();
+//tryTypeInfo();
 
 print(":-D");
+
