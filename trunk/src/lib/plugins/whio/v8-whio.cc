@@ -108,16 +108,36 @@ namespace v8 { namespace juice { namespace whio {
        IODevice:
 
        - (string filename, bool writeMode)
+       - (":memory:" [, int initialSize])
      */
     whio_dev * dev_construct( int argc, Handle<Value> argv[], Handle<Value> & exception )
     {
 	whio_dev * dev = 0;
-	if( 2 == argc )
+	if( argc > 0 )
 	{
 	    std::string fname = JSToStdString(argv[0]);
-	    bool writeMode = JSToBool(argv[1]);
-	    char const * mode = (writeMode) ? "w+b" : "rb";
-	    dev = whio_dev_for_filename( fname.c_str(), mode );
+	    if( ":memory:" == fname )
+	    { // (":memory:" [,int size])
+		//uint32_t sz = (argc > 1) ? JSToUInt32(argv[1]) : 0;
+		whio_size_t sz = (argc > 1) ? CastFromJS<whio_size_t>(argv[1]) : 0;
+		//whio_size_t sz = (argc > 1) ? JSToInt32(argv[1]) : 0;
+		dev = whio_dev_for_membuf( sz, 1.25 );
+		if( ! dev )
+		{
+		    exception = ThrowException(JSTR("Could not create in-memory i/o device of the requested size!"));
+		}
+		return dev;
+	    }
+	    else if( 2 == argc )
+	    { // (string filename, bool writeMode)
+		bool writeMode = JSToBool(argv[1]);
+		char const * mode = (writeMode) ? "w+b" : "rb";
+		dev = whio_dev_for_filename( fname.c_str(), mode );
+		return dev;
+	    }
+	    exception = ThrowException(JSTR("Invalid arguments for IODevice constructor. "
+					    "RTFM: http://code.google.com/p/v8-juice/wiki/PluginWhio"));
+	    return 0;
 	}
 	else
 	{
@@ -225,20 +245,13 @@ namespace v8 { namespace juice { namespace whio {
     template <typename T>
     static T * dev_cast( Local< Value > v )
     {
-	if( v.IsEmpty() || ! v->IsObject() ) return 0;
+	if( v.IsEmpty() || ! v->IsObject() )
+	{
+	    return 0;
+	    //?? return bind::GetBoundNative<T>( bind_cx(), v );
+	}
 	Local<Object> o( Object::Cast( *v ) );
 	T * obj = bind::GetBoundNative<T>( bind_cx(), o->GetInternalField(0) );
-	//?? if( ! T ) T = bind::GetBoundNative<T>( bind_cx(), v );
-#if 0
-	if( obj )
-	{
-	    if(!LameAssKludge<T>().count(obj))
-	    {
-		bind::UnbindNative<T>( bind_cx(), obj, obj );
-		return 0;
-	    }
-	}
-#endif
 	return obj;
     }
 
@@ -275,7 +288,7 @@ namespace v8 { namespace juice { namespace whio {
 		return juice::ThrowException("write(input,%u): input data is too short (%u bytes) for write request for %u bytes!",
 					     l, data.size(), l);
 	    }
-	    return CastToJS<uint32_t>( dev->api->write( dev, data.data(), l ) );
+	    return CastToJS( dev->api->write( dev, data.data(), l ) );
 	}
     }
 
@@ -324,7 +337,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("error",(argc==0));
 	DEVTHIS(whio_dev);
-	return IntToJS( dev->api->error( dev ) );
+	return Int32ToJS( dev->api->error( dev ) );
     }
 
     /**
@@ -334,7 +347,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("clearError",(argc==0));
 	DEVTHIS(whio_dev);
-	return IntToJS( dev->api->clear_error( dev ) );
+	return Int32ToJS( dev->api->clear_error( dev ) );
     }
 
     /**
@@ -344,7 +357,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("eof",(argc==0));
 	DEVTHIS(whio_dev);
-	return IntToJS( dev->api->eof(dev) );
+	return Int32ToJS( dev->api->eof(dev) );
     }
 
     /**
@@ -354,7 +367,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("tell",(argc==0));
 	DEVTHIS(whio_dev);
-	return ULongToJS( dev->api->tell( dev ) );
+	return UInt64ToJS( dev->api->tell( dev ) );
     }
 
     /**
@@ -364,8 +377,8 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("seek",((argc==1) || (argc==2)));
 	DEVTHIS(whio_dev);
-	uint32_t pos = JSToULong( argv[0] );
-	const int whence = (argc>1) ? JSToInt( argv[1] ) : SEEK_SET;
+	uint32_t pos = JSToUInt64( argv[0] );
+	const int whence = (argc>1) ? JSToInt32( argv[1] ) : SEEK_SET;
 	switch( whence )
 	{
 	  case SEEK_SET:
@@ -375,7 +388,7 @@ namespace v8 { namespace juice { namespace whio {
 	  default:
 	      TOSS("The second argument to seek() must be one of SEEK_SET, SEEK_CUR, or SEEK_END!");
 	};
-	return ULongToJS( dev->api->seek( dev, pos, whence) );
+	return UInt64ToJS( dev->api->seek( dev, pos, whence) );
     }
 
     /**
@@ -386,7 +399,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("flush",(argc==0));
 	DEVTHIS(DevT);
-	return IntToJS( dev->api->flush( dev ) );
+	return Int32ToJS( dev->api->flush( dev ) );
     }
 
     /**
@@ -396,8 +409,8 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("truncate",(argc==1));
 	DEVTHIS(whio_dev);
-	uint32_t len = JSToULong( argv[0] );
-	return IntToJS( dev->api->truncate(dev, len) );
+	uint32_t len = JSToUInt64( argv[0] );
+	return Int32ToJS( dev->api->truncate(dev, len) );
     }
 
     /**
@@ -407,7 +420,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("size",(argc==0));
 	DEVTHIS(whio_dev);
-	return ULongToJS( whio_dev_size( dev ) );
+	return UInt64ToJS( whio_dev_size( dev ) );
     }
 
     /**
@@ -417,7 +430,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS("rewind",(argc==0));
 	DEVTHIS(whio_dev);
-	return IntToJS( whio_dev_rewind( dev ) );
+	return Int32ToJS( whio_dev_rewind( dev ) );
     }
 
 #if 0
