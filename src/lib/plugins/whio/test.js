@@ -47,3 +47,22 @@ if(1) {
 }
 
 print("Output is in file",fname);
+
+function tryMemory()
+{
+    var dev = new whio.IODevice(":memory:");
+    print("Buffer size:",dev.size());
+    dev.write("Hi, world!");
+    dev.seek(4,whio.SEEK_SET);
+    dev.write("Guido");
+    dev.rewind();
+    print("In-memory device says ["+dev.read(10)+']');
+    print("Buffer size:",dev.size());
+    dev.truncate(1024 * 1024);
+    print("Grown buffer size:",dev.size());
+    dev.truncate(256 * 1024);
+    print("Shrunk buffer size:",dev.size());
+    dev.close();
+}
+
+tryMemory();
