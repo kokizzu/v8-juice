@@ -16,10 +16,9 @@
    that code is GPL, i wrote it, and am re-licensing this copy to
    conform to v8 conventions.
 */
-// Copyright 2007-2009 the V8 project authors. All rights reserved.
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Copyright 2009 Stephan Beal. All rights reserved.  Redistribution
+// and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
 //
 //     * Redistributions of source code must retain the above copyright
 //       notice, this list of conditions and the following disclaimer.
@@ -56,10 +55,6 @@
 #ifndef CERR
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
-
-
-#include <ncurses.h>
-#include <panel.h>
 
 #include <v8.h>
 #include <v8/juice/convert.h>
