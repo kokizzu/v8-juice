@@ -29,6 +29,7 @@ if( 1 ) {
     {
 	ostr.write( "This is line #"+i+'\n');
     }
+    print("ostr =",ostr);
     ostr.close();
     //ostr.write("ouch"); // should throw
     var istr = new whio.InStream(fname);
@@ -101,12 +102,58 @@ function trySubdev()
 
     var dev = new whio.IODevice(":memory:");
     dev.write("012345679");
+
+    var dump = function(){
+        dev.rewind();
+	print('dev contents: ',dev.read(10));
+	sub.rewind();
+	print('subdev contents: ',sub.read(10));
+    };
+
     var sub = new whio.IODevice(dev, 4, 7 );
     sub.write("abcdefghij");
-    dev.rewind();
-    print(dev.read(10));
+    dump();
+
+    print('rebound:',sub.rebound);
+    var rc = sub.rebound(3,8);
+    print('rebound rc =',rc);
+    sub.seek(1);
+    print('tell =',sub.tell());
+    sub.write("ZYXWVUTSRQ");
+    print('sub.ioDevice =',sub.originDevice);
+    print('sub =',sub);
+    dump();    
+
     sub.close();
     dev.close();
 
 }
 trySubdev();
+
+function tryBadStream()
+{
+    var a = null;
+    var fn = '/etc/passwd';
+    try {
+	a = new whio.IODevice(fn,false);
+	print(fn,'=',a,a.fileName);
+	print(fn+'.canWrite =',a.canWrite);
+	var o = new whio.OutStream(a); // should throw
+	var i = new whio.InStream(a);
+	print(i,'=',i);
+	i.close();
+	a.close();
+    }
+    catch(e) {
+	print("As hoped, it threw:",e);
+    } finally {
+	print("finally{} closing",fn);
+	if(a) a.close();
+	return;
+    }
+    throw new Error("You shouldn't have gotten this far!");
+}
+
+tryBadStream();
+
+print(":-D");
