@@ -40,17 +40,17 @@ See below for the complete class and function list.
 
 ==!InStream Class==
 
-InStream represents a read-only stream.
+!InStream represents a read-only stream.
 
 || Function or Property || Notes ||
 || `new InStream(string file)` || Opens the given file in read mode. ||
 || `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
-|| `string read(int length)` || As for whio.IODevice.read() ||
+|| `string read(int length)` || As for `IODevice.read()` ||
 || `int write(string data [,int lenght])` || Throws an exception - InStreams cannot write ||
-|| `void close()` || As for whio.IODevice.close() ||
-|| `int flush()` || As for whio.IODevice.flush() ||
+|| `void close()` || As for `IODevice.close()` ||
+|| `int flush()` || As for `IODevice.flush()` ||
 || `bool isGood()`  || Returns true if the stream is in a usable state. ||
-|| `IODevice ioDevice` || Only for objects created with the InStream(IODevice) constructor, this points to the subdevice's pointed-to device. ||
+|| `IODevice ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
 
 
 ==!OutStream Class==
@@ -60,17 +60,24 @@ OutStream represents a write-only stream.
 || Function or Property || Notes ||
 || `new OutStream(string file[, bool truncate=false])` || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
 || `new OutStream(IODevice)` || As for InStream(IODevice). If the device is not writable, no write operations on the new object will succeed.||
-|| `string read(int length)` || Throws an exception - OutStreams cannot read. ||
-|| `int write(string data [,int lenght])` || As for whio.IODevice.write() ||
-|| `void close()` || As for whio.IODevice.close() ||
-|| `int flush()` || As for whio.IODevice.flush() ||
-|| `bool isGood()`  || As for whio.InStream.isGood() ||
-|| `IODevice ioDevice` || Only for objects created with the OutStream(IODevice) constructor, this points to the subdevice's pointed-to device. ||
+|| `string read(int length)` || Throws an exception - !OutStreams cannot read. ||
+|| `int write(string data [,int lenght])` || As for `IODevice.write()` ||
+|| `void close()` || As for `IODevice.close()` ||
+|| `int flush()` || As for `IODevice.flush()` ||
+|| `bool isGood()`  || As for `InStream.isGood()` ||
+|| `IODevice ioDevice` || Only for objects created with the `OutStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
 
 
 ==IODevice Class==
 
-IODevice represents a random-access i/o device, with read-only or read/write access. It is modelled very closely on conventional C-based APIs and will be familiar to anyone who's worked with any of them.
+IODevice represents a random-access i/o device, with read-only or
+read/write access. It is modelled very closely on conventional C-based
+APIs and will be familiar to anyone who's worked with any of them.
+
+When we say "device", we're normally referring to a file, but the
+concept of i/o device is more abstract than that, and can essentially
+mean any data source or destination to which we have random access
+(the ability to access any point in the data at any time).
 
 || Function or Property  || Notes ||
 || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
@@ -83,12 +90,12 @@ IODevice represents a random-access i/o device, with read-only or read/write acc
 || `int clearError()` || Tries to clear any error state and EOF marker. Returns 0 on success. ||
 || `bool eof()` || Returns true if the device is at (or past) its EOF. ||
 || `int tell()` || Returns the current position within the underlying device. ||
-|| `int seek(int offset, int whence)` || Sets the current position to offset, relative to whence, which must be one of `whio.IODevice.SEEK_SET`, `whio.IODevice.SEET_CUR`, or `whio.IODevice.SEEK_END`. Returns the new position. ||
+|| `int seek(int offset[, int whence=IODevice.SEEK_SET])` || Sets the current position to offset, relative to whence, which must be one of `whio.IODevice.SEEK_SET`, `whio.IODevice.SEET_CUR`, or `whio.IODevice.SEEK_END`. Returns the new position. ||
 || `int flush()` || Tries to flush any existing write data. Returns 0 on success. ||
 || `int truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
 || `int size()` || Returns the current size of the device. ||
 || `int rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
-|| `IODevice ioDevice` || Only for devices created with the IODevice(IODevice,int,int) constructor, this points to the subdevice's pointed-to device. ||
+|| `IODevice ioDevice` || Only for devices created with the `IODevice(IODevice,int,int)` constructor, this points to the subdevice's pointed-to device. ||
 
 
 ===SEEK_SET and friends===
@@ -139,7 +146,24 @@ And a new property:
 
 || `IODevice ioDevice` || This points to the subdevice's pointed-to device. ||
 
+
+==Error reporting==
+
+The i/o classes are based on an abstract C API. That API uses numeric
+error codes or null values to indicate errors, and this library
+normally passed on errors from the C API directly back to the
+caller. Errors which happen at the JS level, as opposed to the C
+level, are reported via exceptions. All of the constructors will throw
+if they cannot open their underlying device or stream.
+
+For example, a call to `read(20)` which can only read 13 bytes will
+tell us so by returning the number 13, but calling `read()` would trigger an
+exception because there is no sensible default value to pass on to the C
+API.
+
+
 =Tips and tricks=
+
 
 ==stdin and stdout==
 
