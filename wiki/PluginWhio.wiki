@@ -1,17 +1,22 @@
 #summary I/O classes for JS
 #labels Phase-UserDocs
 
-Achtung: these docs are for the current version in the subversion
+*Achtung #1:* these docs are for the current version in the subversion
 source tree (i document here as changes are made). If you are using an "older" version,
 i recommend [http://code.google.com/p/v8-juice/source/browse/wiki/PluginWhio.wiki searching through the subversion repo] for a version of this page which is
-close to the version you're working with (follow that link, and there are options to browse all versions).
+closer to the version you're working with (follow that link, and there are options to browse all versions).
+
+*Achtung #2:* It has [http://groups.google.com/group/v8-users/browse_thread/thread/1621beb71d65e6fa/2883be6ddd10cddd come to my attention] that using this API to read and write non-ASCII data may (and eventually will) produce undefined results (due to how v8 internally stores and translates strings). *You Have Been Warned.*
+
+=The whio I/O plugin=
+
+The whio plugin adds object-oriented i/o support to v8 JavaScript applications.
 
 <wiki:toc max_depth="3" />
 
-=The whio plugin=
 
-The whio plugin adds i/o support to JS. It gets its name from the i/o
-library it is based on:
+==About==
+whio gets its name from the i/o library it is based on:
 
 http://fossil.wanderinghorse.net/repos/whio/
 
@@ -199,7 +204,7 @@ var stdin = new whio.InStream("/dev/stdin");
 stdout.write("hi, world!\n");
 }}}
 
-Note, however, that you shouldn't mix such usage with, e.g. `print()`, or other routines which read/write stdin/stdout, as that may garble your output. Note that calling `close()` on such devices will not close the stdin/stdout associated with the application.
+Note, however, that you shouldn't mix such usage with, e.g. `print()`, or other routines which read/write stdin/stdout, as that may garble your output (depending on the buffering used by the underlying interface, e.g. `std::cout` vs. `printf()`). Calling `close()` on such devices will _not_ close the stdin/stdout associated with the application.
 
 ==Use in-memory IODevices as buffers==
 
@@ -209,8 +214,8 @@ You don't need files to use IODevices:
 var dev = new whio.IODevice(":memory:");
 }}}
 
-Creates an i/o device which uses RAM as storage, growing as necessary. It works just like a file-based i/o device, and can be used to buffer arbitrary data in memory. To specify a starting size of the device, pass it as the optional second parameter.
+Creates an i/o device which uses RAM as storage, growing as necessary. It works just like a file-based i/o device, and can be used to buffer arbitrary data in memory. To specify a starting size of the device, pass it as the optional second parameter. Multiple in-memory devices can be created, but each has its own memory despite having the same name of `":memory:"`.
 
-While it may not be immediately obvious, this is one easy way to buffer large amounts of text for later output, and "should" be more efficient than using string concatenation to build up very large strings.
+While it may not be immediately obvious, this is one easy way to buffer large amounts of text for later output, and "should" be more efficient than using string concatenation to build up very large strings. (See the big ugly warning at the top of this page regarding writing binary data this way!)
 
 If you want to ensure sequential, write-only access to a buffer until you are ready to send it, simply wrap up the IODevice in an !OutStream using `new OutStream(myDevice)`.
