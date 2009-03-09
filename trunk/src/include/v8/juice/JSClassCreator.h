@@ -5,10 +5,9 @@
 
    License: same as v8 (see below)
 */
-// Copyright 2007-2008 the V8 project authors. All rights reserved.
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Copyright 2009 Stephan Beal. All rights reserved.  Redistribution
+// and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
 //
 //     * Redistributions of source code must retain the above copyright
 //       notice, this list of conditions and the following disclaimer.
@@ -68,6 +67,8 @@ namespace juice {
 	Handle<Object> target;
 	Handle<FunctionTemplate> ctorTmpl;
 	Local<ObjectTemplate> proto;
+	JSClassCreator( JSClassCreator const & ); // not implemented
+	JSClassCreator & operator=( JSClassCreator const & ); // not implemented
     public:
 	/**
 	   Begins setting up a new JS class, as a member of the given target object,
@@ -75,8 +76,8 @@ namespace juice {
 	   can be set here or by calling SetINternalFieldCount().
 	*/
 	JSClassCreator( char const * className,
-			 Handle<Object> target,
-			 v8::InvocationCallback ctor,
+			Handle<Object> target,
+			v8::InvocationCallback ctor,
 			int internalFieldCount = 0 );
 	/**
 	   Does nothing. It is virtual because it may become
