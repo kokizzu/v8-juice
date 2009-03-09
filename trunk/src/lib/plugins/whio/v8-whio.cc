@@ -27,13 +27,63 @@
 
 #include <set>
 namespace v8 { namespace juice { namespace whio {
+
     namespace bind = ::v8::juice::bind;
     //namespace juice = ::v8::juice;
     using namespace ::v8::juice::convert;
+
 #define JSTR(X) String::New(X)
 #define TOSS(X) return ::v8::ThrowException(JSTR(X)) /*juice::ThrowException(X)*/
-
 #define WHIO_RTFM "RTFM: " v8_juice_HOME_PAGE "/wiki/PluginWhio"
+
+    /**
+       Static/shared strings, some of which are used as template
+       parameters (where we can't use string literals but can,
+       curiously enough, use references to pointers to shared
+       strings)...
+    */
+    struct strings
+    {
+	static char const * IODevice;
+	static char const * InStream;
+	static char const * OutStream;
+	static char const * IOBase;
+
+	// Shared:
+	static char const * read;
+	static char const * write;
+	static char const * flush;
+	static char const * close;
+	static char const * toString;
+
+	// IODevice:
+        static char const * error;
+        static char const * clearError;
+	static char const * eof;
+	static char const * tell;
+	static char const * seek;
+	static char const * truncate;
+	static char const * size;
+	static char const * rewind;
+    };
+    char const * strings::IODevice = "IODevice";
+    char const * strings::InStream = "InStream";
+    char const * strings::OutStream = "OutStream";
+    char const * strings::IOBase = "IOBase";
+    char const * strings::read = "read";
+    char const * strings::write = "write";
+    char const * strings::flush = "flush";
+    char const * strings::close = "close";
+    char const * strings::toString = "toString";
+    char const * strings::error = "error";
+    char const * strings::clearError = "clearError";
+    char const * strings::eof = "eof";
+    char const * strings::tell = "tell";
+    char const * strings::seek = "seek";
+    char const * strings::truncate = "truncate";
+    char const * strings::size = "size";
+    char const * strings::rewind = "rewind";
+
 
     /**
        Internal binding context for BindNative() and friends.
@@ -57,7 +107,8 @@ namespace v8 { namespace juice { namespace whio {
 
     /**
        Destructor for use with v8::juice::cleanup::AddToCleanup().
-       obj MUST be-a (whio_dev*) or (whio_stream*).
+       obj MUST be-a (whio_dev*) or (whio_stream*). It simply calls
+       dev_cleanup( obj, (T*)obj ).
     */
     template <typename T>
     static void dev_cleanup( void * obj )
@@ -67,7 +118,8 @@ namespace v8 { namespace juice { namespace whio {
 
     /**
        Destructor callback for Pesistent::MakeWeak(). T must be
-       one of whio_dev or whio_stream.
+       one of whio_dev or whio_stream. It calls dev_cleanup<T>(parameter)
+       and disposes object.
     */
     template <typename T>
     static void dev_dtor(Persistent< Value > object, void *parameter)
@@ -112,7 +164,7 @@ namespace v8 { namespace juice { namespace whio {
     }
 
 
-#define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS(FUNC "(): argument assertion failed: " # COND)
+#define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
 #define DEVH(T,H) T * dev = dev_cast<T>( H )
 #define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer has already been destroyed!")
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
@@ -166,12 +218,13 @@ namespace v8 { namespace juice { namespace whio {
 	}
 	//char const * dontknow = "Don't know how to handle the given constructor arguments!";
 	if( argv[0]->IsString() )
-	{
-	    std::string fname = JSToStdString(argv[0]);
+	{ //ctor(":memory:")
+	  //ctor(string filename[, bool writeMode])
+	    std::string fname( JSToStdString(argv[0]) );
 	    if( ":memory:" == fname )
 	    { // (":memory:" [,int size])
 		whio_size_t sz = (argc > 1) ? CastFromJS<whio_size_t>(argv[1]) : 0;
-		dev = whio_dev_for_membuf( sz, 1.25 );
+		dev = whio_dev_for_membuf( sz, 1.33 );
 		if( ! dev )
 		{
 		    std::ostringstream msg;
@@ -195,7 +248,7 @@ namespace v8 { namespace juice { namespace whio {
 		{
 		    self->Set(JSTR("fileName"), argv[0], v8::ReadOnly );
 		    self->Set(JSTR("canWrite"), Boolean::New(writeMode) );
-		    self->Set(JSTR("canRead"), Boolean::New(true) );
+		    self->Set(JSTR("canRead"), Boolean::New(!writeMode) );
 		}
 		return dev;
 	    }
@@ -283,7 +336,7 @@ namespace v8 { namespace juice { namespace whio {
 	    self->Set(JSTR("fileName"), argv[0], v8::ReadOnly );
 	    self->Set(JSTR("canWrite"), Boolean::New(writeMode), v8::ReadOnly );
 	    self->Set(JSTR("canRead"), Boolean::New(writeMode ? false : true) );
-	    CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
+	    //CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
 	    return dev;
 	}
 	whio_dev * iod = dev_cast<whio_dev>(argv[0]);
@@ -398,7 +451,7 @@ namespace v8 { namespace juice { namespace whio {
 	}
 	else
 	{
-	    ARGS("write",(argc==1 || argc==2));
+	    ARGS(strings::write,(argc==1 || argc==2));
 	    DEVTHIS(DevT);
 	    std::string data( JSToStdString(argv[0]) );
 	    uint32_t l = (argc>1)
@@ -429,7 +482,7 @@ namespace v8 { namespace juice { namespace whio {
 	}
 	else
 	{
-	    ARGS("read",(argc==1));
+	    ARGS(strings::read,(argc==1));
 	    DEVTHIS(DevT);
 	    uint32_t l = CastFromJS<uint32_t>( argv[0] );
 	    if( 0 == l ) TOSS("Number of bytes to read must be greater than 0!");
@@ -444,7 +497,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> base_close(const Arguments& argv)
     {
-	ARGS("close",(argc==0));
+	ARGS(strings::close,(argc==0));
 	whio_dev * srcD = dev_cast<whio_dev>( argv.This() );
 	whio_stream * srcS = (0==srcD) ? dev_cast<whio_stream>( argv.This() ) : 0;
 	if( !srcD && !srcS )
@@ -457,23 +510,24 @@ namespace v8 { namespace juice { namespace whio {
 	return Undefined();
     }
 
-#if 0
+    /**
+       close() impl for whio_dev and whio_stream.
+    */
     template <typename DevT>
-    static Handle<Value> dev_close(const Arguments& argv)
+    static Handle<Value> devT_close(const Arguments& argv)
     {
-	ARGS("close",(argc==0));
+	ARGS(strings::close,(argc==0));
 	DEVTHIS(DevT);
 	argv.This()->SetInternalField(0,Null()); // is this working?
 	dev_cleanup( dev, dev );
 	return Undefined();
     }
-#endif
     /**
        whio_dev_api::close() wrapper.
     */
     static Handle<Value> dev_error(const Arguments& argv)
     {
-	ARGS("error",(argc==0));
+	ARGS(strings::error,(argc==0));
 	DEVTHIS(whio_dev);
 	return Int32ToJS( dev->api->error( dev ) );
     }
@@ -483,7 +537,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_clear_error(const Arguments& argv)
     {
-	ARGS("clearError",(argc==0));
+	ARGS(strings::clearError,(argc==0));
 	DEVTHIS(whio_dev);
 	return Int32ToJS( dev->api->clear_error( dev ) );
     }
@@ -493,7 +547,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_eof(const Arguments& argv)
     {
-	ARGS("eof",(argc==0));
+	ARGS(strings::eof,(argc==0));
 	DEVTHIS(whio_dev);
 	return Int32ToJS( dev->api->eof(dev) );
     }
@@ -503,7 +557,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_tell(const Arguments& argv)
     {
-	ARGS("tell",(argc==0));
+	ARGS(strings::tell,(argc==0));
 	DEVTHIS(whio_dev);
 	return UInt64ToJS( dev->api->tell( dev ) );
     }
@@ -513,7 +567,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_seek(const Arguments& argv)
     {
-	ARGS("seek",((argc==1) || (argc==2)));
+	ARGS(strings::seek,((argc==1) || (argc==2)));
 	DEVTHIS(whio_dev);
 	int32_t pos = JSToUInt32( argv[0] );
 	const int whence = (argc>1) ? JSToInt32( argv[1] ) : SEEK_SET;
@@ -535,7 +589,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> base_flush(const Arguments& argv)
     {
-	ARGS("flush",(argc==0));
+	ARGS(strings::flush,(argc==0));
 	whio_dev * srcD = dev_cast<whio_dev>( argv.This() );
 	if( srcD )
 	{
@@ -549,15 +603,29 @@ namespace v8 { namespace juice { namespace whio {
 	TOSS("Could not determine source object type!");
     }
 
+    template <typename DevT>
+    static Handle<Value> devT_flush(const Arguments& argv)
+    {
+	ARGS(strings::close,(argc==0));
+	DEVTHIS(DevT);
+	return CastToJS( dev->api->flush( dev ) );
+	// Potential fixme: for subdevices we have no direct (via whio_dev)
+	// handle to the parent. If the "parent" is destroyed first then calling
+	// flush() on the subdevice (which happens on close()) can crash.
+	// In the generic whio API we actually have no way of doing anything about
+	// this. Hmmm.
+	return Undefined();
+    }
+
     /**
        whio_dev_api::truncate() wrapper.
     */
     static Handle<Value> dev_truncate(const Arguments& argv)
     {
-	ARGS("truncate",(argc==1));
+	ARGS(strings::truncate,(argc==1));
 	DEVTHIS(whio_dev);
-	uint32_t len = JSToUInt64( argv[0] );
-	return Int32ToJS( dev->api->truncate(dev, len) );
+	whio_size_t len = CastFromJS<whio_size_t>( argv[0] );
+	return CastToJS( dev->api->truncate(dev, len) );
     }
 
     /**
@@ -565,9 +633,9 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_size(const Arguments& argv)
     {
-	ARGS("size",(argc==0));
+	ARGS(strings::size,(argc==0));
 	DEVTHIS(whio_dev);
-	return UInt64ToJS( whio_dev_size( dev ) );
+	return CastToJS( whio_dev_size( dev ) );
     }
 
     /**
@@ -575,9 +643,9 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_rewind(const Arguments& argv)
     {
-	ARGS("rewind",(argc==0));
+	ARGS(strings::rewind,(argc==0));
 	DEVTHIS(whio_dev);
-	return Int32ToJS( whio_dev_rewind( dev ) );
+	return CastToJS( whio_dev_rewind( dev ) );
     }
 
     /** whio_stream_api::isgood() and whio_dev_api::isgood(). */
@@ -602,10 +670,19 @@ namespace v8 { namespace juice { namespace whio {
 #endif
     }
 
+    /** whio_stream_api::isgood() and whio_dev_api::isgood(). */
+    template <typename DevT>
+    static Handle<Value> dev_isgood(const Arguments& argv)
+    {
+	ARGS("isgood",(argc==0));
+	DEVTHIS(DevT);
+	return BoolToJS( dev->api->isgood(dev) );
+    }
+
     template <typename T,char const *&N>
     static Handle<Value> to_string(const Arguments& argv)
     {
-	ARGS("toString",(0==argc));
+	ARGS(strings::toString,(0==argc));
 	std::ostringstream os;
 	Local<Object> self = argv.This();
 	os << "[object "<<N;
@@ -625,166 +702,10 @@ namespace v8 { namespace juice { namespace whio {
     }
 
 
-    template <typename FromT, typename ToT>
-    static Handle<Value> filter( FromT * src,
-				 ToT * dest,
-				 Handle<Object> destJObj,
-				 Handle<Function> callback,
-				 Handle<Value> userData )
-    {
-	enum { bufSize = 1024 * 16 };
-	whio_size_t rdsz = 0;
-	std::vector<unsigned char> rbuf(bufSize,0);
-	typedef Handle<Value> HV;
-	const unsigned int argc = 4;
-	std::vector<HV> vec(argc,Null());
-	vec[3] = userData;
-	bool isEnd = false;
-	whio_size_t total = 0;
-	while( 0 != (rdsz = src->api->read( src, &rbuf[0], bufSize)) )
-	{
-	    if( rdsz < bufSize ) isEnd = true;
-	    vec[0] = destJObj;
-	    vec[1] = String::New( reinterpret_cast<char const*>(&rbuf[0]), static_cast<int>( rdsz ) );
-	    vec[2] = Boolean::New( isEnd );
-	    Local<Value> rv = callback->Call( destJObj/*???*/, argc, &vec[0] );
-	    if( rv.IsEmpty() ) return rv;
-	    whio_size_t check = CastFromJS<whio_size_t>(rv);
-	    total += check;
-	    if( check != rdsz )
-	    {
-		std::ostringstream msg;
-		msg << "filter() callback returned "<<check<<" for a write request of "<<rdsz<<"\n";
-		TOSS(msg.str().c_str());
-	    }
-	    if( isEnd ) break;
-	}
-	if( (total>0) && (0 == rdsz) && !isEnd )
-	{ // we hit a block boundary. Let callback know, in case it wants to do something like flush a zlib buffer.
-	    vec[0] = destJObj;
-	    vec[1] = String::New( "" );
-	    vec[2] = Boolean::New( true );
-	    Local<Value> rv = callback->Call( destJObj/*???*/, argc, &vec[0] );
-	    if( rv.IsEmpty() ) return rv;
-	}
-	return CastToJS( total );
-    }
 
 #define DEVHN(T,N,H) T * dev ## N = dev_cast<T>( H )
 #define DEVHTN(T,N,H) DEVHN(T,N,H); if( ! dev ) TOSS("Handle is-not-a " # T "!")
 
-    /**
-       JS usage:
-
-       Signature:
-
-       \code
-       int (IODevice|InStream).filter( OStream|IODevice target,
-                                       Function callback
-                                       [, mixed userData = undefined] );
-       \endcode
-
-       The callback signature is:
-
-       \code
-       int callback(OutStream out,
-                    string data,
-		    bool isEnd,
-		    mixed userData );
-       \endcode
-
-       filter() reads the 'this' object until EOF, in blocks of an
-       unspecified size. Each block is passed to the callback function,
-       which is presumed to do some sort of filtering on the data.
-
-       The callback should:
-
-       - Perform any translation of the input data it wants to do and
-       write it out to the destination stream. If it cannot
-       (e.g. target not writable, or write fails), it should throw.
-
-       - Return the number of bytes consumed (not output, which might
-       be very different). On success, data.length should be returned,
-       and any other value will cause filter() to abort. When
-       returning an error value, you must simply ensure that it is
-       some value other than data.length 0 is only an error when
-       data.length is not 0.
-
-       - Be prepared to be called multiple times, as the data is read
-       in blocks. If the callback needs persistent data, it can be
-       passed as the third argument to filter() and the callback will
-       get it.
-
-       - If the isEnd parameter is true then this will be the last call for
-       this filter loop. If needed, the callack can check this and perform
-       any necessary actions (e.g. flushing a zlib stream, for example).
-       It IS possible that the callback gets called with an empty data
-       parameter and (isEnd==true), which simply means the last call to
-       read data returned 0 bytes.
-
-       - The callback must not close the output destination.
-
-       filter() returns the total number of bytes it thinks
-       where consumed. This number depends on the callback
-       returning valid values. In general, no assumptions can
-       be made about the state of the two streams on error.
-       On success, this stream will be at EOF.
-    */
-    static Handle<Value> filter(const Arguments& argv)
-    {
-	ARGS("filter",(argc==2 || argc==3));
-	/**
-	 filter(IOObj dest, Function callback [, mixed userdata = undefined])
-
-	 function callback(OutStream out, string data, bool isEnd);
-
-	 callback should return the number of bytes processed (need not be the
-	 same number as output), or 0 on error or if length==0 (which can happen
-	 at the end of the stream).
-      */
-	whio_dev * srcD = dev_cast<whio_dev>( argv.This() );
-	whio_stream * srcS = srcD ? 0 : dev_cast<whio_stream>( argv.This() );
-	if( ! srcD && !srcS ) TOSS("Could not determine source object type!");
-	HandleScope sentry;
-	Handle<Value> destV( argv[0] );
-
-	if( argv.This() == destV ) TOSS("Object cannot be both the source and target for a filter!");
-
-	whio_dev * destD = dev_cast<whio_dev>( destV );
-	whio_stream * destS = destD ? 0 : dev_cast<whio_stream>( destV );
-	if( ! destD && !destS ) TOSS("First argument is-not-a i/o stream or device!");
-
-	Local<Object> destO( Object::Cast(*destV) );
-	{
-	    Local<String> key( String::New("canWrite") );
-	    if( ! destO->Has(key)
-		|| ! destO->Get(key)->BooleanValue() )
-	    {
-		TOSS("Destination stream/device does not seem to be writable!");
-	    }
-	}
-
-	//CERR << "Filter: srcD="<<srcD<<", srcS="<<srcS<<", destD="<<destD<<", destS="<<destS<<'\n';
-
-	if( ! argv[1]->IsFunction() ) TOSS("Second argument must be-a Function!");
-	Handle<Function> func( Function::Cast(*argv[1]) );
-	Handle<Value> udata;
-	if( argc>2 ) udata =argv[2];
-	else udata =Undefined();
-	//whio_size_t len = (argc>2) ? CastFromJS<whio_size_t>(argv[2]) : 0U;
-	if( srcD )
-	{
-	    return ( destD )
-		? filter( srcD, destD, destO, func, udata )
-		: filter( srcD, destS, destO, func, udata );
-	}
-	else
-	{
-	    return ( destD )
-		? filter( srcS, destD, destO, func, udata )
-		: filter( srcS, destS, destO, func, udata );
-	}
-    }
     
 #undef DEVHT
 #undef DEVHV
@@ -793,20 +714,10 @@ namespace v8 { namespace juice { namespace whio {
 #undef DEVHNT
 #undef DEVTHIS
 
-    /**
-       Strings which are used as template parameters...
-    */
-    struct strings
+    /** A bogus type used a a to_string<>() template parameter. */
+    struct IOBase
     {
-	static char const * IODevice;
-	static char const * InStream;
-	static char const * OutStream;
-	static char const * IOBase;
     };
-    char const * strings::IODevice = "IODevice";
-    char const * strings::InStream = "InStream";
-    char const * strings::OutStream = "OutStream";
-    char const * strings::IOBase = "IOBase";
 
     /**
        Adds to target object:
@@ -833,14 +744,15 @@ namespace v8 { namespace juice { namespace whio {
 	    Local<ObjectTemplate> proto = absCtorTmpl->PrototypeTemplate();
 	    Local<Function> noop = FunctionTemplate::New(abstract_reimplement)->GetFunction();
 #define FUNC(N) proto->Set(JSTR(N),noop)
-	    FUNC("read");
-	    FUNC("write");
+	    FUNC(strings::read);
+	    FUNC(strings::write);
 #undef FUNC
 #define FUNC(N,F) proto->Set(JSTR(N),FunctionTemplate::New(F)->GetFunction())
 	    FUNC("isGood",base_isgood);
-	    FUNC("flush",base_flush);
-	    FUNC("close",base_close);
+	    FUNC(strings::flush,base_flush);
+	    FUNC(strings::close,base_close);
 #undef FUNC
+	    proto->Set(strings::toString, FunctionTemplate::New( to_string<IOBase,strings::IOBase> )->GetFunction() );
 	    proto->Set("SEEK_SET",Integer::New(SEEK_SET));
 	    proto->Set("SEEK_END",Integer::New(SEEK_END));
 	    proto->Set("SEEK_CUR",Integer::New(SEEK_CUR));
@@ -855,26 +767,27 @@ namespace v8 { namespace juice { namespace whio {
 	Handle<FunctionTemplate> devCtorTmpl =
 	    FunctionTemplate::New(combined_ctor< whio_dev, &dev_construct >);
 	devCtorTmpl->Inherit( absCtorTmpl );
+	{
+	    Local<ObjectTemplate> proto = devCtorTmpl->PrototypeTemplate();
+	    proto->Set(strings::write, FunctionTemplate::New( dev_write<whio_dev,true> )->GetFunction() );
+	    proto->Set(strings::read, FunctionTemplate::New( dev_read<whio_dev,true> )->GetFunction() );
+	    proto->Set(strings::toString, FunctionTemplate::New( to_string<whio_dev,strings::IODevice> )->GetFunction() );
+#define FUNC(N,F) proto->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
+	    FUNC(strings::flush, devT_flush<whio_dev> );
+	    FUNC(strings::close, devT_close<whio_dev> );
+	    FUNC(strings::error,dev_error);
+	    FUNC(strings::clearError,dev_clear_error);
+	    FUNC(strings::eof,dev_eof);
+	    FUNC(strings::tell,dev_tell);
+	    FUNC(strings::seek,dev_seek);
+	    FUNC(strings::truncate,dev_truncate);
+	    FUNC(strings::size,dev_size);
+	    FUNC(strings::rewind,dev_rewind);
+#undef FUNC
+	}
 	Local<ObjectTemplate> devInst = devCtorTmpl->InstanceTemplate();
 	devInst->SetInternalFieldCount(1);
-	Handle<Function> devCtor( devCtorTmpl->GetFunction() ); // MUST come after devInst->SetInteralFieldCount()
-	whio->Set(JSTR(strings::IODevice), devCtor);
-	devInst->Set("write", FunctionTemplate::New( dev_write<whio_dev,true> )->GetFunction() );
-	devInst->Set("read", FunctionTemplate::New( dev_read<whio_dev,true> )->GetFunction() );
-	devInst->Set("toString", FunctionTemplate::New( to_string<whio_dev,strings::IODevice> )->GetFunction() );
-#define FUNC(N,F) devInst->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
-	FUNC("error",dev_error);
-	FUNC("clearError",dev_clear_error);
-	FUNC("eof",dev_eof);
-	FUNC("tell",dev_tell);
-	FUNC("seek",dev_seek);
-	FUNC("truncate",dev_truncate);
-	FUNC("size",dev_size);
-	FUNC("rewind",dev_rewind);
-	FUNC("filter",filter);
-#undef FUNC
-
-
+	whio->Set(JSTR(strings::IODevice), devCtorTmpl->GetFunction() );// MUST come after devInst->SetInteralFieldCount()
 
 	////////////////////////////////////////////////////////////
 	// InStream class:
@@ -890,12 +803,14 @@ namespace v8 { namespace juice { namespace whio {
 	    // InstanceTemplate? Seem to work the same.
 	    // Reminder: if this comes after tmpl->GetFunction(), it doesn't work!
 	    Local<ObjectTemplate> proto = istrCtorTmpl->PrototypeTemplate();
-	    proto->Set("read", FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
+	    proto->Set(strings::read, FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
+	proto->Set(strings::flush, FunctionTemplate::New( devT_flush<whio_stream> )->GetFunction() );
+	proto->Set(strings::close, FunctionTemplate::New( devT_close<whio_stream> )->GetFunction() );
+
 #define FUNC(N,F) proto->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
-	    FUNC("filter",filter);
-	    //proto->Set(JSTR("write"), FunctionTemplate::New( dev_write<whio_stream,false> )->GetFunction() );
-	    //istrInst->Set(JSTR("read"), FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
-	    proto->Set(JSTR("toString"), FunctionTemplate::New( to_string<whio_stream,strings::InStream> )->GetFunction() );
+	    //proto->Set(JSTR(strings::write), FunctionTemplate::New( dev_write<whio_stream,false> )->GetFunction() );
+	    //istrInst->Set(JSTR(strings::read), FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
+	    proto->Set(JSTR(strings::toString), FunctionTemplate::New( to_string<whio_stream,strings::InStream> )->GetFunction() );
 #undef FUNC
 	}
 	Local<ObjectTemplate> istrInst = istrCtorTmpl->InstanceTemplate();
@@ -914,21 +829,15 @@ namespace v8 { namespace juice { namespace whio {
 	ostrCtorTmpl->Inherit( absCtorTmpl );
 	{
 	    Local<ObjectTemplate> proto = ostrCtorTmpl->PrototypeTemplate();
-	    proto->Set(JSTR("write"), FunctionTemplate::New( dev_write<whio_stream,true> )->GetFunction() );
-	    proto->Set(JSTR("read"), FunctionTemplate::New( dev_read<whio_stream,false> )->GetFunction() );
-	    proto->Set(JSTR("toString"), FunctionTemplate::New( to_string<whio_stream,strings::OutStream> )->GetFunction() );
+	    proto->Set(JSTR(strings::write), FunctionTemplate::New( dev_write<whio_stream,true> )->GetFunction() );
+	    proto->Set(JSTR(strings::read), FunctionTemplate::New( dev_read<whio_stream,false> )->GetFunction() );
+	    proto->Set(JSTR(strings::toString), FunctionTemplate::New( to_string<whio_stream,strings::OutStream> )->GetFunction() );
+	    proto->Set(strings::close, FunctionTemplate::New( devT_close<whio_stream> )->GetFunction() );
+	    proto->Set(strings::flush, FunctionTemplate::New( devT_flush<whio_stream> )->GetFunction() );
 	}
 	Local<ObjectTemplate> ostrInst = ostrCtorTmpl->InstanceTemplate();
 	ostrInst->SetInternalFieldCount(1);
-	Handle<Function> ostrCtor( ostrCtorTmpl->GetFunction() );
-	whio->Set(JSTR(strings::OutStream), ostrCtor);
-#define FUNC(N,F) ostrInst->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
-#undef FUNC
-
-	
-
-
-
+	whio->Set( JSTR(strings::OutStream), ostrCtorTmpl->GetFunction() );
 	return whio;
     }
 
