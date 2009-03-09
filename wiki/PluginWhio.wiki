@@ -242,26 +242,26 @@ Return the number of bytes consumed (not output, which might
 be very different). On success, data.length should be returned,
 and any other value will cause filter() to abort. When
 returning an error value, you must simply ensure that it is
-some value other than data.length 0 is only an error when
+some value other than data.length. Zero (0) is only an error when
 data.length is not 0.
 
 Be prepared to be called multiple times, as the data is read
-in blocks. If the callback needs persistent data, it can be
+in blocks of an unspecified size. If the callback needs persistent data, it can be
 passed as the third argument to filter() and the callback will
 t it.
 
 If the isEnd parameter is true then this will be the last call for
 this filter loop. If needed, the callack can check this and perform
-y necessary actions (e.g. flushing a zlib stream, for example).
+any necessary actions (e.g. flushing a zlib stream, for example).
 It IS possible that the callback gets called with an empty data
 parameter and (isEnd==true), which simply means the last call to
-read data returned 0 bytes.
+read data returned 0 bytes (that will only happen on a zero-byte input source or when reading ends exactly on a block boundary).
 
 The callback must not close the output destination.
 
-Below is a rather long example of using filter(). It itsn't as complex
+Below is a rather long example of using filter(). filter() isn't as complex
 to use as this example implies, but this was test code while i was
-implementing filter(), so it shows more than most would need to see.
+implementing filter(), so it shows more than most would need to do.
 
 {{{
 function tryStreamFilter()
