@@ -1,15 +1,14 @@
 #ifndef CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED
 #define CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED
 #include <v8.h>
-#include "juice-config.h"
 namespace v8 {
 
-    /**
-       The juice namespace is the top-most namespace used by the
-       v8-juice toolkit.
-    */
-    namespace juice
-    {
+/**
+   The juice namespace is the top-most namespace used by the
+   v8-juice toolkit.
+*/
+namespace juice {
+
 	using ::v8::Handle;
 	using ::v8::Value;
 
@@ -33,7 +32,6 @@ namespace v8 {
 	*/
 	Handle<Value> ThrowException(char const * fmt,...);
 
-    }
-}
+}} // namespace
 
 #endif // CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED
