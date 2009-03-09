@@ -26,8 +26,7 @@ This plugins provides the following features:
 =C++ usage=
 
 When using the plugins API, you don't need to do anything C++-side to
-use this addon - simply load it as described on [Plugins the plugins
-page].
+use this addon - simply load it as described on [Plugins the plugins page].
 
 =JS usage=
 
