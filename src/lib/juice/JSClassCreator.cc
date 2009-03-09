@@ -53,7 +53,7 @@ namespace v8 { namespace juice {
 
     void JSClassCreator::Seal()
     {
-	// In my experience, if GetFunction() is not AFTER setting up
+	// In my experience, if GetFunction() is called BEFORE setting up
 	// the Prototype object, v8 gets very unhappy.
 	this->target->Set( ::v8::String::New(this->className), ctorTmpl->GetFunction() );
 	//return target;
