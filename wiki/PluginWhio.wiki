@@ -38,9 +38,7 @@ See below for the complete class and function list.
 
 ==IOBase Class==
 
-This class is abstract - it cannot be instantiated directly. However, it does specify several functions
-of the i/o interface used by its subclasses, and it can be used with `instanceof` to ensure that certain
-basic i/o operations are implemented.
+This class is abstract - it cannot be instantiated directly. However, it does specify several functions of the i/o interface used by its subclasses, and it can be used with `instanceof` to ensure that certain basic i/o operations are implemented.
 
 ||*Functions*||*Nodes||
 || `string read(int length)` || Tries to read up to `length` bytes from the input source. Returns the data as a string, and the length of that string will equal the `length` parameter unless EOF is reached or a read error occurs. ||
@@ -88,7 +86,7 @@ can essentially mean any data source or destination to which we have
 random access (the ability to access any point in the data at any
 time).
 
- n additions to the interface defined by IOBase, it has:
+In addition to the interface defined by IOBase, it has:
 
 || *Functions*  || *Notes* ||
 || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
