@@ -762,9 +762,6 @@ namespace v8 { namespace juice { namespace whio {
 
 	////////////////////////////////////////////////////////////
 	// IODevice class:
-	/** Reminder: code order is very important here. See:
-	    http://code.google.com/p/v8/issues/detail?id=262
-	*/
 	{
 	    v8::juice::JSClassCreator
 		bindIOD( strings::IODevice, whio, combined_ctor< whio_dev, &dev_construct >, 1 );
