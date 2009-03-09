@@ -14,18 +14,19 @@
 
 #include <v8.h>
 #include <v8/juice/juice.h>
+#include <v8/juice/juice-config.h>
 #include <v8/juice/convert.h>
 #include <v8/juice/plugin.h>
 #include <v8/juice/cleanup.h>
+#include <v8/juice/JSClassCreator.h>
 
-#include "whio_amalgamation.h"
+#include "whio_amalgamation.h" // this is the i/o lib we're uses as a basis.
 
 /* only for debuggering */
 #ifndef CERR
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
 
-#include <set>
 namespace v8 { namespace juice { namespace whio {
 
     namespace bind = ::v8::juice::bind;
@@ -44,17 +45,22 @@ namespace v8 { namespace juice { namespace whio {
     */
     struct strings
     {
+	// Class names:
 	static char const * IODevice;
 	static char const * InStream;
 	static char const * OutStream;
 	static char const * IOBase;
 
-	// Shared:
+	// IOBase:
 	static char const * read;
 	static char const * write;
 	static char const * flush;
 	static char const * close;
 	static char const * toString;
+	static char const * isGood;
+	static char const * SEEK_SET_;//need suffix b/c SEEK_SET is a #define'd numeric constant
+	static char const * SEEK_CUR_;
+	static char const * SEEK_END_;
 
 	// IODevice:
         static char const * error;
@@ -65,6 +71,7 @@ namespace v8 { namespace juice { namespace whio {
 	static char const * truncate;
 	static char const * size;
 	static char const * rewind;
+
     };
     char const * strings::IODevice = "IODevice";
     char const * strings::InStream = "InStream";
@@ -75,6 +82,7 @@ namespace v8 { namespace juice { namespace whio {
     char const * strings::flush = "flush";
     char const * strings::close = "close";
     char const * strings::toString = "toString";
+    char const * strings::isGood = "isGood";
     char const * strings::error = "error";
     char const * strings::clearError = "clearError";
     char const * strings::eof = "eof";
@@ -83,7 +91,9 @@ namespace v8 { namespace juice { namespace whio {
     char const * strings::truncate = "truncate";
     char const * strings::size = "size";
     char const * strings::rewind = "rewind";
-
+    char const * strings::SEEK_SET_ = "SEEK_SET";
+    char const * strings::SEEK_CUR_ = "SEEK_CUR";
+    char const * strings::SEEK_END_ = "SEEK_END";
 
     /**
        Internal binding context for BindNative() and friends.
@@ -163,13 +173,12 @@ namespace v8 { namespace juice { namespace whio {
 	return bind::GetBoundNative<T>( bind_cx(), o->GetInternalField(0) );
     }
 
-
+// Helper macros for args and type checking:
 #define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
 #define DEVH(T,H) T * dev = dev_cast<T>( H )
 #define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer has already been destroyed!")
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
 #define DEVTHIS(T) DEVHT(T,argv.This())
-
 
     /**
        whio_dev_subdev_rebound() wrapper. It will only work with
@@ -443,7 +452,7 @@ namespace v8 { namespace juice { namespace whio {
        false for the InStream class.
     */
     template <typename DevT,bool allowWrite>
-    static Handle<Value> dev_write(const Arguments& argv)
+    static Handle<Value> devT_write(const Arguments& argv)
     {
 	if( ! allowWrite )
 	{
@@ -474,7 +483,7 @@ namespace v8 { namespace juice { namespace whio {
        false for the OutStream class.
     */
     template <typename DevT,bool allowRead>
-    static Handle<Value> dev_read(const Arguments& argv)
+    static Handle<Value> devT_read(const Arguments& argv)
     {
 	if( ! allowRead )
 	{
@@ -651,7 +660,7 @@ namespace v8 { namespace juice { namespace whio {
     /** whio_stream_api::isgood() and whio_dev_api::isgood(). */
     static Handle<Value> base_isgood(const Arguments& argv)
     {
-	ARGS("isgood",(argc==0));
+	ARGS(strings::isGood,(argc==0));
 #if 0
 	DEVTHIS(whio_stream);
 	return BoolToJS( dev->api->isgood(dev) );
@@ -680,7 +689,7 @@ namespace v8 { namespace juice { namespace whio {
     }
 
     template <typename T,char const *&N>
-    static Handle<Value> to_string(const Arguments& argv)
+    static Handle<Value> devT_tostring(const Arguments& argv)
     {
 	ARGS(strings::toString,(0==argc));
 	std::ostringstream os;
@@ -714,7 +723,7 @@ namespace v8 { namespace juice { namespace whio {
 #undef DEVHNT
 #undef DEVTHIS
 
-    /** A bogus type used a a to_string<>() template parameter. */
+    /** A bogus type used a a devT_tostring<>() template parameter. */
     struct IOBase
     {
     };
@@ -735,109 +744,75 @@ namespace v8 { namespace juice { namespace whio {
 
 	////////////////////////////////////////////////////////////
 	// IOBase class:
-	Handle<FunctionTemplate> absCtorTmpl =
-	    FunctionTemplate::New(abstract_ctor);
-	Local<ObjectTemplate> absInst = absCtorTmpl->InstanceTemplate();
-	absInst->SetInternalFieldCount(1);
-	if(1)
-	{ // must come before CtorImpl->GetFunction() is called or it no workie!
-	    Local<ObjectTemplate> proto = absCtorTmpl->PrototypeTemplate();
+	v8::juice::JSClassCreator bindAbs( strings::IOBase, whio, abstract_ctor );
+	{
 	    Local<Function> noop = FunctionTemplate::New(abstract_reimplement)->GetFunction();
-#define FUNC(N) proto->Set(JSTR(N),noop)
-	    FUNC(strings::read);
-	    FUNC(strings::write);
-#undef FUNC
-#define FUNC(N,F) proto->Set(JSTR(N),FunctionTemplate::New(F)->GetFunction())
-	    FUNC("isGood",base_isgood);
-	    FUNC(strings::flush,base_flush);
-	    FUNC(strings::close,base_close);
-#undef FUNC
-	    proto->Set(strings::toString, FunctionTemplate::New( to_string<IOBase,strings::IOBase> )->GetFunction() );
-	    proto->Set("SEEK_SET",Integer::New(SEEK_SET));
-	    proto->Set("SEEK_END",Integer::New(SEEK_END));
-	    proto->Set("SEEK_CUR",Integer::New(SEEK_CUR));
+	    bindAbs
+		.Set(strings::read, noop )
+		.Set(strings::write ,noop)
+		.Set(strings::isGood,base_isgood)
+		.Set(strings::flush,base_flush)
+		.Set(strings::close,base_close)
+		.Set(strings::toString, devT_tostring<IOBase,strings::IOBase> )
+		.Set(strings::SEEK_SET_,Integer::New(SEEK_SET) )
+		.Set(strings::SEEK_END_, Integer::New(SEEK_END))
+		.Set(strings::SEEK_CUR_,Integer::New(SEEK_CUR) )
+		.Seal();
 	}
-	whio->Set(JSTR(strings::IOBase), absCtorTmpl->GetFunction());
 
 	////////////////////////////////////////////////////////////
 	// IODevice class:
 	/** Reminder: code order is very important here. See:
-	   http://code.google.com/p/v8/issues/detail?id=262
+	    http://code.google.com/p/v8/issues/detail?id=262
 	*/
-	Handle<FunctionTemplate> devCtorTmpl =
-	    FunctionTemplate::New(combined_ctor< whio_dev, &dev_construct >);
-	devCtorTmpl->Inherit( absCtorTmpl );
 	{
-	    Local<ObjectTemplate> proto = devCtorTmpl->PrototypeTemplate();
-	    proto->Set(strings::write, FunctionTemplate::New( dev_write<whio_dev,true> )->GetFunction() );
-	    proto->Set(strings::read, FunctionTemplate::New( dev_read<whio_dev,true> )->GetFunction() );
-	    proto->Set(strings::toString, FunctionTemplate::New( to_string<whio_dev,strings::IODevice> )->GetFunction() );
-#define FUNC(N,F) proto->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
-	    FUNC(strings::flush, devT_flush<whio_dev> );
-	    FUNC(strings::close, devT_close<whio_dev> );
-	    FUNC(strings::error,dev_error);
-	    FUNC(strings::clearError,dev_clear_error);
-	    FUNC(strings::eof,dev_eof);
-	    FUNC(strings::tell,dev_tell);
-	    FUNC(strings::seek,dev_seek);
-	    FUNC(strings::truncate,dev_truncate);
-	    FUNC(strings::size,dev_size);
-	    FUNC(strings::rewind,dev_rewind);
-#undef FUNC
+	    v8::juice::JSClassCreator
+		bindIOD( strings::IODevice, whio, combined_ctor< whio_dev, &dev_construct >, 1 );
+	    bindIOD
+		.Inherit( bindAbs )
+		.SetInternalFieldCount(1)
+		.Set(strings::write, devT_write<whio_dev,true> )
+		.Set(strings::read, devT_read<whio_dev,true> )
+		.Set(strings::toString, devT_tostring<whio_dev,strings::IODevice> )
+		.Set(strings::flush, devT_flush<whio_dev> )
+		.Set(strings::close, devT_close<whio_dev> )
+		.Set(strings::error,dev_error)
+		.Set(strings::clearError,dev_clear_error)
+		.Set(strings::eof,dev_eof)
+		.Set(strings::tell,dev_tell)
+		.Set(strings::seek,dev_seek)
+		.Set(strings::truncate,dev_truncate)
+		.Set(strings::size,dev_size)
+		.Set(strings::rewind,dev_rewind)
+		.Seal();
 	}
-	Local<ObjectTemplate> devInst = devCtorTmpl->InstanceTemplate();
-	devInst->SetInternalFieldCount(1);
-	whio->Set(JSTR(strings::IODevice), devCtorTmpl->GetFunction() );// MUST come after devInst->SetInteralFieldCount()
 
 	////////////////////////////////////////////////////////////
 	// InStream class:
-	Handle<FunctionTemplate> istrCtorTmpl =
-	    FunctionTemplate::New(combined_ctor<
-				  whio_stream,
-				  &stream_construct<false> // okay, that looks weird.
-				  >);
-	istrCtorTmpl->Inherit( absCtorTmpl );
-	if(1)
 	{
-	    // What's the difference b/t using the prototype or the
-	    // InstanceTemplate? Seem to work the same.
-	    // Reminder: if this comes after tmpl->GetFunction(), it doesn't work!
-	    Local<ObjectTemplate> proto = istrCtorTmpl->PrototypeTemplate();
-	    proto->Set(strings::read, FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
-	proto->Set(strings::flush, FunctionTemplate::New( devT_flush<whio_stream> )->GetFunction() );
-	proto->Set(strings::close, FunctionTemplate::New( devT_close<whio_stream> )->GetFunction() );
-
-#define FUNC(N,F) proto->Set(JSTR(N), FunctionTemplate::New(F)->GetFunction() )
-	    //proto->Set(JSTR(strings::write), FunctionTemplate::New( dev_write<whio_stream,false> )->GetFunction() );
-	    //istrInst->Set(JSTR(strings::read), FunctionTemplate::New( dev_read<whio_stream,true> )->GetFunction() );
-	    proto->Set(JSTR(strings::toString), FunctionTemplate::New( to_string<whio_stream,strings::InStream> )->GetFunction() );
-#undef FUNC
-	}
-	Local<ObjectTemplate> istrInst = istrCtorTmpl->InstanceTemplate();
-	istrInst->SetInternalFieldCount(1);
-	Handle<Function> istrCtor( istrCtorTmpl->GetFunction() );
-	whio->Set(JSTR(strings::InStream), istrCtor);
-
+	    v8::juice::JSClassCreator
+		bindIS( strings::InStream, whio, combined_ctor< whio_stream, &stream_construct<false> >, 1 );
+	    bindIS
+		.Inherit( bindAbs )
+		.Set(strings::read, FunctionTemplate::New( devT_read<whio_stream,true> )->GetFunction() )
+		.Set(strings::flush, devT_flush<whio_stream> )
+		.Set(strings::close, devT_close<whio_stream> )
+		.Set(strings::toString, devT_tostring<whio_stream,strings::InStream> )
+		.Seal();
+        }
 
 	////////////////////////////////////////////////////////////
 	// OutStream class:
-	Handle<FunctionTemplate> ostrCtorTmpl =
-	    FunctionTemplate::New(combined_ctor<
-				  whio_stream,
-				  &stream_construct<true>
-				  >);
-	ostrCtorTmpl->Inherit( absCtorTmpl );
 	{
-	    Local<ObjectTemplate> proto = ostrCtorTmpl->PrototypeTemplate();
-	    proto->Set(JSTR(strings::write), FunctionTemplate::New( dev_write<whio_stream,true> )->GetFunction() );
-	    proto->Set(JSTR(strings::read), FunctionTemplate::New( dev_read<whio_stream,false> )->GetFunction() );
-	    proto->Set(JSTR(strings::toString), FunctionTemplate::New( to_string<whio_stream,strings::OutStream> )->GetFunction() );
-	    proto->Set(strings::close, FunctionTemplate::New( devT_close<whio_stream> )->GetFunction() );
-	    proto->Set(strings::flush, FunctionTemplate::New( devT_flush<whio_stream> )->GetFunction() );
+	    v8::juice::JSClassCreator
+		bindOS( strings::OutStream, whio, combined_ctor< whio_stream, &stream_construct<true> >, 1 );
+	    bindOS.Inherit( bindAbs )
+		.Set(strings::write, devT_write<whio_stream,true> )
+		.Set(strings::flush, devT_flush<whio_stream> )
+		.Set(strings::close, devT_close<whio_stream> )
+		.Set(strings::toString, devT_tostring<whio_stream,strings::OutStream> )
+		.Seal();
 	}
-	Local<ObjectTemplate> ostrInst = ostrCtorTmpl->InstanceTemplate();
-	ostrInst->SetInternalFieldCount(1);
-	whio->Set( JSTR(strings::OutStream), ostrCtorTmpl->GetFunction() );
 	return whio;
     }
 
