@@ -3,8 +3,8 @@
 
 Achtung: these docs are for the current version in the subversion
 source tree (i document here as changes are made). If you are using an "older" version,
-i recommend searching through the subversion repo for a version of this page which is
-close to the version you're working with.
+i recommend [http://code.google.com/p/v8-juice/source/browse/wiki/PluginWhio.wiki searching through the subversion repo] for a version of this page which is
+close to the version you're working with (follow that link, and there are options to browse all versions).
 
 <wiki:toc max_depth="3" />
 
