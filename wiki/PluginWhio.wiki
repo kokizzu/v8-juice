@@ -36,42 +36,48 @@ See below for the complete class and function list.
 
 =JS API for the whio classes=
 
+==IOBase Class==
 
+This class is abstract - it cannot be instantiated directly. However, it does specify several functions
+of the i/o interface used by its subclasses, and it can be used with `instanceof` to ensure that certain
+basic i/o operations are implemented.
+
+||*Functions*||*Nodes||
+|| `string read(int length)` || Tries to read up to `length` bytes from the input source. Returns the data as a string, and the length of that string will equal the `length` parameter unless EOF is reached or a read error occurs. ||
+|| `int write(string data [,int length=data.length])` || Attempts to write `length` bytes of data. Returns the number of bytes actually written, which will be less than `length` on error ||
+|| `void close()` || Closes the stream. Do not use the object after calling this. ||
+|| `int flush()` || May (or may not) flush any device-specific cache. Returns 0 on success. ||
+|| `bool isGood()`  || Returns true if the stream is in a usable state (i.e. there have been no i/o errors). ||
+|| *Properties* (read-only) || *Notes* ||
+|| `bool canWrite` and `bool canRead`|| Specify whether the object is capable of reading or writing. These are static - set when the device is opened and never changed, so don't use them for error checking. ||
 
 ==!InStream Class==
 
-!InStream represents a read-only stream.
+!InStream represents a read-only stream. In additions to the interface defined by IOBase, it has:
 
 || *Functions* || *Notes* ||
 || `new InStream(string file)` || Opens the given file in read mode. ||
 || `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
-|| `string read(int length)` || As for `IODevice.read()` ||
-|| `int write(string data [,int lenght])` || Throws an exception - InStreams cannot write ||
-|| `void close()` || Closes the stream. Do not use the object after calling this. ||
-|| `int flush()` || As for `IODevice.flush()` ||
-|| `bool isGood()`  || Returns true if the stream is in a usable state. ||
 || `int filter( (OutStream|IODevice) dest, Function callback )`  || Described in much more detail below. ||
 || *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
 || `string fileName` || Only for objects which are associated with a file. ||
-|| `bool canWrite` || Always false for !InStreams. ||
+|| `bool canWrite` || Always false for !OutStreams. ||
+|| `bool canRead` || Always true for !OutStreams. ||
 
 ==!OutStream Class==
 
-!OutStream represents a write-only stream.
+!OutStream represents a write-only stream. In additions to the interface defined by IOBase, it has:
 
 || *Functions* || *Notes* ||
 || `new OutStream(string file[, bool truncate=false])` || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
 || `new OutStream(IODevice)` || As for InStream(IODevice). If the device is not writable, no write operations on the new object will succeed.||
-|| `string read(int length)` || Throws an exception - !OutStreams cannot read. ||
-|| `int write(string data [,int lenght])` || As for `IODevice.write()` ||
-|| `void close()` || Closes the stream. Do not use the object after calling this. ||
-|| `int flush()` || As for `IODevice.flush()` ||
-|| `bool isGood()`  || Returns true if the stream is in a usable state. ||
 || *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for objects created with the `OutStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
 || `string fileName` || Only for objects which are associated with a file. ||
 || `bool canWrite` || Always true for !OutStreams. ||
+|| `bool canRead` || Always false for !OutStreams. ||
+
 
 ==IODevice Class==
 
@@ -82,18 +88,17 @@ can essentially mean any data source or destination to which we have
 random access (the ability to access any point in the data at any
 time).
 
+ n additions to the interface defined by IOBase, it has:
+
 || *Functions*  || *Notes* ||
 || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
 || `new IODevice(":memory:" [, int startingSize=0])` || Opens a read/write i/o device which uses RAM as its storage. It starts out at the given size and grows on demand. ||
 || `new IODevice(IODevice,int lower,int upper)`|| Creates a new IODevice which acts as a proxy for a subset of the original device's range. This is described in more detail below. The parent device must outlive the new device. ||
-|| `int write(string[,length=string.lenght`) || Writes up to length bytes. Returns number of bytes written. ||
-|| `string read(length)` || Reads, at most, length bytes and returns the result as a string ||
-|| `void close()` || Closes the device. Do not use the object after calling this. ||
 || `int error()` || Returns a platform-specific non-0 value if the device has an error state. ||
 || `int clearError()` || Tries to clear any error state and EOF marker. Returns 0 on success. ||
 || `bool eof()` || Returns true if the device is at (or past) its EOF. ||
 || `int tell()` || Returns the current position within the underlying device. ||
-|| `int seek(int offset[, int whence=IODevice.SEEK_SET])` || Sets the current position to offset, relative to whence, which must be one of `whio.IODevice.SEEK_SET`, `whio.IODevice.SEET_CUR`, or `whio.IODevice.SEEK_END`. Returns the new position. ||
+|| `int seek(int offset[, int whence=IOBase.SEEK_SET])` || Sets the current position to offset, relative to whence, which must be one of `whio.IOBase.SEEK_SET`, `whio.IOBase.SEET_CUR`, or `whio.IOBase.SEEK_END`. Returns the new position. ||
 || `int flush()` || Tries to flush any existing write data, if applicable. Some device types might to other handling here. Returns 0 on success. ||
 || `int truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
 || `int size()` || Returns the current size of the device. ||
@@ -102,16 +107,15 @@ time).
 || *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for devices created with the `IODevice(IODevice,int,int)` constructor, this points to the subdevice's pointed-to device. ||
 || `string fileName` || Only for objects which are associated with a file. ||
-|| `bool canWrite` || True if the object was not opened for read/write, else false. ||
 
 
 ===SEEK_SET and friends===
 
 `whio.IODevice.seek()` is semantically identical to the C function `fseek()`, and requires a second argument with one of these values:
 
-  * `whio.IODevice.SEEK_SET` means to move to that absolute position.
-  * `whio.IODevice.SEEK_CUR` means to move relative to the current position.
-  * `whio.IODevice.SEEK_END` means to move relative to the end of the device.
+  * `whio.IOBase.SEEK_SET` means to move to that absolute position.
+  * `whio.IOBase.SEEK_CUR` means to move relative to the current position.
+  * `whio.IOBase.SEEK_END` means to move relative to the end of the device.
 
 they are analogous to the C-standard constants of the same names, and are described in the man pages for `fseek()`.
 
@@ -300,15 +304,11 @@ function tryStreamFilter()
 	//dev.filter(is, cb, ud); // should throw
     }
     catch(e) { ex = e; }
-    finally
-    { // Because of the 'is'--uses-->'dev' relationship, 'is' must close first:
-	is.close();
-	dev.close();
-	os.write("\n");
-	os.close();
-	if( ex ) throw ex;
-    }
     print('userData.lastIn='+ud.lastIn, 'userData.hits='+ud.hits);
+    is.close();
+    os.close();
+    dev.close();
+    if( ex ) throw ex;
 }
 tryStreamFilter();
 }}}
