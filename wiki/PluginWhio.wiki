@@ -69,7 +69,6 @@ The API for this class includes any routines which are common amongst the `InStr
 || *Functions* || *Notes* ||
 || `new InStream(string file)` || Opens the given file in read mode. ||
 || `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
-|| `int filter( (OutStream|IODevice) dest, Function callback )`  || Described in much more detail below. ||
 || *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
 || `string fileName` || Only for objects which are associated with a file. ||
@@ -114,7 +113,6 @@ In addition to the interface defined by IOBase, it has:
 || `int truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
 || `int size()` || Returns the current size of the device. ||
 || `int rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
-|| `int filter( (OutStream|IODevice) dest, Function callback )`  || Described in much more detail below. ||
 || *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for devices created with the `IODevice(IODevice,int,int)` constructor, this points to the subdevice's pointed-to device. ||
 || `string fileName` || Only for objects which are associated with a file. ||
