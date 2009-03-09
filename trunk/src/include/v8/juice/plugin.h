@@ -330,9 +330,10 @@ namespace plugin {
 	This macro may be used multiple times in a single
 	implementation file as long as it is passed a different
 	function name on each call.
+
     */
 #define V8_JUICE_PLUGIN_STATIC_INIT(INIT_FUNC) \
-    static bool INIT_FUNC ## _static_initializer  = (::v8::juice::plugin::Detail::PluginStaticInit(INIT_FUNC),true)
+    static bool INIT_FUNC ## _v8_plugin_static_initializer  = (::v8::juice::plugin::Detail::PluginStaticInit(INIT_FUNC),true)
 
 
 }}} // namespaces
