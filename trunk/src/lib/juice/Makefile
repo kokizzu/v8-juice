@@ -9,6 +9,7 @@ OBJECTS = $(addsuffix .o,\
 	convert \
 	plugin \
 	juice \
+	JSClassCreator \
 	whprintf \
 	)
 
