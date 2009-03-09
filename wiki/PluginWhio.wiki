@@ -1,20 +1,33 @@
 #summary I/O classes for JS
 #labels Phase-UserDocs
 
+Achtung: these docs are for the current version in the subversion
+source tree (i document here as changes are made). If you are using an "older" version,
+i recommend searching through the subversion repo for a version of this page which is
+close to the version you're working with.
+
 <wiki:toc max_depth="3" />
 
 =The whio plugin=
 
-The whio plugin adds i/o support to JS. It gets its name from the i/o library it is based on: http://fossil.wanderinghorse.net/repos/whio/
+The whio plugin adds i/o support to JS. It gets its name from the i/o
+library it is based on:
 
-This plugins provides:
+http://fossil.wanderinghorse.net/repos/whio/
 
-  * Class whio.IODevice, which models random-access devices. The back-end supports, in principal, a wide variety of data stores, but v8's class construction mechanism makes it unduly difficult to add the support needed for, e.g., in-memory i/o devices or client-provided back-ends (like [http://fossil.wanderinghorse.net/repos/whefs/ whefs], which i had planned to add bindings for).
-  * Classes whio.InStream and whio.OutStream, which model sequential-access devices.
+That library is provided with this plugin, and need not be installed separately.
+
+This plugins provides the following features:
+
+  * Classes `whio.InStream` and `whio.OutStream`, which model sequential-access devices. These are your general-purposes i/o objects and are suitable for most work even though they are limited to either reading or writing.
+  * Class `whio.IODevice` controls access to an underlying random-acces device (e.g. a file or in-memory buffer). The back-end supports, in principal, a wide variety of data stores.
+
 
 =C++ usage=
 
-When using the plugins API, you don't need to do anything C++-side to use this addon - simply load it as described on [Plugins the plugins page].
+When using the plugins API, you don't need to do anything C++-side to
+use this addon - simply load it as described on [Plugins the plugins
+page].
 
 =JS usage=
 
@@ -33,25 +46,26 @@ See below for the complete class and function list.
 
   * Make the vals from whio_rc.XXX available via whio.rc.XXX. whio_rc.SizeTError needs special handling due to (potentially) different sizes in the underlying numeric types.
 
-
 =JS API for the whio classes=
 
 ==IOBase Class==
 
-This class is abstract - it cannot be instantiated directly. However, it does specify several functions of the i/o interface used by its subclasses, and it can be used with `instanceof` to ensure that certain basic i/o operations are implemented.
+This class is abstract - it cannot be instantiated directly. However, it does specify several functions of the i/o interface used by its subclasses, and it can be used with `instanceof` to ensure that a given object has the most basic i/o operations.
+
+The API for this class includes any routines which are common amongst the `InStream`, `OutStream`, and `IODevice` classes, but those classes sometimes provide their own implementations for these functions.
 
 ||*Functions*||*Nodes||
 || `string read(int length)` || Tries to read up to `length` bytes from the input source. Returns the data as a string, and the length of that string will equal the `length` parameter unless EOF is reached or a read error occurs. ||
 || `int write(string data [,int length=data.length])` || Attempts to write `length` bytes of data. Returns the number of bytes actually written, which will be less than `length` on error ||
 || `void close()` || Closes the stream. Do not use the object after calling this. ||
 || `int flush()` || May (or may not) flush any device-specific cache. Returns 0 on success. ||
-|| `bool isGood()`  || Returns true if the stream is in a usable state (i.e. there have been no i/o errors). ||
+|| `bool isGood()`  || Returns true if the object is in a usable state (i.e. there have been no i/o errors). ||
 || *Properties* (read-only) || *Notes* ||
 || `bool canWrite` and `bool canRead`|| Specify whether the object is capable of reading or writing. These are static - set when the device is opened and never changed, so don't use them for error checking. ||
 
 ==!InStream Class==
 
-!InStream represents a read-only stream. In additions to the interface defined by IOBase, it has:
+!InStream represents a read-only stream. In addition to the interface defined by IOBase, it has:
 
 || *Functions* || *Notes* ||
 || `new InStream(string file)` || Opens the given file in read mode. ||
@@ -105,6 +119,8 @@ In addition to the interface defined by IOBase, it has:
 || *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for devices created with the `IODevice(IODevice,int,int)` constructor, this points to the subdevice's pointed-to device. ||
 || `string fileName` || Only for objects which are associated with a file. ||
+|| `bool canWrite` || Value depends on how the device was opened. ||
+|| `bool canRead` || Value depends on how the device was opened. ||
 
 
 ===SEEK_SET and friends===
@@ -123,7 +139,7 @@ The IODevice class has a constructor with the signature `new IODevice(IODevice d
 
 Here's one explanation of what subdevices are for:
 
-Consider an IODevice pointing to 100 bytes of storage (somewhere - we don't care where). We can create a subdevice which fences off some amount of that storage. The subdevice is a full-fledged i/o device, but it cannot read or write outside of the bounds it is assigned to.
+Consider an IODevice pointing to 1000 bytes of storage (somewhere - we don't care where). We can create a subdevice which fences off some amount of that storage. The subdevice is a full-fledged i/o device, but it cannot read or write outside of the bounds it is assigned to.
 
 For example:
 
@@ -145,9 +161,12 @@ The output of that script is:
 
 Note that the upper bound is equivalent to EOF, or "one past the end", and is not accessible to the subdevice.
 
-Subdevices have some obscure uses, but probably not many which JS applications can make use of.
+Subdevices have some obscure uses, but probably not many which JS
+applications can make use of. They were originally designed to
+partition off access to various internal areas of
+[http://fossil.wanderinghorse.net/repos/whefs/ an embedded filesystem library].
 
-Subdevices also get an extra function:
+Subdevices get an extra function compared to other IODevices:
 
 || `int rebound( int lower, int upper )` || Changes the subdevice's lower and upper bounds, relative to the parent. Returns 0 on success. ||
 
@@ -166,10 +185,9 @@ level, are reported via exceptions. All of the constructors will throw
 if they cannot open their underlying device or stream.
 
 For example, a call to `read(20)` which can only read 13 bytes will
-tell us so by returning the number 13, but calling `read()` would trigger an
-exception because there is no sensible default value to pass on to the C
-API.
-
+tell us so by returning the number 13, but calling `read()` with no
+arugments would trigger an exception because there is no sensible
+default value to pass on to the C API.
 
 =Tips and tricks=
 
@@ -217,20 +235,22 @@ int filter( OStream|IODevice target,
        The callback signature is:
 
 {{{
-int callback(OutStream out,
+int callback(OutStream|IODevice out,
              string data,
              bool isEnd,
              mixed userData );
 }}}
 
 filter() reads the 'this' object until EOF, in blocks of an
-unspecified size. Each block is passed to the callback function,
-which is presumed to do some sort of filtering on the data.
+unspecified size. Each block is passed to the callback function, which
+is presumed to do some sort of filtering on the data. The callback is
+presumed to send the filtered data to the givven output stream, but
+this is not strictly necessary.
 
 filter() returns the total number of bytes it thinks where
-consumed. This number depends on the callback returning valid
-values. In general, no assumptions can be made about the state of the
-two streams on error.  On success, this stream will be at EOF.
+consumed. This number depends on the callback returning valid values
+(see below). In general, no assumptions can be made about the state of
+the two streams on error.  On success, this stream will be at EOF.
 
 The callback should:
 
