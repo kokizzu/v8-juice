@@ -154,6 +154,46 @@ namespace convert {
 	    }
 	};
 
+	template <typename T>
+	struct to_js_f< ::v8::Handle<T> >
+	{
+	    typedef ::v8::Handle<T> handle_type;
+	    ValueHandle operator()( handle_type & li ) const
+	    {
+		return li;
+	    }
+	};
+
+	template <typename T>
+	struct to_js_f< ::v8::Local<T> >
+	{
+	    typedef ::v8::Local<T> handle_type;
+	    ValueHandle operator()( handle_type const & li ) const
+	    {
+		return li;
+	    }
+	};
+
+	template <typename T>
+	struct to_js_f< ::v8::Persistent<T> >
+	{
+	    typedef ::v8::Persistent<T> handle_type;
+	    ValueHandle operator()( handle_type const & li ) const
+	    {
+		return li;
+	    }
+	};
+
+// 	template <>
+// 	struct to_js_f< ::v8::Function >
+// 	{
+// 	    ValueHandle operator()( ::v8::Function const & li ) const
+// 	    {
+// 		return Handle<Function>(li);
+// 	    }
+// 	};
+
+
 	template <typename ListT>
 	struct to_js_f_list
 	{
