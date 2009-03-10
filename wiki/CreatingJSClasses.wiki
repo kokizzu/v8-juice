@@ -60,27 +60,36 @@ The documentation for v8's weak pointers support is a bit spotty, and one can ea
 
 =WeakJSClassCreator=
 
-The WeakJSClassCreator is a JSClassCreator subclass which uses C++ templates to create functions for binding and unbinding JS objects to/from native objects of a given type. It is used mostly like JSClassCreator, the notable difference being the required signature of the constructor function for the bound type, which must look like:
+The WeakJSClassCreator is a JSClassCreator subclass which uses C++ templates to create functions for binding and unbinding JS objects to/from native objects of a given type. It is used mostly like JSClassCreator, the notable difference being template arguments. The first is the native type we are wrapping. The second is a type conforming
+to the WeakJSClassCreatorOps interface, which described fully in the API docs and briefly shown here:
 
 {{{
 // JS-side constructor for MyClass objects...
-MyClass * MyClass_ctor( Arguments const & argv, std::string & exceptionText );
+    template <typename T>
+    struct WeakJSClassCreatorOps
+    {
+	typedef T WrappedType;
+	/**
+	    Constructor function.
+	*/
+	static WrappedType * Ctor( Arguments const &  /*argv*/,
+				   std::string & /*exceptionText*/);
+
+	/**
+	    Destructor function.
+	*/
+	static void Dtor( WrappedType * obj );
+    };
 }}}
 
 That constructor is responsible for trying to create a `MyClass` object from the given arguments, but it is _not_ responsible for binding that native to the JS object. If it cannot create a new object, it must return 0 and may optionally put some descriptive error string in the given string reference (note that it is not const!), and the internal handler provided by WeakJSClassCreator will convert the error text into a JS-side exception. On success, the ctor must return a new instance of the native object. The internals of WeakJSClassCreator will then bind that native to JS using the weak pointer callback mechanism.
 
-We also need a destructor, which is simply a functor with this signature:
-
-{{{
-void (*)( MyClass * ) const;
-}}}
-
-It may be a free function or a C++ functor structure. The default destructor implementation simply calls `delete` on the object, but this is not suitable for many low-level types (e.g. a database handle from a C library, a low-level file handle, etc.) and clients may need to provide their own implementation.
+The destructor function must destroy the object using some type-specific logic.
 
 Now that we have a ctor and a dtor, we've got everything we need. From there we can let WeakJSClassCreator implement the more tedious bits for us:
 
 {{{
-typedef WeakJSClassCreator<MyClass,MyCtor> CC;
+typedef WeakJSClassCreator<MyClass,MyClassOps> CC;
 CC c( "MyClass", objectToAddClassTo );
 c.Set(...)
  .Set(...)
@@ -98,7 +107,7 @@ Again, that's all there is to it. Now when we call `new MyClass(...)` from JS, t
 
 The native object can be fetched later by passing a bound JS object to one of the static methods `WeakJSClassCreator::GetSelf()` or `WeakJSClassCreator::GetObject()`, both of which work similarly but have very slightly different semantics.
 
-The WeakJSClassCreator approach also uses the `v8::juice::cleanup` API, so users of that API will be guaranteed that the native object's dtor (the one defined in the WeakJSClassCreator template args) will be called (at an indeterminate time) if v8 does not do it and the client calls `v8::juice::cleanup::Cleanup()` at application shutdown (or they use `v8::juice::cleanup::CleanupSentry()` in conjunction with their v8 context).
+Clients can use the `v8::juice::bind` and `v8::juice::cleanup` APIs in their ctors and dtors to get enhanced (and type-safe) type conversions and "supplemental" GC support. See the API docs for more details.
 
 ==Design notes==
 
