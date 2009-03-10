@@ -57,17 +57,37 @@ namespace juice {
     }
 
     /**
-       Any type used with WeakJSClassCreator must provide
-       a specialization of this type and provide all of
-       the functions described herein.
+       Any type used with WeakJSClassCreator must provide a
+       specialization of this type and provide all of the functions,
+       typedefs, and constants described herein.
     */
     template <typename T>
     struct WeakJSClassCreatorOps
     {
 	/**
-	   This type's associated native type.
+	   This type's associated native type. In specializations,
+	   T *may* differ from WrappedType, and WrappedType
+	   is the definition that WeakJSClassCreator will use
+	   as a parameter type. This has some odd uses, actually,
+	   such as matching multiple logical JS types to a single
+	   native data type.
 	*/
 	typedef T WrappedType;
+
+	enum {
+	/**
+	   Must be defined to the number of internal fields
+	   which client code will need for each instance
+	   of the wrapped object.
+
+	   WeakJSClassCreator will automatically allocate one
+	   additional field and store the underlying native object in
+	   the *last* internal field (so clients can work with fields
+	   0..N as normal, without having to take too much care to not
+	   step on this class' slot).
+	*/
+	ExtraInternalFieldCount = 0
+	};
 
 	/**
 	   This will be called in response to calling
@@ -130,25 +150,19 @@ namespace juice {
        implement member function which disconnect from the underlying native
        object (e.g. File.close()).
 
-       The template arguments are:
+       The template argument is:
 
-       - WrappedT = the native type we will wrap.
+       - WrappedT = the native type we will wrap, non-CVP qualified.
 
-       - ClassOpsType is a helper which defines the core-most
-       operations needed by this class. There are two ways to provide
-       this: 1) specialize WeakJSClassCreatorOps<WrappedT> for the
-       type, following the interface shown in the API docs. 2) provide
-       a custom class with the same interface and semantics documented
-       in WeakJSClassCreatorOps.  See the docs for
-       WeakJSClassCreatorOps for how types consistent with its
-       interface should behave.
+       However, the client must also provide a specialization of WeakJSClassCreatorOps
+       for the given type. That specialization must conform to the API defined
+       in the base template definition (which is not implemented and cannot be
+       instantiated).
 
-       - extraInternalFieldCount = the number of internal fields
-       required by the class. This class will automatically allocate
-       one additional field and store the underlying native object in
-       the *last* internal field (so clients can work with fields 0..N
-       as normal, without having to take too much care to not step on
-       this class' slot).
+       The WeakJSClassCreatorOps specialization is a helper which
+       defines the core-most operations needed by this class. See the
+       docs for WeakJSClassCreatorOps for how types consistent with
+       its interface should behave.
 
        The wrapper works basically like this:
 
@@ -169,23 +183,24 @@ namespace juice {
        - If ClassOpsType::Ctor() succeeds (returns non-0) then the new
        object is bound to a weak pointer and gives the new weak
        pointer to v8. It will also add the native as an External in
-       the Nth internal slot, where N is the extraInternalFieldCount
-       value passed to this template (it reserves one extra slot at
-       the end of the list for this purpose, so there will always
-       be at least one slot).
+       the Nth internal slot, where N is the
+       WeakJSClassCreatorOps<WrappedT>::ExtraInternalFieldCount. This
+       class reserves one extra slot at the end of the list for storing
+       the native, so there will always be at least one slot.
 
        It's a lot simpler than it sounds and completely frees the caller of
-       worry that destructors might not be called (unless the app crashes
-       prematurely due to his buggy JS/Native wrapper ;).
-
+       worry of setting up weak pointer callback handling.
 
        Example usage:
 
+       First we need a custom WeakJSClassCreatorOps specialization. Here's
+       one way to do that:
+
        \code
-       // Custom ClassOpsType for use with WeakJSClassCreator:
-       struct MyClassOps
+       struct MyTypeOps
        {
            typedef MyClass WrappedType;
+	   enum { ExtraInternalFieldCount = 0 };
            static MyType * Ctor( Arguments const & argv, std::string & exceptionText)
 	   {
 	       return new MyType;
@@ -195,34 +210,45 @@ namespace juice {
 	       if(obj) delete obj;
 	   }
        };
+       namespace v8 { namespace juice {
+           // Requires specialization of WeakJSClassCreatorOps.
+           template <>
+           WeakJSClassCreatorOps<MyType> : MyTypeOps {};
+       }}
+       \endcode
 
+       Now we can use the class creator:
+
+       \code
        ...
        // Add the class to JS:
-       typedef WeakJSClassCreator<MyType,MyClassOps> WC;
+       typedef WeakJSClassCreator<MyType> WC;
        WC c( "MyType", objectToAddClassTo );
        c.Set(...)
          .Set(...)
 	 .Set(...)
 	 .Set(...)
 	 .Seal(); // must be the last call made on this object.
-
-       // Now create a JS subclass:
-       typedef WeakJSClassCreator<MySubType,MySubTypeOps> WC2;
-       WC2 c2( "MySubType", objectToAddClassTo );
-       c2.Inherit( c )
-         .Set(...)
-	 .Seal(); // must be the last call made on this object.
        \endcode
 
        That's all there is to it.
     */
-    template <typename WrappedT,
-	      typename ClassOpsType = WeakJSClassCreatorOps<WrappedT>,
-	      int extraInternalFieldCount = 0>
+    template <typename WrappedT>
     class WeakJSClassCreator : public JSClassCreator
     {
     public:
-	typedef WrappedT WrappedType;
+	/**
+	   The WeakJSClassCreatorOps specialization used by this
+	   class.
+	*/
+	typedef WeakJSClassCreatorOps<WrappedT> ClassOpsType;
+
+	/**
+	   The actual native type wrapped by this class, which may
+	   be different from the WrappedT template parameter!
+	*/
+	typedef typename ClassOpsType::WrappedType WrappedType;
+
 	/**
 	   Starts the setup of a new class with the given name. It
 	   will be populated into the target object when Seal() is
@@ -231,7 +257,10 @@ namespace juice {
 	*/
 	WeakJSClassCreator( char const * className,
 			    Handle<Object> target)
-	    : JSClassCreator( className, target, ctor_proxy, static_cast<int>(extraInternalFieldCount + 1) )
+	    : JSClassCreator( className,
+			      target,
+			      ctor_proxy,
+			      static_cast<int>(ClassOpsType::ExtraInternalFieldCount + 1) )
 	{
 	}
 
@@ -248,21 +277,21 @@ namespace juice {
 	*/
 	static WrappedType * GetSelf( Local<Object> h )
 	{
-	    if( h.IsEmpty() || (h->InternalFieldCount() != (extraInternalFieldCount+1)) ) return 0;
-	    Local<Value> lv( h->GetInternalField(extraInternalFieldCount) );
+	    if( h.IsEmpty() || (h->InternalFieldCount() != (ClassOpsType::ExtraInternalFieldCount+1)) ) return 0;
+	    Local<Value> lv( h->GetInternalField(ClassOpsType::ExtraInternalFieldCount) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
 	    Local<External> ex( External::Cast(*lv) );
 	    return static_cast<WrappedType*>( ex->Value() ); // we can only hope...
 	}
 
-	/** Reimplemented to add one to the given number (it is reserved
-	    for use by this type for holding the native object).
-
-	    TODO: consider allowing this and remove it from the template args
+	/** Reimplemented to DO NOTHING, as the number is defined
+	    by the WeakJSClassCreator specialization. When changing
+	    it here, we lose the ability to know where the object
+	    is in the list (since we store it at the end).
 	*/
  	virtual WeakJSClassCreator & SetInternalFieldCount( int n )
  	{
-	    JSClassCreator::SetInternalFieldCount(n+1);
+	    //JSClassCreator::SetInternalFieldCount(n+1);
 	    // gcc 4.3.2 won't allow this syntax: :-?
  	    //this->JSClassCreator::SetInteralFieldCount( n + 1 );
 	    return *this;
@@ -304,10 +333,13 @@ namespace juice {
 	   That code "should" destroy the underlying device and
 	   disconnect the JS reference to that object, and it can use
 	   this function to do so.
+
+	   Returns true if it passes a native object to the
+	   destructor, else false.
 	*/
 	static bool DestroyObject( Local<Object> jo )
 	{
-	    WrappedType * t = GetSelf(jo);
+	    WrappedType * t = GetSelf(jo); // sanity check
 	    if( ! t ) return false;
 	    Persistent<Object> p = Persistent<Object>::New( jo ); // is this correct? Seems to work.
 	    weak_callback( p, t );
@@ -329,10 +361,6 @@ namespace juice {
 
     private:
 	/**
-	   Internal binding context for BindNative() and friends.
-	*/
-	static const void * bind_cx() { return 0; /*(void const *)bind_cx*/; }
-	/**
 	   Unbinds native and destroys it using CleanupFunctor.
 	*/
 	static void the_cleaner( WrappedType * native )
@@ -351,8 +379,8 @@ namespace juice {
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
 	    Local<Object> jobj( Object::Cast(*pv) );
-	    if( jobj->InternalFieldCount() != (1+extraInternalFieldCount) ) return;
-	    Local<Value> lv( jobj->GetInternalField(extraInternalFieldCount) );
+	    if( jobj->InternalFieldCount() != (1+ClassOpsType::ExtraInternalFieldCount) ) return;
+	    Local<Value> lv( jobj->GetInternalField(ClassOpsType::ExtraInternalFieldCount) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return;
 	    /**
 	       We have to ensure that we have no dangling External in JS space. This
@@ -360,7 +388,7 @@ namespace juice {
 	       knowledge that member funcs called after that won't get a dangling
 	       pointer. Without this, some code will crash in that case.
 	    */
-	    jobj->SetInternalField(extraInternalFieldCount,Null());
+	    jobj->SetInternalField(ClassOpsType::ExtraInternalFieldCount,Null());
 	    pv.Dispose();
 	    pv.Clear();
 	    the_cleaner( static_cast<WrappedType*>( nobj ) );
@@ -369,17 +397,15 @@ namespace juice {
 	/**
 	   "Wraps" a native pointer in a JS weak pointer. Returns the new
 	   Persistent weak object, which is a wrapper for the self object.
+
+	   Results are undefined if this function is called from anywhere
+	   other than ctor_proxy().
 	*/
 	static Persistent<Object> wrap_native( Handle<Object> _self, WrappedType * obj )
 	{
-	    const int ic = _self->InternalFieldCount();
-	    if( ! ic )
-	    {
-		return Persistent<Object>();
-	    }
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
-	    self->SetInternalField( ic - 1, External::New(obj) );
+	    self->SetInternalField( ClassOpsType::ExtraInternalFieldCount, External::New(obj) );
 	    //CERR << "Wrapped object @"<<obj<<" in a Persistent<Object>.\n";
 	    return self;
 	}
