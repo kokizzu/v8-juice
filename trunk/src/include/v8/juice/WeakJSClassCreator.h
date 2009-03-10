@@ -32,11 +32,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <v8.h>
-#include <v8/juice/JSClassCreator.h>
-#include <v8/juice/bind.h>
-#include <v8/juice/cleanup.h>
 
+#include <v8/juice/JSClassCreator.h>
 #include <string>
+#include <stdexcept>
 
 namespace v8 {
 namespace juice {
@@ -56,6 +55,60 @@ namespace juice {
 	    }
 	};
     }
+
+    /**
+       Any type used with WeakJSClassCreator must provide
+       a specialization of this type and provide all of
+       the functions described herein.
+    */
+    template <typename T>
+    struct WeakJSClassCreatorOps
+    {
+	/**
+	   This type's associated native type.
+	*/
+	typedef T WrappedType;
+
+	/**
+	   This will be called in response to calling
+	   "new WrappedType(...)" in JS code. It should:
+
+	   - Create a new native object.
+
+	   - If successful, return that object.
+
+	   - On error, return 0 and optionally populate the (string &)
+	   argument with an informative error message (e.g. "requires
+	   arguments (String,Integer)").
+
+	   If the client is using any "supplemental" garbage collection
+	   (e.g. the v8::juice::cleanup API) then they should
+	   register the object in this function, and use Dtor()
+	   as the registered destruction callback.
+	*/
+	static WrappedType * Ctor( Arguments const &  /*argv*/,
+				   std::string & /*exceptionText*/);
+
+	/**
+	   Must "destroy" the given object, though the exact meaning
+	   of "destroy", and mechanism of destruction, is
+	   type-specific.
+
+	   This function is is responsible for destroying the native
+	   object. Most implementations must simply call "delete obj",
+	   which is fine for many types, but opaque types and types
+	   allocated via something other than 'new' will need a
+	   different implementation. A destructor functor for shared,
+	   static, or stack-allocated objects should simply do nothing
+	   (or maybe clear the object to some empty/default state).
+
+	   If the client is using any "supplemental" garbage collection
+	   (e.g. the v8::juice::cleanup API) then they should
+	   deregister the object in this function.
+	*/
+	static void Dtor( WrappedType * obj );
+    };
+
     /**
        WeakJSClassCreator is a tool to simplify the creation of new
        wrapped classes, including addition of automatic cleanup handling
@@ -68,92 +121,95 @@ namespace juice {
 
        - Via v8's weak pointers, the native will be deleted *if* (BIG
        *if*) the gc is triggered and the pointer is due for deletion.
+       An option is provided to support external garbage collection,
+       in case calling dtors is an absolute must for your types.
 
-       - If v8::juice::cleanup::Cleanup() is called.
-
-       - If the client calls the static DestroyNative() function of this class,
-       passing it the native. This also disposes the underlying weak pointers,
-       so they won't point back to the object anymore.
+       - If the client calls the static DestroyObject() function of
+       this class. This also disposes the underlying weak pointers, so
+       they won't point back to the object anymore. This allows us to
+       implement member function which disconnect from the underlying native
+       object (e.g. File.close()).
 
        The template arguments are:
 
        - WrappedT = the native type we will wrap.
 
-       - NativeConstructor = explained below
+       - ClassOpsType is a helper which defines the core-most
+       operations needed by this class. There are two ways to provide
+       this: 1) specialize WeakJSClassCreatorOps<WrappedT> for the
+       type, following the interface shown in the API docs. 2) provide
+       a custom class with the same interface and semantics documented
+       in WeakJSClassCreatorOps.  See the docs for
+       WeakJSClassCreatorOps for how types consistent with its
+       interface should behave.
 
-       - extraInternalFieldCount = the number of internal fields which
-       the client will use. This class adds one to that number and
-       uses the last field to store a handle to the native object.
+       - extraInternalFieldCount = the number of internal fields
+       required by the class. This class will automatically allocate
+       one additional field and store the underlying native object in
+       the *last* internal field (so clients can work with fields 0..N
+       as normal, without having to take too much care to not step on
+       this class' slot).
 
-       - CleanupFunctorT = a functor which must have an
-       operator()(WrappedT*).  The cleanup functor is responsible for
-       destroying the native object.  The default implementation
-       simply calls delete, which is fine for many types, but opaque
-       types and types allocated via something other than 'new' will
-       need a different implementation. A destructor functor for
-       shared, static, or stack-allocated objects should simply do
-       nothing.
-
-       The NativeConstructor function is a callback which looks like this:
-
-       \code
-       WrappedT * construct( Local<Object> self,
-                             int argc,
-			     Handle<Value> argv[],
-			     std::string & exception );
-       \endcode
-
-       And it works like this:
+       The wrapper works basically like this:
 
        When, in JS code, "new MyType(...)" is called, this call arranges
        to have a private constructor called. That contructor does the following:
 
-       - Converts the Arguments array to an array of Handle<Value> and passes
-       them on to the NativeConstructor. If the NativeConstructor returns 0,
-       the construction fails and throws and exception. If the exceptionText
-       (4th parameter to NativeConstructor) is non-empty when NativeConstructor
-       returns, the private constructor will destroy the returned object (if
-       necessary) and throw an exception using the exceptionText string.
+       - Passes the Arguments array to ClassOpsType::Ctor(). If the
+       ctor returns 0, the construction fails and throws and
+       exception. If the exceptionText string (2nd parameter to
+       ClassOpsType::Ctor()) is non-empty when the ctor returns, the
+       private constructor will destroy the returned object (if
+       necessary) using ClassOpsType::Dtor() and throw a JS exception
+       using the exceptionText string.
 
-       - The "self" argument passed to the NativeConstructor is the argv.This()
-       object of the "real" constructor.
+       - The argv.This() argument passed to ClassOpsType::Ctor() is
+       the "this" object of the "real" constructor.
 
-       - If NativeConstructor succeeds (returns non-0) then the new object
-       is bound to a weak pointer, bound to v8::juice::bind::BindNative<WrappedT>()
-       with a BindContextKey of 0 (so CastFromJS() will work with it), adds it to
-       v8::juice::cleanup::AddToCleanup(), and gives the new weak pointer to
-       v8. It will also add the native as an External in the internal slot with
-       the number passed to this template + 1 (it reserves one extra slot at the
-       end of the list for this purpose).
+       - If ClassOpsType::Ctor() succeeds (returns non-0) then the new
+       object is bound to a weak pointer and gives the new weak
+       pointer to v8. It will also add the native as an External in
+       the Nth internal slot, where N is the extraInternalFieldCount
+       value passed to this template (it reserves one extra slot at
+       the end of the list for this purpose, so there will always
+       be at least one slot).
 
        It's a lot simpler than it sounds and completely frees the caller of
        worry that destructors might not be called (unless the app crashes
        prematurely due to his buggy JS/Native wrapper ;).
 
 
-       TODO: consider changing NativeConstructor to:
-
-       WrappedT * (*NativeConstructor)( Arguments const &, string & )
-
-       The reason for the Handle[] is because i implement my ctors that way
-       so i can farm off work to different functions depending on the argument
-       count/content, and we can't do that with Argument objects.
-
        Example usage:
 
        \code
-       typedef WeakJSClassCreator<MyType,MyCtor> C;
-       C c( "MyType", objectToAddClassTo );
+       // Custom ClassOpsType for use with WeakJSClassCreator:
+       struct MyClassOps
+       {
+           typedef MyClass WrappedType;
+           static MyType * Ctor( Arguments const & argv, std::string & exceptionText)
+	   {
+	       return new MyType;
+	   }
+	   static void Dtor( MyType * obj )
+	   {
+	       if(obj) delete obj;
+	   }
+       };
+
+       ...
+       // Add the class to JS:
+       typedef WeakJSClassCreator<MyType,MyClassOps> WC;
+       WC c( "MyType", objectToAddClassTo );
        c.Set(...)
          .Set(...)
 	 .Set(...)
 	 .Set(...)
 	 .Seal(); // must be the last call made on this object.
 
-	 // Now create a subclass:
-       typedef WeakJSClassCreator<MyOtherType,MyOtherCtor> C;
-       C2 c2( "MyMyOther", objectToAddClassTo );
-       c2.Inherit( C )
+       // Now create a JS subclass:
+       typedef WeakJSClassCreator<MySubType,MySubTypeOps> WC2;
+       WC2 c2( "MySubType", objectToAddClassTo );
+       c2.Inherit( c )
          .Set(...)
 	 .Seal(); // must be the last call made on this object.
        \endcode
@@ -161,30 +217,12 @@ namespace juice {
        That's all there is to it.
     */
     template <typename WrappedT,
-	      // FIXME: make this a template typw hwhich gets specialzied!
-	      // Fixme: change ctor callback to InvokactionCallback w/ extra (string&) arg.
-// 	      WrappedT * (*NativeConstructor)( Local<Object> /*self*/,
-// 					       int /*argc*/,
-// 					       Handle<Value> /*argv*/[],
-// 					       std::string & /*exceptionText*/),
-	      WrappedT * (*NativeConstructor)( Arguments const &  /*argv*/,
-					       std::string & /*exceptionText*/),
-	      // Fixme: remove extraInternalFieldCount from templates, use JSClassCreator support instead
-	      //int extraInternalFieldCount = 0,
-	      typename CleanupFunctorT = Detail::ObjectDeleter>
+	      typename ClassOpsType = WeakJSClassCreatorOps<WrappedT>,
+	      int extraInternalFieldCount = 0>
     class WeakJSClassCreator : public JSClassCreator
     {
     public:
 	typedef WrappedT WrappedType;
-	typedef CleanupFunctorT CleanupType;
-
-	/** The object constructor type for this class. See the class
-	 docs for how it's supposed to work. */
-	typedef WrappedT * (*NativeCtor)( Local<Object> /*self*/,
-						 int /*argc*/,
-						 Handle<Value> /*argv*/[],
-						 std::string & /*exceptionText*/);
-
 	/**
 	   Starts the setup of a new class with the given name. It
 	   will be populated into the target object when Seal() is
@@ -192,9 +230,8 @@ namespace juice {
 	   on that process.
 	*/
 	WeakJSClassCreator( char const * className,
-			    Handle<Object> target,
-			    int extraFieldCount = 0)
-	    : JSClassCreator( className, target, ctor_proxy, extraFieldCount + 1 )
+			    Handle<Object> target)
+	    : JSClassCreator( className, target, ctor_proxy, static_cast<int>(extraInternalFieldCount + 1) )
 	{
 	}
 
@@ -204,15 +241,20 @@ namespace juice {
 	   mechanisms. If it was not, this routine will return 0.
 
 	   Ownership of the returned object remains unchanged.
+
+	   Results are technically undefined if the given handle has
+	   not created by this class, but this function makes every
+	   effort to ensure that it doesn't do anything too stupid.
 	*/
 	static WrappedType * GetSelf( Local<Object> h )
 	{
-	    //if( h.IsEmpty() || (h->InternalFieldCount() != (extraInternalFieldCount+1)) ) return 0;
-	    if( h.IsEmpty() || !h->InternalFieldCount() ) return 0;
-	    return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(),
-								   h->GetInternalField(h->InternalFieldCount()-1)  // extraInternalFieldCount
-								   );
+	    if( h.IsEmpty() || (h->InternalFieldCount() != (extraInternalFieldCount+1)) ) return 0;
+	    Local<Value> lv( h->GetInternalField(extraInternalFieldCount) );
+	    if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
+	    Local<External> ex( External::Cast(*lv) );
+	    return static_cast<WrappedType*>( ex->Value() ); // we can only hope...
 	}
+
 	/** Reimplemented to add one to the given number (it is reserved
 	    for use by this type for holding the native object).
 
@@ -221,11 +263,10 @@ namespace juice {
  	virtual WeakJSClassCreator & SetInternalFieldCount( int n )
  	{
 	    JSClassCreator::SetInternalFieldCount(n+1);
-	    // gcc 4.3.2 bug? won't allow this syntax:
+	    // gcc 4.3.2 won't allow this syntax: :-?
  	    //this->JSClassCreator::SetInteralFieldCount( n + 1 );
 	    return *this;
  	}
-
 
 	/**
 	   Like GetSelf(), but takes a Handle to a value. This can be
@@ -241,8 +282,6 @@ namespace juice {
         {
             if( h.IsEmpty() || ! h->IsObject() ) return 0;
             Local<Object> obj( Object::Cast(*h) );
-            //if( obj->InternalFieldCount() != (extraInternalFieldCount+1) ) return 0;
-            //return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), obj->GetInternalField(extraInternalFieldCount) );
 	    return GetSelf( obj );
         }
 
@@ -288,7 +327,6 @@ namespace juice {
 		: DestroyObject( Local<Object>(Object::Cast(*h)) );
         }
 
-
     private:
 	/**
 	   Internal binding context for BindNative() and friends.
@@ -297,43 +335,35 @@ namespace juice {
 	/**
 	   Unbinds native and destroys it using CleanupFunctor.
 	*/
-	template <bool removeFromCleanup>
-	static void the_cleaner( void * obj, WrappedType * native )
+	static void the_cleaner( WrappedType * native )
 	{
-	    //CERR << "dev_cleanup( void@"<<obj<<",  native@"<<native<<")\n";
-	    if( removeFromCleanup )
-	    {
-		::v8::juice::cleanup::RemoveFromCleanup(obj);
-		// ^^^ maintenance reminider: we must call that from here, instead
-		// of the primary dtor because in some cases (IOBase.close()) we want
-		// to destroy the object from inside a member function, and we
-		// can re-use this function for that purpose.
-	    }
+	    //CERR << "the_cleaner( native@"<<native<<")\n";
 	    if( native )
 	    {
-		::v8::juice::bind::UnbindNative( bind_cx(), obj, native );
-		CleanupFunctorT()( native );
+		ClassOpsType::Dtor( native );
 	    }
-	}
-
-	/**
-	   Destructor for use with v8::juice::cleanup::AddToCleanup().
-	   obj MUST be-a (WrappedType*). It simply calls the_cleaner(obj,(T*)obj).
-	*/
-	static void cleanup_callback( void * obj )
-	{
-	    the_cleaner<false>( obj, static_cast<WrappedType*>( obj ) );
 	}
 
 	/**
 	   Only called by v8 GC. It removes the object from "supplemental" GC,
-	   calls cleanup_callback(), and Dipose()es the given object.
+	   calls the_cleaner(nobj), and Dipose()es the given object.
 	*/
-	static void weak_callback(Persistent< Value > jobj, void * nobj)
+	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
-	    the_cleaner<true>( nobj, static_cast<WrappedType*>( nobj ) );
-	    jobj.Dispose();
-	    jobj.Clear();
+	    Local<Object> jobj( Object::Cast(*pv) );
+	    if( jobj->InternalFieldCount() != (1+extraInternalFieldCount) ) return;
+	    Local<Value> lv( jobj->GetInternalField(extraInternalFieldCount) );
+	    if( lv.IsEmpty() || !lv->IsExternal() ) return;
+	    /**
+	       We have to ensure that we have no dangling External in JS space. This
+	       is so that functions like IODevice.close() can act safely with the
+	       knowledge that member funcs called after that won't get a dangling
+	       pointer. Without this, some code will crash in that case.
+	    */
+	    jobj->SetInternalField(extraInternalFieldCount,Null());
+	    pv.Dispose();
+	    pv.Clear();
+	    the_cleaner( static_cast<WrappedType*>( nobj ) );
 	}
 
 	/**
@@ -342,8 +372,6 @@ namespace juice {
 	*/
 	static Persistent<Object> wrap_native( Handle<Object> _self, WrappedType * obj )
 	{
-	    ::v8::juice::cleanup::AddToCleanup(obj, cleanup_callback );
-	    ::v8::juice::bind::BindNative( bind_cx(), obj, obj );
 	    const int ic = _self->InternalFieldCount();
 	    if( ! ic )
 	    {
@@ -368,28 +396,34 @@ namespace juice {
 	    {
 		return ThrowException(String::New("Cannot call this constructor as function!"));
 	    }
-	    const int argc = argv.Length();
-	    std::vector< Handle<Value> > av(argc,Null());
-	    for( int i = 0; i < argc; ++i ) av[i] = argv[i];
 	    std::string err;
-	    WrappedType * obj =
-		//NativeConstructor( argv.This(), argc, &av[0], err );
-		NativeConstructor( argv, err );
+	    WrappedType * obj = 0;
+	    try
+	    {
+		obj = ClassOpsType::Ctor( argv, err );
+	    }
+	    catch(std::exception const & ex)
+	    {
+		return ThrowException(String::New(ex.what()));
+	    }
+	    catch(...)
+	    {
+		return ThrowException(String::New("Native constructor threw an unknown native exception!"));
+	    }
 	    if( ! err.empty() )
 	    {
 		if( obj )
 		{
-		    CleanupFunctorT()( obj );
+		    ClassOpsType::Dtor(obj);
 		    obj = 0;
 		}
 		return ThrowException(String::New(err.c_str(),static_cast<int>(err.size())));
 	    }
 	    if( ! obj )
 	    {
-		return ThrowException(String::New("Opening the stream failed for an unspecified reason!"));
+		return ThrowException(String::New("Constructor failed for an unspecified reason!"));
 	    }
 	    return wrap_native( argv.This(), obj );
-	    //return argv.This();
 	}
 
     };
