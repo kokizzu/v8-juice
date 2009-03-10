@@ -201,11 +201,8 @@ namespace juice {
 	*/
 	static WrappedType * GetSelf( Local<Object> h )
 	{
-	    if( h.IsEmpty() ) return 0;
-	    Local<Object> obj( Object::Cast(*h) );
-	    if( h->InternalFieldCount() != (extraInternalFieldCount+1) ) return 0;
-	    Handle<Value> key( h->GetInternalField(extraInternalFieldCount) );
-	    return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), key );
+	    if( h.IsEmpty() || (h->InternalFieldCount() != (extraInternalFieldCount+1)) ) return 0;
+	    return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), h->GetInternalField(extraInternalFieldCount) );
 	}
 
 	/**
