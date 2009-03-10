@@ -164,6 +164,7 @@ function tryTypeInfo()
 {
     print("Typeinfo:");
     var dev = new whio.IODevice('/dev/stdout',true);
+    var stdin = new whio.IODevice('/dev/stdin',false);
     var os = new whio.OutStream('/dev/stdout');
     var is = new whio.InStream('/dev/stdin');
     var typeinfo = function(o,F) {
@@ -172,7 +173,7 @@ function tryTypeInfo()
 // 	print(o,'instanceof',F,'==',o instanceof F);
 	print(o,'instanceof',F,'==',o instanceof (( 'string' == typeof F) ? eval(F) : F));
     };
-    var sar = [os,is,dev];
+    var sar = [os,is,dev,stdin];
     for( var ks in sar  )
     {
 	var strdev = sar[ks];
@@ -182,13 +183,9 @@ function tryTypeInfo()
 	    typeinfo(strdev,types[kt]);
 	}
 	print('('+strdev+').isGood() ==',strdev.isGood());
+	strdev.close();
     }
     //is.write(7); // should throw
-    is.close();
-    //is.read(4); // should throw
-    os.close();
-    dev.close();
-    print
 }
 
 function tryOnlyOut()
@@ -203,7 +200,10 @@ function tryAbstract()
     var ex = null;
     try
     {
-	var s = new whio.StreamBase();
+	//var s = new whio.StreamBase();
+	var s = new whio.OutStream('/dev/null');
+	s.close();
+	s.close();
     }
     catch(E) {
 	ex=E;
