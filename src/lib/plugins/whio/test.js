@@ -123,7 +123,7 @@ function trySubdev()
     sub.seek(1);
     print('tell =',sub.tell());
     sub.write("ZYXWVUTSRQ");
-    print('sub.ioDevice =',sub.originDevice);
+    print('sub.ioDevice =',sub.ioDevice);
     print('sub =',sub);
     dump();    
 
@@ -148,11 +148,13 @@ function tryBadStream()
     }
     catch(e) {
 	print("As hoped, it threw:",e);
-    } finally {
 	print("finally{} closing",fn);
-	if(a) a.close();
 	return;
     }
+    finally {
+	if(a) a.close();
+    }
+
     throw new Error("You shouldn't have gotten this far!");
 }
 
