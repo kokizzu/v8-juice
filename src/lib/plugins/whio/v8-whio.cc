@@ -477,7 +477,7 @@ namespace v8 { namespace juice { namespace whio {
 	ARGS((0==argc));
 	DEVTHIS(DevT);
 	//bool b =
-	    WeakCreator<DevT>::type::DestroySelf( argv.This() );
+	WeakCreator<DevT>::type::DestroyObject( argv.This() );
 	//CERR << "DestroySelf() == " << b << '\n';
 	return Undefined();
     }
