@@ -1,22 +1,19 @@
 #summary Creating JS classes from C++
 #labels Phase-UserDocs,Featured
 
+<wiki:toc max_depth="3" />
+
 The library has (as of [http://code.google.com/p/v8-juice/source/detail?r=167 r167], 20090310), support for creating custom JS classes using minimal code.
 
 This API is likely to be continually tweaked, so if you use this API be prepared for changes down the road.
 
 While this code is part of v8-juice, it is actually independent of any other
-library components, and can be extracted from the source tree for personal
-use in v8-based projects. The source files are:
+library components, and can be extracted from the source tree for use in other v8-based projects. The source files are:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/JSClassCreator.h JSClassCreator.h]
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/JSClassCreator.cc JSClassCreator.cc]
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/WeakJSClassCreator.h WeakJSClassCreator.h]
-  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/WeakJSClassCreator.cc WeakJSClassCreator.cc]
 
-=Contents=
-
-<wiki:toc max_depth="3" />
 
 =Creating new JS classes=
 
