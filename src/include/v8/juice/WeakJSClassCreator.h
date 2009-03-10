@@ -43,8 +43,12 @@ namespace juice {
 
     namespace Detail
     {
+	/**
+	   A functor to delete objects.
+	*/
 	struct ObjectDeleter
 	{
+	    /** Calls (delete obj). */
 	    template <typename T>
 	    void operator()( T * obj ) const
 	    {
@@ -77,14 +81,18 @@ namespace juice {
 
        - NativeConstructor = explained below
 
-       - extraInternalFieldCount = the number of internal fields which the client
-       will use. This class adds one to that number and uses the last field
-       to store a handle to the native object.
+       - extraInternalFieldCount = the number of internal fields which
+       the client will use. This class adds one to that number and
+       uses the last field to store a handle to the native object.
 
-       - CleanupFunctorT = a functor which must have an operator()(WrappedT*).
-       The cleanup functor is responsible for destroying the native object.
-       The default implementation simply calls delete, which is fine for many
-       types.
+       - CleanupFunctorT = a functor which must have an
+       operator()(WrappedT*).  The cleanup functor is responsible for
+       destroying the native object.  The default implementation
+       simply calls delete, which is fine for many types, but opaque
+       types and types allocated via something other than 'new' will
+       need a different implementation. A destructor functor for
+       shared, static, or stack-allocated objects should simply do
+       nothing.
 
        The NativeConstructor function is a callback which looks like this:
 
@@ -122,6 +130,35 @@ namespace juice {
        worry that destructors might not be called (unless the app crashes
        prematurely due to his buggy JS/Native wrapper ;).
 
+
+       TODO: consider changing NativeConstructor to:
+
+       WrappedT * (*NativeConstructor)( Arguments const &, string & )
+
+       The reason for the Handle[] is because i implement my ctors that way
+       so i can farm off work to different functions depending on the argument
+       count/content, and we can't do that with Argument objects.
+
+       Example usage:
+
+       \code
+       typedef WeakJSClassCreator<MyType,MyCtor> C;
+       C c( "MyType", objectToAddClassTo );
+       c.Set(...)
+         .Set(...)
+	 .Set(...)
+	 .Set(...)
+	 .Seal(); // must be the last call made on this object.
+
+	 // Now create a subclass:
+       typedef WeakJSClassCreator<MyOtherType,MyOtherCtor> C;
+       C2 c2( "MyMyOther", objectToAddClassTo );
+       c2.Inherit( C )
+         .Set(...)
+	 .Seal(); // must be the last call made on this object.
+       \endcode
+
+       That's all there is to it.
     */
     template <typename WrappedT,
 	      WrappedT * (*NativeConstructor)( Local<Object> /*self*/,
@@ -135,6 +172,13 @@ namespace juice {
     public:
 	typedef WrappedT WrappedType;
 	typedef CleanupFunctorT CleanupType;
+
+	/** The object constructor type for this class. See the class
+	 docs for how it's supposed to work. */
+	typedef WrappedT * (*NativeCtor)( Local<Object> /*self*/,
+						 int /*argc*/,
+						 Handle<Value> /*argv*/[],
+						 std::string & /*exceptionText*/);
 
 	/**
 	   Starts the setup of a new class with the given name. It
