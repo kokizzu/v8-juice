@@ -5,6 +5,8 @@ The library has (as of [http://code.google.com/p/v8-juice/source/detail?r=167 r1
 
 This API is likely to be continually tweaked, so if you use this API be prepared for changes down the road.
 
+<wiki:toc max_depth="3" />
+
 =Creating new JS classes=
 
 The JSClassCreator and !WeakJSClassCreator classes are helpers which encapsulate
