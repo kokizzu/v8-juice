@@ -113,6 +113,20 @@ namespace v8 { namespace juice { namespace whio {
 	}
     };
 
+    whio_dev * dev_construct(
+// 			     Local<Object> self,
+// 			      int argc,
+// 			      Handle<Value> argv[],
+			      Arguments const &,
+			      std::string & exception );
+    template <bool writeMode>
+    whio_stream * stream_construct(
+// 				   Local<Object> self,
+// 				    int argc,
+// 				    Handle<Value> argv[],
+				   Arguments const &,
+				    std::string & exception );
+
 
     static Handle<Value> abstract_ctor(const Arguments& argv)
     {
@@ -130,6 +144,43 @@ namespace v8 { namespace juice { namespace whio {
     {
     };
 
+
+    /**
+       Internal template we can specialize for specific i/o dev/stream
+       combinations.
+    */
+    template <typename T, bool b = true>
+    struct WeakCreator
+    {
+    };
+
+
+    template <bool b>
+    struct WeakCreator<whio_dev,b>
+    {
+	typedef v8::juice::WeakJSClassCreator<whio_dev,
+					      &dev_construct,
+					      devT_finalizer>
+	type;
+    };
+
+    template <>
+    struct WeakCreator<whio_stream,false>
+    {
+	typedef v8::juice::WeakJSClassCreator<whio_stream,
+					      &stream_construct<false>,
+					      devT_finalizer>
+	type;
+    };
+
+    template <>
+    struct WeakCreator<whio_stream,true>
+    {
+	typedef v8::juice::WeakJSClassCreator<whio_stream,
+					      &stream_construct<true>,
+					      devT_finalizer>
+	type;
+    };
 
     /**
        Casts v to (T*). T must be one of whio_dev or whio_stream.
@@ -150,7 +201,8 @@ namespace v8 { namespace juice { namespace whio {
 
 // Helper macros for args and type checking:
 #define ARGS(COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
-#define DEVH(T,H) T * dev = dev_cast<T>( H )
+    //#define DEVH(T,H) T * dev = dev_cast<T>( H )
+#define DEVH(T,H) T * dev = WeakCreator<T>::type::GetNative( H )
 #define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer has already been destroyed!")
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
 #define DEVTHIS(T) DEVHT(T,argv.This())
@@ -190,17 +242,22 @@ namespace v8 { namespace juice { namespace whio {
        - (":memory:" [, int initialSize])   = in-memory buffer
        - (IODevice, int lower, int upper)   = subdevice
      */
-    whio_dev * dev_construct( Local<Object> self,
-			      int argc,
-			      Handle<Value> argv[],
-			      std::string & exception )
+    whio_dev * dev_construct(
+// 			     Local<Object> self,
+// 				    int argc,
+// 				    Handle<Value> argv[],
+				    Arguments const & argv,
+				    std::string & exception )
     {
+	const int argc = argv.Length();
 	whio_dev * dev = 0;
 	if( 0 == argc )
 	{
 	    exception = "Not enough arguments for the constructor!";
 	}
+	HandleScope scope;
 	//char const * dontknow = "Don't know how to handle the given constructor arguments!";
+	Local<Object> self = argv.This();
 	if( argv[0]->IsString() )
 	{ //ctor(":memory:")
 	  //ctor(string filename[, bool writeMode])
@@ -292,17 +349,21 @@ namespace v8 { namespace juice { namespace whio {
        - (IODevice)
     */
     template <bool writeMode>
-    whio_stream * stream_construct( Local<Object> self,
-				    int argc,
-				    Handle<Value> argv[],
+    whio_stream * stream_construct(
+// 				   Local<Object> self,
+// 				    int argc,
+// 				    Handle<Value> argv[],
+				    Arguments const & argv,
 				    std::string & exception )
     {
+	const int argc = argv.Length();
 	if( argc < 1 )
 	{
 	    exception = "Not enough arguments for the constructor!";
 	    return 0;
 	}
 	HandleScope boo;
+	Local<Object> self = argv.This();
 	whio_stream * dev = 0;
 	if( argv[0]->IsString() )
 	{// (string filename [, truncate=true])
@@ -365,45 +426,6 @@ namespace v8 { namespace juice { namespace whio {
 	return 0;
     }
 
-    /**
-       Internal template we can specialize for specific i/o dev/stream
-       combinations.
-    */
-    template <typename T, bool b = true>
-    struct WeakCreator
-    {
-    };
-
-
-    template <bool b>
-    struct WeakCreator<whio_dev,b>
-    {
-	typedef v8::juice::WeakJSClassCreator<whio_dev,
-					      &dev_construct,
-					      0,
-					      devT_finalizer>
-	type;
-    };
-
-    template <>
-    struct WeakCreator<whio_stream,false>
-    {
-	typedef v8::juice::WeakJSClassCreator<whio_stream,
-					      &stream_construct<false>,
-					      0,
-					      devT_finalizer>
-	type;
-    };
-
-    template <>
-    struct WeakCreator<whio_stream,true>
-    {
-	typedef v8::juice::WeakJSClassCreator<whio_stream,
-					      &stream_construct<true>,
-					      0,
-					      devT_finalizer>
-	type;
-    };
 
 
 
@@ -723,6 +745,7 @@ namespace v8 { namespace juice { namespace whio {
 		.Set(strings::close, devT_close<whio_stream> )
 		.Set(strings::toString, devT_tostring<whio_stream,strings::OutStream> )
 		.Set(strings::isGood,stream_isgood)
+		.SetInternalFieldCount(30)
 		.Seal();
 	}
 	return whio;

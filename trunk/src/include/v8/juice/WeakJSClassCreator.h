@@ -161,11 +161,16 @@ namespace juice {
        That's all there is to it.
     */
     template <typename WrappedT,
-	      WrappedT * (*NativeConstructor)( Local<Object> /*self*/,
-					       int /*argc*/,
-					       Handle<Value> /*argv*/[],
+	      // FIXME: make this a template typw hwhich gets specialzied!
+	      // Fixme: change ctor callback to InvokactionCallback w/ extra (string&) arg.
+// 	      WrappedT * (*NativeConstructor)( Local<Object> /*self*/,
+// 					       int /*argc*/,
+// 					       Handle<Value> /*argv*/[],
+// 					       std::string & /*exceptionText*/),
+	      WrappedT * (*NativeConstructor)( Arguments const &  /*argv*/,
 					       std::string & /*exceptionText*/),
-	      int extraInternalFieldCount = 0,
+	      // Fixme: remove extraInternalFieldCount from templates, use JSClassCreator support instead
+	      //int extraInternalFieldCount = 0,
 	      typename CleanupFunctorT = Detail::ObjectDeleter>
     class WeakJSClassCreator : public JSClassCreator
     {
@@ -187,8 +192,9 @@ namespace juice {
 	   on that process.
 	*/
 	WeakJSClassCreator( char const * className,
-			    Handle<Object> target )
-	    : JSClassCreator( className, target, ctor_proxy, extraInternalFieldCount + 1 )
+			    Handle<Object> target,
+			    int extraFieldCount = 0)
+	    : JSClassCreator( className, target, ctor_proxy, extraFieldCount + 1 )
 	{
 	}
 
@@ -201,9 +207,26 @@ namespace juice {
 	*/
 	static WrappedType * GetSelf( Local<Object> h )
 	{
-	    if( h.IsEmpty() || (h->InternalFieldCount() != (extraInternalFieldCount+1)) ) return 0;
-	    return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), h->GetInternalField(extraInternalFieldCount) );
+	    //if( h.IsEmpty() || (h->InternalFieldCount() != (extraInternalFieldCount+1)) ) return 0;
+	    if( h.IsEmpty() || !h->InternalFieldCount() ) return 0;
+	    return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(),
+								   h->GetInternalField(h->InternalFieldCount()-1)  // extraInternalFieldCount
+								   );
 	}
+	/** Reimplemented to add one to the given number (it is reserved
+	    for use by this type for holding the native object).
+
+	    TODO: consider allowing this and remove it from the template args
+	*/
+ 	virtual WeakJSClassCreator & SetInternalFieldCount( int n )
+ 	{
+	    JSClassCreator::SetInternalFieldCount(n+1);
+	    // gcc 4.3.2 bug? won't allow this syntax:
+ 	    //this->JSClassCreator::SetInteralFieldCount( n + 1 );
+	    return *this;
+ 	}
+
+
 	/**
 	   Like GetSelf(), but takes a Handle to a value. This can be
 	   used for checking/converting arguments other than the
@@ -218,8 +241,9 @@ namespace juice {
         {
             if( h.IsEmpty() || ! h->IsObject() ) return 0;
             Local<Object> obj( Object::Cast(*h) );
-            if( obj->InternalFieldCount() != (extraInternalFieldCount+1) ) return 0;
-            return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), obj->GetInternalField(extraInternalFieldCount) );
+            //if( obj->InternalFieldCount() != (extraInternalFieldCount+1) ) return 0;
+            //return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), obj->GetInternalField(extraInternalFieldCount) );
+	    return GetSelf( obj );
         }
 
 	/**
@@ -263,6 +287,7 @@ namespace juice {
 		? false
 		: DestroyObject( Local<Object>(Object::Cast(*h)) );
         }
+
 
     private:
 	/**
@@ -319,9 +344,14 @@ namespace juice {
 	{
 	    ::v8::juice::cleanup::AddToCleanup(obj, cleanup_callback );
 	    ::v8::juice::bind::BindNative( bind_cx(), obj, obj );
+	    const int ic = _self->InternalFieldCount();
+	    if( ! ic )
+	    {
+		return Persistent<Object>();
+	    }
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
-	    self->SetInternalField( extraInternalFieldCount, External::New(obj) );
+	    self->SetInternalField( ic - 1, External::New(obj) );
 	    //CERR << "Wrapped object @"<<obj<<" in a Persistent<Object>.\n";
 	    return self;
 	}
@@ -342,7 +372,9 @@ namespace juice {
 	    std::vector< Handle<Value> > av(argc,Null());
 	    for( int i = 0; i < argc; ++i ) av[i] = argv[i];
 	    std::string err;
-	    WrappedType * obj = NativeConstructor( argv.This(), argc, &av[0], err );
+	    WrappedType * obj =
+		//NativeConstructor( argv.This(), argc, &av[0], err );
+		NativeConstructor( argv, err );
 	    if( ! err.empty() )
 	    {
 		if( obj )
