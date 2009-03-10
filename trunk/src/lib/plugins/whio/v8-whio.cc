@@ -19,6 +19,7 @@
 #include <v8/juice/plugin.h>
 #include <v8/juice/cleanup.h>
 #include <v8/juice/JSClassCreator.h>
+#include <v8/juice/WeakJSClassCreator.h>
 #include <v8/juice/RCPtr.h>
 
 #include "whio_amalgamation.h" // this is the i/o lib we're uses as a basis.
@@ -99,7 +100,17 @@ namespace v8 { namespace juice { namespace whio {
     /**
        Internal binding context for BindNative() and friends.
     */
-    static const void * bind_cx() { static const int x=42;return &x;}
+    static const void * bind_cx() { return 0;}
+
+    struct devT_finalizer
+    {
+	template <typename DevT>
+	void operator()( DevT * obj ) const
+	{
+	    CERR << "Finalizing device @ "<<obj<<'\n';
+	    if( obj ) obj->api->finalize(obj);
+	}
+    };
 
     /** Internal util to reduce code duplication elsewhere: unbinds
 	dev and deletes obj using obj->api->finalize(obj).
@@ -117,10 +128,7 @@ namespace v8 { namespace juice { namespace whio {
 	    // a no-op.
 	}
 	bind::UnbindNative( bind_cx(), obj, dev );
-	if( dev )
-	{
-	    dev->api->finalize(dev);
-	}
+	devT_finalizer()( dev );
     }
 
     /**
@@ -722,8 +730,11 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// IODevice class:
 	{
-	    v8::juice::JSClassCreator
-		bindIOD( strings::IODevice, whio, combined_ctor< whio_dev, &dev_construct >, 1 );
+	    v8::juice::WeakJSClassCreator<whio_dev,
+		&dev_construct,
+		0,
+		devT_finalizer>
+		bindIOD( strings::IODevice, whio );
 	    bindIOD
 		.Inherit( bindAbs )
 		.SetInternalFieldCount(1)
@@ -747,8 +758,11 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// InStream class:
 	{
-	    v8::juice::JSClassCreator
-		bindIS( strings::InStream, whio, combined_ctor< whio_stream, &stream_construct<false> >, 1 );
+	    v8::juice::WeakJSClassCreator<whio_stream,
+		&stream_construct<false>,
+		0,
+		devT_finalizer>
+		bindIS( strings::InStream, whio );
 	    bindIS
 		.Inherit( bindAbs )
 		.Set(strings::read, FunctionTemplate::New( devT_read<whio_stream,true> )->GetFunction() )
@@ -762,8 +776,11 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// OutStream class:
 	{
-	    v8::juice::JSClassCreator
-		bindOS( strings::OutStream, whio, combined_ctor< whio_stream, &stream_construct<true> >, 1 );
+	    v8::juice::WeakJSClassCreator<whio_stream,
+		&stream_construct<true>,
+		0,
+		devT_finalizer>
+		bindOS( strings::OutStream, whio );
 	    bindOS.Inherit( bindAbs )
 		.Set(strings::write, devT_write<whio_stream,true> )
 		.Set(strings::flush, devT_flush<whio_stream> )
