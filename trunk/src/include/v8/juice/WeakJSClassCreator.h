@@ -123,7 +123,7 @@ namespace juice {
 					       int /*argc*/,
 					       Handle<Value> /*argv*/[],
 					       std::string & /*exceptionText*/),
-	      int internalFieldCount,
+	      int internalFieldCount = 0,
 	      typename CleanupFunctorT = Detail::ObjectDeleter>
     class WeakJSClassCreator : public JSClassCreator
     {
@@ -131,6 +131,12 @@ namespace juice {
 	typedef WrappedT WrappedType;
 	typedef CleanupFunctorT CleanupType;
 
+	/**
+	   Starts the setup of a new class with the given name. It
+	   will be populated into the target object when Seal() is
+	   called.  See the JSClassCreator ctor for more information
+	   on that process.
+	*/
 	WeakJSClassCreator( char const * className,
 			    Handle<Object> target )
 	    : JSClassCreator( className, target, ctor_proxy, internalFieldCount + 1 )
@@ -138,24 +144,50 @@ namespace juice {
 	}
 
 	/**
-	   Returns the bound native for the given handle. The handle is assumed to
-	   have been created using this class' mechanisms. If it was not, this routine
-	   will return 0.
+	   Returns the bound native for the given handle. The handle
+	   is assumed to have been created using this class'
+	   mechanisms. If it was not, this routine will return 0.
+
+	   Ownership of the returned object remains unchanged.
 	*/
-	static WrappedType * GetBoundNative( Handle<Value> h )
+	static WrappedType * GetSelf( Local<Object> h )
 	{
-	    if( h.IsEmpty() || ! h->IsObject() ) return 0;
+	    if( h.IsEmpty() ) return 0;
 	    Local<Object> obj( Object::Cast(*h) );
-	    if( obj->InternalFieldCount() != (internalFieldCount+1) ) return 0;
-	    Handle<Value> key( obj->GetInternalField(internalFieldCount) );
+	    if( h->InternalFieldCount() != (internalFieldCount+1) ) return 0;
+	    Handle<Value> key( h->GetInternalField(internalFieldCount) );
 	    return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), key );
 	}
 
+	/**
+	   If jo "seems" to have been created via this class' mechanism,
+	   then the behaviour is as-if the weak pointer callback has been
+	   triggered. That will delete the bound native and dispose/clear the
+	   persistent handle.
 
-	static void DestroyNative( WrappedType * t )
+	   The reason this function exists is so that native implementations
+	   of member functions can implement functions which logically destroy
+	   the JS object. For example:
+
+	   \code
+	   var os = new OutStream(...);
+	   ...
+	   os.close();
+	   \endcode
+
+	   That code "should" destroy the underlying device and
+	   disconnect the JS reference to that object, and it can use
+	   this function to do so.
+	*/
+	static bool DestroySelf( Local<Object> jo )
 	{
-	    the_cleaner<true>( t, t );
+	    WrappedType * t = GetSelf(jo);
+	    if( ! t ) return false;
+	    Persistent<Object> p = Persistent<Object>::New( jo ); // is this correct? Seems to work.
+	    weak_callback( p, t );
+	    return true;
 	}
+
     private:
 	/**
 	   Internal binding context for BindNative() and friends.
