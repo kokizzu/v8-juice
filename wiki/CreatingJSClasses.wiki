@@ -50,30 +50,25 @@ For the most basic cases, that's all that necessary, in terms of C++ setup. Howe
 
 Let's back up a moment and describe the overall problem:
 
-When an object is created in JavaScript, there is normally no client-visible "native" component to that value - it is an opaque type defined by v8, and has no visible association with a native value. That's all fine and good because the JS engine takes care of cleaning up those objects when it no longer needs them. When "binding" native 
-
-classes to JS, we invariably associate a JS class with an instance of a C++ class (or some other native type - it need not be a class, e.g. it may be an opaque pointer type from a third-party C library). To do such bindings effectively we need several components:
+When an object is created in JavaScript, there is normally no client-visible "native" component to that value - it is an opaque type defined by v8, and has no visible association with a native value. That's all fine and good because the JS engine takes care of cleaning up those objects when it no longer needs them. When "binding" native classes to JS, we invariably associate a JS class with an instance of a C++ class (or some other native type - it need not be a class, e.g. it may be an opaque pointer type from a third-party C library). To do such bindings effectively we need several components:
 
   * A way to internally associate the native data with the JS object. In v8 this is done using `v8::Object::SetInternalField()` and the `v8::External` type. In fact, `v8::External` is the _only_ option for us here, because it is the only v8 type for which we can get a stable unique-per-process value (`External::Value()`), and having some sort of lookup key (in this case a void pointer) is an essential component of binding classes.
   * We "should" have a way to be notified when the JS part of an object is destroyed. In v8 this is accomplished by registering a "weak pointer" callback with the JS object. That callback will be called when (_if_) the v8 GC decides that there are no JS-side references to the object. When this callback is triggered, we can take care of properly deleting the native object and unbinding it from JS-land.
 
 In practice there are a few wrinkles in that story, but we will skip over those now for the sake of clarity, and will touch on them again later on.
 
-The documentation for v8's weak pointers support is a bit spotty, and one can easily spend hours experimenting before the first attempts at class wrapping work. Or we can use !WeakJSClassCreator, which was constructed after many hours of painful experimentation and sorting through vague documentation...
+The documentation for v8's weak pointers support is a bit spotty, and one can easily spend hours experimenting before the first attempts at class wrapping work. Or we can use WeakJSClassCreator, which was authored after many hours of painful experimentation and sorting through the vague documentation regarding weak pointers in v8...
 
 =WeakJSClassCreator=
 
-The WeakJSClassCreator is a JSClassCreator subclass which uses C++ templates to create functions for binding and 
-
-unbinding JS objects to/from native objects of a given type. It is used mostly like JSClassCreator, the notable difference being the required signature of the constructor function for the bound type, which must look like:
+The WeakJSClassCreator is a JSClassCreator subclass which uses C++ templates to create functions for binding and unbinding JS objects to/from native objects of a given type. It is used mostly like JSClassCreator, the notable difference being the required signature of the constructor function for the bound type, which must look like:
 
 {{{
 // JS-side constructor for MyClass objects...
 MyClass * MyClass_ctor( Arguments const & argv, std::string & exceptionText );
 }}}
 
-
-That constructor is responsible for trying to create a `MyClass` object from the given arguments. If it cannot, it must return 0 and may optionally put some descriptive error string in the given string reference (note that it is not const!), and the internal handler provided by WeakJSClassCreator will convert the error text into a JS-side exception. On success, the ctor must return a new instance of the native object. The internals of WeakJSClassCreator will then bind that native to JS using the weak pointer callback mechanism.
+That constructor is responsible for trying to create a `MyClass` object from the given arguments, but it is _not_ responsible for binding that native to the JS object. If it cannot create a new object, it must return 0 and may optionally put some descriptive error string in the given string reference (note that it is not const!), and the internal handler provided by WeakJSClassCreator will convert the error text into a JS-side exception. On success, the ctor must return a new instance of the native object. The internals of WeakJSClassCreator will then bind that native to JS using the weak pointer callback mechanism.
 
 We also need a destructor, which is simply a functor with this signature:
 
@@ -81,11 +76,9 @@ We also need a destructor, which is simply a functor with this signature:
 void (*)( MyClass * ) const;
 }}}
 
-It may be a free function or a C++ functor structure. The default destructor implementation simply calls `delete` 
+It may be a free function or a C++ functor structure. The default destructor implementation simply calls `delete` on the object, but this is not suitable for many low-level types (e.g. a database handle from a C library, a low-level file handle, etc.) and clients may need to provide their own implementation.
 
-on the object, but this is not suitable for many low-level types (e.g. a database handle from a C library, a low-level file handle, etc.) and clients may need to provide their own implementation.
-
-Now that we have a ctor and a dtor, we've got everything we need
+Now that we have a ctor and a dtor, we've got everything we need. From there we can let WeakJSClassCreator implement the more tedious bits for us:
 
 {{{
 typedef WeakJSClassCreator<MyClass,MyCtor> CC;
@@ -99,9 +92,13 @@ c.Set(...)
 
 Again, that's all there is to it. Now when we call `new MyClass(...)` from JS, the following will happen:
 
-  * v8 will create an instance of MyClass
+  * v8 will create a new _JS_ instance of MyClass (_not_a native instance).
   * v8 will pass that new JS object to an internal !WeakJSClassCreator proxy function which will pass on the arguments to the client-specified specified constructor.
   * If the client-side ctor fails, the internal constructor will throw a JS-side exception (there is no other way to notify JS of a failed construction).
-  * If the client ctor succeeds, the internal ctor will then set up a weak pointer callback, which will cause the client-specified dtor to be called _if_ the v8 GC decides.
+  * If the client ctor succeeds, the internal ctor will then set up a weak pointer callback, which will cause the client-specified dtor to be called _if_ the v8 GC ever decides to kick in. The internal ctor also packs the new native pointer into an internal field of the JS object for later reference by bound functions.
 
-The native object can be fetched by passing a bound JS object to one of the static methods `WeakJSClassCreator::GetSelf()` or `WeakJSClassCreator::GetObject()`, both of which work similarly but have very slightly different semantics.
+The native object can be fetched later by passing a bound JS object to one of the static methods `WeakJSClassCreator::GetSelf()` or `WeakJSClassCreator::GetObject()`, both of which work similarly but have very slightly different semantics.
+
+==Design notes==
+
+  * Due to the nature of v8's API (which relies very heavily on static functions instead of instance functions), the constructor function argument to WeakJSClassCreator must be a template parameter (or a static member function pointer, but that'd be even uglier).
