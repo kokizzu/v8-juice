@@ -166,25 +166,12 @@ function tryTypeInfo()
     var dev = new whio.IODevice('/dev/stdout',true);
     var os = new whio.OutStream('/dev/stdout');
     var is = new whio.InStream('/dev/stdin');
-    var f = function(o,F) {
+    var typeinfo = function(o,F) {
         var ack;
 // 	if( F instanceof String ) F = eval(F);
 // 	print(o,'instanceof',F,'==',o instanceof F);
 	print(o,'instanceof',F,'==',o instanceof (( 'string' == typeof F) ? eval(F) : F));
     };
-    if(0) {
-	f(dev,'whio.IODevice');
-	f(dev,'whio.IOBase');
-	f(is,'whio.InStream');
-	f(is,'whio.IODevice');
-	f(is,'whio.IOBase');
-	//is.write("hi"); // should throw
-	//os.read(1); // should throw;
-	f(os,'whio.OutStream');
-	f(os,'whio.IOBase');
-	f(os,'whio.InStream');
-	f(os,'whio.IODevice');
-    }
     var sar = [os,is,dev];
     for( var ks in sar  )
     {
@@ -192,11 +179,13 @@ function tryTypeInfo()
 	var types = ['whio.IODevice','whio.IOBase','whio.InStream','whio.OutStream'];
 	for( kt in types )
 	{
-	    f(strdev,types[kt]);
-	    print(ks+'.isGood() ==',strdev.isGood());
+	    typeinfo(strdev,types[kt]);
 	}
+	print('('+strdev+').isGood() ==',strdev.isGood());
     }
+    //is.write(7); // should throw
     is.close();
+    //is.read(4); // should throw
     os.close();
     dev.close();
     print
@@ -208,12 +197,30 @@ function tryOnlyOut()
     os.close();
     //os.close(); //should throw
 }
-tryOnlyOut();
+
+function tryAbstract()
+{
+    var ex = null;
+    try
+    {
+	var s = new whio.StreamBase();
+    }
+    catch(E) {
+	ex=E;
+	print("Caught expected exception:",E);
+    }
+    finally
+    {
+	if( ! ex ) throw("We should have gotten an exception!");
+    }
+}
+
 tryOne();
+tryOnlyOut();
 tryMemory();
 trySubdev();
 tryBadStream();
 tryTypeInfo();
-
+tryAbstract();
 print(":-D");
 

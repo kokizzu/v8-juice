@@ -12,6 +12,11 @@
 #include <sstream>
 #include <vector>
 
+/* only for debuggering */
+#ifndef CERR
+#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#endif
+
 #include <v8.h>
 #include <v8/juice/juice.h>
 #include <v8/juice/juice-config.h>
@@ -24,10 +29,6 @@
 
 #include "whio_amalgamation.h" // this is the i/o lib we're uses as a basis.
 
-/* only for debuggering */
-#ifndef CERR
-#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
-#endif
 
 namespace v8 { namespace juice { namespace whio {
 
@@ -52,6 +53,7 @@ namespace v8 { namespace juice { namespace whio {
 	static char const * InStream;
 	static char const * OutStream;
 	static char const * IOBase;
+	static char const * StreamBase;
 
 	// IOBase:
 	static char const * read;
@@ -79,6 +81,7 @@ namespace v8 { namespace juice { namespace whio {
     char const * strings::InStream = "InStream";
     char const * strings::OutStream = "OutStream";
     char const * strings::IOBase = "IOBase";
+    char const * strings::StreamBase = "StreamBase";
     char const * strings::read = "read";
     char const * strings::write = "write";
     char const * strings::flush = "flush";
@@ -102,30 +105,54 @@ namespace v8 { namespace juice { namespace whio {
     */
     static const void * bind_cx() { return 0;}
 
-    /** Used by WeakJSClassCreator. */
-    struct devT_finalizer
-    {
-	template <typename DevT>
-	void operator()( DevT * obj ) const
-	{
-	    //CERR << "Finalizing device @ "<<obj<<'\n';
-	    if( obj ) obj->api->finalize(obj);
-	}
-    };
 
     whio_dev * dev_construct(
-// 			     Local<Object> self,
-// 			      int argc,
-// 			      Handle<Value> argv[],
 			      Arguments const &,
 			      std::string & exception );
-    template <bool writeMode>
-    whio_stream * stream_construct(
-// 				   Local<Object> self,
-// 				    int argc,
-// 				    Handle<Value> argv[],
-				   Arguments const &,
+    template <int mode /* 0=out, 1=in, -1=no-op*/>
+    whio_stream * stream_construct( Arguments const &,
 				    std::string & exception );
+
+
+    /**
+       Used with WeakJSClassCreator for whio_dev and whio_stream.
+     */
+    template <typename DevT,
+	      DevT * (*ctor)( Arguments const &, std::string & ) >
+    struct DevClassOps
+    {
+
+	typedef DevT WrappedType;
+	static DevT * Ctor( Arguments const & argv,
+			    std::string & exceptionText)
+	{
+	    DevT * d = ctor( argv, exceptionText );
+	    //CERR << "Ctor() got @"<<d<<'\n';
+	    if( d )
+	    {
+		::v8::juice::cleanup::AddToCleanup(d, cleanup_callback );
+		bind::BindNative( 0, d, d );
+	    }
+	    return d;
+	}
+
+	static void Dtor( DevT * obj )
+	{
+	    //CERR << "Dtor() passing on @"<<obj<<'\n';
+	    if( obj )
+	    {
+		bind::UnbindNative( 0, obj, obj );
+		::v8::juice::cleanup::RemoveFromCleanup(obj);
+		obj->api->finalize(obj);
+	    }
+	}
+	/** Callback for use with juice::cleanup::AddToCleanup(). */
+	static void cleanup_callback( void * obj )
+	{
+	    Dtor( static_cast<DevT*>(obj) );
+	}
+
+    };
 
 
     static Handle<Value> abstract_ctor(const Arguments& argv)
@@ -139,47 +166,64 @@ namespace v8 { namespace juice { namespace whio {
     }
 
 
-    /** A bogus type used a a devT_tostring<>() template parameter. */
+    /** A internal marker type. */
     struct IOBase
     {
     };
-
+    /** A internal marker type. */
+    struct IODevice : IOBase
+    {
+	typedef whio_dev type;
+    };
+    /** A internal marker type. */
+    struct StreamBase : IOBase
+    {
+	typedef whio_stream type;
+    };
+    /** A internal marker type. */
+    struct InStream : StreamBase
+    {
+    };
+    /** A internal marker type. */
+    struct OutStream : StreamBase
+    {
+    };
 
     /**
        Internal template we can specialize for specific i/o dev/stream
        combinations.
     */
-    template <typename T, bool b = true>
+    template <typename T>
     struct WeakCreator
     {
     };
 
-
-    template <bool b>
-    struct WeakCreator<whio_dev,b>
+    template <>
+    struct WeakCreator<IODevice>
     {
-	typedef v8::juice::WeakJSClassCreator<whio_dev,
-					      &dev_construct,
-					      devT_finalizer>
-	type;
+	typedef v8::juice::WeakJSClassCreator<IODevice::type, DevClassOps<IODevice::type, &dev_construct> > wrapper;
+	typedef whio_dev DevType;
     };
 
     template <>
-    struct WeakCreator<whio_stream,false>
+    struct WeakCreator<InStream>
     {
-	typedef v8::juice::WeakJSClassCreator<whio_stream,
-					      &stream_construct<false>,
-					      devT_finalizer>
-	type;
+	typedef v8::juice::WeakJSClassCreator<InStream::type, DevClassOps<InStream::type, &stream_construct<1> > > wrapper;
+	typedef InStream::type DevType;
     };
 
     template <>
-    struct WeakCreator<whio_stream,true>
+    struct WeakCreator<OutStream>
     {
-	typedef v8::juice::WeakJSClassCreator<whio_stream,
-					      &stream_construct<true>,
-					      devT_finalizer>
-	type;
+	typedef v8::juice::WeakJSClassCreator<OutStream::type, DevClassOps<OutStream::type, &stream_construct<0> > > wrapper;
+	typedef OutStream::type DevType;
+    };
+
+    template <>
+    struct WeakCreator<StreamBase>
+    {   // this is not actually technically valid, but it'll have to do for now:
+	typedef v8::juice::WeakJSClassCreator<StreamBase::type, DevClassOps<StreamBase::type, &stream_construct<-1> > > wrapper;
+	typedef StreamBase::type DevType;
     };
 
     /**
@@ -201,9 +245,12 @@ namespace v8 { namespace juice { namespace whio {
 
 // Helper macros for args and type checking:
 #define ARGS(COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
-    //#define DEVH(T,H) T * dev = dev_cast<T>( H )
-#define DEVH(T,H) T * dev = WeakCreator<T>::type::GetNative( H )
-#define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer has already been destroyed!")
+#if 0
+#  define DEVH(PT,H) PT::type * dev = dev_cast< PT::type >( H )
+#else
+#  define DEVH(T,H) WeakCreator<T>::DevType * dev = WeakCreator<T>::wrapper::GetSelf( H )
+#endif
+#define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer not found (maybe already destroyed?)!")
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
 #define DEVTHIS(T) DEVHT(T,argv.This())
 
@@ -214,7 +261,7 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> dev_rebound(const Arguments& argv)
     {
 	ARGS((argc==2));
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	whio_size_t low = CastFromJS<whio_size_t>( argv[0] );
 	whio_size_t high = CastFromJS<whio_size_t>( argv[1] );
 	return CastToJS( whio_dev_subdev_rebound( dev, low, high ) );
@@ -289,7 +336,7 @@ namespace v8 { namespace juice { namespace whio {
 		{
 		    self->Set(JSTR("fileName"), argv[0], v8::ReadOnly );
 		    self->Set(JSTR("canWrite"), Boolean::New(writeMode) );
-		    self->Set(JSTR("canRead"), Boolean::New(!writeMode) );
+		    self->Set(JSTR("canRead"), Boolean::New(true) );
 		}
 		return dev;
 	    }
@@ -347,8 +394,15 @@ namespace v8 { namespace juice { namespace whio {
 
        Both types:
        - (IODevice)
+
+       omModes:
+
+       - (0)=Out
+       - (1)=In
+       - (-1)=No-op (throw)
+      
     */
-    template <bool writeMode>
+    template <int opMode >
     whio_stream * stream_construct(
 // 				   Local<Object> self,
 // 				    int argc,
@@ -356,6 +410,11 @@ namespace v8 { namespace juice { namespace whio {
 				    Arguments const & argv,
 				    std::string & exception )
     {
+	if( opMode < 0 )
+	{
+	    exception = "This is an abstract base type which cannot be directly instantiated!";
+	    return 0;
+	}
 	const int argc = argv.Length();
 	if( argc < 1 )
 	{
@@ -365,11 +424,12 @@ namespace v8 { namespace juice { namespace whio {
 	HandleScope boo;
 	Local<Object> self = argv.This();
 	whio_stream * dev = 0;
+	const bool writeMode = (0==opMode);
 	if( argv[0]->IsString() )
 	{// (string filename [, truncate=true])
 	    std::string fname = JSToStdString(argv[0]);
 	    bool trunc = (argc>1) ? argv[1]->BooleanValue() : true;
-	    char const * mode = (writeMode) ? (trunc ? "wb" : "ab") : "rb";
+	    char const * mode = writeMode ? (trunc ? "wb" : "ab") : "rb";
 	    dev = whio_stream_for_filename( fname.c_str(), mode );
 	    if(!dev)
 	    {
@@ -427,80 +487,87 @@ namespace v8 { namespace juice { namespace whio {
     }
 
 
-
-
-
-
-
     /**
        write() impl for DevT, which must be one of whio_dev or whio_stream.
 
        If allowWrite is false then this function throws when called. Set it to
        false for the InStream class.
     */
-    template <typename DevT,bool allowWrite>
-    static Handle<Value> devT_write(const Arguments& argv)
+    template <typename DevT>
+    static Handle<Value> devT_write_impl( DevT * dev, const Arguments& argv)
     {
-	if( ! allowWrite )
-	{
-	    TOSS("This device does not allow writing!");
-	}
-	else
-	{
-	    ARGS((argc==1 || argc==2));
-	    DEVTHIS(DevT);
-	    std::string data( JSToStdString(argv[0]) );
-	    uint32_t l = (argc>1)
-		? CastFromJS<uint32_t>( argv[1] )
+	ARGS((argc==1 || argc==2));
+	std::string data( JSToStdString(argv[0]) );
+	uint32_t l = (argc>1)
+	    ? CastFromJS<uint32_t>( argv[1] )
 	    : 0;
-	    if( 0 == l ) l = data.size();
-	    if( l > data.size() )
-	    {
-		return juice::ThrowException("write(input,%u): input data is too short (%u bytes) for write request for %u bytes!",
-					     l, data.size(), l);
-	    }
-	    return CastToJS( dev->api->write( dev, data.data(), l ) );
+	if( 0 == l ) l = data.size();
+	if( l > data.size() )
+	{
+	    return juice::ThrowException("write(input,%u): input data is too short (%u bytes) for write request for %u bytes!",
+					 l, data.size(), l);
 	}
+	return CastToJS( dev->api->write( dev, data.data(), l ) );
     }
 
+    static Handle<Value> stream_write( const Arguments& argv)
+    {
+	DEVTHIS(OutStream);
+	return devT_write_impl<OutStream::type>( dev, argv );
+    }
+    static Handle<Value> dev_write( const Arguments& argv)
+    {
+	DEVTHIS(IODevice);
+	return devT_write_impl<IODevice::type>( dev, argv );
+    }
     /**
        read() impl for DevT, which must be one of whio_dev or whio_stream.
 
        If allowRead is false then this function throws when called. Set it to
        false for the OutStream class and true for all (or most) others.
     */
-    template <typename DevT,bool allowRead>
-    static Handle<Value> devT_read(const Arguments& argv)
+    template <typename DevT>
+    static Handle<Value> devT_read_impl( DevT * dev, const Arguments& argv)
     {
-	if( ! allowRead )
-	{
-	    TOSS("This device type does not allow reading!");
-	}
-	else
-	{
-	    ARGS((argc==1));
-	    DEVTHIS(DevT);
-	    uint32_t l = CastFromJS<uint32_t>( argv[0] );
-	    if( 0 == l ) TOSS("Number of bytes to read must be greater than 0!");
-	    std::vector<char> data( l, '\0' );
-	    uint32_t rlen = dev->api->read( dev, &data[0], l );
-	    return String::New( &data[0], rlen );
-	}
+	uint32_t l = CastFromJS<uint32_t>( argv[0] );
+	if( 0 == l ) TOSS("Number of bytes to read must be greater than 0!");
+	std::vector<char> data( l, '\0' );
+	whio_size_t rlen = dev->api->read( dev, &data[0], l );
+	return String::New( &data[0], static_cast<int>(rlen) );
+    }
+    static Handle<Value> dev_read(const Arguments& argv)
+    {
+	ARGS((argc==1));
+	DEVTHIS(IODevice);
+	return devT_read_impl( dev, argv );
     }
 
+    static Handle<Value> stream_read(const Arguments& argv)
+    {
+	ARGS((argc==1));
+	DEVTHIS(InStream);
+	return devT_read_impl( dev, argv );
+    }
 
 
     /**
        close() impl for whio_dev and whio_stream.
     */
-    template <typename DevT>
-    static Handle<Value> devT_close(const Arguments& argv)
+    static Handle<Value> dev_close(const Arguments& argv)
     {
 	ARGS((0==argc));
-	DEVTHIS(DevT);
-	//bool b =
-	WeakCreator<DevT>::type::DestroyObject( argv.This() );
-	//CERR << "DestroySelf() == " << b << '\n';
+	DEVTHIS(IODevice);
+	//CERR << "IODevice.close() == " << dev << '\n';
+	WeakCreator<IODevice>::wrapper::DestroyObject( argv.This() );
+	return Undefined();
+    }
+
+    static Handle<Value> stream_close(const Arguments& argv)
+    {
+	ARGS((0==argc));
+	DEVTHIS(StreamBase);
+	//CERR << "StreamBase.close() == " << dev << '\n';
+	WeakCreator<StreamBase>::wrapper::DestroyObject( argv.This() );
 	return Undefined();
     }
     /**
@@ -509,7 +576,7 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> dev_error(const Arguments& argv)
     {
 	ARGS((0==argc));
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	return Int32ToJS( dev->api->error( dev ) );
     }
 
@@ -519,7 +586,7 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> dev_clear_error(const Arguments& argv)
     {
 	ARGS((0==argc));
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	return Int32ToJS( dev->api->clear_error( dev ) );
     }
 
@@ -529,7 +596,7 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> dev_eof(const Arguments& argv)
     {
 	ARGS((0==argc));
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	return Int32ToJS( dev->api->eof(dev) );
     }
 
@@ -539,7 +606,7 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> dev_tell(const Arguments& argv)
     {
 	ARGS((0==argc));
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	return UInt64ToJS( dev->api->tell( dev ) );
     }
 
@@ -549,7 +616,7 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> dev_seek(const Arguments& argv)
     {
 	ARGS(((argc==1) || (argc==2)));
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	int32_t pos = JSToUInt32( argv[0] );
 	const int whence = (argc>1) ? JSToInt32( argv[1] ) : SEEK_SET;
 	switch( whence )
@@ -569,10 +636,8 @@ namespace v8 { namespace juice { namespace whio {
        flush() impl for DevT, which must be one of whio_dev or whio_stream.
     */
     template <typename DevT>
-    static Handle<Value> devT_flush(const Arguments& argv)
+    static Handle<Value> devT_flush_impl(DevT * dev, const Arguments& argv)
     {
-	ARGS((0==argc));
-	DEVTHIS(DevT);
 	return CastToJS( dev->api->flush( dev ) );
 	// Potential fixme: for subdevices we have no direct (via whio_dev)
 	// handle to the parent. If the "parent" is destroyed first then calling
@@ -581,13 +646,26 @@ namespace v8 { namespace juice { namespace whio {
 	// this. Hmmm.
     }
 
+    static Handle<Value> dev_flush(const Arguments& argv)
+    {
+	ARGS((0==argc));
+	DEVTHIS(IODevice);
+	return devT_flush_impl<IODevice::type>( dev, argv );
+    }
+    static Handle<Value> stream_flush(const Arguments& argv)
+    {
+	ARGS((0==argc));
+	DEVTHIS(StreamBase);
+	return devT_flush_impl<StreamBase::type>( dev, argv );
+    }
+
     /**
        whio_dev_api::truncate() wrapper.
     */
     static Handle<Value> dev_truncate(const Arguments& argv)
     {
 	ARGS((argc==1));
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	whio_size_t len = CastFromJS<whio_size_t>( argv[0] );
 	return CastToJS( dev->api->truncate(dev, len) );
     }
@@ -598,7 +676,7 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> dev_size(const Arguments& argv)
     {
 	ARGS(0==argc);
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	return CastToJS( whio_dev_size( dev ) );
     }
 
@@ -608,7 +686,7 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> dev_rewind(const Arguments& argv)
     {
 	ARGS((0==argc));
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	return CastToJS( whio_dev_rewind( dev ) );
     }
 
@@ -616,7 +694,7 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> dev_isgood(const Arguments& argv)
     {
 	ARGS((0==argc));
-	DEVTHIS(whio_dev);
+	DEVTHIS(IODevice);
 	return BoolToJS( 0 == dev->api->error(dev) );
     }
 
@@ -624,11 +702,11 @@ namespace v8 { namespace juice { namespace whio {
     static Handle<Value> stream_isgood(const Arguments& argv)
     {
 	ARGS((0==argc));
-	DEVTHIS(whio_stream);
+	DEVTHIS(StreamBase);
 	return BoolToJS( dev->api->isgood(dev) );
     }
 
-    template <typename T,char const *&N>
+    template <char const *&N>
     static Handle<Value> devT_tostring(const Arguments& argv)
     {
 	ARGS(0==argc);
@@ -680,15 +758,15 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// IOBase class:
 	v8::juice::JSClassCreator bindAbs( strings::IOBase, whio, abstract_ctor );
+	Local<Function> func_noop = FunctionTemplate::New(abstract_reimplement)->GetFunction();
 	{
-	    Local<Function> noop = FunctionTemplate::New(abstract_reimplement)->GetFunction();
 	    bindAbs
-		.Set(strings::read, noop )
-		.Set(strings::write ,noop)
-		.Set(strings::isGood,noop)
-		.Set(strings::close,noop)
-		.Set(strings::flush,noop)
-		.Set(strings::toString, devT_tostring<IOBase,strings::IOBase> )
+		.Set(strings::read, func_noop )
+		.Set(strings::write ,func_noop)
+		.Set(strings::isGood,func_noop)
+		.Set(strings::close,func_noop)
+		.Set(strings::flush,func_noop)
+		.Set(strings::toString, devT_tostring<strings::IOBase> )
 		.Set(strings::SEEK_SET_,Integer::New(SEEK_SET) )
 		.Set(strings::SEEK_END_, Integer::New(SEEK_END))
 		.Set(strings::SEEK_CUR_,Integer::New(SEEK_CUR) )
@@ -698,15 +776,15 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// IODevice class:
 	{
-	    WeakCreator<whio_dev>::type
+	    WeakCreator<IODevice>::wrapper
 		bindIOD( strings::IODevice, whio );
 	    bindIOD
 		.Inherit( bindAbs )
-		.Set(strings::write, devT_write<whio_dev,true> )
-		.Set(strings::read, devT_read<whio_dev,true> )
-		.Set(strings::toString, devT_tostring<whio_dev,strings::IODevice> )
-		.Set(strings::flush, devT_flush<whio_dev> )
-		.Set(strings::close, devT_close<whio_dev> )
+ 		.Set(strings::write, dev_write )
+ 		.Set(strings::read, dev_read )
+ 		.Set(strings::toString, devT_tostring<strings::IODevice> )
+ 		.Set(strings::flush, dev_flush )
+ 		.Set(strings::close, dev_close )
 		.Set(strings::error,dev_error)
 		.Set(strings::clearError,dev_clear_error)
 		.Set(strings::eof,dev_eof)
@@ -720,32 +798,39 @@ namespace v8 { namespace juice { namespace whio {
 	}
 
 	////////////////////////////////////////////////////////////
+	// StreamBase class:
+	WeakCreator<StreamBase>::wrapper
+	    bindSB( strings::StreamBase, whio );
+	{
+	    bindSB
+		.Inherit( bindAbs )
+ 		.Set(strings::close, stream_close )
+ 		.Set(strings::flush, stream_flush )
+ 		.Set(strings::isGood,stream_isgood)
+ 		.Set(strings::toString, devT_tostring<strings::StreamBase> )
+		.Seal();
+        }
+
+	////////////////////////////////////////////////////////////
 	// InStream class:
 	{
-	    WeakCreator<whio_stream,false>::type
+	    WeakCreator<InStream>::wrapper
 		bindIS( strings::InStream, whio );
 	    bindIS
-		.Inherit( bindAbs )
-		.Set(strings::read, FunctionTemplate::New( devT_read<whio_stream,true> )->GetFunction() )
-		.Set(strings::flush, devT_flush<whio_stream> )
-		.Set(strings::close, devT_close<whio_stream> )
-		.Set(strings::toString, devT_tostring<whio_stream,strings::InStream> )
-		.Set(strings::isGood,stream_isgood)
+		.Inherit( bindSB )
+ 		.Set(strings::read, FunctionTemplate::New( stream_read )->GetFunction() )
+ 		.Set(strings::toString, devT_tostring<strings::InStream> )
 		.Seal();
         }
 
 	////////////////////////////////////////////////////////////
 	// OutStream class:
 	{
-	    WeakCreator<whio_stream,true>::type
+	    WeakCreator<OutStream>::wrapper
 		bindOS( strings::OutStream, whio );
-            bindOS.Inherit( bindAbs )
-		.Set(strings::write, devT_write<whio_stream,true> )
-		.Set(strings::flush, devT_flush<whio_stream> )
-		.Set(strings::close, devT_close<whio_stream> )
-		.Set(strings::toString, devT_tostring<whio_stream,strings::OutStream> )
-		.Set(strings::isGood,stream_isgood)
-		.SetInternalFieldCount(30)
+            bindOS.Inherit( bindSB )
+ 		.Set(strings::write, stream_write )
+ 		.Set(strings::toString, devT_tostring<strings::OutStream> )
 		.Seal();
 	}
 	return whio;
