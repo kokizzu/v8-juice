@@ -1,5 +1,5 @@
 #summary Creating JS classes from C++
-#labels Phase-UserDocs
+#labels Phase-UserDocs,Featured
 
 The library has (as of [http://code.google.com/p/v8-juice/source/detail?r=167 r167], 20090310), support for creating custom JS classes using minimal code.
 
