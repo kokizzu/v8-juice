@@ -25,7 +25,6 @@
 #include <v8/juice/cleanup.h>
 #include <v8/juice/JSClassCreator.h>
 #include <v8/juice/WeakJSClassCreator.h>
-#include <v8/juice/RCPtr.h>
 
 #include "whio_amalgamation.h" // this is the i/o lib we're uses as a basis.
 
@@ -49,56 +48,66 @@ namespace v8 { namespace juice { namespace whio {
     struct strings
     {
 	// Class names:
+	static char const * IOBase;
 	static char const * IODevice;
+	static char const * StreamBase;
 	static char const * InStream;
 	static char const * OutStream;
-	static char const * IOBase;
-	static char const * StreamBase;
 
 	// IOBase:
-	static char const * read;
-	static char const * write;
-	static char const * flush;
-	static char const * close;
-	static char const * toString;
-	static char const * isGood;
-	static char const * SEEK_SET_;//need suffix b/c SEEK_SET is a #define'd numeric constant
 	static char const * SEEK_CUR_;
 	static char const * SEEK_END_;
+	static char const * SEEK_SET_;//need suffix b/c SEEK_SET is a #define'd numeric constant
+	static char const * canRead;
+	static char const * canWrite;
+	static char const * close;
+	static char const * fileName;
+	static char const * flush;
+	static char const * isGood;
+	static char const * read;
+	static char const * toString;
+	static char const * write;
 
 	// IODevice:
-        static char const * error;
-        static char const * clearError;
 	static char const * eof;
-	static char const * tell;
-	static char const * seek;
-	static char const * truncate;
-	static char const * size;
+	static char const * ioDevice;
+	static char const * rebound;
 	static char const * rewind;
+	static char const * seek;
+	static char const * size;
+	static char const * tell;
+	static char const * truncate;
+        static char const * clearError;
+        static char const * error;
 
     };
+    char const * strings::IOBase = "IOBase";
     char const * strings::IODevice = "IODevice";
     char const * strings::InStream = "InStream";
     char const * strings::OutStream = "OutStream";
-    char const * strings::IOBase = "IOBase";
-    char const * strings::StreamBase = "StreamBase";
-    char const * strings::read = "read";
-    char const * strings::write = "write";
-    char const * strings::flush = "flush";
-    char const * strings::close = "close";
-    char const * strings::toString = "toString";
-    char const * strings::isGood = "isGood";
-    char const * strings::error = "error";
-    char const * strings::clearError = "clearError";
-    char const * strings::eof = "eof";
-    char const * strings::tell = "tell";
-    char const * strings::seek = "seek";
-    char const * strings::truncate = "truncate";
-    char const * strings::size = "size";
-    char const * strings::rewind = "rewind";
-    char const * strings::SEEK_SET_ = "SEEK_SET";
     char const * strings::SEEK_CUR_ = "SEEK_CUR";
     char const * strings::SEEK_END_ = "SEEK_END";
+    char const * strings::SEEK_SET_ = "SEEK_SET";
+    char const * strings::StreamBase = "StreamBase";
+    char const * strings::canRead = "canRead";
+    char const * strings::canWrite = "canWrite";
+    char const * strings::clearError = "clearError";
+    char const * strings::close = "close";
+    char const * strings::eof = "eof";
+    char const * strings::error = "error";
+    char const * strings::fileName = "fileName";
+    char const * strings::flush = "flush";
+    char const * strings::ioDevice = "ioDevice";
+    char const * strings::isGood = "isGood";
+    char const * strings::read = "read";
+    char const * strings::rebound = "rebound";
+    char const * strings::rewind = "rewind";
+    char const * strings::seek = "seek";
+    char const * strings::size = "size";
+    char const * strings::tell = "tell";
+    char const * strings::toString = "toString";
+    char const * strings::truncate = "truncate";
+    char const * strings::write = "write";
 
     /**
        Internal binding context for BindNative() and friends.
@@ -112,58 +121,6 @@ namespace v8 { namespace juice { namespace whio {
     template <int mode /* 0=out, 1=in, -1=no-op*/>
     whio_stream * stream_construct( Arguments const &,
 				    std::string & exception );
-
-
-    /**
-       Used with WeakJSClassCreator for whio_dev and whio_stream.
-     */
-    template <typename DevT,
-	      DevT * (*ctor)( Arguments const &, std::string & ) >
-    struct DevClassOps
-    {
-
-	typedef DevT WrappedType;
-	static DevT * Ctor( Arguments const & argv,
-			    std::string & exceptionText)
-	{
-	    DevT * d = ctor( argv, exceptionText );
-	    //CERR << "Ctor() got @"<<d<<'\n';
-	    if( d )
-	    {
-		::v8::juice::cleanup::AddToCleanup(d, cleanup_callback );
-		bind::BindNative( 0, d, d );
-	    }
-	    return d;
-	}
-
-	static void Dtor( DevT * obj )
-	{
-	    //CERR << "Dtor() passing on @"<<obj<<'\n';
-	    if( obj )
-	    {
-		bind::UnbindNative( 0, obj, obj );
-		::v8::juice::cleanup::RemoveFromCleanup(obj);
-		obj->api->finalize(obj);
-	    }
-	}
-	/** Callback for use with juice::cleanup::AddToCleanup(). */
-	static void cleanup_callback( void * obj )
-	{
-	    Dtor( static_cast<DevT*>(obj) );
-	}
-
-    };
-
-
-    static Handle<Value> abstract_ctor(const Arguments& argv)
-    {
-	TOSS("This is an abtract class and cannot be instantiated directly!");
-    }
-
-    static Handle<Value> abstract_reimplement(const Arguments& argv)
-    {
-	TOSS("This is an abtract virtual function which is unimplemented by this subclasses!");
-    }
 
 
     /** A internal marker type. */
@@ -190,41 +147,132 @@ namespace v8 { namespace juice { namespace whio {
     };
 
     /**
+       Used with WeakJSClassCreator for whio_dev and whio_stream.
+
+       DevT must be one of: IODevice, StreamBase, InStream,
+       or OutStream.
+     */
+    template <typename DevT,
+	      typename DevT::type * (*ctor)( Arguments const &, std::string & ) >
+    struct DevClassOps
+    {
+	enum { ExtraInternalFieldCount = 0 };
+	typedef typename DevT::type WrappedType;
+	static WrappedType * Ctor( Arguments const & argv,
+			    std::string & exceptionText)
+	{
+	    WrappedType * d = ctor( argv, exceptionText );
+	    //CERR << "Ctor() got @"<<d<<'\n';
+	    if( d )
+	    {
+		::v8::juice::cleanup::AddToCleanup(d, cleanup_callback );
+		bind::BindNative( 0, d, d );
+	    }
+	    return d;
+	}
+
+	static void Dtor( WrappedType * obj )
+	{
+	    //CERR << "Dtor() passing on @"<<obj<<'\n';
+	    if( obj )
+	    {
+		bind::UnbindNative( 0, obj, obj );
+		::v8::juice::cleanup::RemoveFromCleanup(obj);
+		obj->api->finalize(obj);
+	    }
+	}
+    private:
+	/** Callback for use with juice::cleanup::AddToCleanup(). */
+	static void cleanup_callback( void * obj )
+	{
+	    Dtor( static_cast<WrappedType*>(obj) );
+	}
+
+    };
+
+
+    static Handle<Value> abstract_ctor(const Arguments& argv)
+    {
+	TOSS("This is an abtract class and cannot be instantiated directly!");
+    }
+
+    static Handle<Value> abstract_reimplement(const Arguments& argv)
+    {
+	TOSS("This is an abtract virtual function which is unimplemented by this subclasses!");
+    }
+
+
+} // namespace whio
+
+    /** Specialization needed by WeakJSClassCreator. */
+    template <>
+    struct WeakJSClassCreatorOps<whio::StreamBase> :
+	whio::DevClassOps<whio::StreamBase, &whio::stream_construct<-1> >
+    {};
+
+    /** Specialization needed by WeakJSClassCreator. */
+    template <>
+    struct WeakJSClassCreatorOps<whio::OutStream> :
+	whio::DevClassOps<whio::OutStream, &whio::stream_construct<0> >
+    {};
+
+    /** Specialization needed by WeakJSClassCreator. */
+    template <>
+    struct WeakJSClassCreatorOps<whio::InStream> :
+	whio::DevClassOps<whio::InStream, &whio::stream_construct<1> >
+    {};
+
+    /** Specialization needed by WeakJSClassCreator. */
+    template <>
+    struct WeakJSClassCreatorOps<whio::IODevice> :
+	whio::DevClassOps<whio::IODevice, &whio::dev_construct >
+    {};
+
+
+namespace whio {
+
+    /**
        Internal template we can specialize for specific i/o dev/stream
        combinations.
     */
     template <typename T>
-    struct WeakCreator
+    struct WeakWrap
     {
     };
 
     template <>
-    struct WeakCreator<IODevice>
+    struct WeakWrap<IODevice>
     {
-	typedef v8::juice::WeakJSClassCreator<IODevice::type, DevClassOps<IODevice::type, &dev_construct> > wrapper;
+	//typedef v8::juice::WeakJSClassCreator<IODevice::type, DevClassOps<IODevice, &dev_construct> > wrapper;
+	typedef v8::juice::WeakJSClassCreator<IODevice> wrapper;
 	typedef whio_dev DevType;
     };
 
     template <>
-    struct WeakCreator<InStream>
+    struct WeakWrap<InStream>
     {
-	typedef v8::juice::WeakJSClassCreator<InStream::type, DevClassOps<InStream::type, &stream_construct<1> > > wrapper;
+	//typedef v8::juice::WeakJSClassCreator<InStream::type, DevClassOps<InStream, &stream_construct<1> > > wrapper;
+	typedef v8::juice::WeakJSClassCreator<InStream> wrapper;
 	typedef InStream::type DevType;
     };
 
     template <>
-    struct WeakCreator<OutStream>
+    struct WeakWrap<OutStream>
     {
-	typedef v8::juice::WeakJSClassCreator<OutStream::type, DevClassOps<OutStream::type, &stream_construct<0> > > wrapper;
+	//typedef v8::juice::WeakJSClassCreator<OutStream::type, DevClassOps<OutStream, &stream_construct<0> > > wrapper;
+	typedef v8::juice::WeakJSClassCreator<OutStream> wrapper;
 	typedef OutStream::type DevType;
     };
 
     template <>
-    struct WeakCreator<StreamBase>
+    struct WeakWrap<StreamBase>
     {   // this is not actually technically valid, but it'll have to do for now:
-	typedef v8::juice::WeakJSClassCreator<StreamBase::type, DevClassOps<StreamBase::type, &stream_construct<-1> > > wrapper;
+	//typedef v8::juice::WeakJSClassCreator<StreamBase::type, DevClassOps<StreamBase, &stream_construct<-1> > > wrapper;
+	typedef v8::juice::WeakJSClassCreator<StreamBase> wrapper;
 	typedef StreamBase::type DevType;
     };
+
+
 
     /**
        Casts v to (T*). T must be one of whio_dev or whio_stream.
@@ -248,7 +296,7 @@ namespace v8 { namespace juice { namespace whio {
 #if 0
 #  define DEVH(PT,H) PT::type * dev = dev_cast< PT::type >( H )
 #else
-#  define DEVH(T,H) WeakCreator<T>::DevType * dev = WeakCreator<T>::wrapper::GetSelf( H )
+#  define DEVH(T,H) WeakWrap<T>::DevType * dev = WeakWrap<T>::wrapper::GetSelf( H )
 #endif
 #define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer not found (maybe already destroyed?)!")
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
@@ -322,8 +370,8 @@ namespace v8 { namespace juice { namespace whio {
 		}
 		else
 		{
-		    self->Set(JSTR("canWrite"), Boolean::New(true) );
-		    self->Set(JSTR("canRead"), Boolean::New(true) );
+		    self->Set(JSTR(strings::canWrite), Boolean::New(true) );
+		    self->Set(JSTR(strings::canRead), Boolean::New(true) );
 		}
 		return dev;
 	    }
@@ -334,9 +382,9 @@ namespace v8 { namespace juice { namespace whio {
 		dev = whio_dev_for_filename( fname.c_str(), mode );
 		if( dev )
 		{
-		    self->Set(JSTR("fileName"), argv[0], v8::ReadOnly );
-		    self->Set(JSTR("canWrite"), Boolean::New(writeMode) );
-		    self->Set(JSTR("canRead"), Boolean::New(true) );
+		    self->Set(JSTR(strings::fileName), argv[0], v8::ReadOnly );
+		    self->Set(JSTR(strings::canWrite), Boolean::New(writeMode) );
+		    self->Set(JSTR(strings::canRead), Boolean::New(true) );
 		}
 		return dev;
 	    }
@@ -359,11 +407,11 @@ namespace v8 { namespace juice { namespace whio {
 		}
 		else
 		{
-		    self->Set(JSTR("rebound"),
+		    self->Set(JSTR(strings::rebound),
 			      FunctionTemplate::New(dev_rebound)->GetFunction());
-		    self->Set(JSTR("ioDevice"), par, v8::ReadOnly);
-		    self->Set(JSTR("canWrite"), par->Get(JSTR("canWrite")), v8::ReadOnly );
-		    self->Set(JSTR("canRead"), par->Get(JSTR("canRead")), v8::ReadOnly );
+		    self->Set(JSTR(strings::ioDevice), par, v8::ReadOnly);
+		    self->Set(JSTR(strings::canWrite), par->Get(JSTR(strings::canWrite)), v8::ReadOnly );
+		    self->Set(JSTR(strings::canRead), par->Get(JSTR(strings::canRead)), v8::ReadOnly );
 		}
 		return dev;
 	    }
@@ -438,9 +486,9 @@ namespace v8 { namespace juice { namespace whio {
 		exception = msg.str();
 		return 0;
 	    }
-	    self->Set(JSTR("fileName"), argv[0], v8::ReadOnly );
-	    self->Set(JSTR("canWrite"), Boolean::New(writeMode), v8::ReadOnly );
-	    self->Set(JSTR("canRead"), Boolean::New(writeMode ? false : true) );
+	    self->Set(JSTR(strings::fileName), argv[0], v8::ReadOnly );
+	    self->Set(JSTR(strings::canWrite), Boolean::New(writeMode), v8::ReadOnly );
+	    self->Set(JSTR(strings::canRead), Boolean::New(writeMode ? false : true) );
 	    //CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
 	    return dev;
 	}
@@ -450,7 +498,7 @@ namespace v8 { namespace juice { namespace whio {
 	    Local<Object> par( Object::Cast(*argv[0]) );
 	    if( writeMode )
 	    { // try a basic sanity check...
-		Local<Value> parRW( par->Get(JSTR("canWrite")) );
+		Local<Value> parRW( par->Get(JSTR(strings::canWrite)) );
 		if( writeMode && !parRW->BooleanValue() )
 		{
 		    std::ostringstream msg;
@@ -468,16 +516,16 @@ namespace v8 { namespace juice { namespace whio {
 	    }
 	    else
 	    {
-		self->Set(JSTR("ioDevice"), par, v8::ReadOnly );
+		self->Set(JSTR(strings::ioDevice), par, v8::ReadOnly );
 		if( writeMode )
 		{
-		    self->Set(JSTR("canWrite"), par->Get(JSTR("canWrite")), v8::ReadOnly );
-		    self->Set(JSTR("canRead"), Boolean::New(false) );
+		    self->Set(JSTR(strings::canWrite), par->Get(JSTR(strings::canWrite)), v8::ReadOnly );
+		    self->Set(JSTR(strings::canRead), Boolean::New(false) );
 		}
 		else
 		{
-		    self->Set(JSTR("canWrite"), Boolean::New(false), v8::ReadOnly );
-		    self->Set(JSTR("canRead"), Boolean::New(true) );
+		    self->Set(JSTR(strings::canWrite), Boolean::New(false), v8::ReadOnly );
+		    self->Set(JSTR(strings::canRead), Boolean::New(true) );
 		}
 	    }
 	    return dev;
@@ -558,7 +606,7 @@ namespace v8 { namespace juice { namespace whio {
 	ARGS((0==argc));
 	DEVTHIS(IODevice);
 	//CERR << "IODevice.close() == " << dev << '\n';
-	WeakCreator<IODevice>::wrapper::DestroyObject( argv.This() );
+	WeakWrap<IODevice>::wrapper::DestroyObject( argv.This() );
 	return Undefined();
     }
 
@@ -567,7 +615,7 @@ namespace v8 { namespace juice { namespace whio {
 	ARGS((0==argc));
 	DEVTHIS(StreamBase);
 	//CERR << "StreamBase.close() == " << dev << '\n';
-	WeakCreator<StreamBase>::wrapper::DestroyObject( argv.This() );
+	WeakWrap<StreamBase>::wrapper::DestroyObject( argv.This() );
 	return Undefined();
     }
     /**
@@ -714,15 +762,15 @@ namespace v8 { namespace juice { namespace whio {
 	Local<Object> self = argv.This();
 	os << "[object "<<N;
 
-	Local<String> key(JSTR("fileName"));
+	Local<String> key(JSTR(strings::fileName));
 	if( self->Has(key) )
 	{
-	    os << " fileName:'"<<JSToStdString(self->Get(key))<<"',";
+	    os << ' ' << strings::fileName<<":'"<<JSToStdString(self->Get(key))<<"',";
 	}
-	key = JSTR("canWrite");
-	os << " canWrite:"<< (JSToStdString(self->Get(key))) << ',';
-	key = JSTR("canRead");
-	os << " canRead:"<< (JSToStdString(self->Get(key)));
+	key = JSTR(strings::canWrite);
+	os << ' ' << strings::canWrite <<':'<< (JSToStdString(self->Get(key))) << ',';
+	key = JSTR(strings::canRead);
+	os << ' ' << strings::canRead << ':'<< (JSToStdString(self->Get(key)));
 
 	os <<"]";
 	return CastToJS( os.str() );
@@ -776,7 +824,7 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// IODevice class:
 	{
-	    WeakCreator<IODevice>::wrapper
+	    WeakWrap<IODevice>::wrapper
 		bindIOD( strings::IODevice, whio );
 	    bindIOD
 		.Inherit( bindAbs )
@@ -799,7 +847,7 @@ namespace v8 { namespace juice { namespace whio {
 
 	////////////////////////////////////////////////////////////
 	// StreamBase class:
-	WeakCreator<StreamBase>::wrapper
+	WeakWrap<StreamBase>::wrapper
 	    bindSB( strings::StreamBase, whio );
 	{
 	    bindSB
@@ -814,7 +862,7 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// InStream class:
 	{
-	    WeakCreator<InStream>::wrapper
+	    WeakWrap<InStream>::wrapper
 		bindIS( strings::InStream, whio );
 	    bindIS
 		.Inherit( bindSB )
@@ -826,7 +874,7 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// OutStream class:
 	{
-	    WeakCreator<OutStream>::wrapper
+	    WeakWrap<OutStream>::wrapper
 		bindOS( strings::OutStream, whio );
             bindOS.Inherit( bindSB )
  		.Set(strings::write, stream_write )
