@@ -3,8 +3,7 @@
 
 The library has (as of [http://code.google.com/p/v8-juice/source/detail?r=167 r167], 20090310), support for creating custom JS classes using minimal code.
 
-=DRAFT=
-
+This API is likely to be continually tweaked, so if you use this API be prepared for changes down the road.
 
 =Creating new JS classes=
 
@@ -96,6 +95,8 @@ Again, that's all there is to it. Now when we call `new MyClass(...)` from JS, t
   * If the client ctor succeeds, the internal ctor will then set up a weak pointer callback, which will cause the client-specified dtor to be called _if_ the v8 GC ever decides to kick in. The internal ctor also packs the new native pointer into an internal field of the JS object for later reference by bound functions.
 
 The native object can be fetched later by passing a bound JS object to one of the static methods `WeakJSClassCreator::GetSelf()` or `WeakJSClassCreator::GetObject()`, both of which work similarly but have very slightly different semantics.
+
+The WeakJSClassCreator approach also uses the `v8::juice::cleanup` API, so users of that API will be guaranteed that the native object's dtor (the one defined in the WeakJSClassCreator template args) will be called (at an indeterminate time) if v8 does not do it and the client calls `v8::juice::cleanup::Cleanup()` at application shutdown (or they use `v8::juice::cleanup::CleanupSentry()` in conjunction with their v8 context).
 
 ==Design notes==
 
