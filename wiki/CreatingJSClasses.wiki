@@ -3,12 +3,16 @@
 
 <wiki:toc max_depth="3" />
 
+=Introduction=
+
 The library has (as of [http://code.google.com/p/v8-juice/source/detail?r=167 r167], 20090310), support for creating custom JS classes using minimal code.
 
 This API is likely to be continually tweaked, so if you use this API be prepared for changes down the road.
 
-While this code is part of v8-juice, it is actually independent of any other
-library components, and can be extracted from the source tree for use in other v8-based projects. The source files are:
+==Getting the source code==
+
+While this code is part of v8-juice, its implementation is independent of any other
+library components, which means it be extracted from the v8-juice source tree for use in other v8-based projects. The source files are:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/JSClassCreator.h JSClassCreator.h]
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/JSClassCreator.cc JSClassCreator.cc]
