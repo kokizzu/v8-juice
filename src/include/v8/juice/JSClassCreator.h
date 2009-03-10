@@ -46,7 +46,7 @@ namespace juice {
        Example usage:
 
        \code
-       ClassBindHelp<MyT> binder( "MyClass", targetObject, myCtor, 1 );
+       JSClassCreator binder( "MyClass", targetObject, myCtor, 1 );
        binder
            .Inherit( otherBinder )
 	   .Set( "funcOne", my_callback_func )
@@ -58,7 +58,6 @@ namespace juice {
        be called after calling Seal() (it might work, it might not,
        but in my experimentation v8 is very sensitive to certain
        orders of operations).
-
     */
     class JSClassCreator
     {
@@ -80,10 +79,7 @@ namespace juice {
 			v8::InvocationCallback ctor,
 			int internalFieldCount = 0 );
 	/**
-	   Does nothing. It is virtual because it may become
-	   interesting to subclass these one day (e.g. a
-	   hypothetical templates-based extension which can handle
-	   certain function forwarding to native member functions).
+	   Does nothing.
 	 */
 	virtual ~JSClassCreator();
 
@@ -93,7 +89,7 @@ namespace juice {
 
 	   Returns this object.
 	*/
-	JSClassCreator & SetInternalFieldCount( int n );
+	virtual JSClassCreator & SetInternalFieldCount( int n );
 
 	/**
 	   Returns the constructor template.
