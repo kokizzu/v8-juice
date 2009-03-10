@@ -19,6 +19,7 @@
 #include <v8/juice/plugin.h>
 #include <v8/juice/cleanup.h>
 #include <v8/juice/JSClassCreator.h>
+#include <v8/juice/RCPtr.h>
 
 #include "whio_amalgamation.h" // this is the i/o lib we're uses as a basis.
 
@@ -103,11 +104,18 @@ namespace v8 { namespace juice { namespace whio {
     /** Internal util to reduce code duplication elsewhere: unbinds
 	dev and deletes obj using obj->api->finalize(obj).
      */
-    template <typename T>
+    template <bool removeCleaner,typename T>
     static void dev_cleanup( void * obj, T * dev )
     {
-	::v8::juice::cleanup::RemoveFromCleanup(obj);
-	//CERR << "dev_cleanup( void@"<<obj<<",  dev@"<<dev<<")\n";
+	CERR << "dev_cleanup( void@"<<obj<<",  dev@"<<dev<<")\n";
+	if( removeCleaner )
+	{
+	    ::v8::juice::cleanup::RemoveFromCleanup(obj);
+	    // ^^^ maintenance reminider: we must call that from here, instead
+	    // of dev_dtor() because of how IOBase.close() works. When this
+	    // func is called by cleanup::Cleanup(), that will become
+	    // a no-op.
+	}
 	bind::UnbindNative( bind_cx(), obj, dev );
 	if( dev )
 	{
@@ -118,23 +126,24 @@ namespace v8 { namespace juice { namespace whio {
     /**
        Destructor for use with v8::juice::cleanup::AddToCleanup().
        obj MUST be-a (whio_dev*) or (whio_stream*). It simply calls
-       dev_cleanup( obj, (T*)obj ).
+       dev_cleanup<false,T>( obj, (T*)obj ).
+
     */
     template <typename T>
-    static void dev_cleanup( void * obj )
+    static void cleanup_callback( void * obj )
     {
-	dev_cleanup( obj, static_cast<T*>( obj ) );
+	dev_cleanup<false,T>( obj, static_cast<T*>( obj ) );
     }
 
     /**
        Destructor callback for Pesistent::MakeWeak(). T must be
-       one of whio_dev or whio_stream. It calls dev_cleanup<T>(parameter)
+       one of whio_dev or whio_stream. It calls dev_cleanup<true,T>(parameter)
        and disposes object.
     */
     template <typename T>
-    static void dev_dtor(Persistent< Value > object, void *parameter)
+    static void dev_dtor(Persistent< Value > object, void *obj)
     {
-	dev_cleanup<T>(parameter);
+	dev_cleanup<true,T>( obj, static_cast<T*>( obj ) );
 	object.Dispose();
 	object.Clear();
     }
@@ -147,7 +156,7 @@ namespace v8 { namespace juice { namespace whio {
     template <typename T>
     static Persistent<Object> dev_wrap( Handle<Object> _self, T * obj )
     {
-	::v8::juice::cleanup::AddToCleanup(obj, dev_cleanup<T> );
+	::v8::juice::cleanup::AddToCleanup(obj, cleanup_callback<T> );
 	bind::BindNative( bind_cx(), obj, obj );
 	Persistent<Object> self( Persistent<Object>::New(_self) );
 	self.MakeWeak( obj, dev_dtor<T> );
@@ -174,7 +183,7 @@ namespace v8 { namespace juice { namespace whio {
     }
 
 // Helper macros for args and type checking:
-#define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
+#define ARGS(COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
 #define DEVH(T,H) T * dev = dev_cast<T>( H )
 #define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer has already been destroyed!")
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
@@ -186,7 +195,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_rebound(const Arguments& argv)
     {
-	ARGS("rebound",(argc==2));
+	ARGS((argc==2));
 	DEVTHIS(whio_dev);
 	whio_size_t low = CastFromJS<whio_size_t>( argv[0] );
 	whio_size_t high = CastFromJS<whio_size_t>( argv[1] );
@@ -282,7 +291,7 @@ namespace v8 { namespace juice { namespace whio {
 		{
 		    self->Set(JSTR("rebound"),
 			      FunctionTemplate::New(dev_rebound)->GetFunction());
-		    self->Set(JSTR("ioDevice"),par, v8::ReadOnly);
+		    self->Set(JSTR("ioDevice"), par, v8::ReadOnly);
 		    self->Set(JSTR("canWrite"), par->Get(JSTR("canWrite")), v8::ReadOnly );
 		    self->Set(JSTR("canRead"), par->Get(JSTR("canRead")), v8::ReadOnly );
 		}
@@ -460,7 +469,7 @@ namespace v8 { namespace juice { namespace whio {
 	}
 	else
 	{
-	    ARGS(strings::write,(argc==1 || argc==2));
+	    ARGS((argc==1 || argc==2));
 	    DEVTHIS(DevT);
 	    std::string data( JSToStdString(argv[0]) );
 	    uint32_t l = (argc>1)
@@ -480,18 +489,18 @@ namespace v8 { namespace juice { namespace whio {
        read() impl for DevT, which must be one of whio_dev or whio_stream.
 
        If allowRead is false then this function throws when called. Set it to
-       false for the OutStream class.
+       false for the OutStream class and true for all (or most) others.
     */
     template <typename DevT,bool allowRead>
     static Handle<Value> devT_read(const Arguments& argv)
     {
 	if( ! allowRead )
 	{
-	    TOSS("This device does not allow reading!");
+	    TOSS("This device type does not allow reading!");
 	}
 	else
 	{
-	    ARGS(strings::read,(argc==1));
+	    ARGS((argc==1));
 	    DEVTHIS(DevT);
 	    uint32_t l = CastFromJS<uint32_t>( argv[0] );
 	    if( 0 == l ) TOSS("Number of bytes to read must be greater than 0!");
@@ -504,31 +513,13 @@ namespace v8 { namespace juice { namespace whio {
     /**
        close() impl for whio_dev and whio_stream.
     */
-    static Handle<Value> base_close(const Arguments& argv)
-    {
-	ARGS(strings::close,(argc==0));
-	whio_dev * srcD = dev_cast<whio_dev>( argv.This() );
-	whio_stream * srcS = (0==srcD) ? dev_cast<whio_stream>( argv.This() ) : 0;
-	if( !srcD && !srcS )
-	{
-	    TOSS("Could not determine argv.This() object type!");
-	}
-	argv.This()->SetInternalField(0,Null()); // is this working?
-	if( srcD ) dev_cleanup( srcD, srcD );
-	else dev_cleanup( srcS, srcS );
-	return Undefined();
-    }
-
-    /**
-       close() impl for whio_dev and whio_stream.
-    */
     template <typename DevT>
     static Handle<Value> devT_close(const Arguments& argv)
     {
-	ARGS(strings::close,(argc==0));
+	ARGS((0==argc));
 	DEVTHIS(DevT);
 	argv.This()->SetInternalField(0,Null()); // is this working?
-	dev_cleanup( dev, dev );
+	dev_cleanup<true>( dev, dev );
 	return Undefined();
     }
     /**
@@ -536,7 +527,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_error(const Arguments& argv)
     {
-	ARGS(strings::error,(argc==0));
+	ARGS((0==argc));
 	DEVTHIS(whio_dev);
 	return Int32ToJS( dev->api->error( dev ) );
     }
@@ -546,7 +537,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_clear_error(const Arguments& argv)
     {
-	ARGS(strings::clearError,(argc==0));
+	ARGS((0==argc));
 	DEVTHIS(whio_dev);
 	return Int32ToJS( dev->api->clear_error( dev ) );
     }
@@ -556,7 +547,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_eof(const Arguments& argv)
     {
-	ARGS(strings::eof,(argc==0));
+	ARGS((0==argc));
 	DEVTHIS(whio_dev);
 	return Int32ToJS( dev->api->eof(dev) );
     }
@@ -566,7 +557,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_tell(const Arguments& argv)
     {
-	ARGS(strings::tell,(argc==0));
+	ARGS((0==argc));
 	DEVTHIS(whio_dev);
 	return UInt64ToJS( dev->api->tell( dev ) );
     }
@@ -576,7 +567,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_seek(const Arguments& argv)
     {
-	ARGS(strings::seek,((argc==1) || (argc==2)));
+	ARGS(((argc==1) || (argc==2)));
 	DEVTHIS(whio_dev);
 	int32_t pos = JSToUInt32( argv[0] );
 	const int whence = (argc>1) ? JSToInt32( argv[1] ) : SEEK_SET;
@@ -596,26 +587,10 @@ namespace v8 { namespace juice { namespace whio {
     /**
        flush() impl for DevT, which must be one of whio_dev or whio_stream.
     */
-    static Handle<Value> base_flush(const Arguments& argv)
-    {
-	ARGS(strings::flush,(argc==0));
-	whio_dev * srcD = dev_cast<whio_dev>( argv.This() );
-	if( srcD )
-	{
-	    return CastToJS( srcD->api->flush(srcD) );
-	}
-	whio_stream * srcS = dev_cast<whio_stream>( argv.This() );
-	if( srcS )
-	{
-	    return CastToJS( srcS->api->flush(srcS) );
-	}
-	TOSS("Could not determine source object type!");
-    }
-
     template <typename DevT>
     static Handle<Value> devT_flush(const Arguments& argv)
     {
-	ARGS(strings::close,(argc==0));
+	ARGS((0==argc));
 	DEVTHIS(DevT);
 	return CastToJS( dev->api->flush( dev ) );
 	// Potential fixme: for subdevices we have no direct (via whio_dev)
@@ -623,7 +598,6 @@ namespace v8 { namespace juice { namespace whio {
 	// flush() on the subdevice (which happens on close()) can crash.
 	// In the generic whio API we actually have no way of doing anything about
 	// this. Hmmm.
-	return Undefined();
     }
 
     /**
@@ -631,7 +605,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_truncate(const Arguments& argv)
     {
-	ARGS(strings::truncate,(argc==1));
+	ARGS((argc==1));
 	DEVTHIS(whio_dev);
 	whio_size_t len = CastFromJS<whio_size_t>( argv[0] );
 	return CastToJS( dev->api->truncate(dev, len) );
@@ -642,7 +616,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_size(const Arguments& argv)
     {
-	ARGS(strings::size,(argc==0));
+	ARGS(0==argc);
 	DEVTHIS(whio_dev);
 	return CastToJS( whio_dev_size( dev ) );
     }
@@ -652,46 +626,31 @@ namespace v8 { namespace juice { namespace whio {
     */
     static Handle<Value> dev_rewind(const Arguments& argv)
     {
-	ARGS(strings::rewind,(argc==0));
+	ARGS((0==argc));
 	DEVTHIS(whio_dev);
 	return CastToJS( whio_dev_rewind( dev ) );
     }
 
-    /** whio_stream_api::isgood() and whio_dev_api::isgood(). */
-    static Handle<Value> base_isgood(const Arguments& argv)
-    {
-	ARGS(strings::isGood,(argc==0));
-#if 0
-	DEVTHIS(whio_stream);
-	return BoolToJS( dev->api->isgood(dev) );
-#else
-	whio_dev * srcD = dev_cast<whio_dev>( argv.This() );
-	if( srcD )
-	{
-	    return BoolToJS( 0 == srcD->api->error(srcD) );
-	}
-	whio_stream * srcS = dev_cast<whio_stream>( argv.This() );
-	if( srcS )
-	{
-	    return BoolToJS( srcS->api->isgood(srcS) );
-	}
-	TOSS("Could not determine source object type!");
-#endif
-    }
-
-    /** whio_stream_api::isgood() and whio_dev_api::isgood(). */
-    template <typename DevT>
+    /** IOBase isGood() impl for whio_dev. */
     static Handle<Value> dev_isgood(const Arguments& argv)
     {
-	ARGS("isgood",(argc==0));
-	DEVTHIS(DevT);
+	ARGS((0==argc));
+	DEVTHIS(whio_dev);
+	return BoolToJS( 0 == dev->api->error(dev) );
+    }
+
+    /** IOBase isGood() impl for whio_stream. */
+    static Handle<Value> stream_isgood(const Arguments& argv)
+    {
+	ARGS((0==argc));
+	DEVTHIS(whio_stream);
 	return BoolToJS( dev->api->isgood(dev) );
     }
 
     template <typename T,char const *&N>
     static Handle<Value> devT_tostring(const Arguments& argv)
     {
-	ARGS(strings::toString,(0==argc));
+	ARGS(0==argc);
 	std::ostringstream os;
 	Local<Object> self = argv.This();
 	os << "[object "<<N;
@@ -750,9 +709,9 @@ namespace v8 { namespace juice { namespace whio {
 	    bindAbs
 		.Set(strings::read, noop )
 		.Set(strings::write ,noop)
-		.Set(strings::isGood,base_isgood)
-		.Set(strings::flush,base_flush)
-		.Set(strings::close,base_close)
+		.Set(strings::isGood,noop)
+		.Set(strings::close,noop)
+		.Set(strings::flush,noop)
 		.Set(strings::toString, devT_tostring<IOBase,strings::IOBase> )
 		.Set(strings::SEEK_SET_,Integer::New(SEEK_SET) )
 		.Set(strings::SEEK_END_, Integer::New(SEEK_END))
@@ -781,6 +740,7 @@ namespace v8 { namespace juice { namespace whio {
 		.Set(strings::truncate,dev_truncate)
 		.Set(strings::size,dev_size)
 		.Set(strings::rewind,dev_rewind)
+		.Set(strings::isGood,dev_isgood)
 		.Seal();
 	}
 
@@ -795,6 +755,7 @@ namespace v8 { namespace juice { namespace whio {
 		.Set(strings::flush, devT_flush<whio_stream> )
 		.Set(strings::close, devT_close<whio_stream> )
 		.Set(strings::toString, devT_tostring<whio_stream,strings::InStream> )
+		.Set(strings::isGood,stream_isgood)
 		.Seal();
         }
 
@@ -808,6 +769,7 @@ namespace v8 { namespace juice { namespace whio {
 		.Set(strings::flush, devT_flush<whio_stream> )
 		.Set(strings::close, devT_close<whio_stream> )
 		.Set(strings::toString, devT_tostring<whio_stream,strings::OutStream> )
+		.Set(strings::isGood,stream_isgood)
 		.Seal();
 	}
 	return whio;
