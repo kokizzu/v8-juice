@@ -102,76 +102,34 @@ namespace v8 { namespace juice { namespace whio {
     */
     static const void * bind_cx() { return 0;}
 
+    /** Used by WeakJSClassCreator. */
     struct devT_finalizer
     {
 	template <typename DevT>
 	void operator()( DevT * obj ) const
 	{
-	    CERR << "Finalizing device @ "<<obj<<'\n';
+	    //CERR << "Finalizing device @ "<<obj<<'\n';
 	    if( obj ) obj->api->finalize(obj);
 	}
     };
 
-    /** Internal util to reduce code duplication elsewhere: unbinds
-	dev and deletes obj using obj->api->finalize(obj).
-     */
-    template <bool removeCleaner,typename T>
-    static void dev_cleanup( void * obj, T * dev )
+
+    static Handle<Value> abstract_ctor(const Arguments& argv)
     {
-	CERR << "dev_cleanup( void@"<<obj<<",  dev@"<<dev<<")\n";
-	if( removeCleaner )
-	{
-	    ::v8::juice::cleanup::RemoveFromCleanup(obj);
-	    // ^^^ maintenance reminider: we must call that from here, instead
-	    // of dev_dtor() because of how IOBase.close() works. When this
-	    // func is called by cleanup::Cleanup(), that will become
-	    // a no-op.
-	}
-	bind::UnbindNative( bind_cx(), obj, dev );
-	devT_finalizer()( dev );
+	TOSS("This is an abtract class and cannot be instantiated directly!");
     }
 
-    /**
-       Destructor for use with v8::juice::cleanup::AddToCleanup().
-       obj MUST be-a (whio_dev*) or (whio_stream*). It simply calls
-       dev_cleanup<false,T>( obj, (T*)obj ).
-
-    */
-    template <typename T>
-    static void cleanup_callback( void * obj )
+    static Handle<Value> abstract_reimplement(const Arguments& argv)
     {
-	dev_cleanup<false,T>( obj, static_cast<T*>( obj ) );
+	TOSS("This is an abtract virtual function which is unimplemented by this subclasses!");
     }
 
-    /**
-       Destructor callback for Pesistent::MakeWeak(). T must be
-       one of whio_dev or whio_stream. It calls dev_cleanup<true,T>(parameter)
-       and disposes object.
-    */
-    template <typename T>
-    static void dev_dtor(Persistent< Value > object, void *obj)
-    {
-	dev_cleanup<true,T>( obj, static_cast<T*>( obj ) );
-	object.Dispose();
-	object.Clear();
-    }
 
-    /**
-       Makes a persistent weak pointer for the given object, using
-       _self as the JS-side instance of the object. T must be one of
-       whio_dev or whio_stream.
-    */
-    template <typename T>
-    static Persistent<Object> dev_wrap( Handle<Object> _self, T * obj )
+    /** A bogus type used a a devT_tostring<>() template parameter. */
+    struct IOBase
     {
-	::v8::juice::cleanup::AddToCleanup(obj, cleanup_callback<T> );
-	bind::BindNative( bind_cx(), obj, obj );
-	Persistent<Object> self( Persistent<Object>::New(_self) );
-	self.MakeWeak( obj, dev_dtor<T> );
-	self->SetInternalField(0,External::New(obj));
-	//CERR << "Wrapped device @"<<obj<<" in a Persistent<Object>.\n";
-	return self;
-    }
+    };
+
 
     /**
        Casts v to (T*). T must be one of whio_dev or whio_stream.
@@ -407,59 +365,49 @@ namespace v8 { namespace juice { namespace whio {
 	return 0;
     }
 
-    static Handle<Value> abstract_ctor(const Arguments& argv)
-    {
-	TOSS("This is an abtract class and cannot be instantiated directly!");
-    }
-
-    static Handle<Value> abstract_reimplement(const Arguments& argv)
-    {
-	TOSS("This is an abtract virtual function which is unimplemented by this subclasses!");
-    }
-
     /**
-       ctor for IODevice, InStream, and OutStream classes. This common
-       ctor simply forwards all arguments to Func(), which must return
-       a (T*) on success (transfering ownership to us), or 0 on error.
-
-       T must be whio_dev or whio_stream.
+       Internal template we can specialize for specific i/o dev/stream
+       combinations.
     */
-    template <
-	typename T,
-	/* constructor proxy: */
-	T * (*Func)(Local<Object>, int, Handle<Value>[], std::string &)
-	>
-    static Handle<Value> combined_ctor(const Arguments& argv)
+    template <typename T, bool b = true>
+    struct WeakCreator
     {
-	if (!argv.IsConstructCall()) 
-	{
-	    return ThrowException(String::New("Cannot call this constructor as function!"));
-	}
-	const int argc = argv.Length();
-	if( argc > 0 )
-	{
-	    std::vector< Handle<Value> > av(argc,Null());
-	    for( int i = 0; i < argc; ++i ) av[i] = argv[i];
-	    std::string err;
-	    T * dev = Func( argv.This(), argc, &av[0], err );
-	    //err = juice::ThrowException("Just testing at %s:%d!","here",__LINE__);
-	    if( ! err.empty() )
-	    {
-		if( dev )
-		{
-		    dev->api->finalize(dev);
-		    dev = 0;
-		}
-		TOSS(err.c_str());
-	    }
-	    if( ! dev )
-	    {
-		TOSS("Opening the stream failed for an unspecified reason!");
-	    }
-	    return dev_wrap( argv.This(), dev );
-	}
-	TOSS("Invalid arguments!");
-    }
+    };
+
+
+    template <bool b>
+    struct WeakCreator<whio_dev,b>
+    {
+	typedef v8::juice::WeakJSClassCreator<whio_dev,
+					      &dev_construct,
+					      0,
+					      devT_finalizer>
+	type;
+    };
+
+    template <>
+    struct WeakCreator<whio_stream,false>
+    {
+	typedef v8::juice::WeakJSClassCreator<whio_stream,
+					      &stream_construct<false>,
+					      0,
+					      devT_finalizer>
+	type;
+    };
+
+    template <>
+    struct WeakCreator<whio_stream,true>
+    {
+	typedef v8::juice::WeakJSClassCreator<whio_stream,
+					      &stream_construct<true>,
+					      0,
+					      devT_finalizer>
+	type;
+    };
+
+
+
+
 
 
     /**
@@ -518,6 +466,8 @@ namespace v8 { namespace juice { namespace whio {
 	}
     }
 
+
+
     /**
        close() impl for whio_dev and whio_stream.
     */
@@ -526,8 +476,9 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS((0==argc));
 	DEVTHIS(DevT);
-	argv.This()->SetInternalField(0,Null()); // is this working?
-	dev_cleanup<true>( dev, dev );
+	//bool b =
+	    WeakCreator<DevT>::type::DestroySelf( argv.This() );
+	//CERR << "DestroySelf() == " << b << '\n';
 	return Undefined();
     }
     /**
@@ -690,11 +641,6 @@ namespace v8 { namespace juice { namespace whio {
 #undef DEVHNT
 #undef DEVTHIS
 
-    /** A bogus type used a a devT_tostring<>() template parameter. */
-    struct IOBase
-    {
-    };
-
     /**
        Adds to target object:
 
@@ -730,14 +676,10 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// IODevice class:
 	{
-	    v8::juice::WeakJSClassCreator<whio_dev,
-		&dev_construct,
-		0,
-		devT_finalizer>
+	    WeakCreator<whio_dev>::type
 		bindIOD( strings::IODevice, whio );
 	    bindIOD
 		.Inherit( bindAbs )
-		.SetInternalFieldCount(1)
 		.Set(strings::write, devT_write<whio_dev,true> )
 		.Set(strings::read, devT_read<whio_dev,true> )
 		.Set(strings::toString, devT_tostring<whio_dev,strings::IODevice> )
@@ -758,10 +700,7 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// InStream class:
 	{
-	    v8::juice::WeakJSClassCreator<whio_stream,
-		&stream_construct<false>,
-		0,
-		devT_finalizer>
+	    WeakCreator<whio_stream,false>::type
 		bindIS( strings::InStream, whio );
 	    bindIS
 		.Inherit( bindAbs )
@@ -776,12 +715,9 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// OutStream class:
 	{
-	    v8::juice::WeakJSClassCreator<whio_stream,
-		&stream_construct<true>,
-		0,
-		devT_finalizer>
+	    WeakCreator<whio_stream,true>::type
 		bindOS( strings::OutStream, whio );
-	    bindOS.Inherit( bindAbs )
+            bindOS.Inherit( bindAbs )
 		.Set(strings::write, devT_write<whio_stream,true> )
 		.Set(strings::flush, devT_flush<whio_stream> )
 		.Set(strings::close, devT_close<whio_stream> )

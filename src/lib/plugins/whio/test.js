@@ -205,13 +205,14 @@ function tryTypeInfo()
 function tryOnlyOut()
 {
     var os = new whio.OutStream("/dev/null",false);
-    //os.close();
+    os.close();
+    //os.close(); //should throw
 }
 tryOnlyOut();
-// tryOne();
-// tryMemory();
-// trySubdev();
-// tryBadStream();
+tryOne();
+tryMemory();
+trySubdev();
+tryBadStream();
 tryTypeInfo();
 
 print(":-D");
