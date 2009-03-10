@@ -7,6 +7,10 @@
 
 The library has (as of [http://code.google.com/p/v8-juice/source/detail?r=167 r167], 20090310), support for creating custom JS classes using minimal code.
 
+The JSClassCreator and !WeakJSClassCreator classes are helpers which encapsulate
+much of the drudge work associated with binding a native class to JS. This page
+describes how to use them.
+
 This API is likely to be continually tweaked, so if you use this API be prepared for changes down the road.
 
 ==Getting the source code==
@@ -17,13 +21,6 @@ library components, which means it be extracted from the v8-juice source tree fo
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/JSClassCreator.h JSClassCreator.h]
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/JSClassCreator.cc JSClassCreator.cc]
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/WeakJSClassCreator.h WeakJSClassCreator.h]
-
-
-=Creating new JS classes=
-
-The JSClassCreator and !WeakJSClassCreator classes are helpers which encapsulate
-much of the drudge work associated with binding a native class to JS. This page
-describes how to use them.
 
 =JSClassCreator=
 
