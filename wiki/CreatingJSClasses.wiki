@@ -76,11 +76,11 @@ The WeakJSClassCreator is a JSClassCreator subclass which uses C++
 templates to create functions for binding and unbinding JS objects
 to/from native objects of a given type. It is based on the v8 "weak
 persistent pointers" concept, and thus its odd name. It is used mostly
-like JSClassCreator, the notable difference being template
+like JSClassCreator, the notable difference being a template
 argument. As a template argument it takes a native type on whos behalf
-it should act. In addition, we need `WeakJSClassCreatorOps<MyType>` 
-class template specialization, which
-described fully in the API docs and briefly shown here:
+it should act. In addition, we need a `WeakJSClassCreatorOps<MyType>` 
+class template specialization, which is described fully in the API docs
+and briefly shown here:
 
 {{{
 namespace v8 { namespace juice {
