@@ -1,5 +1,7 @@
 #include <v8/juice/plugin.h>
 #include <v8/juice/PathFinder.h>
+#include <v8/juice/Phoenix.h>
+#include <sstream>
 
 /**
    Set to 1 to use a no-op plugin (non-)loader (just for testing
@@ -11,6 +13,13 @@
 #  define PLUGIN_USE_NOOP 1
 #endif
 
+/* only for debuggering */
+#if 0
+#  ifndef CERR
+#    include <iostream>
+#    define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#  endif
+#endif
 namespace v8 {
 namespace juice {
 namespace plugin {
@@ -20,12 +29,23 @@ namespace plugin {
     using namespace ::v8;
     using ::v8::juice::PathFinder;
 
+    struct PathFinder_phoenix_initializer
+    {
+	/** Does nothing: This class is called no_op for a reason ;) */
+	void operator()( PathFinder & t ) const
+	{
+	    t.path(v8_juice_plugin_CONFIG_PLUGINS_PATH);
+	    t.extensions(v8_juice_plugin_CONFIG_DLL_EXTENSIONS);
+	    t.path_separator(v8_juice_plugin_CONFIG_PATH_SEPARATOR);
+	}
+    };
+
     PathFinder & PluginPath()
     {
-	static PathFinder bob(v8_juice_plugin_CONFIG_PLUGINS_PATH,
-			      v8_juice_plugin_CONFIG_DLL_EXTENSIONS,
-			      v8_juice_plugin_CONFIG_PATH_SEPARATOR);
-	return bob;
+	typedef ::v8::juice::Detail::phoenix<PathFinder,
+	    PathFinder,
+	    PathFinder_phoenix_initializer> PHX;
+	return PHX::instance();
     }
 
     LoadPluginScope * LoadPluginScope::current = 0;
@@ -70,13 +90,20 @@ namespace plugin {
 	std::string fn( open( modname, errmsg ) );
 	if( ! errmsg.empty() )
 	{
-	    errmsg = "LoadPlugin(\""+modname+"\") DLL error message: dll=["+fn+"]: "+errmsg;
+	    std::ostringstream os;
+	    os << "LoadPlugin(\""<<modname<<"\") DLL error message: dll=["<<fn<<"]: "
+	       << errmsg
+	       << "\nPluginPath()=["<<PluginPath().path_string()<<']';
+	    errmsg = os.str();
 	    return ThrowException( String::New(errmsg.c_str(),
 					       static_cast<int>(errmsg.size())) );
 	}
 	else if( fn.empty() )
 	{
-	    errmsg = "LoadPlugin(\""+modname+"\"): No DLL found!";
+	    std::ostringstream os;
+	    os << "LoadPlugin(\""<<modname<<"\"): No DLL found in path "
+	       << '['<<PluginPath().path_string()<<']';
+	    errmsg = os.str();
 	    return ThrowException( String::New(errmsg.c_str(),
 					       static_cast<int>(errmsg.size())) );
 	}
@@ -133,9 +160,9 @@ namespace plugin {
 	{ // only here to avoid a "static function defined but not used" warning
 	    FindPlugin( basename );
 	}
-	errmsg = std::string("s11n::plugin::open(")
+	errmsg = std::string("v8::juice::plugin::open(")
 	    + basename
-	    + std::string( "): not implemented on this platform." )
+	    + std::string( "): not implemented for this build of v8-juice." )
 	    ;
 	return std::string();
     }
