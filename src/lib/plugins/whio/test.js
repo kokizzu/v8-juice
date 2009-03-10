@@ -202,10 +202,16 @@ function tryTypeInfo()
     print
 }
 
-tryOne();
-tryMemory();
-trySubdev();
-tryBadStream();
+function tryOnlyOut()
+{
+    var os = new whio.OutStream("/dev/null",false);
+    //os.close();
+}
+tryOnlyOut();
+// tryOne();
+// tryMemory();
+// trySubdev();
+// tryBadStream();
 tryTypeInfo();
 
 print(":-D");
