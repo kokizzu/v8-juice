@@ -77,7 +77,7 @@ namespace juice {
 
        - NativeConstructor = explained below
 
-       - internalFieldCount = the number of internal fields which the client
+       - extraInternalFieldCount = the number of internal fields which the client
        will use. This class adds one to that number and uses the last field
        to store a handle to the native object.
 
@@ -107,11 +107,16 @@ namespace juice {
        returns, the private constructor will destroy the returned object (if
        necessary) and throw an exception using the exceptionText string.
 
+       - The "self" argument passed to the NativeConstructor is the argv.This()
+       object of the "real" constructor.
+
        - If NativeConstructor succeeds (returns non-0) then the new object
        is bound to a weak pointer, bound to v8::juice::bind::BindNative<WrappedT>()
        with a BindContextKey of 0 (so CastFromJS() will work with it), adds it to
        v8::juice::cleanup::AddToCleanup(), and gives the new weak pointer to
-       v8.
+       v8. It will also add the native as an External in the internal slot with
+       the number passed to this template + 1 (it reserves one extra slot at the
+       end of the list for this purpose).
 
        It's a lot simpler than it sounds and completely frees the caller of
        worry that destructors might not be called (unless the app crashes
@@ -123,7 +128,7 @@ namespace juice {
 					       int /*argc*/,
 					       Handle<Value> /*argv*/[],
 					       std::string & /*exceptionText*/),
-	      int internalFieldCount = 0,
+	      int extraInternalFieldCount = 0,
 	      typename CleanupFunctorT = Detail::ObjectDeleter>
     class WeakJSClassCreator : public JSClassCreator
     {
@@ -139,7 +144,7 @@ namespace juice {
 	*/
 	WeakJSClassCreator( char const * className,
 			    Handle<Object> target )
-	    : JSClassCreator( className, target, ctor_proxy, internalFieldCount + 1 )
+	    : JSClassCreator( className, target, ctor_proxy, extraInternalFieldCount + 1 )
 	{
 	}
 
@@ -154,8 +159,8 @@ namespace juice {
 	{
 	    if( h.IsEmpty() ) return 0;
 	    Local<Object> obj( Object::Cast(*h) );
-	    if( h->InternalFieldCount() != (internalFieldCount+1) ) return 0;
-	    Handle<Value> key( h->GetInternalField(internalFieldCount) );
+	    if( h->InternalFieldCount() != (extraInternalFieldCount+1) ) return 0;
+	    Handle<Value> key( h->GetInternalField(extraInternalFieldCount) );
 	    return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), key );
 	}
 
@@ -245,7 +250,7 @@ namespace juice {
 	    ::v8::juice::bind::BindNative( bind_cx(), obj, obj );
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
-	    self->SetInternalField( internalFieldCount, External::New(obj) );
+	    self->SetInternalField( extraInternalFieldCount, External::New(obj) );
 	    //CERR << "Wrapped object @"<<obj<<" in a Persistent<Object>.\n";
 	    return self;
 	}
