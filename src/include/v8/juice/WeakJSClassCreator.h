@@ -204,6 +204,23 @@ namespace juice {
 	    if( h.IsEmpty() || (h->InternalFieldCount() != (extraInternalFieldCount+1)) ) return 0;
 	    return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), h->GetInternalField(extraInternalFieldCount) );
 	}
+	/**
+	   Like GetSelf(), but takes a Handle to a value. This can be
+	   used for checking/converting arguments other than the
+	   current This object (e.g., maybe the second argument to a
+	   certain WrappedType member function is a different
+	   WrappedType object).
+
+	   This can be used in place of GetSelf(), but it does more
+	   work than GetSelf() has to.
+	*/
+        static WrappedType * GetNative( Handle<Value> h )
+        {
+            if( h.IsEmpty() || ! h->IsObject() ) return 0;
+            Local<Object> obj( Object::Cast(*h) );
+            if( obj->InternalFieldCount() != (extraInternalFieldCount+1) ) return 0;
+            return ::v8::juice::bind::GetBoundNative<WrappedType>( bind_cx(), obj->GetInternalField(extraInternalFieldCount) );
+        }
 
 	/**
 	   If jo "seems" to have been created via this class' mechanism,
@@ -225,7 +242,7 @@ namespace juice {
 	   disconnect the JS reference to that object, and it can use
 	   this function to do so.
 	*/
-	static bool DestroySelf( Local<Object> jo )
+	static bool DestroyObject( Local<Object> jo )
 	{
 	    WrappedType * t = GetSelf(jo);
 	    if( ! t ) return false;
@@ -233,6 +250,19 @@ namespace juice {
 	    weak_callback( p, t );
 	    return true;
 	}
+
+	/**
+	   Like the other DestroyObject() overload, but takes a handle
+	   to a generic value. If h is not an Object reference, false
+	   is returned, otherwise the result of calling the other overload
+	   is returned.
+	*/
+        static bool DestroyObject( Handle<Value> h )
+        {
+            return ( h.IsEmpty() || ! h->IsObject() )
+		? false
+		: DestroyObject( Local<Object>(Object::Cast(*h)) );
+        }
 
     private:
 	/**
