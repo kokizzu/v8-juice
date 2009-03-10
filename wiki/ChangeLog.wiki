@@ -9,6 +9,10 @@ are at the top. Dates written extra large are release dates. This contains only 
 http://code.google.com/p/v8-juice/source/browse/
 
 ----
+*2009 March 9/10*
+  * Added initial JS class creation helpers. See [CreatingJSClasses] wiki page for info.
+  * General improvements to the [PluginWhio i/o plugin].
+
 *2009 March 8*
 
   * Added [http://code.google.com/p/v8-juice/source/browse/#svn/extra-plugins extra-plugins] directory to svn, for plugins with hard dependencies on external/3rd-party software. Moved sqlite3/ncurses plugins into that tree.
