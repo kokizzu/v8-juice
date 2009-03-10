@@ -3,8 +3,6 @@
 
 The library has (as of [http://code.google.com/p/v8-juice/source/detail?r=167 r167], 20090310), support for creating custom JS classes using minimal code.
 
-It'd 4:30 in the morning and i've gotta get up at 10:30 for work, but i'll document these some tomorrow. One of them can even manage object destruction via weak pointer callbacks.
-
 =DRAFT=
 
 
