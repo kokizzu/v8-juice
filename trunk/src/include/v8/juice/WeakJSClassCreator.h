@@ -360,6 +360,12 @@ namespace juice {
         }
 
     private:
+	WeakJSClassCreator(){}
+	// Should we make them copyable? Might be useful at some
+	// point, so down-stream code has access to the JS-side
+	// constructor/prototype and such.
+	WeakJSClassCreator & operator=(WeakJSClassCreator const &);
+	WeakJSClassCreator(WeakJSClassCreator const &);
 	/**
 	   Unbinds native and destroys it using CleanupFunctor.
 	*/
