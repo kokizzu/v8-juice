@@ -27,7 +27,10 @@
 #    define phoenix_CERR if(0) std::cerr
 #endif // phoenix_DEBUG
 
-namespace v8 { namespace juice { namespace Detail {
+namespace v8 { namespace juice {
+
+#if !defined(DOXYGEN)
+namespace Detail {
 
         
         /**
@@ -207,7 +210,9 @@ namespace v8 { namespace juice { namespace Detail {
         };
         template <typename T, typename C, typename I> bool phoenix<T,C,I>::m_destroyed = false;
 
-}}} // namespaces
+} // Detail
+#endif // DOXYGEN
+}} // namespaces
 
 #undef phoenix_DEBUG
 #undef phoenix_CERR
