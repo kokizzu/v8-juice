@@ -215,6 +215,12 @@ function tryAbstract()
     }
 }
 
+function tryByteArray()
+{
+    var ba = new whio.ByteArray(100);
+    print(ba);
+    ba.close();
+}
 tryOne();
 tryOnlyOut();
 tryMemory();
@@ -222,5 +228,6 @@ trySubdev();
 tryBadStream();
 tryTypeInfo();
 tryAbstract();
+tryByteArray();
 print(":-D");
 

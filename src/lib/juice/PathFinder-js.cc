@@ -31,6 +31,7 @@ namespace v8 { namespace juice {
     {
 	enum { ExtraInternalFieldCount = 0 };
 	typedef PathFinder WrappedType;
+			    
 	static WrappedType * Ctor( Arguments const & argv,
 				   std::string & exceptionText)
 	{
@@ -80,7 +81,6 @@ namespace v8 { namespace juice {
 	{
 	    Dtor( static_cast<WrappedType*>(obj) );
 	}
-
     };
 
 #define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS(FUNC "(): argument assertion failed: " # COND)
@@ -154,7 +154,8 @@ namespace v8 { namespace juice {
     {
 	HandleScope scope;
 	typedef WeakJSClassCreator<PathFinder> PW;
-	PW pw( "PathFinder", target );
+	char const * className = "PathFinder";
+	PW pw( className );
 	pw.Set("pathString",
 	       pf_get_path_string,
 	       pf_set_path_string
@@ -170,6 +171,7 @@ namespace v8 { namespace juice {
 	    Set("find", pf_find );
 
 	Handle<Function> ctorFunc = pw.Seal();
+	target->Set( String::New(className), ctorFunc );
 	Handle<Object> shared = Object::New();
 	ctorFunc->Set(JSTR("shared"),shared);
 	{
