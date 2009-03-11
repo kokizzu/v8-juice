@@ -9,7 +9,7 @@ CXXFLAGS += -fPIC
 
 package.install.package_headers.dest := $(prefix)/include/v8/juice
 package.install.headers.dest = $(package.install.package_headers.dest)
-package.install.package_dlls.dest := $(prefix)/lib/v8/juice# use this one for plugin DLLs
+package.install.package_dlls.dest := $(prefix)/lib/v8/juice/$(package.version)# use this one for plugin DLLs
 
 ############################################################
 # we fudge the linker args for clients which live in this source tree,

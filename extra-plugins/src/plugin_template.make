@@ -26,6 +26,7 @@ $(error libv8-juice-config was not found in the PATH!)
 endif
 
 CPPFLAGS += $(shell $(jconfig) --includes)
+JUICE_VERSION := $(shell $(jconfig) --version)
 
 #package.dist_files += $(wildcard *.cpp *.cc *.h *.hpp *.c)
 #package.install.dlls.dest := $(package.install.package_dlls.dest)# override so plugins get installed here
@@ -42,7 +43,7 @@ $(call ShakeNMake.CALL.RULES.DLLS,$(PLUGIN_DLL_NAME))
 all: $($(PLUGIN_DLL_NAME).DLL)
 
 INSTALL.PLUGIN := $($(PLUGIN_DLL_NAME).DLL)
-INSTALL.PLUGIN.DEST := $(shell $(jconfig) --prefix)/lib/v8/juice
+INSTALL.PLUGIN.DEST := $(shell $(jconfig) --prefix)/lib/v8/juice/$(JUICE_VERSION)
 $(call ShakeNMake.CALL.RULES.INSTALL,PLUGIN)
 
 CLEAN_FILES += $(wildcard *~)
