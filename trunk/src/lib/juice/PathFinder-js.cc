@@ -12,8 +12,9 @@
 #include <v8/juice/JSClassCreator.h>
 #include <v8/juice/WeakJSClassCreator.h>
 
-#include <iostream> /* only for debuggering */
+
 #ifndef CERR
+#include <iostream> /* only for debuggering */
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
 
@@ -23,6 +24,8 @@ namespace v8 { namespace juice {
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
 
+    /** Required specialization of WeakJSClassCreatorOps<> for use
+	with WeakJSClassCreator<PathFinder>. */
     template <>
     struct WeakJSClassCreatorOps<PathFinder>
     {
@@ -176,6 +179,7 @@ namespace v8 { namespace juice {
 	    shared->Set(String::New("plugins"), pfobj );
 	}
 
+	if(0) // we don't yet have an include() func for JS...
 	{
 	    // Includes includes path:
 	    std::vector<Handle<Value> > vec(3,Null());
@@ -190,4 +194,3 @@ namespace v8 { namespace juice {
 #undef JSTR
 #undef TOSS
 }} // namespaces
-
