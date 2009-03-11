@@ -130,3 +130,10 @@ Again, that's all there is to it. Now when we call `new MyClass(...)` from JS, t
 The native object can be fetched later by passing a bound JS object to one of the static methods `WeakJSClassCreator::GetSelf()` or `WeakJSClassCreator::GetObject()`, both of which work similarly but have very slightly different semantics.
 
 Clients can use the `v8::juice::bind` and `v8::juice::cleanup` APIs in their ctors and dtors to get enhanced (and type-safe) type conversions and "supplemental" GC support. See the API docs for more details.
+
+=Real-world examples=
+
+There are some real-world examples of using these types in the v8-juice source tree:
+
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-js.cc Pathfinder-js.cc] is a fairly straightforward example which wraps the `v8::juice::PathFinder` class (or parts of it). Search that file for `SetupPathFinderClass` and you'll jump right to the relevant parts.
+  * Or the much more detailed [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/v8-whio.cc v8-whio.cc] implements the [PluginWhio whio plugin]. This example is way more convoluted than normal, largely because it contains some evolutionary cruft from the various phases of WeakJSClassCreator's development. It also demonstrates `WeakJSClassCreator<T>` where `WeakJSClassCreator<T>::WrappedType` is-not `T`, which might be interesting to someone out there.
