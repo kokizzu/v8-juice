@@ -117,8 +117,10 @@ namespace juice {
 	   called after this! Returns the target object which was set in the
 	   ctor.
 
+	   It returns the result of CtorTemplate()->GetFunction(), for reasons
+	   too deep and dark to shed light on at the moment.
 	*/
-	void Seal();
+	Handle<Function> Seal();
 
 	/**
 	   Sets a property with the given name and value.
@@ -134,6 +136,18 @@ namespace juice {
 	*/
 	JSClassCreator & Set( char const * name, InvocationCallback func, PropertyAttribute attributes = v8::None );
 
+	/**
+	   Adds a property accessor to the prototype object.
+
+	   Returns this object.
+	*/
+	JSClassCreator & Set( char const * name,
+			      AccessorGetter  	getter,
+			      AccessorSetter  	setter = 0,
+			      Handle< Value >  	data = Handle< Value >(),
+			      AccessControl  	settings = v8::DEFAULT,
+			      PropertyAttribute attribute = None
+			      );
 	/**
 	   Sets this JS class to inherit the given parent.
 
