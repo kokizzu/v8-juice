@@ -217,31 +217,41 @@ namespace v8 { namespace juice { namespace whio {
     template <>
     struct WeakJSClassCreatorOps<whio::StreamBase> :
 	whio::DevClassOps<whio::StreamBase, &whio::stream_construct<-1> >
-    {};
+    {
+	static char const * ClassName() { return "StreamBase"; }
+    };
 
     /** Specialization needed by WeakJSClassCreator. */
     template <>
     struct WeakJSClassCreatorOps<whio::OutStream> :
 	whio::DevClassOps<whio::OutStream, &whio::stream_construct<0> >
-    {};
+    {
+	static char const * ClassName() { return "OutStream"; }
+    };
 
     /** Specialization needed by WeakJSClassCreator. */
     template <>
     struct WeakJSClassCreatorOps<whio::InStream> :
 	whio::DevClassOps<whio::InStream, &whio::stream_construct<1> >
-    {};
+    {
+	static char const * ClassName() { return "InStream"; }
+    };
 
     /** Specialization needed by WeakJSClassCreator. */
     template <>
     struct WeakJSClassCreatorOps<whio::IODevice> :
 	whio::DevClassOps<whio::IODevice, &whio::dev_construct >
-    {};
+    {
+	static char const * ClassName() { return "IODevice"; }
+    };
 
     /** Specialization needed by WeakJSClassCreator. */
     template <>
     struct WeakJSClassCreatorOps<whio::ByteArray> :
 	whio::DevClassOps<whio::ByteArray, &whio::ba_construct >
-    {};
+    {
+	static char const * ClassName() { return "ByteArray"; }
+    };
 
 
 namespace whio {
@@ -818,7 +828,7 @@ namespace whio {
 
 	////////////////////////////////////////////////////////////
 	// IODevice class:
-	WeakJSClassCreator<IODevice> bindIOD( strings::IODevice, whio );
+	WeakJSClassCreator<IODevice> bindIOD( whio );
 	{
 	    bindIOD
 		.Inherit( bindAbs )
@@ -843,7 +853,7 @@ namespace whio {
 	// ByteArray class:
 	{
 	    WeakJSClassCreator<ByteArray>
-		bindBA( strings::ByteArray, whio );
+		bindBA( whio );
             bindBA.Inherit( bindIOD )
  		.Set(strings::toString, devT_tostring<strings::ByteArray> )
 		.Seal();
@@ -851,7 +861,7 @@ namespace whio {
 
 	////////////////////////////////////////////////////////////
 	// StreamBase class:
-	WeakJSClassCreator<StreamBase> bindSB( strings::StreamBase, whio );
+	WeakJSClassCreator<StreamBase> bindSB( whio );
 	{
 	    bindSB
 		.Inherit( bindAbs )
@@ -865,7 +875,7 @@ namespace whio {
 	////////////////////////////////////////////////////////////
 	// InStream class:
 	{
-	    WeakJSClassCreator<InStream> bindIS( strings::InStream, whio );
+	    WeakJSClassCreator<InStream> bindIS( whio );
 	    bindIS.Inherit( bindSB )
  		.Set(strings::read, FunctionTemplate::New( stream_read )->GetFunction() )
  		.Set(strings::toString, devT_tostring<strings::InStream> )
@@ -875,7 +885,7 @@ namespace whio {
 	////////////////////////////////////////////////////////////
 	// OutStream class:
 	{
-	    WeakJSClassCreator<OutStream> bindOS( strings::OutStream, whio );
+	    WeakJSClassCreator<OutStream> bindOS( whio );
             bindOS.Inherit( bindSB )
  		.Set(strings::write, stream_write )
  		.Set(strings::toString, devT_tostring<strings::OutStream> )

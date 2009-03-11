@@ -31,7 +31,7 @@ namespace v8 { namespace juice {
     {
 	enum { ExtraInternalFieldCount = 0 };
 	typedef PathFinder WrappedType;
-			    
+	static char const * ClassName() { return "PathFinder"; }
 	static WrappedType * Ctor( Arguments const & argv,
 				   std::string & exceptionText)
 	{
@@ -154,8 +154,7 @@ namespace v8 { namespace juice {
     {
 	HandleScope scope;
 	typedef WeakJSClassCreator<PathFinder> PW;
-	char const * className = "PathFinder";
-	PW pw( className );
+	PW pw;
 	pw.Set("pathString",
 	       pf_get_path_string,
 	       pf_set_path_string
@@ -170,14 +169,13 @@ namespace v8 { namespace juice {
 		).
 	    Set("find", pf_find );
 
-	Handle<Function> ctorFunc = pw.Seal();
-	target->Set( String::New(className), ctorFunc );
+	target->Set( String::New(PW::ClassOpsType::ClassName()), pw.Seal() );
 	Handle<Object> shared = Object::New();
-	ctorFunc->Set(JSTR("shared"),shared);
+	pw.CtorTemplate()->GetFunction()->Set(JSTR("shared"),shared);
 	{
 	    // Install an instance wrapping the v8::juice::plugin::PluginPath() shared object:
 	    Handle<Value> pfex( External::New( &::v8::juice::plugin::PluginPath() ) );
-	    Handle<Object> pfobj = ctorFunc->NewInstance( 1, &pfex );
+	    Handle<Object> pfobj = pw.NewInstance( 1, &pfex );
 	    shared->Set(String::New("plugins"), pfobj );
 	}
 
@@ -188,7 +186,7 @@ namespace v8 { namespace juice {
 	    vec[0] = JSTR(".");
 	    vec[1] = JSTR(".js:.v8:.juice:.v8-juice");
 	    vec[2] = JSTR(":");
-	    Handle<Object> pfInc = ctorFunc->NewInstance( 3, &vec[0] );
+	    Handle<Object> pfInc = pw.NewInstance( 3, &vec[0] );
 	    shared->Set(String::New("include"), pfInc );
 	}
 	return target;

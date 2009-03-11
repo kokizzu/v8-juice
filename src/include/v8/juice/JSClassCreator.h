@@ -35,7 +35,6 @@
 namespace v8 {
 namespace juice {
 
-
     /**
        JSClassCreator is a tool to simplify the creation of new
        JS-side classes. It does not currently have any features for
@@ -142,6 +141,15 @@ namespace juice {
 	   too deep and dark to shed light on at the moment.
 	*/
 	Handle<Function> Seal();
+
+	/**
+	   Creates a new instance of this class' represented type,
+	   using the constructor function set in the ctor.  This must
+	   not be called before Seal() is called (results are
+	   undefined). The returned object is owned by the JS engine,
+	   and it may be Empty() (v8's way of signaling an exception).
+	*/
+	Local<Object> NewInstance( int argc, Handle<Value> argv[] );
 
 	/**
 	   Sets a property with the given name and value.
