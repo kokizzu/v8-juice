@@ -53,6 +53,7 @@ namespace v8 { namespace juice { namespace whio {
 	static char const * StreamBase;
 	static char const * InStream;
 	static char const * OutStream;
+	static char const * ByteArray;
 
 	// IOBase:
 	static char const * SEEK_CUR_;
@@ -85,6 +86,7 @@ namespace v8 { namespace juice { namespace whio {
     char const * strings::IODevice = "IODevice";
     char const * strings::InStream = "InStream";
     char const * strings::OutStream = "OutStream";
+    char const * strings::ByteArray = "ByteArray";
     char const * strings::SEEK_CUR_ = "SEEK_CUR";
     char const * strings::SEEK_END_ = "SEEK_END";
     char const * strings::SEEK_SET_ = "SEEK_SET";
@@ -121,27 +123,34 @@ namespace v8 { namespace juice { namespace whio {
     template <int mode /* 0=out, 1=in, -1=no-op*/>
     whio_stream * stream_construct( Arguments const &,
 				    std::string & exception );
+    whio_dev * ba_construct( Arguments const &,
+			     std::string & exception );
 
 
-    /** A internal marker type. */
+    /** A internal helper type. */
     struct IOBase
     {
     };
-    /** A internal marker type. */
+    /** A internal helper type. */
     struct IODevice : IOBase
     {
 	typedef whio_dev type;
     };
-    /** A internal marker type. */
+    /** A internal helper type. */
+    struct ByteArray : IODevice
+    {
+	typedef whio_dev type;
+    };
+    /** A internal helper type. */
     struct StreamBase : IOBase
     {
 	typedef whio_stream type;
     };
-    /** A internal marker type. */
+    /** A internal helper type. */
     struct InStream : StreamBase
     {
     };
-    /** A internal marker type. */
+    /** A internal helper type. */
     struct OutStream : StreamBase
     {
     };
@@ -228,49 +237,14 @@ namespace v8 { namespace juice { namespace whio {
 	whio::DevClassOps<whio::IODevice, &whio::dev_construct >
     {};
 
+    /** Specialization needed by WeakJSClassCreator. */
+    template <>
+    struct WeakJSClassCreatorOps<whio::ByteArray> :
+	whio::DevClassOps<whio::ByteArray, &whio::ba_construct >
+    {};
+
 
 namespace whio {
-
-    /**
-       Internal template we can specialize for specific i/o dev/stream
-       combinations.
-    */
-    template <typename T>
-    struct WeakWrap
-    {
-    };
-
-    template <>
-    struct WeakWrap<IODevice>
-    {
-	//typedef v8::juice::WeakJSClassCreator<IODevice::type, DevClassOps<IODevice, &dev_construct> > wrapper;
-	typedef v8::juice::WeakJSClassCreator<IODevice> wrapper;
-	typedef whio_dev DevType;
-    };
-
-    template <>
-    struct WeakWrap<InStream>
-    {
-	//typedef v8::juice::WeakJSClassCreator<InStream::type, DevClassOps<InStream, &stream_construct<1> > > wrapper;
-	typedef v8::juice::WeakJSClassCreator<InStream> wrapper;
-	typedef InStream::type DevType;
-    };
-
-    template <>
-    struct WeakWrap<OutStream>
-    {
-	//typedef v8::juice::WeakJSClassCreator<OutStream::type, DevClassOps<OutStream, &stream_construct<0> > > wrapper;
-	typedef v8::juice::WeakJSClassCreator<OutStream> wrapper;
-	typedef OutStream::type DevType;
-    };
-
-    template <>
-    struct WeakWrap<StreamBase>
-    {   // this is not actually technically valid, but it'll have to do for now:
-	//typedef v8::juice::WeakJSClassCreator<StreamBase::type, DevClassOps<StreamBase, &stream_construct<-1> > > wrapper;
-	typedef v8::juice::WeakJSClassCreator<StreamBase> wrapper;
-	typedef StreamBase::type DevType;
-    };
 
 
 
@@ -296,7 +270,7 @@ namespace whio {
 #if 0
 #  define DEVH(PT,H) PT::type * dev = dev_cast< PT::type >( H )
 #else
-#  define DEVH(T,H) WeakWrap<T>::DevType * dev = WeakWrap<T>::wrapper::GetSelf( H )
+#  define DEVH(T,H) WeakJSClassCreator<T>::WrappedType * dev = WeakJSClassCreator<T>::GetSelf( H )
 #endif
 #define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer not found (maybe already destroyed?)!")
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
@@ -421,6 +395,29 @@ namespace whio {
 	return 0;
     }
 
+    whio_dev * ba_construct( Arguments const & argv,
+			     std::string & exception )
+    {
+	const int argc = argv.Length();
+	whio_dev * dev = 0;
+	HandleScope scope;
+	Local<Object> self = argv.This();
+	whio_size_t sz = (argc > 0) ? CastFromJS<whio_size_t>(argv[0]) : 0;
+	dev = whio_dev_for_membuf( sz, 1.5 );
+	if( ! dev )
+	{
+	    std::ostringstream msg;
+	    msg << "Could not create in-memory i/o device of "
+		<<sz<<" bytes!";
+	    exception = msg.str();
+	}
+	else
+	{
+	    self->Set(JSTR(strings::canWrite), Boolean::New(true) );
+	    self->Set(JSTR(strings::canRead), Boolean::New(true) );
+	}
+	return dev;
+    }
     /**
        Constructor for the native half of InStream and OutStream
        objects.
@@ -606,7 +603,7 @@ namespace whio {
 	ARGS((0==argc));
 	DEVTHIS(IODevice);
 	//CERR << "IODevice.close() == " << dev << '\n';
-	WeakWrap<IODevice>::wrapper::DestroyObject( argv.This() );
+	WeakJSClassCreator<IODevice>::DestroyObject( argv.This() );
 	return Undefined();
     }
 
@@ -615,7 +612,7 @@ namespace whio {
 	ARGS((0==argc));
 	DEVTHIS(StreamBase);
 	//CERR << "StreamBase.close() == " << dev << '\n';
-	WeakWrap<StreamBase>::wrapper::DestroyObject( argv.This() );
+	WeakJSClassCreator<StreamBase>::DestroyObject( argv.This() );
 	return Undefined();
     }
     /**
@@ -823,9 +820,8 @@ namespace whio {
 
 	////////////////////////////////////////////////////////////
 	// IODevice class:
+	WeakJSClassCreator<IODevice> bindIOD( strings::IODevice, whio );
 	{
-	    WeakWrap<IODevice>::wrapper
-		bindIOD( strings::IODevice, whio );
 	    bindIOD
 		.Inherit( bindAbs )
  		.Set(strings::write, dev_write )
@@ -846,9 +842,18 @@ namespace whio {
 	}
 
 	////////////////////////////////////////////////////////////
+	// ByteArray class:
+	{
+	    WeakJSClassCreator<ByteArray>
+		bindBA( strings::ByteArray, whio );
+            bindBA.Inherit( bindIOD )
+ 		.Set(strings::toString, devT_tostring<strings::ByteArray> )
+		.Seal();
+	}
+
+	////////////////////////////////////////////////////////////
 	// StreamBase class:
-	WeakWrap<StreamBase>::wrapper
-	    bindSB( strings::StreamBase, whio );
+	WeakJSClassCreator<StreamBase> bindSB( strings::StreamBase, whio );
 	{
 	    bindSB
 		.Inherit( bindAbs )
@@ -862,10 +867,8 @@ namespace whio {
 	////////////////////////////////////////////////////////////
 	// InStream class:
 	{
-	    WeakWrap<InStream>::wrapper
-		bindIS( strings::InStream, whio );
-	    bindIS
-		.Inherit( bindSB )
+	    WeakJSClassCreator<InStream> bindIS( strings::InStream, whio );
+	    bindIS.Inherit( bindSB )
  		.Set(strings::read, FunctionTemplate::New( stream_read )->GetFunction() )
  		.Set(strings::toString, devT_tostring<strings::InStream> )
 		.Seal();
@@ -874,8 +877,7 @@ namespace whio {
 	////////////////////////////////////////////////////////////
 	// OutStream class:
 	{
-	    WeakWrap<OutStream>::wrapper
-		bindOS( strings::OutStream, whio );
+	    WeakJSClassCreator<OutStream> bindOS( strings::OutStream, whio );
             bindOS.Inherit( bindSB )
  		.Set(strings::write, stream_write )
  		.Set(strings::toString, devT_tostring<strings::OutStream> )
