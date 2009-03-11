@@ -1,6 +1,7 @@
 #include <string>
 
 #include <v8/juice/convert.h>
+#include <v8/juice/forwarding.h>
 #include <v8/juice/plugin.h>
 #include "v8-strfunc.h"
 #include "v8-sprintf.h"

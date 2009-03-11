@@ -142,6 +142,41 @@ namespace juice {
     };
 
     /**
+       WeakOpsNoop is a helper for use in the early stages of
+       implementing WeakJSClassCreatorOps specializations. The idea is
+       that one's own WeakJSClassCreatorOps specialization inherits
+       this type to get dummy/empty functionality, so it'll at least
+       it'll compile before one has to implement the Ctor() and Dtor()
+       members. Once the custom implementation has all of the required
+       members, there is no need to inherit this class (unless one only
+       wants to inherit the WrappedType typedef).
+
+       Because there is no sensible default value for a class' name,
+       the ClassName() member must be implemented even when subclassing
+       this type.
+    */
+    template <typename T, int FieldCount = 0>
+    struct WeakOpsNoop
+    {
+	/** See WeakJSClassCreatorOps::WrappedType. */
+	typedef T WrappedType;
+	/** See WeakJSClassCreatorOps::ExtraInternalFieldCount. */
+	enum { ExtraInternalFieldCount = FieldCount };
+	/** Triggers a "not yet implemented" exception. */
+	static WrappedType * Ctor( Arguments const &  /*argv*/,
+				   std::string & exceptionText)
+	{
+	    exceptionText = "WeakOpsNoop<T>::Ctor() not implemented!";
+	    return 0;
+	}
+	/** Warning - Does Nothing! Reimplement this in subclasses! */
+	static void Dtor( WrappedType * obj )
+	{
+	    return 0;
+	}
+    };
+
+    /**
        WeakJSClassCreator is a tool to simplify the creation of new
        wrapped classes, including addition of automatic cleanup handling
        via weak-pointer callbacks.
@@ -162,9 +197,10 @@ namespace juice {
        implement member function which disconnect from the underlying native
        object (e.g. File.close()).
 
-       The template argument is:
-
-       - WrappedT = the native type we will wrap, non-CVP qualified.
+       The template argument, WrappedT, is the native type we will
+       wrap, non-CVP qualified. It is actually legal to use a type other
+       than the real native we will wrap, as long as the WeakJSClassCreatorOps
+       specialization (see below) provides us with the real type.
 
        However, the client must also provide a specialization of WeakJSClassCreatorOps
        for the given type. That specialization must conform to the API defined
@@ -206,7 +242,7 @@ namespace juice {
        Example usage:
 
        First we need a custom WeakJSClassCreatorOps specialization. Here's
-       one way to do that:
+       a minimal (but functional) implementation:
 
        \code
        struct MyTypeOps
@@ -221,11 +257,17 @@ namespace juice {
 	   {
 	       if(obj) delete obj;
 	   }
+	   static char const * ClassName()
+	   {
+	       return "MyClass";
+	   }
        };
        namespace v8 { namespace juice {
-           // Requires specialization of WeakJSClassCreatorOps.
+           // Required specialization of WeakJSClassCreatorOps:
            template <>
            WeakJSClassCreatorOps<MyType> : MyTypeOps {};
+	   // We could have done it without subclassing, but this is copy/paste code
+	   // from a working implementation ;)
        }}
        \endcode
 
@@ -243,7 +285,10 @@ namespace juice {
 	 .Seal(); // must be the last call made on this object.
        \endcode
 
-       That's all there is to it.
+       That's all there is to it. More functionality is provided via
+       the JSClassCreator base class, and there are several static
+       member functions for "casting" between the JS/Native worlds
+       and for destroying instances of the generated class.
     */
     template <typename WrappedT>
     class WeakJSClassCreator : public JSClassCreator
@@ -270,7 +315,7 @@ namespace juice {
 	    : JSClassCreator( ClassOpsType::ClassName(),
 			      target,
 			      ctor_proxy,
-			      static_cast<int>(ClassOpsType::ExtraInternalFieldCount + 1) )
+			      static_cast<int>(FieldCount) )
 	{
 	}
 
@@ -292,7 +337,7 @@ namespace juice {
 	WeakJSClassCreator()
 	    : JSClassCreator( ClassOpsType::ClassName(),
 			      ctor_proxy,
-			      static_cast<int>(ClassOpsType::ExtraInternalFieldCount + 1) )
+			      static_cast<int>(FieldCount) )
 	{
 	}
 
@@ -309,8 +354,8 @@ namespace juice {
 	*/
 	static WrappedType * GetSelf( Local<Object> h )
 	{
-	    if( h.IsEmpty() || (h->InternalFieldCount() != (ClassOpsType::ExtraInternalFieldCount+1)) ) return 0;
-	    Local<Value> lv( h->GetInternalField(ClassOpsType::ExtraInternalFieldCount) );
+	    if( h.IsEmpty() || (h->InternalFieldCount() != (FieldCount)) ) return 0;
+	    Local<Value> lv( h->GetInternalField(NativeInternalField) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
 	    Local<External> ex( External::Cast(*lv) );
 	    return static_cast<WrappedType*>( ex->Value() ); // we can only hope...
@@ -392,6 +437,13 @@ namespace juice {
         }
 
     private:
+	enum Internal {
+	/** The internal field number where we store the wrapped object. */
+	NativeInternalField = ClassOpsType::ExtraInternalFieldCount,
+	/** The number of internal fields. */
+	FieldCount = NativeInternalField + 1
+	};
+
 	// Should we make them copyable? Might be useful at some
 	// point, so down-stream code has access to the JS-side
 	// constructor/prototype and such.
@@ -416,8 +468,8 @@ namespace juice {
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
 	    Local<Object> jobj( Object::Cast(*pv) );
-	    if( jobj->InternalFieldCount() != (1+ClassOpsType::ExtraInternalFieldCount) ) return;
-	    Local<Value> lv( jobj->GetInternalField(ClassOpsType::ExtraInternalFieldCount) );
+	    if( jobj->InternalFieldCount() != (FieldCount) ) return;
+	    Local<Value> lv( jobj->GetInternalField(NativeInternalField) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return;
 	    /**
 	       We have to ensure that we have no dangling External in JS space. This
@@ -425,7 +477,7 @@ namespace juice {
 	       knowledge that member funcs called after that won't get a dangling
 	       pointer. Without this, some code will crash in that case.
 	    */
-	    jobj->SetInternalField(ClassOpsType::ExtraInternalFieldCount,Null());
+	    jobj->SetInternalField(NativeInternalField,Null());
 	    pv.Dispose();
 	    pv.Clear();
 	    the_cleaner( static_cast<WrappedType*>( nobj ) );
@@ -442,7 +494,7 @@ namespace juice {
 	{
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
-	    self->SetInternalField( ClassOpsType::ExtraInternalFieldCount, External::New(obj) );
+	    self->SetInternalField( NativeInternalField, External::New(obj) );
 	    //CERR << "Wrapped object @"<<obj<<" in a Persistent<Object>.\n";
 	    return self;
 	}
