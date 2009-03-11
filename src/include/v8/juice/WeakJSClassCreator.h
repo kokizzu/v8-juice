@@ -40,6 +40,7 @@
 namespace v8 {
 namespace juice {
 
+#if !defined(DOXYGEN)
     namespace Detail
     {
 	/**
@@ -55,7 +56,7 @@ namespace juice {
 	    }
 	};
     }
-
+#endif // DOXYGEN
     /**
        Any type used with WeakJSClassCreator must provide a
        specialization of this type and provide all of the functions,
