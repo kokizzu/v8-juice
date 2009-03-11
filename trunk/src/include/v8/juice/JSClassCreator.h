@@ -68,6 +68,7 @@ namespace juice {
 	Local<ObjectTemplate> proto;
 	JSClassCreator( JSClassCreator const & ); // not implemented
 	JSClassCreator & operator=( JSClassCreator const & ); // not implemented
+	bool hasTarget;
     public:
 	/**
 	   Begins setting up a new JS class, as a member of the given target object,
@@ -76,6 +77,24 @@ namespace juice {
 	*/
 	JSClassCreator( char const * className,
 			Handle<Object> target,
+			v8::InvocationCallback ctor,
+			int internalFieldCount = 0 );
+	/**
+	   Identical to the 4-arg ctor except that it does not take a target
+	   object. The implications of this are:
+
+	   - The Target() member will return an empty handle.
+	   - The caller must add this class to his chosen target manually,
+	   as demonstrated here:
+
+	   \code
+	   target->Set( String::New("ClassName"), myCreator.Seal() );
+	   \endcode
+
+	   That will "close off" the class creation process and add the new class
+	   to the target object.
+	*/
+	JSClassCreator( char const * className,
 			v8::InvocationCallback ctor,
 			int internalFieldCount = 0 );
 	/**
@@ -107,15 +126,17 @@ namespace juice {
 	Local<ObjectTemplate> Prototype() const;
 
 	/**
-	   Returns the target set in the constructor.
+	   Returns the target set in the constructor. If no target was
+	   set, the returned handle will be default-constructed
+	   (empty).
 	*/
 	Handle<Object> Target() const;
 
 	/**
-	   Finalizes the class creation process and adds the construtor
-	   to this->Target(). No setter methods should be
-	   called after this! Returns the target object which was set in the
-	   ctor.
+	   Finalizes the class creation process and adds the
+	   construtor to this->Target() (if it was set in the
+	   ctor). No setter methods should be called after this (well,
+	   go ahead - maybe it'll work for you).
 
 	   It returns the result of CtorTemplate()->GetFunction(), for reasons
 	   too deep and dark to shed light on at the moment.

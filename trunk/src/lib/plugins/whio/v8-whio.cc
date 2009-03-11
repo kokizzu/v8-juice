@@ -246,8 +246,6 @@ namespace v8 { namespace juice { namespace whio {
 
 namespace whio {
 
-
-
     /**
        Casts v to (T*). T must be one of whio_dev or whio_stream.
     */

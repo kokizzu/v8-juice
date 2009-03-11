@@ -13,7 +13,23 @@ namespace v8 { namespace juice {
 	: className(className),
 	  target(target),
 	  ctorTmpl( FunctionTemplate::New(ctor) ),
-	  proto( ctorTmpl->PrototypeTemplate() )
+	  proto( ctorTmpl->PrototypeTemplate() ),
+	  hasTarget(true)
+    {
+	if( internalFieldCount > 0 )
+	{
+	    ctorTmpl->InstanceTemplate()->SetInternalFieldCount(internalFieldCount);
+	}
+    }
+
+    JSClassCreator::JSClassCreator( char const * className,
+				    v8::InvocationCallback ctor,
+				    int internalFieldCount )
+	: className(className),
+	  target(),
+	  ctorTmpl( FunctionTemplate::New(ctor) ),
+	  proto( ctorTmpl->PrototypeTemplate() ),
+	  hasTarget(false)
     {
 	if( internalFieldCount > 0 )
 	{
@@ -55,9 +71,13 @@ namespace v8 { namespace juice {
     {
 	// In my experience, if GetFunction() is called BEFORE setting up
 	// the Prototype object, v8 gets very unhappy.
-	Handle<Function> func( ctorTmpl->GetFunction() );
-	this->target->Set( ::v8::String::New(this->className), func );
-	return func;
+	if( this->hasTarget )
+	{
+	    Handle<Function> func( ctorTmpl->GetFunction() );
+	    this->target->Set( ::v8::String::New(this->className), func );
+	    return func;
+	}
+	else return ctorTmpl->GetFunction();
     }
 
     JSClassCreator & JSClassCreator::Set( char const * name, Handle< Data > const & value , PropertyAttribute attributes )

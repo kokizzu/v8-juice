@@ -18,5 +18,5 @@ function tryOne()
 tryOne();
 print('PathFinder.shared =',PathFinder.shared);
 dumpPF(PathFinder.shared.plugins);
-dumpPF(PathFinder.shared.include);
+//dumpPF(PathFinder.shared.include);
 //dumpPF(new Number(3)); // should throw

@@ -266,6 +266,28 @@ namespace juice {
 	}
 
 	/**
+	   Identical to the 2-arg ctor except that it does not take a
+	   target object. The implications of this are:
+
+	   - The Target() member will return an empty handle.
+	   - The caller must add this class to his chosen target manually,
+	   as demonstrated here:
+
+	   \code
+	   target->Set( String::New("ClassName"), myCreator.Seal() );
+	   \endcode
+
+	   That will "close off" the class creation process and add the new class
+	   to the target object.
+	*/
+	WeakJSClassCreator( char const * className )
+	    : JSClassCreator( className,
+			      ctor_proxy,
+			      static_cast<int>(ClassOpsType::ExtraInternalFieldCount + 1) )
+	{
+	}
+
+	/**
 	   Returns the bound native for the given handle. The handle
 	   is assumed to have been created using this class'
 	   mechanisms. If it was not, this routine will return 0.
