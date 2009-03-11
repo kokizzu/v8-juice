@@ -16,13 +16,12 @@
 
    Pedantic license note: much of this code was ported from the
    SpiderApe JS/sqlite3 bindings (http://SpiderApe.sf.net). Though
-   that code is GPL, i wrote it, and am re-licensing this copy to
+   that code is MPL, i wrote it, and am re-licensing this copy to
    conform to v8 conventions.
 */
-// Copyright 2007-2009 the V8 project authors. All rights reserved.
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Copyright 2009 Stephan Beal. All rights reserved.  Redistribution
+// and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
 //
 //     * Redistributions of source code must retain the above copyright
 //       notice, this list of conditions and the following disclaimer.
@@ -74,6 +73,7 @@
 #include <v8.h>
 #include <v8/juice/convert.h>
 #include <v8/juice/plugin.h>
+#include <v8/juice/WeakJSClassCreator.h>
 
 /**
    Convenience macro for marking wrapper functions.
@@ -88,6 +88,7 @@ namespace sq3 {
     namespace bind = ::v8::juice::bind;
     using namespace ::v8;
     using namespace ::v8::juice::convert;
+
 
     JS_WRAPPER(sq3_callback_noop)
     {
@@ -282,6 +283,8 @@ namespace sq3 {
 	return db ? db->dbh : 0;
     }
 
+} // namespaces sq3
+
 #define ASSERTARGS(FUNCNAME,COND) if(!(COND)) return ThrowException(String::New(# FUNCNAME "(): assertion failed: " # COND))
 
 #define DB_ARG(HND) DBInfo * db = DBInfo::GetNative( HND );			\
@@ -301,6 +304,30 @@ namespace sq3 {
 #define SQVAL_ARG_OR(HND,RV) SQVAL_ARG(HND);	\
 	if( ! sqval ) return RV
 #define SQVAL_ARG_THROW(HND) SQVAL_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_value handle!")))
+
+    template <>
+    struct WeakJSClassCreatorOps<sq3::DBInfo>
+    {
+	typedef sq3::DBInfo WrappedType;
+	enum {
+	ExtraInternalFieldCount = 0
+	};
+	static char const * ClassName() { return "SQLite3"; }
+	static WrappedType * Ctor( Arguments const &  /*argv*/,
+				   std::string & exceptionText )
+	{
+	    exceptionText = "Not yet implemented.";
+	    return 0;
+	}
+	static void Dtor( WrappedType * obj )
+	{
+	    delete obj;
+	}
+    };
+
+namespace sq3 {
+
+    typedef WeakJSClassCreator<DBInfo> WeakWrap;
 
 
     /**
@@ -416,8 +443,11 @@ namespace sq3 {
 
     JS_WRAPPER(sq3_open)
     {
+// 	std::string errmsg;
+// 	DBInfo * db = WeakWrap::Ctor( argv, errmsg );
+
 	ASSERTARGS(sqlite3_open,(argv.Length()==1));
-	std::string name = CastFromJS<std::string>( argv[0] );
+	std::string name( CastFromJS<std::string>( argv[0] ) );
 	if( name.empty() )
 	{
 	    return ThrowException( String::New("First argument must be a database file name!") );
@@ -432,7 +462,7 @@ namespace sq3 {
 	}
 	DBInfo * db = new DBInfo;
 	db->dbh = dbh;
-	db->jsobj = argv.Holder();
+	db->jsobj = argv.This();
 
 	if(1)
 	{ // register js_eval() SQL func
@@ -1423,6 +1453,11 @@ namespace sq3 {
 	    Handle<ObjectTemplate> wtf = ObjectTemplate::New();
 	    DBInfo::js_prototype = Persistent<ObjectTemplate>::New( wtf );
 	}
+#endif
+
+#if 1 // just testing..
+	WeakWrap gen(gl);
+	gen.Seal();
 #endif
 
 #define ADDFUNC(SUF) gl->Set(String::New("sqlite3_" # SUF), FunctionTemplate::New(sq3_ ## SUF)->GetFunction() )
