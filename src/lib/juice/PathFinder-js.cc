@@ -152,11 +152,10 @@ namespace v8 { namespace juice {
 	HandleScope scope;
 	typedef WeakJSClassCreator<PathFinder> PW;
 	PW pw( "PathFinder", target );
-	pw.Set("shared", Handle<Object>(Object::New())).
-	    Set("pathString",
-		pf_get_path_string,
-		pf_set_path_string
-		).
+	pw.Set("pathString",
+	       pf_get_path_string,
+	       pf_set_path_string
+	       ).
 	    Set("pathArray",
 		pf_get_path_array,
 		pf_set_path_array
