@@ -80,6 +80,11 @@ namespace v8 { namespace juice {
 	else return ctorTmpl->GetFunction();
     }
 
+    Local<Object> JSClassCreator::NewInstance( int argc, Handle<Value> argv[] )
+    {
+	return this->CtorTemplate()->GetFunction()->NewInstance( argc, argv );
+    }
+
     JSClassCreator & JSClassCreator::Set( char const * name, Handle< Data > const & value , PropertyAttribute attributes )
     {
 	proto->Set( String::New(name), value, attributes );

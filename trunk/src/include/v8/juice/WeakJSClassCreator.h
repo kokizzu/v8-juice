@@ -128,6 +128,17 @@ namespace juice {
 	   deregister the object in this function.
 	*/
 	static void Dtor( WrappedType * obj );
+
+	/**
+	   Must return the JS-side class name of this type. It must be
+	   a legal JS function name.
+
+	   Design note: this is a static function instead of a static
+	   string because this requires much less code from
+	   implementors (whereas a string string requires out-of-class
+	   initialization).
+	*/
+	static char const * ClassName();
     };
 
     /**
@@ -251,14 +262,12 @@ namespace juice {
 	typedef typename ClassOpsType::WrappedType WrappedType;
 
 	/**
-	   Starts the setup of a new class with the given name. It
-	   will be populated into the target object when Seal() is
-	   called.  See the JSClassCreator ctor for more information
-	   on that process.
+	   Starts the setup of a new class. It will be populated into
+	   the target object when Seal() is called.  See the
+	   JSClassCreator ctor for more information on that process.
 	*/
-	WeakJSClassCreator( char const * className,
-			    Handle<Object> target)
-	    : JSClassCreator( className,
+	explicit WeakJSClassCreator( Handle<Object> target)
+	    : JSClassCreator( ClassOpsType::ClassName(),
 			      target,
 			      ctor_proxy,
 			      static_cast<int>(ClassOpsType::ExtraInternalFieldCount + 1) )
@@ -266,7 +275,7 @@ namespace juice {
 	}
 
 	/**
-	   Identical to the 2-arg ctor except that it does not take a
+	   Identical to the 1-arg ctor except that it does not take a
 	   target object. The implications of this are:
 
 	   - The Target() member will return an empty handle.
@@ -280,8 +289,8 @@ namespace juice {
 	   That will "close off" the class creation process and add the new class
 	   to the target object.
 	*/
-	WeakJSClassCreator( char const * className )
-	    : JSClassCreator( className,
+	WeakJSClassCreator()
+	    : JSClassCreator( ClassOpsType::ClassName(),
 			      ctor_proxy,
 			      static_cast<int>(ClassOpsType::ExtraInternalFieldCount + 1) )
 	{
@@ -308,7 +317,7 @@ namespace juice {
 	}
 
 	/** Reimplemented to DO NOTHING, as the number is defined
-	    by the WeakJSClassCreator specialization. When changing
+	    by the WeakJSClassCreatorOps specialization. When changing
 	    it here, we lose the ability to know where the object
 	    is in the list (since we store it at the end).
 	*/
@@ -383,12 +392,11 @@ namespace juice {
         }
 
     private:
-	WeakJSClassCreator(){}
 	// Should we make them copyable? Might be useful at some
 	// point, so down-stream code has access to the JS-side
 	// constructor/prototype and such.
-	WeakJSClassCreator & operator=(WeakJSClassCreator const &);
-	WeakJSClassCreator(WeakJSClassCreator const &);
+	//WeakJSClassCreator & operator=(WeakJSClassCreator const &);
+	//WeakJSClassCreator(WeakJSClassCreator const &);
 	/**
 	   Unbinds native and destroys it using CleanupFunctor.
 	*/
