@@ -51,11 +51,13 @@ namespace v8 { namespace juice {
 	return this->target;
     }
 
-    void JSClassCreator::Seal()
+    Handle<Function> JSClassCreator::Seal()
     {
 	// In my experience, if GetFunction() is called BEFORE setting up
 	// the Prototype object, v8 gets very unhappy.
-	this->target->Set( ::v8::String::New(this->className), ctorTmpl->GetFunction() );
+	Handle<Function> func( ctorTmpl->GetFunction() );
+	this->target->Set( ::v8::String::New(this->className), func );
+	return func;
     }
 
     JSClassCreator & JSClassCreator::Set( char const * name, Handle< Data > const & value , PropertyAttribute attributes )
@@ -81,5 +83,16 @@ namespace v8 { namespace juice {
 	return this->Inherit( parent.CtorTemplate() );
     }
 
+    JSClassCreator & JSClassCreator::Set( char const * name,
+					  AccessorGetter  	getter,
+					  AccessorSetter  	setter,
+					  Handle< Value >  	data,
+					  AccessControl  	settings,
+					  PropertyAttribute attribute
+					  )
+    {
+	this->proto->SetAccessor( String::New(name), getter, setter, data, settings, attribute );
+	return *this;
+    }
 
 }}
