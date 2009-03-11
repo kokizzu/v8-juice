@@ -17,6 +17,6 @@ function tryOne()
 
 tryOne();
 print('PathFinder.shared =',PathFinder.shared);
-dumpPF(PathFinder.shared.plugins);
+dumpPF(PathFinder.shared.plugins,['v8-juice-whio','v8-juice-sqlite3']);
 //dumpPF(PathFinder.shared.include);
 //dumpPF(new Number(3)); // should throw
