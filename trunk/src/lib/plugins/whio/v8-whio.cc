@@ -21,6 +21,7 @@
 #include <v8/juice/juice.h>
 #include <v8/juice/juice-config.h>
 #include <v8/juice/convert.h>
+#include <v8/juice/forwarding.h>
 #include <v8/juice/plugin.h>
 #include <v8/juice/cleanup.h>
 #include <v8/juice/JSClassCreator.h>
@@ -114,15 +115,17 @@ namespace v8 { namespace juice { namespace whio {
     /**
        Internal binding context for BindNative() and friends.
     */
-    static const void * bind_cx() { return 0;}
+    //static const void * bind_cx() { return 0;}
 
-
-    whio_dev * dev_construct(
-			      Arguments const &,
+    // whio_dev ctor
+    whio_dev * dev_construct( Arguments const &,
 			      std::string & exception );
+
+    // whio_stream ctor
     template <int mode /* 0=out, 1=in, -1=no-op*/>
     whio_stream * stream_construct( Arguments const &,
 				    std::string & exception );
+    // whio_dev ctor for ByteArray
     whio_dev * ba_construct( Arguments const &,
 			     std::string & exception );
 
@@ -139,7 +142,6 @@ namespace v8 { namespace juice { namespace whio {
     /** A internal helper type. */
     struct ByteArray : IODevice
     {
-	typedef whio_dev type;
     };
     /** A internal helper type. */
     struct StreamBase : IOBase
@@ -158,8 +160,8 @@ namespace v8 { namespace juice { namespace whio {
     /**
        Used with WeakJSClassCreator for whio_dev and whio_stream.
 
-       DevT must be one of: IODevice, StreamBase, InStream,
-       or OutStream.
+       DevT must be one of: IODevice, StreamBase, InStream, or
+       OutStream.
      */
     template <typename DevT,
 	      typename DevT::type * (*ctor)( Arguments const &, std::string & ) >
@@ -257,11 +259,15 @@ namespace v8 { namespace juice { namespace whio {
 namespace whio {
 
     /**
-       Casts v to (T*). T must be one of whio_dev or whio_stream.
+       Casts v to (T*). T must be one of IOBase, IODevice, InStream,
+       or OutStream.
     */
     template <typename T>
-    static T * dev_cast( Handle< Value > const & v )
+    static typename WeakJSClassCreator<T>::WrappedType * dev_cast( Handle< Value > const & v )
     {
+#if 1
+	return WeakJSClassCreator<T>::GetNative( v );
+#else
 	if( v.IsEmpty() ) return 0;
 	if( ! v->IsObject() )
 	{
@@ -271,12 +277,12 @@ namespace whio {
 	}
 	Local<Object> o( Object::Cast( *v ) );
 	return bind::GetBoundNative<T>( bind_cx(), o->GetInternalField(0) );
+#endif
     }
-
 // Helper macros for args and type checking:
 #define ARGS(COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
-#if 0
-#  define DEVH(PT,H) PT::type * dev = dev_cast< PT::type >( H )
+#if 1
+#  define DEVH(PT,H) PT::type * dev = dev_cast< PT >( H )
 #else
 #  define DEVH(T,H) WeakJSClassCreator<T>::WrappedType * dev = WeakJSClassCreator<T>::GetSelf( H )
 #endif
@@ -374,7 +380,7 @@ namespace whio {
 	if( (3 == argc) && argv[0]->IsObject() )
 	{ // (IODevice,lower,upper)
 	    Local<Object> par( Object::Cast(*argv[0]) );
-	    whio_dev * iod = dev_cast<whio_dev>(par);
+	    whio_dev * iod = dev_cast<IODevice>(par);
 	    if( iod )
 	    {
 		whio_size_t low = CastFromJS<whio_size_t>(argv[1]);
@@ -797,10 +803,12 @@ namespace whio {
     /**
        Adds to target object:
 
+       - whio (generic holder object)
        - whio.IOBase
        - whio.IODevice inherits IOBase
-       - whio.InStream inherits IOBase
-       - whio.OutStream inherits IOBase
+       - whio.StreamBase
+       - whio.InStream inherits StreamBase
+       - whio.OutStream inherits StreamBase
     */
     Handle<Value> SetupWhioClasses(const Handle<Object> target )
     {

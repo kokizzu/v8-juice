@@ -132,13 +132,29 @@ namespace juice {
 	Handle<Object> Target() const;
 
 	/**
+	   Adds the generated JS class to the given target object,
+	   using ClassName() as the property name.
+
+	   This should not be called before Seal() is called.
+
+	   If a target object was set in the ctor, this need not be
+	   called - it will be called by Seal(). It may, however, be
+	   called to add the class to other objects.
+
+	   Returns the JS constructor function object (the same as
+	   Seal()).
+
+	*/
+	Handle<Function> AddClassTo( Handle<Object> target );
+
+	/**
 	   Finalizes the class creation process and adds the
 	   construtor to this->Target() (if it was set in the
 	   ctor). No setter methods should be called after this (well,
 	   go ahead - maybe it'll work for you).
 
-	   It returns the result of CtorTemplate()->GetFunction(), for reasons
-	   too deep and dark to shed light on at the moment.
+	   It returns the result of CtorTemplate()->GetFunction(), for
+	   reasons too deep and dark to shed light on at the moment.
 	*/
 	Handle<Function> Seal();
 

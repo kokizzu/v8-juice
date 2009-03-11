@@ -67,15 +67,20 @@ namespace v8 { namespace juice {
 	return this->target;
     }
 
+    Handle<Function> JSClassCreator::AddClassTo( Handle<Object> target )
+    {
+	Handle<Function> func( ctorTmpl->GetFunction() );
+	this->target->Set( ::v8::String::New(this->className), func );
+	return func;
+    }
+
     Handle<Function> JSClassCreator::Seal()
     {
 	// In my experience, if GetFunction() is called BEFORE setting up
-	// the Prototype object, v8 gets very unhappy.
+	// the Prototype object, v8 gets very unhappy (class member lookups don't work?).
 	if( this->hasTarget )
 	{
-	    Handle<Function> func( ctorTmpl->GetFunction() );
-	    this->target->Set( ::v8::String::New(this->className), func );
-	    return func;
+	    return this->AddClassTo( this->target );
 	}
 	else return ctorTmpl->GetFunction();
     }

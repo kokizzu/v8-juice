@@ -43,6 +43,7 @@
 #include <v8/juice/bind.h>
 #include <v8/juice/plugin.h>
 #include <v8/juice/cleanup.h>
+#include <v8/juice/WeakJSClassCreator.h>
 //#include <v8/juice/v8-classwrap.h> // failed experiment
 
 namespace bind = ::v8::juice::bind;
@@ -63,18 +64,157 @@ typedef v8::Handle<v8::ObjectTemplate> V8Object;
 typedef v8::Local<v8::Object> V8LObject;
 typedef v8::Handle<v8::Context> V8CxH;
 
-template <typename NT>
-class ClassWrapper
+
+
+using namespace v8;
+using namespace ::v8::juice;
+
+struct my_native
 {
-public:
+    std::string str;
+    int func1() { return 42; }
+    int func2(int x) { return x*2; }
+    std::string hi() { return "hi!"; }
 };
 
-#if 0
-static struct MyData
+namespace v8 { namespace juice {
+    template <>
+    struct WeakJSClassCreatorOps<my_native>
+    {
+    private:
+	/** Callback for use with juice::cleanup::AddToCleanup(). */
+	static void cleanup_callback( void * obj )
+	{
+	    Dtor( static_cast<WrappedType*>(obj) );
+	}
+    public:
+	enum { ExtraInternalFieldCount = 0 };
+	typedef my_native WrappedType;
+	static char const * ClassName() { return "MyNative"; }
+	static WrappedType * Ctor( Arguments const & argv,
+				   std::string & exceptionText)
+	{
+	    my_native * obj = new my_native;
+	    obj->str = "hi, world";
+	    CERR << "Ctor() create @"<<obj<<'\n';
+	    ::v8::juice::cleanup::AddToCleanup(obj,cleanup_callback);
+	    bind::BindNative( 0, obj, obj );
+	    return obj;
+	}
+
+	static void Dtor( WrappedType * obj )
+	{
+	    CERR << "Dtor() passing on @"<<obj<<'\n';
+	    if( obj )
+	    {
+		bind::UnbindNative( 0, obj, obj );
+		::v8::juice::cleanup::RemoveFromCleanup(obj);
+		delete obj;
+	    }
+	}
+    };
+}} // v8::juice
+
+// template <typename T, typename RV, typename A1  >
+// struct MemFuncType< RV (T::*)(A1) >
+// {
+//     typedef T Type;
+//     typedef RV ReturnType;
+//     typedef ReturnType (T::*MemFunc)(A1);
+// };
+
+
+template <typename T, typename RV>
+struct MemFuncSig0
 {
-    
-} MyData;
+    typedef T Type;
+    typedef RV (T::*Member)();
+};
+
+template <typename T, typename RV, RV (T::*Func)()  >
+struct MemFuncCallOp0
+{
+    typedef T Type;
+    enum { Arity = 0 };
+    static Handle<Value> Call( Type * obj, Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
+ 	return convert::CastToJS( (RV) (obj->*Func)() );
+    }
+};
+
+template <typename T, typename RV, typename A1, RV (T::*Func)(A1)  >
+struct MemFuncCallOp1
+{
+    typedef T Type;
+    enum { Arity = 1 };
+    static Handle<Value> Call( Type * obj, Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCallOp1::Call(): Native object is null!"));
+	else if( argv.Length()<Arity ) return ThrowException(String::New("MemFuncCallOp0::Call(): wrong argument count!"));
+ 	return convert::CastToJS( (RV) (obj->*Func)(
+						    convert::CastFromJS<A1>(argv[0])
+						    ) );
+    }
+};
+
+template <typename T, typename CallOpType>
+struct MemFuncCallOp
+{
+    typedef T Type;
+    enum { Arity = CallOpType::Arity };
+    typedef WeakJSClassCreator<Type> Wrapper;
+    static Handle<Value> Call( Arguments const & argv )
+    {
+	Type * obj = Wrapper::GetSelf( argv.This() );
+	if( ! obj ) return ThrowException(String::New("MemberForwader<>::Call() could not find native 'this' object!"));
+	return CallOpType::Call( obj, argv );
+    }
+};
+
+
+template <typename T, typename RV, RV (T::*Func)()>
+WeakJSClassCreator<T> & AddMemFunc( WeakJSClassCreator<T> & cr,
+					   char const * name )
+{
+    typedef MemFuncCallOp0< T, RV, Func > Caller;
+    cr.Set(name, MemFuncCallOp<T, Caller>::Call );
+    return cr;
+}
+
+template <typename T, typename RV, typename A1, RV (T::*Func)(A1) >
+WeakJSClassCreator<T> & AddMemFunc( WeakJSClassCreator<T> & cr,
+			     char const * name )
+{
+    typedef MemFuncCallOp1< T, RV, A1, Func > Caller;
+    cr.Set(name, MemFuncCallOp<T, Caller >::Call );
+    return cr;
+}
+
+int my_fwd( V8CxH & cx )
+{
+    typedef WeakJSClassCreator<my_native> WT;
+    WT w( cx->Global() );
+
+#if 0
+    //w.Set("func1", MemFuncCallOp< my_native, MemFuncCallOp0<my_native,int,&my_native::func1> >::Call );
+    //w.Set("func2", MemFuncCallOp< my_native, MemFuncCallOp1<my_native,int,int,&my_native::func2> >::Call );
+#else
+    //AddMemFunc( w, "func1", &my_native::func1 );
+    typedef my_native MY;
+#define FARG0(R,F) MY,R,&MY::F
+#define FARG1(R,F,A1) MY,R,A1,&MY::F
+    AddMemFunc< FARG0(int,func1) >( w, "func1" );
+    AddMemFunc< FARG1(int,func2,int) >( w, "func2" );
+    AddMemFunc< FARG0(std::string,hi) >( w, "hi" );
+//     AddMemFunc<my_native,int,int,&my_native::func2>( w, "func2" );
+//     AddMemFunc<my_native,std::string,&my_native::hi>( w, "hi" );
 #endif
+    w.Seal();
+    return 0;
+}
+
+
 
 int my_test( V8CxH & cx )
 {
@@ -106,10 +246,6 @@ int my_test( V8CxH & cx )
     return 0;
 }
 
-struct my_native
-{
-    std::string str;
-};
 int my_bind_test2( V8CxH & cx )
 {
     using namespace v8::juice::convert;
@@ -161,63 +297,6 @@ int my_bind_test( V8CxH & cx )
     COUT << "unbind bs = " << bs << " == ["<<(bs?bs->str:"<NULL>")<<"]\n";
     return 0;
 }
-
-
-my_native *my_native_ctor( v8::Handle< v8::Object> self, v8::Arguments const & argv )
-{
-    COUT << "my_native_ctor()!\n";
-    return new my_native;
-}
-
-typedef void (*WeakPersistentDtor)(v8::Persistent< v8::Value > object, void *parameter);
-//typedef void (*WeakReferenceCallback)(Persistent<Value> object,                      void* parameter);
-
-template <typename WT,WeakPersistentDtor const & dtor>
-struct WrapNativeDtorCallback
-{
-    static void destruct(v8::Persistent< v8::Value > object, void *parameter)
-    {
-	dtor( object, parameter );
-    }
-};
-
-static void my_native_dtor(v8::Persistent< v8::Value > object, void *parameter)
-{
-#if 0
-    Handle<Value> hv = object->GetInternalField(0);
-    External * ex = External::Cast( *hv );
-    my_native * my = static_cast<my_native*>( ex ? ex->Value() : 0 );
-#else
-    my_native * my = static_cast<my_native*>( parameter );
-#endif
-    //object->SetInternalField(0, NULL);
-    COUT << "my_native_dtor(): my @"<<my<<'\n';
-    if( my ) delete my;
-}
-
-template <WeakPersistentDtor const & Dtor,typename WT>
-v8::Handle< v8::Object> WrapNative( WT * n,
-				    v8::Handle< v8::Function > const & jsclass,
-				    int internalFieldNum )
-{
-    // UNTESTED!
-    using namespace v8;
-    HandleScope handle_scope;
- 
-    //create a new point instance and point to it with a persistent handle
-    Persistent<Object> inst = Persistent<Object>::New(jsclass->NewInstance());
- 
-    //make the handle weak, with a callback
-    inst.MakeWeak( n, WrapNativeDtorCallback<WT,Dtor>::destruct );
- 
-    //add it to the map
-    //jsPoints[pointToWrap] = point_instance;
- 
-    //set that internal field
-    inst->SetInternalField(internalFieldNum, External::New(n));
-    return handle_scope.Close(inst);
-}
-
 
 
 int my_class_test( V8CxH & cx )
@@ -283,6 +362,7 @@ int main(int argc, char* argv[]) {
 	    //my_test( context );
 	    //my_bind_test( context );
 	    my_class_test( context );
+	    my_fwd(context);
 	}
 	bool run_shell = (argc == 1);
 	for (int i = 1; i < argc; i++) {
