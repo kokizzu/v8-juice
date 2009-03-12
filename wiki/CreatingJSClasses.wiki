@@ -193,27 +193,27 @@ int MyClass::func( double ); // function we want to wrap
 
 
 ClassBinder<MyClass> bin;
-bin.AddMemFunc< int /* return value type */,
+binder.AddMemFunc< int /* return value type */,
 		double /* first arg type*/,
 		&MyClass::func /* member func */
 	>( "myFunc" );
 }}}
 
 _WTF?_ Every function-wrapping framework i've seen so far passes
-function pointers as function arguments to the template functions (got
-that?). In this one, we pass the function pointers as a _template
+function pointers as function arguments to the function templates (got
+that?). In this one, we pass the function pointer as a _template
 parameter_ instead of as a function argument! Why? It's ugly, but
 there's a reason for it: it costs us nothing at runtime. If we passed
 pointers to functions as the arguments, we would have to create a small
 wrapper object for _each_ binding (that is, one per class/member
 combination), and the wrapper's only purpose would be to forward the
 call to a specific native object (which is found at runtime of course).
-We would have no place to store the call-wrappers for later cleanup (long
+We would have no logical place to store the call-wrappers for later cleanup (long
 story) and we would effectively introduce a memory leak for every bound
 function. By using function pointers as template parameters, we bind the
 function pointers at compile time and therefor need no intermediary
-call-proxy object instance. We _still_ have proxy functions, but they
-require no dynamic memory and are bound (and possibly inlined) at
+call-proxy object instance. We _still_ have plenty of internal proxy functions,
+but they require no dynamic memory and are bound (and possibly inlined) at
 compile-time.
 
 The primary down-side to this approach, as opposed to passing function
@@ -227,8 +227,8 @@ int MyClass::func( double );
 
 ...
 
-binder.AddMemFunc< int,
-		int /* <--- must be of type double because: */,
+binder.AddMemFunc< int, // return value type
+		int /* first arg type. Must be of type double because: */,
 		&MyClass::func /* int (MyClass::*)(double) */
 		>
 		("func");
@@ -244,9 +244,9 @@ type conversions to do this sort of type conversions for us. That would,
 however, require the above-mentioned leak, which i'm not at all keen on.
 
 The conversion of member function parameters to/from JS is achieved
-using the `v8::juice::convert` API, and it inherits most of the type
+using the `v8::juice::convert` API, and this code inherits most of the type
 conversion limitations (and features) of that API. As an exception, it supports
-member functions returning `void` (which the juice::convert API cannot
+member functions returning `void` (which the `v8::juice::convert` API cannot
 directly handle).
 
 TODO: wrapping of const member functions. Requires generation of one or
