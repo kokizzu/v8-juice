@@ -9,8 +9,7 @@
 #include <v8/juice/convert.h>
 #include <v8/juice/plugin.h>
 #include <v8/juice/cleanup.h>
-#include <v8/juice/JSClassCreator.h>
-#include <v8/juice/WeakJSClassCreator.h>
+#include <v8/juice/ClassBinder.h>
 
 
 #ifndef CERR
@@ -23,6 +22,9 @@ namespace v8 { namespace juice {
     using namespace ::v8::juice::convert;
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
+
+    // TODO: must write a thin wrapper over PathFinder
+    // due to constness and reference passing issues.
 
     /** Required specialization of WeakJSClassCreatorOps<> for use
 	with WeakJSClassCreator<PathFinder>. */
@@ -153,7 +155,7 @@ namespace v8 { namespace juice {
     Handle<Value> SetupPathFinderClass(Handle<Object> target )
     {
 	HandleScope scope;
-	typedef WeakJSClassCreator<PathFinder> PW;
+	typedef ClassBinder<PathFinder> PW;
 	PW pw;
 	pw.Set("pathString",
 	       pf_get_path_string,
@@ -167,7 +169,15 @@ namespace v8 { namespace juice {
 		pf_get_path_sep,
 		pf_set_path_sep
 		).
-	    Set("find", pf_find );
+	    Set("find", pf_find )
+	    ;
+	// const funcs not yet workie:
+	// pw.AddMemFunc< std::string, &PathFinder::path_separator >( "getPathSeparator" );
+	//pw.AddMemFunc< std::size_t, std::string const &, &PathFinder::add_path >( "addPath" );
+	// void no workie:
+	// pw.AddMemFunc< void, &PathFinder::clear_cache >( "clearCache" );
+
+
 
 	target->Set( String::New(PW::ClassOpsType::ClassName()), pw.Seal() );
 	Handle<Object> shared = Object::New();
