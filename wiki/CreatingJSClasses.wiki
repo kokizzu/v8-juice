@@ -253,6 +253,144 @@ TODO: wrapping of const member functions. Requires generation of one or
 two more template specializations (per member function arg count) for
 some internal types.
 
+==Example of using !ClassBinder==
+
+Here's an example of how `ClassBinder` can be used...
+
+First we need a native type. Oh, look, here's one:
+
+{{{
+struct my_native
+{
+    std::string str;
+    int func1() { return 42; }
+    int func2(int x) { return x*2; }
+    double func3(int x,int y) { return x*y; }
+    std::string hi() { return "hi!"; }
+    my_native * me() { return this; }
+    bool him(my_native * him) { return true; }
+    void avoid() {}
+    void avoid1(int x ) {}
+    void avoid2(int x,double d ) {}
+    double takes3(int x, int y, int z) { return x * y * z; }
+};
+}}}
+
+Great, now that's out of the way. We need a
+`WeakJSClassCreatorOps<my_native>` specialization which defines the
+common binding operations:
+
+{{{
+namespace v8 { namespace juice {
+    template <>
+    struct WeakJSClassCreatorOps<my_native>
+    {
+    public:
+	enum { ExtraInternalFieldCount = 0 };
+	typedef my_native WrappedType;
+	static char const * ClassName() { return "MyNative"; }
+	static WrappedType * Ctor( Arguments const & argv,
+				   std::string & exceptionText)
+	{
+	    my_native * obj = new my_native;
+	    obj->str = "hi, world";
+	    return obj;
+	}
+
+	static void Dtor( WrappedType * obj )
+	{
+	    if( obj ) delete obj;
+	}
+    };
+}} // namespaces
+}}}
+
+The following weird code hooks `my_native` in with the `v8::juice::convert` API, so that we
+can use `CastToJS()` and `CastFromJS()` with `my_native`. We want that in this case because
+some of the `my_native` members take or return pointers to `my_native` objects. Since the function
+forwarding mechanism uses `CastToJS()` and `CastFromJS()` for all type conversions, we want to be able to
+hook in to that:
+
+{{{
+namespace v8 { namespace juice { namespace convert { namespace Detail {
+	// Required for CastTo/FromJS() to work:
+	template <>
+	struct to_js_f<my_native>
+	{
+	    Handle<Value> operator()( my_native * p ) const
+	    {
+		Handle<Object> jo = ::v8::juice::WeakJSClassCreator<my_native>::GetJSObject(p);
+		if( jo.IsEmpty() ) return Null();
+		else return jo;
+	    }
+	};
+	template <>
+	struct to_native_f<my_native>
+	{
+	    typedef my_native * result_type;
+	    result_type operator()( Handle<Value> const & h ) const
+	    {
+		return ::v8::juice::WeakJSClassCreator<my_native>::GetNative(h);
+	    }
+	    result_type operator()( ::v8::juice::bind::BindKeyType /*ignored*/, Handle<Value> const & h ) const
+	    {
+		return this->operator()( h );
+	    }
+	};
+    }}
+} } } } // namespaces
+}}}
+
+If the native type will never be passed as a parameter or returned
+from a function (i.e. it will only be the `this` object) then these
+conversions are not required.
+
+And now what we originally set out to to: bind `my_native` with JS:
+
+{{{
+    typedef ClassBinder<my_native> WT;
+    WT w( v8::Context()->GetCurrent()->Global() );
+    typedef my_native MY;
+    w.BindMemFunc< int, &MY::func1>( "func1" );
+    w.BindMemFunc< int, int, &MY::func2 >( "func2" );
+    w.BindMemFunc< std::string,&MY::hi >( "hi" );
+    w.BindMemFunc< MY *,&MY::me >( "me" );
+    w.BindMemFunc< bool,MY *,&MY::him >( "him" );
+    w.BindMemFunc< double,int,int,&MY::func3 >( "func3" );
+    w.BindMemFunc< void,&MY::avoid >( "avoid" );
+    w.BindMemFunc< void,int,&MY::avoid1 >( "avoid1" );
+    w.BindMemFunc< void,int,double,&MY::avoid2 >( "avoid2" );
+    w.BindMemFunc< double,int,int,int,&MY::takes3 >( "takes3" );
+    w.Seal();
+}}}
+
+Again, it's ugly, but it also has no extra runtime memory costs other than that needed by
+the v8 internals.
+
+And in JS it looks like this:
+
+{{{
+var m = new MyNative();
+print('void returns:',m.avoid(),m.avoid1(32),m.avoid2(17,11));
+print(m.hi());
+print(m.func3(m.func1(),m.func2(m.func1())))
+print(m.him(m));
+print(m.me());
+print(m.takes3(2,2,3));
+}}}
+
+The output:
+
+{{{
+stephan@jareth:~/cvs/v8-juice/trunk/src/client/shell$ ./v8-juice-shell js/fwd.js
+void returns: undefined undefined undefined
+hi!
+3528
+true
+[object Object]
+12
+}}}
+
 
 =Real-world examples=
 
