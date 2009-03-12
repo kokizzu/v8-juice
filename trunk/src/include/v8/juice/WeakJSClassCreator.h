@@ -57,11 +57,14 @@ namespace juice {
 	};
 
 	/**
-	   An internal helper type for use by WeakJSClassCreator.
+	   An internal helper type for only use by WeakJSClassCreator.
+
+	   Actual must be WeakJSClassCreator::WrappedType.
 	*/
-	template <typename WrappedType>
+	template <typename Actual>
 	struct WrapperTypeChecker
 	{
+	    typedef Actual WrappedType;
 	    typedef std::pair<WrappedType *,Persistent<Object> > ObjBindT;
 	    typedef std::map<void const *,ObjBindT > OneOfUsT;
 	    static OneOfUsT & Map()
@@ -374,9 +377,10 @@ namespace juice {
 	    Local<Value> lv( h->GetInternalField(NativeInternalField) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
 	    Local<External> ex( External::Cast(*lv) );
-	    typename OneOfUsT::iterator it = typeCheck().find( ex->Value() );
-	    if( typeCheck().end() == it ) return 0;
-	    return (*it).second.first;
+	    TypeCheckIter it = typeCheck().find( ex->Value() );
+	    return ( typeCheck().end() == it )
+		? 0
+		: (*it).second.first;
 	}
 
 	/** Reimplemented to DO NOTHING, as the number is defined
@@ -454,9 +458,14 @@ namespace juice {
 		: DestroyObject( Local<Object>(Object::Cast(*h)) );
         }
 
+	/**
+	   If obj was created via these bindings then this function
+	   returns obj's JS object, otherwise it returns a
+	   default-constructed (empty) handle.
+	*/
 	static Handle<Object> GetJSObject( WrappedType * obj )
 	{
-	    typename OneOfUsT::iterator it = typeCheck().find(obj);
+	    TypeCheckIter it = typeCheck().find(obj);
 	    if( typeCheck().end() == it ) return Handle<Object>();
 	    else return (*it).second.second;
 	}
@@ -465,10 +474,12 @@ namespace juice {
 	typedef Detail::WrapperTypeChecker<WrappedType> TypeCheck;
 	typedef typename TypeCheck::ObjBindT ObjBindT;
 	typedef typename TypeCheck::OneOfUsT OneOfUsT;
+	typedef typename OneOfUsT::iterator TypeCheckIter;
 	static OneOfUsT & typeCheck()
 	{
-	    // We must use a type defined OUTSIDE of this class
-	    // for this to work properly.
+	    // We must use a map instance defined OUTSIDE of this class
+	    // for this binding to work properly. More correctly,
+	    // the instance of the map must depend only on WrappedType.
 	    return TypeCheck::Map();
 	}
 	enum Internal {
