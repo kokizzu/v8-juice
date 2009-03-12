@@ -74,7 +74,12 @@ struct my_native
     std::string str;
     int func1() { return 42; }
     int func2(int x) { return x*2; }
+    double func3(int x,int y) { return x*y; }
     std::string hi() { return "hi!"; }
+
+    my_native * me() { CERR << "my_native::me()="<<this<<'\n';return this; }
+    bool him(my_native * him) { CERR << "my_native::him("<<him<<")\n"; return true; }
+
 };
 
 namespace v8 { namespace juice {
@@ -113,6 +118,34 @@ namespace v8 { namespace juice {
 	    }
 	}
     };
+    namespace convert { namespace Detail {
+	// Required for CastTo/FromJS() to work:
+	template <>
+	struct to_js_f<my_native>
+	{
+	    ValueHandle operator()( my_native * p ) const
+	    {
+		Handle<Object> jo = ::v8::juice::WeakJSClassCreator<my_native>::GetJSObject(p);
+		if( jo.IsEmpty() ) return Null();
+		else return jo;
+	    }
+	};
+	template <>
+	struct to_native_f<my_native>
+	{
+	    typedef my_native * result_type;
+	    result_type operator()( ValueHandle const & h ) const
+	    {
+		return ::v8::juice::WeakJSClassCreator<my_native>::GetNative(h);
+	    }
+	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	    {
+		return this->operator()( h );
+	    }
+
+	};
+
+    }}
 }} // v8::juice
 
 // template <typename T, typename RV, typename A1  >
@@ -131,69 +164,12 @@ struct MemFuncSig0
     typedef RV (T::*Member)();
 };
 
-template <typename T, typename RV, RV (T::*Func)()  >
-struct MemFuncCallOp0
-{
-    typedef T Type;
-    enum { Arity = 0 };
-    static Handle<Value> Call( Type * obj, Arguments const & argv )
-    {
-	if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
- 	return convert::CastToJS( (RV) (obj->*Func)() );
-    }
-};
-
-template <typename T, typename RV, typename A1, RV (T::*Func)(A1)  >
-struct MemFuncCallOp1
-{
-    typedef T Type;
-    enum { Arity = 1 };
-    static Handle<Value> Call( Type * obj, Arguments const & argv )
-    {
-	if( ! obj ) return ThrowException(String::New("MemFuncCallOp1::Call(): Native object is null!"));
-	else if( argv.Length()<Arity ) return ThrowException(String::New("MemFuncCallOp0::Call(): wrong argument count!"));
- 	return convert::CastToJS( (RV) (obj->*Func)(
-						    convert::CastFromJS<A1>(argv[0])
-						    ) );
-    }
-};
-
-template <typename T, typename CallOpType>
-struct MemFuncCallOp
-{
-    typedef T Type;
-    enum { Arity = CallOpType::Arity };
-    typedef WeakJSClassCreator<Type> Wrapper;
-    static Handle<Value> Call( Arguments const & argv )
-    {
-	Type * obj = Wrapper::GetSelf( argv.This() );
-	if( ! obj ) return ThrowException(String::New("MemberForwader<>::Call() could not find native 'this' object!"));
-	return CallOpType::Call( obj, argv );
-    }
-};
-
-
-template <typename T, typename RV, RV (T::*Func)()>
-WeakJSClassCreator<T> & AddMemFunc( WeakJSClassCreator<T> & cr,
-					   char const * name )
-{
-    typedef MemFuncCallOp0< T, RV, Func > Caller;
-    cr.Set(name, MemFuncCallOp<T, Caller>::Call );
-    return cr;
-}
-
-template <typename T, typename RV, typename A1, RV (T::*Func)(A1) >
-WeakJSClassCreator<T> & AddMemFunc( WeakJSClassCreator<T> & cr,
-			     char const * name )
-{
-    typedef MemFuncCallOp1< T, RV, A1, Func > Caller;
-    cr.Set(name, MemFuncCallOp<T, Caller >::Call );
-    return cr;
-}
+#include <v8/juice/ClassBinder.h>
 
 int my_fwd( V8CxH & cx )
 {
-    typedef WeakJSClassCreator<my_native> WT;
+    //typedef WeakJSClassCreator<my_native> WT;
+    typedef ClassBinder<my_native> WT;
     WT w( cx->Global() );
 
 #if 0
@@ -202,11 +178,12 @@ int my_fwd( V8CxH & cx )
 #else
     //AddMemFunc( w, "func1", &my_native::func1 );
     typedef my_native MY;
-#define FARG0(R,F) MY,R,&MY::F
-#define FARG1(R,F,A1) MY,R,A1,&MY::F
-    AddMemFunc< FARG0(int,func1) >( w, "func1" );
-    AddMemFunc< FARG1(int,func2,int) >( w, "func2" );
-    AddMemFunc< FARG0(std::string,hi) >( w, "hi" );
+    w.AddMemFunc< int, &MY::func1>( "func1" );
+    w.AddMemFunc< int, int, &MY::func2 >( "func2" );
+    w.AddMemFunc< std::string,&MY::hi >( "hi" );
+    w.AddMemFunc< MY *,&MY::me >( "me" );
+    w.AddMemFunc< bool,MY *,&MY::him >( "him" );
+    w.AddMemFunc< double,int,int,&MY::func3 >( "func3" );
 //     AddMemFunc<my_native,int,int,&my_native::func2>( w, "func2" );
 //     AddMemFunc<my_native,std::string,&my_native::hi>( w, "hi" );
 #endif
