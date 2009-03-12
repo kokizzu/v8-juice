@@ -153,7 +153,7 @@ toc2_export v8_juice_CONFIG_HAVE_LIBLTDL=${HAVE_LIBLTDL-0}
 toc2_export v8_juice_CONFIG_HAVE_LIBDL=${HAVE_LIBDL-0}
 toc2_export v8_juice_CONFIG_DLL_EXTENSION=".so:.dynlib" # .dynlib is for Darwin systems.
 v8pluginbase="${v8home}/lib/v8/juice"
-toc2_export v8_juice_CONFIG_PLUGINS_PATH=".:${v8pluginbase}/${PACKAGE_VERSION}/plugins:${v8pluginbase}/plugins"
+toc2_export v8_juice_CONFIG_PLUGINS_PATH=".:${v8pluginbase}/${PACKAGE_VERSION}:${v8pluginbase}"
 
 ##### close the config-filtered files:
 toc2_test_require atfilter_file src/lib/juice/plugin-config.h.at src/include/v8/juice/plugin-config.h
