@@ -6,6 +6,8 @@
   * ncurses
   * sqlite3
 
+they need to be reworked to use the newer [CreatingJSClasses native bindings mechanism], as they currently use a very unsafe JS-to-native argument passing convention which can (and often does) lead to segfaults.
+
 =v8-juice Plugins=
 
 v8-juice provides an API for loading DLLs with the intent of adding functionality to a running JS engine.
