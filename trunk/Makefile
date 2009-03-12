@@ -15,7 +15,8 @@ package.install.pkgconfig = $(package.name).pc
 package.dist_files += ChangeLog INSTALL LICENSE \
 	configure configure.$(package.name) \
 	toc2.$(package.name).make.at toc2.$(package.name).help \
-	find_toc2.sh
+	find_toc2.sh \
+	SConstruct
 
 package.distclean_files += $(package.name)-config $(package.name).pc
 
