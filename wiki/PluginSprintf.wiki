@@ -25,7 +25,6 @@ hi, world!
 hi, [object Object]!
 42 00042
 42         42          a a       42.240000
-42         42
 }}}
 
 The function supports a few extensioned formatting options, such as `%h` to escape HTML, `%q` and `%Q` for SQL escaping, and `%t/%T` for URL encoding/decoding.
