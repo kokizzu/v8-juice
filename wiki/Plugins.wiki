@@ -1,7 +1,12 @@
 #summary Extending v8 with plugins
 #labels Phase-UserDocs,Featured
 
-=The Plugins API=
+*Achtung:* some of the plugins were broken with recent (20090312) changes/improvements in the core lib and need some significant reworking before they'll be useful again. The affected plugins are:
+
+  * ncurses
+  * sqlite3
+
+=v8-juice Plugins=
 
 v8-juice provides an API for loading DLLs with the intent of adding functionality to a running JS engine.
 
