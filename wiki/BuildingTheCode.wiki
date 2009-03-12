@@ -17,15 +17,15 @@ make
 make install # installs under the path defined by --prefix=/path
 }}}
 
-My default build options is `make -j2` for parallel building, so the tree is believed to build okay with parallel builds (if it doesn't, please file a bug report). That said, certain parts of the tree enforce that certain directory branches are built before others, so certain branches may not allow parallelization.
+My default build options is `make -j2` for parallel building, so the tree is believed to build okay with parallel builds (if it doesn't, please file a bug report). That said, certain parts of the tree enforce that certain directory branches are built before others, so certain branches may not allow parallelization. Even without parallelization it builds quickly (currently (20090312) it takes about 6 seconds on a 2GHz PC).
 
 The following configuration options are often helpful or necessary:
 
   * `--prefix=/dir` is the installation prefix and the default place under which it will look for v8 and any additional libraries (e.g. those needed by plugins). Using `--prefix=$HOME` is often a good choice, and it allows a non-root user to run the installation.
-  * `--v8-home=/top/install/dir/of/v8` tells configure to look for v8 under the given dir. It expects to find `include/v8.h` and `lib/libv8(_g).(a|so)`.
+  * `--v8-prefix=/top/install/dir/of/v8` tells configure to look for v8 under the given dir. It expects to find `include/v8.h` and `lib/libv8(_g).(a|so)`.
   * `--enable-debug` turns on debugging options and tries to link against `libv8_g` instead of `libv8` (but will use the latter if it can't find the former).
   * `--help` shows many more options which you'll never need.
-  * `--disable-plugins` is silly, but go ahead if you want to disable the build of the plugins. Plugins are automatically disabled if neither `-ldl` or `-lltdl` are found. Specific plugins might not get compiled because their plugin-specific prerequisites are not met (e.g. libsqlite3 or libncurses).
+  * `--disable-plugins` makes the plugin loading features no-ops and disables the build of the core plugins. Plugins are automatically disabled if neither `-ldl` or `-lltdl` are found. Specific plugins might not get compiled because their plugin-specific prerequisites are not met (e.g. libsqlite3 or libncurses).
 
 See SourceTreeOverview for info on how the tree is laid out.
 
