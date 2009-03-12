@@ -73,17 +73,17 @@ namespace convert {
 	    // won't compile if not specialized.
 	};
 	template <typename NT>
-	struct to_js_f<NT *>
-	{
-	    /**
-	       Returns a v8::External which references &p (not p directly,
-	       because of the non-constness of the argument!).
-	    */
-	    ValueHandle operator()( NT const * p ) const
-	    {
-		return External::New( &p );
-	    }
-	};
+	struct to_js_f<NT *> : to_js_f<NT> {};
+// 	{
+// 	    /**
+// 	       Returns a v8::External which references &p (not p directly,
+// 	       because of the non-constness of the argument!).
+// 	    */
+// 	    ValueHandle operator()( NT const * p ) const
+// 	    {
+// 		return External::New( &p );
+// 	    }
+// 	};
 
 	template <>
 	struct to_js_f<void>
@@ -338,7 +338,7 @@ namespace convert {
 	    result_type operator()( BindKeyType cx, ValueHandle const & jv ) const
 	    {
 		// 	    External * ex = External::Cast( *jv );
-		// 	    //CERR << "ex == " << ex << " data="<<(ex?ex->Value():0)<<"\n";
+		///CERR << "ex == " << ex << " data="<<(ex?ex->Value():0)<<"\n";
 		// 	    return ex ? ::v8::juice::bind::GetBoundNative<type>( *ex ) : 0;
 		// requires specialization
 		return ::v8::juice::bind::GetBoundNative<JST>( cx, jv );
