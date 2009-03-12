@@ -69,71 +69,7 @@ namespace juice {
 		return Undefined();
 	    }
 	};
-
-
-	/** Member function call forwarder for member functions taking 1 arguments. */
-	template < typename WrappedType, typename RV,  typename A0, RV (WrappedType::*Func)( A0 ) >
-	struct MemFuncCallOp1
-	{
-	    enum { Arity = 1 };
-	    typedef WrappedType Type;
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp1::Call(): Native object is null!"));
-		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp1::Call(): wrong argument count!"));
-		return convert::CastToJS( (RV) (obj->*Func)(
-							    convert::CastFromJS< A0 >(argv[0])
-							    ) );
-	    }
-	};
-	template < typename WrappedType,  typename A0, void (WrappedType::*Func)( A0) >
-	struct MemFuncCallOp1< WrappedType,void, A0, Func >
-	{
-	    enum { Arity = 1 };
-	    typedef WrappedType Type;
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp1::Call(): Native object is null!"));
-		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp1::Call(): wrong argument count!"));
-		(obj->*Func)(
-			     convert::CastFromJS< A0 >(argv[0])
-			     );
-		return ::v8::Undefined();
-	    }
-	};
-	/** Member function call forwarder for member functions taking 2 arguments. */
-	template < typename WrappedType, typename RV,  typename A0,  typename A1, RV (WrappedType::*Func)( A0, A1 ) >
-	struct MemFuncCallOp2
-	{
-	    enum { Arity = 2 };
-	    typedef WrappedType Type;
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp2::Call(): Native object is null!"));
-		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp2::Call(): wrong argument count!"));
-		return convert::CastToJS( (RV) (obj->*Func)(
-							    convert::CastFromJS< A0 >(argv[0]),
-							    convert::CastFromJS< A1 >(argv[1])
-							    ) );
-	    }
-	};
-	template < typename WrappedType,  typename A0,  typename A1, void (WrappedType::*Func)( A0, A1) >
-	struct MemFuncCallOp2< WrappedType,void, A0, A1, Func >
-	{
-	    enum { Arity = 2 };
-	    typedef WrappedType Type;
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp2::Call(): Native object is null!"));
-		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp2::Call(): wrong argument count!"));
-		(obj->*Func)(
-			     convert::CastFromJS< A0 >(argv[0]),
-			     convert::CastFromJS< A1 >(argv[1])
-			     );
-		return ::v8::Undefined();
-	    }
-	};
-
+#include "ClassBinder-MemFuncCallOpN.h" // generated code
 	/**
 	   Helper used by ClassBinder::AddMemberFunc(). CallOpType
 	   must be an existing MemFuncCallOpN type, where N is an
@@ -217,7 +153,7 @@ namespace juice {
 	virtual ~ClassBinder() {}
 
 	template <typename RV, RV (WrappedType::*Func)()>
-	ClassBinder & AddMemFunc( char const * name )
+	ClassBinder & BindMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp0< WrappedType, RV, Func > Caller;
 	    this->Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
@@ -227,7 +163,7 @@ namespace juice {
 #if 0
 	// not working
 	template <typename RV, RV (WrappedType::*Func)() const>
-	ClassBinder & AddMemFunc( char const * name )
+	ClassBinder & BindMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp0< const WrappedType, RV, Func > Caller;
 	    this->Set(name, Detail::MemFuncCallOp<Caller>::Call );
@@ -239,7 +175,7 @@ namespace juice {
 	   arg and returning RV.
 	*/
 	template < typename RV, typename A1, RV (WrappedType::*Func)(A1) >
-	ClassBinder & AddMemFunc( char const * name )
+	ClassBinder & BindMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp1< WrappedType, RV, A1, Func > Caller;
 	    this->Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
@@ -251,12 +187,47 @@ namespace juice {
 	   args and returning RV.
 	*/
 	template <  typename RV, typename A0, typename A1, RV (WrappedType::*Func)( A0 , A1 ) >
-	ClassBinder & AddMemFunc( char const * name )
+	ClassBinder & BindMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp2< WrappedType, RV, A0, A1, Func > Caller;
 	    this->Set(name, Detail::MemFuncCallOp< Caller,RV >::Call );
 	    return *this;
 	}
+
+	/**
+	   Overload requiring a WrappedType member function taking 3 args and returning RV.
+	*/
+	template <  typename RV, typename A0, typename A1, typename A2, RV (WrappedType::*Func)( A0, A1, A2 ) >
+	ClassBinder & BindMemFunc( char const * name )
+	{
+	    typedef Detail::MemFuncCallOp3< WrappedType, RV,  A0, A1, A2, Func > Caller;
+	    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+	    return *this;
+	}
+
+	/**
+	   Overload requiring a WrappedType member function taking 4 args and returning RV.
+	*/
+	template <  typename RV, typename A0, typename A1, typename A2, typename A3, RV (WrappedType::*Func)( A0, A1, A2, A3 ) >
+	ClassBinder & BindMemFunc( char const * name )
+	{
+	    typedef Detail::MemFuncCallOp4< WrappedType, RV,  A0, A1, A2, A3, Func > Caller;
+	    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+	    return *this;
+	}
+
+	/**
+	   Overload requiring a WrappedType member function taking 5 args and returning RV.
+	*/
+	template <  typename RV, typename A0, typename A1, typename A2, typename A3, typename A4, RV (WrappedType::*Func)( A0, A1, A2, A3, A4 ) >
+	ClassBinder & BindMemFunc( char const * name )
+	{
+	    typedef Detail::MemFuncCallOp5< WrappedType, RV,  A0, A1, A2, A3, A4, Func > Caller;
+	    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+	    return *this;
+	}
+
+
 
     }; // class ClassBinder
 

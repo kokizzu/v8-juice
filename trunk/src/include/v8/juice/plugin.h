@@ -171,6 +171,9 @@ namespace plugin {
        static bool dll_initializer = (InitPlugin(),true);
        \endcode
 
+       Or use the V8_JUICE_PLUGIN_STATIC_INIT() macro in your source file
+       somewhere, as it does all of that work for you.
+
        Here's how it works:
 
        The dll_initializer variable will get initialized when the DLL
@@ -274,7 +277,7 @@ namespace plugin {
     */
     PathFinder & PluginPath();
 
-    /**
+    /** @typedef Handle<Value> (*PluginInitFunction)( Handle<Object> target )
        Callback type for plugins initialized via
        V8_JUICE_PLUGIN_STATIC_INIT().
 
@@ -312,7 +315,7 @@ namespace plugin {
 
 	To use it, simply call it from somewhere in your
 	implementation code and pass it the name of a function, which
-	must have the same signature as the PluginInitFunction
+	must have the same signature as the PluginInitFunction()
 	typedef:
 
 	\code
