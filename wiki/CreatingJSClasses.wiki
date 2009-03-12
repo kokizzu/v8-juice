@@ -189,10 +189,13 @@ bit odd, but there's a reason for it which we'll explain after we
 demonstrate:
 
 {{{
+int MyClass::func( double ); // function we want to wrap
+
+
 ClassBinder<MyClass> bin;
-bin.AddMemFunc<double /* return value type */,
-		int /* first arg type*/,
-		&MyClass::myFunc /* member func: double (MyClass::*)(int) */
+bin.AddMemFunc< int /* return value type */,
+		double /* first arg type*/,
+		&MyClass::func /* member func */
 	>( "myFunc" );
 }}}
 
@@ -246,8 +249,9 @@ conversion limitations (and features) of that API. As an exception, it supports
 member functions returning `void` (which the juice::convert API cannot
 directly handle).
 
-TODO: wrapping of const member functions. Requires generation of one or two more
-template specializations (per member function arg count) for some internal types.
+TODO: wrapping of const member functions. Requires generation of one or
+two more template specializations (per member function arg count) for
+some internal types.
 
 
 =Real-world examples=
