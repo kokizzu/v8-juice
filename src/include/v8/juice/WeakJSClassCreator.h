@@ -36,7 +36,7 @@
 #include <v8/juice/JSClassCreator.h>
 #include <string>
 #include <stdexcept>
-
+#include <map>
 namespace v8 {
 namespace juice {
 
@@ -293,6 +293,14 @@ namespace juice {
     template <typename WrappedT>
     class WeakJSClassCreator : public JSClassCreator
     {
+    private:
+	typedef std::pair<WrappedT *,Handle<Object> > ObjBindT;
+	typedef std::map<void const *,ObjBindT > OneOfUsT;
+	static OneOfUsT & typeCheck()
+	{
+	    static OneOfUsT bob;
+	    return bob;
+	}
     public:
 	/**
 	   The WeakJSClassCreatorOps specialization used by this
@@ -358,7 +366,9 @@ namespace juice {
 	    Local<Value> lv( h->GetInternalField(NativeInternalField) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
 	    Local<External> ex( External::Cast(*lv) );
-	    return static_cast<WrappedType*>( ex->Value() ); // we can only hope...
+	    typename OneOfUsT::iterator it = typeCheck().find( ex->Value() );
+	    if( typeCheck().end() == it ) return 0;
+	    return (*it).second.first;
 	}
 
 	/** Reimplemented to DO NOTHING, as the number is defined
@@ -436,6 +446,13 @@ namespace juice {
 		: DestroyObject( Local<Object>(Object::Cast(*h)) );
         }
 
+	static Handle<Object> GetJSObject( WrappedType * obj )
+	{
+	    typename OneOfUsT::const_iterator it = typeCheck().find(obj);
+	    if( typeCheck().end() == it ) return Handle<Object>();
+	    return (*it).second.second;
+	}
+
     private:
 	enum Internal {
 	/** The internal field number where we store the wrapped object. */
@@ -457,6 +474,7 @@ namespace juice {
 	    //CERR << "the_cleaner( native@"<<native<<")\n";
 	    if( native )
 	    {
+		typeCheck().erase( native );
 		ClassOpsType::Dtor( native );
 	    }
 	}
@@ -495,6 +513,7 @@ namespace juice {
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
 	    self->SetInternalField( NativeInternalField, External::New(obj) );
+	    typeCheck().insert( std::make_pair( obj, std::make_pair( obj, self ) ) );
 	    //CERR << "Wrapped object @"<<obj<<" in a Persistent<Object>.\n";
 	    return self;
 	}
