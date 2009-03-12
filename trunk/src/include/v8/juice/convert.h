@@ -74,6 +74,13 @@ namespace convert {
 	};
 	template <typename NT>
 	struct to_js_f<NT *> : to_js_f<NT> {};
+
+	template <typename NT>
+	struct to_js_f<NT &> : to_js_f<NT> {};
+
+	template <typename NT>
+	struct to_js_f<const NT &> : to_js_f<NT> {};
+
 // 	{
 // 	    /**
 // 	       Returns a v8::External which references &p (not p directly,
