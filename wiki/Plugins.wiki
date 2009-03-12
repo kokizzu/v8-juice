@@ -15,7 +15,7 @@ List of current plugins (in alphabetical order):
 
 The plugins which are "standalone" (have no hard dependencies on external/third-party software other than v8) are in the core source tree under [http://code.google.com/p/v8-juice/source/browse/trunk/src/#src/lib/plugins src/lib/plugins]. Those which have external dependencies live in [http://code.google.com/p/v8-juice/source/browse/#svn/extra-plugins the extra-plugins repository].
 
-Of your copy of juice is configured without plugins, the API for loading plugins will still be there (for consistency and binary compatibility), but the functions won't do anything useful.
+If your copy of juice is configured without plugins, the API for loading plugins will still be there (for consistency and binary compatibility), but the functions won't do anything useful.
 
 ==C++-side==
 
