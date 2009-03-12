@@ -13,12 +13,15 @@ This API is likely to be continually tweaked, so if you use this API be prepared
 
 ==Getting the source code==
 
-While this code is part of v8-juice, its implementation is independent of any other
-library components, which means it be extracted from the v8-juice source tree for use in other v8-based projects. The source files are:
+While this code is part of v8-juice, much of it is independent of any
+other v8-juice library components, which means it be extracted from the
+v8-juice source tree for use in other v8-based projects. The source
+files are:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/JSClassCreator.h JSClassCreator.h]
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/JSClassCreator.cc JSClassCreator.cc]
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/WeakJSClassCreator.h WeakJSClassCreator.h]
+
 
 =JSClassCreator=
 
@@ -116,8 +119,8 @@ Now that we have a ctor and a dtor, we've got everything we need. From there we 
 
 {{{
 typedef WeakJSClassCreator<MyClass> CC;
-CC c( "MyClass", objectToAddClassTo );
-c.Set("propertyOne",String::New("Hi, world!"))
+CC c( objectToAddClassTo );
+c.Set("propertyOne", String::New("Hi, world!"))
  .Set("answer", Integer::New(42))
  .Set(...)
  .Set(...)
@@ -131,7 +134,19 @@ Again, that's all there is to it. Now when we call `new MyClass(...)` from JS, t
   * If the client-side ctor fails, the internal constructor will throw a JS-side exception (there is no other way to notify JS of a failed construction).
   * If the client ctor succeeds, the internal ctor will then set up a weak pointer callback, which will cause the client-specified dtor to be called _if_ the v8 GC ever decides to kick in. The internal ctor also packs the new native pointer into an internal field of the JS object for later reference by bound functions (see `WeakJSClassCreator::GetSelf()` and `WeakJSClassCreator::GetObject()`).
 
-The native object can be fetched later by passing a bound JS object to one of the static methods `WeakJSClassCreator::GetSelf()` or `WeakJSClassCreator::GetObject()`, both of which work similarly but have very slightly different semantics. The former is expicitly intended to be pass `argv.This()` from a bound member function, whereas the latter can be passed a `Handle<Value>` and it will attempt to figure out if it's of the wrapped native type. The second option is useful when passing wrapped objects as arguments, as opposed to them being the `this` object.
+The native object can be fetched later by passing a bound JS object to
+one of the static methods `WeakJSClassCreator::GetSelf()` or
+`WeakJSClassCreator::GetNative()`, both of which work similarly but have
+very slightly different semantics. The former is expicitly intended to
+be pass `argv.This()` from a bound member function, whereas the latter
+can be passed a `Handle<Value>` and it will attempt to figure out if
+it's of the wrapped native type. The second option is useful when
+passing wrapped objects as arguments, as opposed to them being the
+`this` object.
+
+It is often useful to destroy a bound object from script code. The classical example is a `close()` member of a Stream or Database class,
+which should free the underlying device handle. This feature is simple to implement: just call `WeakJSClassCreator::DestroyObject()` from
+the appropriate close/destroy routine.
 
 Clients can optionally use the `v8::juice::bind` and `v8::juice::cleanup` APIs in their ctors and dtors to get enhanced (and type-safe) type conversions and "supplemental" GC support. Or they can tie their own supplemental GC by adding the logic to their `WeakJSClassCreatorOps<T>::Ctor()` and `Dtor()` routines. See the API docs for more details.
 
