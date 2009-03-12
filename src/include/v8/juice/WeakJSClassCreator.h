@@ -55,6 +55,22 @@ namespace juice {
 		if( obj ) delete obj;
 	    }
 	};
+
+	/**
+	   An internal helper type for use by WeakJSClassCreator.
+	*/
+	template <typename WrappedType>
+	struct WrapperTypeChecker
+	{
+	    typedef std::pair<WrappedType *,Persistent<Object> > ObjBindT;
+	    typedef std::map<void const *,ObjBindT > OneOfUsT;
+	    static OneOfUsT & Map()
+	    {
+		static OneOfUsT bob;
+		return bob;
+	    }
+	};
+
     }
 #endif // DOXYGEN
     /**
@@ -440,18 +456,20 @@ namespace juice {
 
 	static Handle<Object> GetJSObject( WrappedType * obj )
 	{
-	    typename OneOfUsT::const_iterator it = typeCheck().find(obj);
+	    typename OneOfUsT::iterator it = typeCheck().find(obj);
 	    if( typeCheck().end() == it ) return Handle<Object>();
-	    return (*it).second.second;
+	    else return (*it).second.second;
 	}
 
     private:
-	typedef std::pair<WrappedType *,Handle<Object> > ObjBindT;
-	typedef std::map<void const *,ObjBindT > OneOfUsT;
+	typedef Detail::WrapperTypeChecker<WrappedType> TypeCheck;
+	typedef typename TypeCheck::ObjBindT ObjBindT;
+	typedef typename TypeCheck::OneOfUsT OneOfUsT;
 	static OneOfUsT & typeCheck()
 	{
-	    static OneOfUsT bob;
-	    return bob;
+	    // We must use a type defined OUTSIDE of this class
+	    // for this to work properly.
+	    return TypeCheck::Map();
 	}
 	enum Internal {
 	/** The internal field number where we store the wrapped object. */
@@ -484,6 +502,7 @@ namespace juice {
 	*/
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
+	    //CERR << "weak callback @"<<nobj<<"\n";
 	    Local<Object> jobj( Object::Cast(*pv) );
 	    if( jobj->InternalFieldCount() != (FieldCount) ) return;
 	    Local<Value> lv( jobj->GetInternalField(NativeInternalField) );
@@ -513,7 +532,6 @@ namespace juice {
 	    self.MakeWeak( obj, weak_callback );
 	    self->SetInternalField( NativeInternalField, External::New(obj) );
 	    typeCheck().insert( std::make_pair( obj, std::make_pair( obj, self ) ) );
-	    //CERR << "Wrapped object @"<<obj<<" in a Persistent<Object>.\n";
 	    return self;
 	}
 
