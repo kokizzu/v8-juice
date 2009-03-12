@@ -25,7 +25,12 @@ files are:
 
 =JSClassCreator=
 
-The base binding class, JSClassCreator is suitable for creating new JS classes which do not need to link to a specific native instance, or want (or need) to do their own handling binding/unbinding of those instances. The WeakJSClassCreator subclass adds the ability to automatically handle the binding/unbinding of a native object to/from the garbage collection system (in v8 this is called a "weak persistent pointer").
+The base binding class, JSClassCreator is suitable for creating new JS
+classes which do not need to link to a specific native instance, or want
+(or need) to do their own handling binding/unbinding of those instances.
+The WeakJSClassCreator subclass adds the ability to automatically handle
+the binding/unbinding of a native object to/from the garbage collection
+system (in v8 this is called a "weak persistent pointer").
 
 {{{
 // JS-side constructor for MyClass objects...
@@ -55,7 +60,19 @@ Once that's in place we can do the following from JS:
 var obj = new MyClass(...);
 }}}
 
-For the most basic cases, that's all that necessary, in terms of C++ setup. However, the most significantly missing feature of !MyClass is memory management. v8 provides a callback mechanism with which we can be notified "when a context no longer needs an object." The callback mechanism is, due to v8 design decisions, not 100% reliable (there is never a _guaranty_ that our callback will be called!), which makes it useless as a basis for resource management when destructors of certain types _must_ be called to avoid resource leaks, data corruption, etc. To be clear, when your application exits, the memory used by your bindings _will_ be freed, but if they are not GC'd before that then their _destructors_ will not be called. For most types a missing dtor call is not all that critical, assuming the application is exiting anyway, but for some types it's essential for proper operation.
+For the most basic cases, that's all that necessary, in terms of C++
+setup. However, the most significantly missing feature of !MyClass is
+memory management. v8 provides a callback mechanism with which we can be
+notified "when a context no longer needs an object." The callback
+mechanism is, due to v8 design decisions, not 100% reliable (there is
+never a _guaranty_ that our callback will be called!), which makes it
+useless as a basis for resource management when destructors of certain
+types _must_ be called to avoid resource leaks, data corruption, etc. To
+be clear, when your application exits, the memory used by your bindings
+_will_ be freed, but if they are not GC'd before that then their
+_destructors_ will not be called. For most types a missing dtor call is
+not all that critical, assuming the application is exiting anyway, but
+for some types it's essential for proper operation.
 
 =Backing up a bit: the garbage collection problem=
 
@@ -142,13 +159,21 @@ be pass `argv.This()` from a bound member function, whereas the latter
 can be passed a `Handle<Value>` and it will attempt to figure out if
 it's of the wrapped native type. The second option is useful when
 passing wrapped objects as arguments, as opposed to them being the
-`this` object.
+`this` object. Both forms use a type-safe conversion and will not crash
+if passed a JS reference to an object with a different native type.
 
-It is often useful to destroy a bound object from script code. The classical example is a `close()` member of a Stream or Database class,
-which should free the underlying device handle. This feature is simple to implement: just call `WeakJSClassCreator::DestroyObject()` from
-the appropriate close/destroy routine.
+It is often useful to destroy a bound object from script code. The
+classic example is a `close()` member of a Stream or Database class,
+which should free the underlying device handle. This feature is simple
+to implement: just call `WeakJSClassCreator::DestroyObject()` from the
+appropriate close/destroy routine.
 
-Clients can optionally use the `v8::juice::bind` and `v8::juice::cleanup` APIs in their ctors and dtors to get enhanced (and type-safe) type conversions and "supplemental" GC support. Or they can tie their own supplemental GC by adding the logic to their `WeakJSClassCreatorOps<T>::Ctor()` and `Dtor()` routines. See the API docs for more details.
+Clients can optionally use the `v8::juice::bind` and
+`v8::juice::cleanup` APIs in their ctors and dtors to get enhanced (and
+type-safe) type conversions and "supplemental" GC support. Or they can
+tie their own supplemental GC by adding the logic to their
+`WeakJSClassCreatorOps<T>::Ctor()` and `Dtor()` routines. See the API
+docs for more details.
 
 =!ClassBinder=
 
