@@ -82,8 +82,9 @@ print(PathFinder.shared.plugins.find("MyPlugin"));
 The default plugins search path is:
 {{{
 .
-PREFIX/lib/v8/juice/JUICE_VERSION
-PREFIX/lib/v8/juice
+PREFIX/lib/v8/juice/JUICE_VERSION/plugin
+PREFIX/lib/v8/juice/plugin
+(note to self: is that still correct?)
 }}}
 
 Where `PREFIX` is the installation prefix (see [BuildingTheCode]) and `JUICE_VERSION` is the version of the library (set during the configuration process).
