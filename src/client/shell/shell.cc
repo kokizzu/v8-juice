@@ -84,6 +84,8 @@ struct my_native
     void avoid1(int x ) {CERR << "my_native::avoid1("<<x<<")="<<this<<'\n'; }
     void avoid2(int x,double d ) {CERR << "my_native::avoid2("<<x<<","<<d<<")="<<this<<'\n'; }
 
+    double takes3(int x, int y, int z) { return x * y * z; }
+
 };
 
 namespace v8 { namespace juice {
@@ -107,7 +109,7 @@ namespace v8 { namespace juice {
 	    obj->str = "hi, world";
 	    CERR << "Ctor() create @"<<obj<<'\n';
 	    ::v8::juice::cleanup::AddToCleanup(obj,cleanup_callback);
-	    bind::BindNative( 0, obj, obj );
+	    //bind::BindNative( 0, obj, obj );
 	    return obj;
 	}
 
@@ -116,7 +118,7 @@ namespace v8 { namespace juice {
 	    CERR << "Dtor() passing on @"<<obj<<'\n';
 	    if( obj )
 	    {
-		bind::UnbindNative( 0, obj, obj );
+		//bind::UnbindNative( 0, obj, obj );
 		::v8::juice::cleanup::RemoveFromCleanup(obj);
 		delete obj;
 	    }
@@ -180,21 +182,18 @@ int my_fwd( V8CxH & cx )
     //w.Set("func1", MemFuncCallOp< my_native, MemFuncCallOp0<my_native,int,&my_native::func1> >::Call );
     //w.Set("func2", MemFuncCallOp< my_native, MemFuncCallOp1<my_native,int,int,&my_native::func2> >::Call );
 #else
-    //AddMemFunc( w, "func1", &my_native::func1 );
+    //BindMemFunc( w, "func1", &my_native::func1 );
     typedef my_native MY;
-    w.AddMemFunc< int, &MY::func1>( "func1" );
-    w.AddMemFunc< int, int, &MY::func2 >( "func2" );
-    w.AddMemFunc< std::string,&MY::hi >( "hi" );
-    w.AddMemFunc< MY *,&MY::me >( "me" );
-    w.AddMemFunc< bool,MY *,&MY::him >( "him" );
-    w.AddMemFunc< double,int,int,&MY::func3 >( "func3" );
-    // reminder before bed: we need to make MemFuncCallOpN return Returner::Type
-    // before we can go further here
-    w.AddMemFunc< void,&MY::avoid >( "avoid" );
-    w.AddMemFunc< void,int,&MY::avoid1 >( "avoid1" );
-    w.AddMemFunc< void,int,double,&MY::avoid2 >( "avoid2" );
-//     AddMemFunc<my_native,int,int,&my_native::func2>( w, "func2" );
-//     AddMemFunc<my_native,std::string,&my_native::hi>( w, "hi" );
+    w.BindMemFunc< int, &MY::func1>( "func1" );
+    w.BindMemFunc< int, int, &MY::func2 >( "func2" );
+    w.BindMemFunc< std::string,&MY::hi >( "hi" );
+    w.BindMemFunc< MY *,&MY::me >( "me" );
+    w.BindMemFunc< bool,MY *,&MY::him >( "him" );
+    w.BindMemFunc< double,int,int,&MY::func3 >( "func3" );
+    w.BindMemFunc< void,&MY::avoid >( "avoid" );
+    w.BindMemFunc< void,int,&MY::avoid1 >( "avoid1" );
+    w.BindMemFunc< void,int,double,&MY::avoid2 >( "avoid2" );
+    w.BindMemFunc< double,int,int,int,&MY::takes3 >( "takes3" );
 #endif
     w.Seal();
     return 0;
