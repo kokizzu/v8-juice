@@ -293,14 +293,6 @@ namespace juice {
     template <typename WrappedT>
     class WeakJSClassCreator : public JSClassCreator
     {
-    private:
-	typedef std::pair<WrappedT *,Handle<Object> > ObjBindT;
-	typedef std::map<void const *,ObjBindT > OneOfUsT;
-	static OneOfUsT & typeCheck()
-	{
-	    static OneOfUsT bob;
-	    return bob;
-	}
     public:
 	/**
 	   The WeakJSClassCreatorOps specialization used by this
@@ -454,6 +446,13 @@ namespace juice {
 	}
 
     private:
+	typedef std::pair<WrappedType *,Handle<Object> > ObjBindT;
+	typedef std::map<void const *,ObjBindT > OneOfUsT;
+	static OneOfUsT & typeCheck()
+	{
+	    static OneOfUsT bob;
+	    return bob;
+	}
 	enum Internal {
 	/** The internal field number where we store the wrapped object. */
 	NativeInternalField = ClassOpsType::ExtraInternalFieldCount,
