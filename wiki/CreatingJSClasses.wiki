@@ -1,6 +1,8 @@
 #summary Creating JS classes from C++
 #labels Phase-UserDocs,Featured
 
+*Achtung:* this page documents the _current_ state of the library, which might be five minutes or a thousand years newer than any given version found on the downloads page.
+
 <wiki:toc max_depth="3" />
 
 =Introduction=
@@ -312,10 +314,10 @@ forwarding mechanism uses `CastToJS()` and `CastFromJS()` for all type conversio
 hook in to that:
 
 {{{
-namespace v8 { namespace juice { namespace convert { namespace Detail {
+namespace v8 { namespace juice { namespace convert {
 	// Required for CastTo/FromJS() to work:
 	template <>
-	struct to_js_f<my_native>
+	struct NativeToJS<my_native>
 	{
 	    Handle<Value> operator()( my_native * p ) const
 	    {
@@ -325,7 +327,7 @@ namespace v8 { namespace juice { namespace convert { namespace Detail {
 	    }
 	};
 	template <>
-	struct to_native_f<my_native>
+	struct JSToNative<my_native>
 	{
 	    typedef my_native * result_type;
 	    result_type operator()( Handle<Value> const & h ) const
@@ -337,8 +339,7 @@ namespace v8 { namespace juice { namespace convert { namespace Detail {
 		return this->operator()( h );
 	    }
 	};
-    }}
-} } } } // namespaces
+} } } // namespaces
 }}}
 
 If the native type will never be passed as a parameter or returned
