@@ -1,0 +1,43 @@
+#summary Converting between JS and native types
+#labels Phase-UserDocs
+
+= Introduction =
+
+Juice comes with an API for casting between JS types and native types. While v8 of course provides convenience routines like `Value::IntegerValue()` and `Value::ToString()`, that leaves us with two limitations:
+
+  * The types of conversions are defined by v8's implementors and are not extensible.
+  * We have to know the exact conversion routine we want to call. Believe it or not, when our code uses typedefs (e.g. numeric types of different sizes, possibly from external libraries) we cannot safely know which conversion to rely upon.
+
+And thus...
+
+{{{
+#include <v8/juice/convert.h>
+
+...
+namespace cv = v8::juice::convert;
+int i = cv::CastFromJS<int>(someJSVal);
+std::string s = cv::CastFromJS<std::string>(someJSVal);
+...
+
+Handle<Value> v1 = cv::CastToJS( myInteger );
+Handle<Value> v2 = cv::CastToJS( "hi, world" );
+Handle<Value> v3 = cv::CastToJS( myType ); // we can add custom conversions!
+}}}
+
+The `CastToJS()` and `CastFromJS()` routines are very small functions which delegate all work to template a specialization of the class `NativeToJS<>` resp. `JSToNative<>`. Specializations are already installed for all of the base POD types (except (`char const *`) - see below), and clients can provide their own to do any conversion they like. An example of this is shown on [CreatingJSClasses the creating-new-classes page].
+
+==The `(char const *)` problem==
+
+The following will work as expected:
+
+{{{
+Handle<Value> v = CastToJS("this is a (char const *)");
+}}}
+
+This won't:
+
+{{{
+char const * v = CastFromJS(myJSVal);
+}}}
+
+The problem here is ownership and lifetime of the string bytes. v8 does not document them (and can't realistically provide any requirements which we would need for this conversion). While we _can_ write a conversion routine for this, its results would technically be undefined. As a workaround, client code should use `std::string` instead, at least for `CastFromJS()` or implement specializations for their string type of choice.
