@@ -76,7 +76,7 @@ namespace v8 { namespace juice {
 	/**
 	   Returns the path separator string. Default is ":";
 	*/
-	const std::string & path_separator() const;
+	std::string path_separator() const;
 
 	/**
 	   Sets the path to p, which should be a path_separator()-delimited string.
