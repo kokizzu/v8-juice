@@ -1,4 +1,4 @@
-#summary Plugin providing supplementing string utilities
+#summary Plugin providing supplemental string utilities
 #labels Phase-UserDocs
 
 This plugin provides the following JS-side functions:
