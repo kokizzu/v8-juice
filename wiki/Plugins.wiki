@@ -15,16 +15,16 @@ List of current plugins (in alphabetical order):
 
 The plugins which are "standalone" (have no hard dependencies on external/third-party software other than v8) are in the core source tree under [http://code.google.com/p/v8-juice/source/browse/trunk/src/#src/lib/plugins src/lib/plugins]. Those which have external dependencies live in [http://code.google.com/p/v8-juice/source/browse/#svn/extra-plugins the extra-plugins repository].
 
-Of your copy of juice is configured without plugins, the API for loading plugins will still be there (for consistency and binary compatibility), but they won't do anything useful.
+Of your copy of juice is configured without plugins, the API for loading plugins will still be there (for consistency and binary compatibility), but the functions won't do anything useful.
 
 ==C++-side==
 
-From C++ code, you need to do the following...
+To be able to load new plugins from JS code, we first have to add a small amount of C++ code:
 
 {{{
 #include <v8/juice/plugin.h>
 ...
-// when you initialize your JS global object, add this function:
+// when initializing the JS global object, add this function:
   gl->Set(String::New("loadPlugin"), v8::juice::plugin::LoadPlugin );
 }}}
 
@@ -42,13 +42,13 @@ That exact signature is not technically required, but it is a convenient convent
 
 That routine should add the plugin's functionality, treating the given target object as the logical global object (whether it is or is not the real global object is up to the caller). On success it should return a non-exception.
 
-Now we set up a trigger which will call that init routine whenever the DLL is opened by adding the following macro somewhere in our implementation file (it doesn't matter where, as long as it's got file/namespace scope):
+Now we set up a trigger which will call that init routine whenever the DLL is opened by adding the following macro somewhere in our implementation file (it doesn't matter where, as long as it's got file- or namespace-level scope):
 
 {{{
 V8_JUICE_PLUGIN_STATIC_INIT(SetupMyAddon);
 }}}
 
-Now, whenever loadPlugin("!MyPlugin") opens the DLL, the initialization code will be run automatically and it can set up its JS state. Optionally, we can pass an Object as a second argument to loadPlugin(), and that object will be used as the local global object. Multiple plugins may live inside a single DLL, and the above macro needs to be called one time per plugin initialization function.
+Now, whenever `loadPlugin("MyPlugin")` opens the DLL, the initialization code will be run automatically and it can set up its JS state. Optionally, we can pass an Object as a second argument to `loadPlugin()` and that object will be used as the logical global object. Multiple plugins may live inside a single DLL, and the above macro needs to be called one time per plugin initialization function.
 
 ==JS-side==
 
@@ -59,23 +59,21 @@ var p2 = {};
 loadPlugin("MyOtherPlugin",p2); // will pass p2 as the target object
 }}}
 
-loadPlugin() will throw on error and the exception will explain the problem, which is normally one of:
+`loadPlugin()` will throw on error and the exception will explain the problem, which is normally one of:
 
   * No plugin could be found in the current plugins search path.
   * A plugin was found but opening it failed (e.g. missing DLL symbols are sometimes problematic).
-  * The DLL initialization code threw an exception.
+  * The DLL initialization code threw a JS exception.
 
 ==The plugins search path==
 
-From native code, you can use the PluginsPath() function to get access to a v8::juice::PathFinder object which is used to do the actual searches for plugins. The plugins path is accessible via JS code if it has been explicitly added using (see v8::juice::plugin::SetupPathFinderClass()). Once it is added to the JS engine, the plugins path is accessible via the shared JS object `PathFinder.shared.plugins` (in fact, it is the same native instance returned by the PluginPath() function).
+From native code, you can use the `v8::juice::plugin::PluginsPath()` function to get access to a shared `v8::juice::PathFinder` object which is used to do the actual searches for plugins. The plugins path is accessible via JS code if it has been explicitly added using (see `v8::juice::plugin::SetupPathFinderClass()`). Once it is added to the JS engine, the plugins path is accessible via the shared JS object `PathFinder.shared.plugins` (it uses the same native instance returned by the PluginPath() function).
 
 For example:
 
 {{{
-print(PathFinder.shared.plugins.pathString);
-print(PathFinder.shared.plugins.pathArray);
 print(PathFinder.shared.plugins.find("MyPlugin"));
-  // ^^^ searches for MyPlugin.(dll|so) but does not open it
+// ^^^ searches for MyPlugin.(dll|so) but does not open it
 }}}
 
 
