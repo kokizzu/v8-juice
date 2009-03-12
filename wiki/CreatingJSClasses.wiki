@@ -97,6 +97,9 @@ namespace v8 { namespace juice {
 
 	/** Destructor function. */
 	static void Dtor( WrappedType * obj );
+
+	/** The JS class name. */
+	static char const * ClassName() { return "MyClass"; }
     };
 }} // namespaces
 }}}
@@ -131,6 +134,81 @@ Again, that's all there is to it. Now when we call `new MyClass(...)` from JS, t
 The native object can be fetched later by passing a bound JS object to one of the static methods `WeakJSClassCreator::GetSelf()` or `WeakJSClassCreator::GetObject()`, both of which work similarly but have very slightly different semantics. The former is expicitly intended to be pass `argv.This()` from a bound member function, whereas the latter can be passed a `Handle<Value>` and it will attempt to figure out if it's of the wrapped native type. The second option is useful when passing wrapped objects as arguments, as opposed to them being the `this` object.
 
 Clients can optionally use the `v8::juice::bind` and `v8::juice::cleanup` APIs in their ctors and dtors to get enhanced (and type-safe) type conversions and "supplemental" GC support. Or they can tie their own supplemental GC by adding the logic to their `WeakJSClassCreatorOps<T>::Ctor()` and `Dtor()` routines. See the API docs for more details.
+
+=!ClassBinder=
+
+!ClassBinder is a WeakJSClassCreator subclass which makes use of
+v8-juice's type conversions API to add features to the class binding process.
+Unlike JSClassCreator and WeakJSClassCreator, !ClassBinder is not a
+standalone implementation which can be used as-is in arbitrary v8 client
+code - it requires the v8-juice type conversions framework.
+
+The primary feature added by !ClassBinder is the ability to bind native
+member functions of the wrapped type. The syntax for doing so is a tiny
+bit odd, but there's a reason for it which we'll explain after we
+demonstrate:
+
+{{{
+ClassBinder<MyClass> bin;
+bin.AddMemFunc<double /* return value type */,
+		int /* first arg type*/,
+		&MyClass::myFunc /* member func: double (MyClass::*)(int) */
+	>( "myFunc" );
+}}}
+
+_WTF?_ Every function-wrapping framework i've seen so far passes
+function pointers as function arguments to the template functions (got
+that?). In this one, we pass the function pointers as a _template
+parameter_ instead of as a function argument! Why? It's ugly, but
+there's a reason for it: it costs us nothing at runtime. If we passed
+pointers to functions as the arguments, we would have to create a small
+wrapper object for _each_ binding (that is, one per class/member
+combination), and the wrapper's only purpose would be to forward the
+call to a specific native object (which is found at runtime of course).
+We would have no place to store the call-wrappers for later cleanup (long
+story) and we would effectively introduce a memory leak for every bound
+function. By using function pointers as template parameters, we bind the
+function pointers at compile time and therefor need no intermediary
+call-proxy object instance. We _still_ have proxy functions, but they
+require no dynamic memory and are bound (and possibly inlined) at
+compile-time.
+
+The primary down-side to this approach, as opposed to passing function
+pointers as _function_ arguments (not _template_ arguments), is that the
+function pointer signature's contained types must exactly match the
+types specified in the other template parameters. e.g. the following
+will not work:
+
+{{{
+int MyClass::func( double );
+
+...
+
+binder.AddMemFunc< int,
+		int /* <--- must be of type double because: */,
+		&MyClass::func /* int (MyClass::*)(double) */
+		>
+		("func");
+}}}
+
+That won't work because the template type for the first member function
+argument is wrong - it must the type used by the signature of the given
+member function (so in this case it must be `double` instead of `int`).
+
+If i'm not mistaken, if we bound at runtime to function pointers (via an
+internal functor used as a call wrapper), we could rely on implicity
+type conversions to do this sort of type conversions for us. That would,
+however, require the above-mentioned leak, which i'm not at all keen on.
+
+The conversion of member function parameters to/from JS is achieved
+using the `v8::juice::convert` API, and it inherits most of the type
+conversion limitations (and features) of that API. As an exception, it supports
+member functions returning `void` (which the juice::convert API cannot
+directly handle).
+
+TODO: wrapping of const member functions. Requires generation of one or two more
+template specializations (per member function arg count) for some internal types.
+
 
 =Real-world examples=
 
