@@ -255,7 +255,6 @@ namespace v8 { namespace juice { namespace whio {
 	static char const * ClassName() { return "ByteArray"; }
     };
 
-
 namespace whio {
 
     /**
@@ -265,23 +264,29 @@ namespace whio {
     template <typename T>
     static typename WeakJSClassCreator<T>::WrappedType * dev_cast( Handle< Value > const & v )
     {
-#if 1
+#if 0
 	return WeakJSClassCreator<T>::GetNative( v );
 #else
-	if( v.IsEmpty() ) return 0;
-	if( ! v->IsObject() )
-	{
-	    return v->IsExternal()
-		? bind::GetBoundNative<T>( bind_cx(), v )
-		: 0;
-	}
-	Local<Object> o( Object::Cast( *v ) );
-	return bind::GetBoundNative<T>( bind_cx(), o->GetInternalField(0) );
+// 	if( v.IsEmpty() ) return 0;
+// 	if( ! v->IsObject() )
+// 	{
+// 	    return v->IsExternal()
+// 		? bind::GetBoundNative<T>( bind_cx(), v )
+// 		: 0;
+// 	}
+// 	Local<Object> o( Object::Cast( *v ) );
+// 	return bind::GetBoundNative<T>( bind_cx(), o->GetInternalField(0) );
+ 	if( v.IsEmpty() || ! v->IsObject() ) return 0;
+ 	Local<Object> o( Object::Cast( *v ) );
+	typedef typename WeakJSClassCreator<T>::WrappedType WT;
+	WT * rv = WeakJSClassCreator<T>::GetSelf( o );
+	CERR << "dev_cast() calling GetSelf() = " << rv<<'\n';
+	return rv;
 #endif
     }
 // Helper macros for args and type checking:
 #define ARGS(COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
-#if 1
+#if 0
 #  define DEVH(PT,H) PT::type * dev = dev_cast< PT >( H )
 #else
 #  define DEVH(T,H) WeakJSClassCreator<T>::WrappedType * dev = WeakJSClassCreator<T>::GetSelf( H )

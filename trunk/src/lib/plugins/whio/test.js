@@ -218,6 +218,7 @@ function tryAbstract()
 function tryByteArray()
 {
     var ba = new whio.ByteArray(100);
+    ba.write("hi, world");
     print(ba);
     ba.close();
 }
