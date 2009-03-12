@@ -44,6 +44,33 @@ namespace juice {
     {
 	using namespace v8;
 	using namespace v8::juice;
+
+	struct VoidType {};
+
+	// TODO: use this to assist in handling void-returning functions:
+	template <typename NonVoid>
+	struct Returner
+	{
+	    typedef Handle< ::v8::Value> ResultType;
+	    template <typename T, typename RV, RV (T::*Func)()  >
+	    static ResultType Call( T * obj, Arguments const & argv )
+	    {
+		return convert::CastToJS( (obj->*Func)() );
+	    }
+	};
+
+	template <>
+	struct Returner<void>
+	{
+	    typedef Handle< ::v8::Value> ResultType;
+	    template <typename T, void (T::*Func)()  >
+	    static ResultType Call( T * obj, Arguments const & argv )
+	    {
+		(obj->*Func)();
+		return Undefined();
+	    }
+	};
+
 	template <typename T, typename RV, RV (T::*Func)()  >
 	struct MemFuncCallOp0
 	{
@@ -56,18 +83,38 @@ namespace juice {
 	    }
 	};
 
+	template <typename T, void (T::*Func)()>
+	struct MemFuncCallOp0<T, void, Func >
+	{
+	    typedef T Type;
+	    enum { Arity = 0 };
+	    static Handle<Value> Call( Type * obj, Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
+		(void) (obj->*Func)();
+		return Undefined();
+	    }
+	};
+
+
 	template <typename WrappedType, typename RV, typename A1, RV (WrappedType::*Func)(A1)  >
 	struct MemFuncCallOp1
 	{
 	    typedef WrappedType Type;
 	    enum { Arity = 1 };
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
+	    //static Handle<Value> Call( Type * obj, Arguments const & argv )
+	    static RV Call( Type * obj, Arguments const & argv )
 	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp1::Call(): Native object is null!"));
-		else if( argv.Length()<Arity ) return ThrowException(String::New("MemFuncCallOp0::Call(): wrong argument count!"));
-		return convert::CastToJS( (RV) (obj->*Func)(
-							    convert::CastFromJS<A1>(argv[0])
-							    ) );
+#if 0
+		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
+		return convert::CastToJS( (RV) (obj->*Func)() );
+#else
+		if( ! obj ) return RV();
+		else if( argv.Length()<Arity ) return RV();
+		return (RV) (obj->*Func)(
+					 convert::CastFromJS<A1>(argv[0])
+					 );
+#endif
 	    }
 	};
 
@@ -87,62 +134,6 @@ namespace juice {
 							    ) );
 	    }
 	};
-	/** Member function call forwarder for member functions taking 3 arguments. */
-	template < typename WrappedType, typename RV,  typename A0, typename A1, typename A2, RV (WrappedType::*Func)( A0 , A1 , A2 ) >
-	struct MemFuncCallOp3
-	{
-	    enum { Arity = 3 };
-	    typedef WrappedType Type;
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp3::Call(): Native object is null!"));
-		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp3::Call(): wrong argument count!"));
-		return convert::CastToJS( (RV) (obj->*Func)(
-							    convert::CastFromJS< A0 >(argv[0]),
-							    convert::CastFromJS< A1 >(argv[1]),
-							    convert::CastFromJS< A2 >(argv[2])
-							    ) );
-	    }
-	};
-
-	/** Member function call forwarder for member functions taking 4 arguments. */
-	template < typename WrappedType, typename RV,  typename A0, typename A1, typename A2, typename A3, RV (WrappedType::*Func)( A0 , A1 , A2 , A3 ) >
-	struct MemFuncCallOp4
-	{
-	    enum { Arity = 4 };
-	    typedef WrappedType Type;
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp4::Call(): Native object is null!"));
-		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp4::Call(): wrong argument count!"));
-		return convert::CastToJS( (RV) (obj->*Func)(
-							    convert::CastFromJS< A0 >(argv[0]),
-							    convert::CastFromJS< A1 >(argv[1]),
-							    convert::CastFromJS< A2 >(argv[2]),
-							    convert::CastFromJS< A3 >(argv[3])
-							    ) );
-	    }
-	};
-
-	/** Member function call forwarder for member functions taking 5 arguments. */
-	template < typename WrappedType, typename RV,  typename A0, typename A1, typename A2, typename A3, typename A4, RV (WrappedType::*Func)( A0 , A1 , A2 , A3 , A4 ) >
-	struct MemFuncCallOp5
-	{
-	    enum { Arity = 5 };
-	    typedef WrappedType Type;
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp5::Call(): Native object is null!"));
-		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp5::Call(): wrong argument count!"));
-		return convert::CastToJS( (RV) (obj->*Func)(
-							    convert::CastFromJS< A0 >(argv[0]),
-							    convert::CastFromJS< A1 >(argv[1]),
-							    convert::CastFromJS< A2 >(argv[2]),
-							    convert::CastFromJS< A3 >(argv[3]),
-							    convert::CastFromJS< A4 >(argv[4])
-							    ) );
-	    }
-	};
 
 
 	/**
@@ -150,7 +141,7 @@ namespace juice {
 	   must be an existing MemFuncCallOpN type, where N is an
 	   integer value.
 	*/
-	template <typename CallOpType>
+	template <typename CallOpType,typename RT = bool>
 	struct MemFuncCallOp
 	{
 	    typedef typename CallOpType::Type Type;
@@ -159,8 +150,23 @@ namespace juice {
 	    static Handle<Value> Call( Arguments const & argv )
 	    {
 		Type * obj = Wrapper::GetSelf( argv.This() );
-		if( ! obj ) return ThrowException(String::New("MemberForwader<>::Call() could not find native 'this' object!"));
-		return CallOpType::Call( obj, argv );
+		if( ! obj ) return ThrowException(String::New("MemberForwarder<>::Call() could not find native 'this' object!"));
+		return convert::CastToJS( CallOpType::Call( obj, argv ) );
+	    }
+	};
+
+	template <typename CallOpType>
+	struct MemFuncCallOp<CallOpType,void>
+	{
+	    typedef typename CallOpType::Type Type;
+	    enum { Arity = CallOpType::Arity };
+	    typedef WeakJSClassCreator<Type> Wrapper;
+	    static Handle<Value> Call( Arguments const & argv )
+	    {
+		Type * obj = Wrapper::GetSelf( argv.This() );
+		if( ! obj ) return ThrowException(String::New("MemberForwarder<>::Call() could not find native 'this' object!"));
+		CallOpType::Call( obj, argv );
+		return Undefined();
 	    }
 	};
 
@@ -216,9 +222,20 @@ namespace juice {
 	ClassBinder & AddMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp0< WrappedType, RV, Func > Caller;
+	    this->Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
+	    return *this;
+	}
+
+#if 0
+	// not working
+	template <typename RV, RV (WrappedType::*Func)() const>
+	ClassBinder & AddMemFunc( char const * name )
+	{
+	    typedef Detail::MemFuncCallOp0< const WrappedType, RV, Func > Caller;
 	    this->Set(name, Detail::MemFuncCallOp<Caller>::Call );
 	    return *this;
 	}
+#endif
 	/**
 	   Overload requiring a WrappedType member function taking 1
 	   arg and returning RV.
@@ -227,9 +244,10 @@ namespace juice {
 	ClassBinder & AddMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp1< WrappedType, RV, A1, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp<Caller >::Call );
+	    this->Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
 	    return *this;
 	}
+
 	/**
 	   Overload requiring a WrappedType member function taking 2
 	   args and returning RV.
@@ -238,38 +256,7 @@ namespace juice {
 	ClassBinder & AddMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp2< WrappedType, RV, A0, A1, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
-	    return *this;
-	}
-
-	/**
-	   Overload requiring a WrappedType member function taking 3 args and returning RV.
-	*/
-	template <  typename RV, typename A0, typename A1, typename A2, RV (WrappedType::*Func)( A0 , A1 , A2 ) >
-	ClassBinder & AddMemFunc( char const * name )
-	{
-	    typedef Detail::MemFuncCallOp3< WrappedType, RV, A0, A1, A2, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
-	    return *this;
-	}
-	/**
-	   Overload requiring a WrappedType member function taking 4 args and returning RV.
-	*/
-	template <  typename RV, typename A0, typename A1, typename A2, typename A3, RV (WrappedType::*Func)( A0 , A1 , A2 , A3 ) >
-	ClassBinder & AddMemFunc( char const * name )
-	{
-	    typedef Detail::MemFuncCallOp4< WrappedType, RV, A0, A1, A2, A3, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
-	    return *this;
-	}
-	/**
-	   Overload requiring a WrappedType member function taking 5 args and returning RV.
-	*/
-	template <  typename RV, typename A0, typename A1, typename A2, typename A3, typename A4, RV (WrappedType::*Func)( A0 , A1 , A2 , A3 , A4 ) >
-	ClassBinder & AddMemFunc( char const * name )
-	{
-	    typedef Detail::MemFuncCallOp5< WrappedType, RV, A0, A1, A2, A3, A4, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
+	    this->Set(name, Detail::MemFuncCallOp< Caller,RV >::Call );
 	    return *this;
 	}
 
