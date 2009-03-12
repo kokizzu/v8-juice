@@ -44,7 +44,7 @@ If you need to do a custom installation, here's what you'll need to copy (and to
 
 The makefile also supports `make uninstall`.
 
-=Using !SCons=
+=Using SCons=
 
 As of 20090313 the tree has very minimal support for a build using SCons.
 
