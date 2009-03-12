@@ -177,7 +177,7 @@ namespace v8 { namespace juice { namespace whio {
 	    if( d )
 	    {
 		::v8::juice::cleanup::AddToCleanup(d, cleanup_callback );
-		bind::BindNative( 0, d, d );
+		//bind::BindNative( 0, d, d );
 	    }
 	    return d;
 	}
@@ -187,7 +187,7 @@ namespace v8 { namespace juice { namespace whio {
 	    //CERR << "Dtor() passing on @"<<obj<<'\n';
 	    if( obj )
 	    {
-		bind::UnbindNative( 0, obj, obj );
+		//bind::UnbindNative( 0, obj, obj );
 		::v8::juice::cleanup::RemoveFromCleanup(obj);
 		obj->api->finalize(obj);
 	    }
@@ -264,25 +264,7 @@ namespace whio {
     template <typename T>
     static typename WeakJSClassCreator<T>::WrappedType * dev_cast( Handle< Value > const & v )
     {
-#if 0
 	return WeakJSClassCreator<T>::GetNative( v );
-#else
-// 	if( v.IsEmpty() ) return 0;
-// 	if( ! v->IsObject() )
-// 	{
-// 	    return v->IsExternal()
-// 		? bind::GetBoundNative<T>( bind_cx(), v )
-// 		: 0;
-// 	}
-// 	Local<Object> o( Object::Cast( *v ) );
-// 	return bind::GetBoundNative<T>( bind_cx(), o->GetInternalField(0) );
- 	if( v.IsEmpty() || ! v->IsObject() ) return 0;
- 	Local<Object> o( Object::Cast( *v ) );
-	typedef typename WeakJSClassCreator<T>::WrappedType WT;
-	WT * rv = WeakJSClassCreator<T>::GetSelf( o );
-	CERR << "dev_cast() calling GetSelf() = " << rv<<'\n';
-	return rv;
-#endif
     }
 // Helper macros for args and type checking:
 #define ARGS(COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
@@ -586,9 +568,6 @@ namespace whio {
     }
     /**
        read() impl for DevT, which must be one of whio_dev or whio_stream.
-
-       If allowRead is false then this function throws when called. Set it to
-       false for the OutStream class and true for all (or most) others.
     */
     template <typename DevT>
     static Handle<Value> devT_read_impl( DevT * dev, const Arguments& argv)
@@ -626,6 +605,9 @@ namespace whio {
 	return Undefined();
     }
 
+    /**
+       whio_stream_api::close() wrapper.
+    */
     static Handle<Value> stream_close(const Arguments& argv)
     {
 	ARGS((0==argc));
@@ -635,13 +617,13 @@ namespace whio {
 	return Undefined();
     }
     /**
-       whio_dev_api::close() wrapper.
+       whio_dev_api::error() wrapper.
     */
     static Handle<Value> dev_error(const Arguments& argv)
     {
 	ARGS((0==argc));
 	DEVTHIS(IODevice);
-	return Int32ToJS( dev->api->error( dev ) );
+	return CastToJS( dev->api->error( dev ) );
     }
 
     /**
@@ -651,7 +633,7 @@ namespace whio {
     {
 	ARGS((0==argc));
 	DEVTHIS(IODevice);
-	return Int32ToJS( dev->api->clear_error( dev ) );
+	return CastToJS( dev->api->clear_error( dev ) );
     }
 
     /**
@@ -661,7 +643,7 @@ namespace whio {
     {
 	ARGS((0==argc));
 	DEVTHIS(IODevice);
-	return Int32ToJS( dev->api->eof(dev) );
+	return CastToJS( dev->api->eof(dev) );
     }
 
     /**
@@ -671,7 +653,7 @@ namespace whio {
     {
 	ARGS((0==argc));
 	DEVTHIS(IODevice);
-	return UInt64ToJS( dev->api->tell( dev ) );
+	return CastToJS( dev->api->tell( dev ) );
     }
 
     /**
@@ -681,8 +663,9 @@ namespace whio {
     {
 	ARGS(((argc==1) || (argc==2)));
 	DEVTHIS(IODevice);
-	int32_t pos = JSToUInt32( argv[0] );
-	const int whence = (argc>1) ? JSToInt32( argv[1] ) : SEEK_SET;
+	typedef int32_t IntT;
+	IntT pos = CastFromJS<IntT>( argv[0] );
+	const int whence = (argc>1) ? CastFromJS<IntT>( argv[1] ) : SEEK_SET;
 	switch( whence )
 	{
 	  case SEEK_SET:
@@ -693,7 +676,7 @@ namespace whio {
 	      TOSS("The second argument to seek() must be one of SEEK_SET, SEEK_CUR, or SEEK_END!");
 	      break;
 	};
-	return UInt64ToJS( dev->api->seek( dev, pos, whence) );
+	return CastToJS( dev->api->seek( dev, pos, whence) );
     }
 
     /**
@@ -710,12 +693,18 @@ namespace whio {
 	// this. Hmmm.
     }
 
+    /**
+       whio_dev_api::flush() wrapper.
+    */
     static Handle<Value> dev_flush(const Arguments& argv)
     {
 	ARGS((0==argc));
 	DEVTHIS(IODevice);
 	return devT_flush_impl<IODevice::type>( dev, argv );
     }
+    /**
+       whio_stream_api::flush() wrapper.
+    */
     static Handle<Value> stream_flush(const Arguments& argv)
     {
 	ARGS((0==argc));
@@ -793,11 +782,6 @@ namespace whio {
     }
 
 
-
-#define DEVHN(T,N,H) T * dev ## N = dev_cast<T>( H )
-#define DEVHTN(T,N,H) DEVHN(T,N,H); if( ! dev ) TOSS("Handle is-not-a " # T "!")
-
-    
 #undef DEVHT
 #undef DEVHV
 #undef DEVH

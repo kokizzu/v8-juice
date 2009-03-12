@@ -12,6 +12,7 @@ function tryOne()
 {
     var p = new PathFinder("/home/stephan/bin:/usr/bin:/bin");
     dumpPF(p);
+    print('getPathSeparator()=',p.getPathSeparator());
 }
 
 

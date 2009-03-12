@@ -80,6 +80,10 @@ struct my_native
     my_native * me() { CERR << "my_native::me()="<<this<<'\n';return this; }
     bool him(my_native * him) { CERR << "my_native::him("<<him<<")\n"; return true; }
 
+    void avoid() {CERR << "my_native::avoid()="<<this<<'\n'; }
+    void avoid1(int x ) {CERR << "my_native::avoid1("<<x<<")="<<this<<'\n'; }
+    void avoid2(int x,double d ) {CERR << "my_native::avoid2("<<x<<","<<d<<")="<<this<<'\n'; }
+
 };
 
 namespace v8 { namespace juice {
@@ -184,6 +188,11 @@ int my_fwd( V8CxH & cx )
     w.AddMemFunc< MY *,&MY::me >( "me" );
     w.AddMemFunc< bool,MY *,&MY::him >( "him" );
     w.AddMemFunc< double,int,int,&MY::func3 >( "func3" );
+    // reminder before bed: we need to make MemFuncCallOpN return Returner::Type
+    // before we can go further here
+    w.AddMemFunc< void,&MY::avoid >( "avoid" );
+    w.AddMemFunc< void,int,&MY::avoid1 >( "avoid1" );
+    w.AddMemFunc< void,int,double,&MY::avoid2 >( "avoid2" );
 //     AddMemFunc<my_native,int,int,&my_native::func2>( w, "func2" );
 //     AddMemFunc<my_native,std::string,&my_native::hi>( w, "hi" );
 #endif

@@ -45,32 +45,6 @@ namespace juice {
 	using namespace v8;
 	using namespace v8::juice;
 
-	struct VoidType {};
-
-	// TODO: use this to assist in handling void-returning functions:
-	template <typename NonVoid>
-	struct Returner
-	{
-	    typedef Handle< ::v8::Value> ResultType;
-	    template <typename T, typename RV, RV (T::*Func)()  >
-	    static ResultType Call( T * obj, Arguments const & argv )
-	    {
-		return convert::CastToJS( (obj->*Func)() );
-	    }
-	};
-
-	template <>
-	struct Returner<void>
-	{
-	    typedef Handle< ::v8::Value> ResultType;
-	    template <typename T, void (T::*Func)()  >
-	    static ResultType Call( T * obj, Arguments const & argv )
-	    {
-		(obj->*Func)();
-		return Undefined();
-	    }
-	};
-
 	template <typename T, typename RV, RV (T::*Func)()  >
 	struct MemFuncCallOp0
 	{
@@ -97,33 +71,42 @@ namespace juice {
 	};
 
 
-	template <typename WrappedType, typename RV, typename A1, RV (WrappedType::*Func)(A1)  >
+	/** Member function call forwarder for member functions taking 1 arguments. */
+	template < typename WrappedType, typename RV,  typename A0, RV (WrappedType::*Func)( A0 ) >
 	struct MemFuncCallOp1
 	{
-	    typedef WrappedType Type;
 	    enum { Arity = 1 };
-	    //static Handle<Value> Call( Type * obj, Arguments const & argv )
-	    static RV Call( Type * obj, Arguments const & argv )
+	    typedef WrappedType Type;
+	    static Handle<Value> Call( Type * obj, Arguments const & argv )
 	    {
-#if 0
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
-		return convert::CastToJS( (RV) (obj->*Func)() );
-#else
-		if( ! obj ) return RV();
-		else if( argv.Length()<Arity ) return RV();
-		return (RV) (obj->*Func)(
-					 convert::CastFromJS<A1>(argv[0])
-					 );
-#endif
+		if( ! obj ) return ThrowException(String::New("MemFuncCallOp1::Call(): Native object is null!"));
+		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp1::Call(): wrong argument count!"));
+		return convert::CastToJS( (RV) (obj->*Func)(
+							    convert::CastFromJS< A0 >(argv[0])
+							    ) );
 	    }
 	};
-
+	template < typename WrappedType,  typename A0, void (WrappedType::*Func)( A0) >
+	struct MemFuncCallOp1< WrappedType,void, A0, Func >
+	{
+	    enum { Arity = 1 };
+	    typedef WrappedType Type;
+	    static Handle<Value> Call( Type * obj, Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncCallOp1::Call(): Native object is null!"));
+		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp1::Call(): wrong argument count!"));
+		(obj->*Func)(
+			     convert::CastFromJS< A0 >(argv[0])
+			     );
+		return ::v8::Undefined();
+	    }
+	};
 	/** Member function call forwarder for member functions taking 2 arguments. */
-	template < typename T, typename RV,  typename A0, typename A1, RV (T::*Func)( A0 , A1 ) >
+	template < typename WrappedType, typename RV,  typename A0,  typename A1, RV (WrappedType::*Func)( A0, A1 ) >
 	struct MemFuncCallOp2
 	{
-	    typedef T Type;
 	    enum { Arity = 2 };
+	    typedef WrappedType Type;
 	    static Handle<Value> Call( Type * obj, Arguments const & argv )
 	    {
 		if( ! obj ) return ThrowException(String::New("MemFuncCallOp2::Call(): Native object is null!"));
@@ -134,7 +117,22 @@ namespace juice {
 							    ) );
 	    }
 	};
-
+	template < typename WrappedType,  typename A0,  typename A1, void (WrappedType::*Func)( A0, A1) >
+	struct MemFuncCallOp2< WrappedType,void, A0, A1, Func >
+	{
+	    enum { Arity = 2 };
+	    typedef WrappedType Type;
+	    static Handle<Value> Call( Type * obj, Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncCallOp2::Call(): Native object is null!"));
+		else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCallOp2::Call(): wrong argument count!"));
+		(obj->*Func)(
+			     convert::CastFromJS< A0 >(argv[0]),
+			     convert::CastFromJS< A1 >(argv[1])
+			     );
+		return ::v8::Undefined();
+	    }
+	};
 
 	/**
 	   Helper used by ClassBinder::AddMemberFunc(). CallOpType
