@@ -57,238 +57,248 @@ namespace convert {
     /** Convenience typedef. */
     typedef Handle<Value> ValueHandle;
 
-#if ! defined(DOXYGEN)
-    /** Internal library details. */
-    namespace Detail
+    /**
+       Base instantiation for T-to-ValueHandle conversion functor.
+    */
+    template <typename NT>
+    struct NativeToJS
     {
+	template <typename X>
+	ValueHandle operator()( X const & ) const;
+	// won't compile if not specialized.
+    };
+    template <typename NT>
+    struct NativeToJS<NT *> : NativeToJS<NT> {};
 
+    template <typename NT>
+    struct NativeToJS<NT &> : NativeToJS<NT> {};
+
+    template <typename NT>
+    struct NativeToJS<const NT &> : NativeToJS<NT> {};
+
+    // 	{
+    // 	    /**
+    // 	       Returns a v8::External which references &p (not p directly,
+    // 	       because of the non-constness of the argument!).
+    // 	    */
+    // 	    ValueHandle operator()( NT const * p ) const
+    // 	    {
+    // 		return External::New( &p );
+    // 	    }
+    // 	};
+
+    template <>
+    struct NativeToJS<void>
+    {
 	/**
-	   Base instantiation for T-to-ValueHandle conversion functor.
+	   Returns a v8::External which references &p (not p directly,
+	   because of the non-constness of the argument!).
 	*/
-	template <typename NT>
-	struct to_js_f
+	template <typename AnyT>
+	ValueHandle operator()( AnyT const &  ) const
 	{
-	    template <typename X>
-	    ValueHandle operator()( X const & ) const;
-	    // won't compile if not specialized.
-	};
-	template <typename NT>
-	struct to_js_f<NT *> : to_js_f<NT> {};
-
-	template <typename NT>
-	struct to_js_f<NT &> : to_js_f<NT> {};
-
-	template <typename NT>
-	struct to_js_f<const NT &> : to_js_f<NT> {};
-
-// 	{
-// 	    /**
-// 	       Returns a v8::External which references &p (not p directly,
-// 	       because of the non-constness of the argument!).
-// 	    */
-// 	    ValueHandle operator()( NT const * p ) const
-// 	    {
-// 		return External::New( &p );
-// 	    }
-// 	};
-
-	template <>
-	struct to_js_f<void>
-	{
-	    /**
-	       Returns a v8::External which references &p (not p directly,
-	       because of the non-constness of the argument!).
-	    */
-	    template <typename AnyT>
-	    ValueHandle operator()( AnyT const &  ) const
-	    {
-		return ::v8::Undefined();
-	    }
-	};
-
-	template <typename IntegerT>
-	struct to_js_f_int_small
-	{
-	    ValueHandle operator()( IntegerT v ) const
-	    {
-		return Integer::New( static_cast<int32_t>(v) );
-	    }
-	};
-
-	template <>
-	struct to_js_f<int16_t> : to_js_f_int_small<int16_t> {};
-
-	template <>
-	struct to_js_f<uint16_t> : to_js_f_int_small<uint16_t> {};
-
-	template <>
-	struct to_js_f<int32_t> : to_js_f_int_small<int32_t> {};
-
-	template <>
-	struct to_js_f<uint32_t> : to_js_f_int_small<uint32_t> {};
-
-
-	template <typename IntegerT>
-	struct to_js_f_int_big
-	{
-	    ValueHandle operator()( IntegerT v ) const
-	    {
-		return Number::New( static_cast<double>(v) );
-	    }
-	};
-
-	template <>
-	struct to_js_f<int64_t> : to_js_f_int_big<int64_t> {};
-
-	template <>
-	struct to_js_f<uint64_t> : to_js_f_int_big<uint64_t> {};
-
-	template <>
-	struct to_js_f<double>
-	{
-	    ValueHandle operator()( double v ) const
-	    {
-		return Number::New( v );
-	    }
-	};
-
-	template <>
-	struct to_js_f<bool>
-	{
-	    ValueHandle operator()( bool v ) const
-	    {
-		return Boolean::New( v );
-	    }
-	};
-
-	template <typename T>
-	struct to_js_f< ::v8::Handle<T> >
-	{
-	    typedef ::v8::Handle<T> handle_type;
-	    ValueHandle operator()( handle_type & li ) const
-	    {
-		return li;
-	    }
-	};
-
-	template <typename T>
-	struct to_js_f< ::v8::Local<T> >
-	{
-	    typedef ::v8::Local<T> handle_type;
-	    ValueHandle operator()( handle_type const & li ) const
-	    {
-		return li;
-	    }
-	};
-
-	template <typename T>
-	struct to_js_f< ::v8::Persistent<T> >
-	{
-	    typedef ::v8::Persistent<T> handle_type;
-	    ValueHandle operator()( handle_type const & li ) const
-	    {
-		return li;
-	    }
-	};
-
-// 	template <>
-// 	struct to_js_f< ::v8::Function >
-// 	{
-// 	    ValueHandle operator()( ::v8::Function const & li ) const
-// 	    {
-// 		return Handle<Function>(li);
-// 	    }
-// 	};
-
-
-	template <typename ListT>
-	struct to_js_f_list
-	{
-	    ValueHandle operator()( ListT const & li ) const
-	    {
-		typedef typename ListT::const_iterator IT;
-		IT it = li.begin();
-		size_t sz = li.size();
-		Handle<Array> rv( Array::New( static_cast<int>(sz) ) );
-		for( int i = 0; li.end() != it; ++it, ++i )
-		{
-		    rv->Set( Integer::New(i), CastToJS( *it ) );
-		}
-		return rv;
-	    }
-	};
-
-	template <typename T>
-	struct to_js_f< std::list<T> > : to_js_f_list< std::list<T> > {};
-
-	template <typename T>
-	struct to_js_f< std::vector<T> > : to_js_f_list< std::vector<T> > {};
-
-	template <typename MapT>
-	struct to_js_f_map
-	{
-	    ValueHandle operator()( MapT const & li ) const
-	    {
-		typedef typename MapT::const_iterator IT;
-		IT it( li.begin() );
-		size_t sz = li.size();
-		Handle<Object> rv( Object::New() );
-		for( int i = 0; li.end() != it; ++it, ++i )
-		{
-		    rv->Set( CastToJS( (*it).first ), CastToJS( (*it).second ) );
-		}
-		return rv;
-	    }
-	};
-
-	template <typename KeyT,typename ValT>
-	struct to_js_f< std::map<KeyT,ValT> > : to_js_f_map< std::map<KeyT,ValT> > {};
-
-#if 0
-	// apparently doesn't do what i want...
-	template <>
-	struct to_js_f<std::string const &>
-	{
-	    ValueHandle operator()( std::string const & v ) const
-	    {
-		return String::New( v.data(), static_cast<int>( v.size() ) );
-	    }
-	};
-#endif
-
-	template <>
-	struct to_js_f<ValueHandle>
-	{
-	    ValueHandle operator()( ValueHandle const & v ) const
-	    {
-		return v;
-	    }
-	};
-
-	template <>
-	struct to_js_f<std::string>
-	{
-	    ValueHandle operator()( std::string const & v ) const
-	    {
-		/** This use of v.data() instead of v.c_str() is highly arguable. */
-		return String::New( v.data(), static_cast<int>( v.size() ) );
-	    }
-	};
-	
-	template <>
-	struct to_js_f<char const *>
-	{
-	    ValueHandle operator()( char const * v ) const
-	    {
-		return String::New( v ? v : "", v ? std::strlen(v) : 0 );
-		/** String::New() internally calls strlen(), which hates it when string==0. */
-	    }
-	};
-    }
-#endif // !DOXYGEN
+	    return ::v8::Undefined();
+	}
+    };
 
     /**
-       "Casts" v to a JS value using Detail::to_js_f<T>.
+       Base implementation for "small" integer conversions (<=32
+       bits).
+    */
+    template <typename IntegerT>
+    struct NativeToJS_int_small
+    {
+	ValueHandle operator()( IntegerT v ) const
+	{
+	    return Integer::New( static_cast<int32_t>(v) );
+	}
+    };
+
+    template <>
+    struct NativeToJS<int16_t> : NativeToJS_int_small<int16_t> {};
+
+    template <>
+    struct NativeToJS<uint16_t> : NativeToJS_int_small<uint16_t> {};
+
+    template <>
+    struct NativeToJS<int32_t> : NativeToJS_int_small<int32_t> {};
+
+    template <>
+    struct NativeToJS<uint32_t> : NativeToJS_int_small<uint32_t> {};
+
+    /**
+       Base implementation for "big" numeric conversions (>32 bits).
+    */
+    template <typename IntegerT>
+    struct NativeToJS_int_big
+    {
+	ValueHandle operator()( IntegerT v ) const
+	{
+	    return Number::New( static_cast<double>(v) );
+	}
+    };
+
+    template <>
+    struct NativeToJS<int64_t> : NativeToJS_int_big<int64_t> {};
+
+    template <>
+    struct NativeToJS<uint64_t> : NativeToJS_int_big<uint64_t> {};
+
+    template <>
+    struct NativeToJS<double>
+    {
+	ValueHandle operator()( double v ) const
+	{
+	    return Number::New( v );
+	}
+    };
+
+    template <>
+    struct NativeToJS<bool>
+    {
+	ValueHandle operator()( bool v ) const
+	{
+	    return Boolean::New( v );
+	}
+    };
+
+    template <typename T>
+    struct NativeToJS< ::v8::Handle<T> >
+    {
+	typedef ::v8::Handle<T> handle_type;
+	ValueHandle operator()( handle_type & li ) const
+	{
+	    return li;
+	}
+    };
+
+    template <typename T>
+    struct NativeToJS< ::v8::Local<T> >
+    {
+	typedef ::v8::Local<T> handle_type;
+	ValueHandle operator()( handle_type const & li ) const
+	{
+	    return li;
+	}
+    };
+
+    template <typename T>
+    struct NativeToJS< ::v8::Persistent<T> >
+    {
+	typedef ::v8::Persistent<T> handle_type;
+	ValueHandle operator()( handle_type const & li ) const
+	{
+	    return li;
+	}
+    };
+
+    // 	template <>
+    // 	struct NativeToJS< ::v8::Function >
+    // 	{
+    // 	    ValueHandle operator()( ::v8::Function const & li ) const
+    // 	    {
+    // 		return Handle<Function>(li);
+    // 	    }
+    // 	};
+
+
+    /**
+       NativeToJS classes which act on list types compatible with the
+       STL can subclass this to get an implementation.
+    */
+    template <typename ListT>
+    struct NativeToJS_list
+    {
+	ValueHandle operator()( ListT const & li ) const
+	{
+	    typedef typename ListT::const_iterator IT;
+	    IT it = li.begin();
+	    size_t sz = li.size();
+	    Handle<Array> rv( Array::New( static_cast<int>(sz) ) );
+	    for( int i = 0; li.end() != it; ++it, ++i )
+	    {
+		rv->Set( Integer::New(i), CastToJS( *it ) );
+	    }
+	    return rv;
+	}
+    };
+
+    /** Partial specialization for std::list<>. */
+    template <typename T>
+    struct NativeToJS< std::list<T> > : NativeToJS_list< std::list<T> > {};
+
+    /** Partial specialization for std::vector<>. */
+    template <typename T>
+    struct NativeToJS< std::vector<T> > : NativeToJS_list< std::vector<T> > {};
+
+    /**
+       NativeToJS classes which act on map types compatible with the
+       STL can subclass this to get an implementation.
+    */
+    template <typename MapT>
+    struct NativeToJS_map
+    {
+	ValueHandle operator()( MapT const & li ) const
+	{
+	    typedef typename MapT::const_iterator IT;
+	    IT it( li.begin() );
+	    size_t sz = li.size();
+	    Handle<Object> rv( Object::New() );
+	    for( int i = 0; li.end() != it; ++it, ++i )
+	    {
+		rv->Set( CastToJS( (*it).first ), CastToJS( (*it).second ) );
+	    }
+	    return rv;
+	}
+    };
+
+    /** Partial specialization for std::map<>. */
+    template <typename KeyT,typename ValT>
+    struct NativeToJS< std::map<KeyT,ValT> > : NativeToJS_map< std::map<KeyT,ValT> > {};
+
+#if 0
+    // apparently doesn't do what i want...
+    template <>
+    struct NativeToJS<std::string const &>
+    {
+	ValueHandle operator()( std::string const & v ) const
+	{
+	    return String::New( v.data(), static_cast<int>( v.size() ) );
+	}
+    };
+#endif
+
+    template <>
+    struct NativeToJS<ValueHandle>
+    {
+	ValueHandle operator()( ValueHandle const & v ) const
+	{
+	    return v;
+	}
+    };
+
+    template <>
+    struct NativeToJS<std::string>
+    {
+	ValueHandle operator()( std::string const & v ) const
+	{
+	    /** This use of v.data() instead of v.c_str() is highly arguable. */
+	    return String::New( v.data(), static_cast<int>( v.size() ) );
+	}
+    };
+	
+    template <>
+    struct NativeToJS<char const *>
+    {
+	ValueHandle operator()( char const * v ) const
+	{
+	    return String::New( v ? v : "", v ? std::strlen(v) : 0 );
+	    /** String::New() internally calls strlen(), which hates it when string==0. */
+	}
+    };
+
+    /**
+       "Casts" v to a JS value using NativeToJS<T>.
 
        TODO: use template metaprogramming to figure out the
        exact parameter type, instead of using (T const &).
@@ -296,7 +306,7 @@ namespace convert {
     template <typename T>
     ValueHandle CastToJS( T const & v )
     {
-	typedef Detail::to_js_f<T> F;
+	typedef NativeToJS<T> F;
 	return F()( v );
     }
 
@@ -305,295 +315,289 @@ namespace convert {
     */
     static inline ValueHandle CastToJS( char const * v )
     {
-	typedef Detail::to_js_f<char const *> F;
+	typedef NativeToJS<char const *> F;
 	return F()( v );
     }
 
-    /** Convenience instance of to_js_f. */
-    static const Detail::to_js_f<int16_t> Int16ToJS = Detail::to_js_f<int16_t>();
-    /** Convenience instance of to_js_f. */
-    static const Detail::to_js_f<uint16_t> UInt16ToJS = Detail::to_js_f<uint16_t>();
-    /** Convenience instance of to_js_f. */
-    static const Detail::to_js_f<int32_t> Int32ToJS = Detail::to_js_f<int32_t>();
-    /** Convenience instance of to_js_f. */
-    static const Detail::to_js_f<uint32_t> UInt32ToJS = Detail::to_js_f<uint32_t>();
-    /** Convenience instance of to_js_f. */
-    static const Detail::to_js_f<int64_t> Int64ToJS = Detail::to_js_f<int64_t>();
-    /** Convenience instance of to_js_f. */
-    static const Detail::to_js_f<uint64_t> UInt64ToJS = Detail::to_js_f<uint64_t>();
-    /** Convenience instance of to_js_f. */
-    static const Detail::to_js_f<double> DoubleToJS = Detail::to_js_f<double>();
-    /** Convenience instance of to_js_f. */
-    static const Detail::to_js_f<bool> BoolToJS = Detail::to_js_f<bool>();
-    /** Convenience instance of to_js_f. */
-    static const Detail::to_js_f<std::string> StdStringToJS = Detail::to_js_f<std::string>();
+    /** Convenience instance of NativeToJS. */
+    static const NativeToJS<int16_t> Int16ToJS = NativeToJS<int16_t>();
+    /** Convenience instance of NativeToJS. */
+    static const NativeToJS<uint16_t> UInt16ToJS = NativeToJS<uint16_t>();
+    /** Convenience instance of NativeToJS. */
+    static const NativeToJS<int32_t> Int32ToJS = NativeToJS<int32_t>();
+    /** Convenience instance of NativeToJS. */
+    static const NativeToJS<uint32_t> UInt32ToJS = NativeToJS<uint32_t>();
+    /** Convenience instance of NativeToJS. */
+    static const NativeToJS<int64_t> Int64ToJS = NativeToJS<int64_t>();
+    /** Convenience instance of NativeToJS. */
+    static const NativeToJS<uint64_t> UInt64ToJS = NativeToJS<uint64_t>();
+    /** Convenience instance of NativeToJS. */
+    static const NativeToJS<double> DoubleToJS = NativeToJS<double>();
+    /** Convenience instance of NativeToJS. */
+    static const NativeToJS<bool> BoolToJS = NativeToJS<bool>();
+    /** Convenience instance of NativeToJS. */
+    static const NativeToJS<std::string> StdStringToJS = NativeToJS<std::string>();
 
-#if ! defined(DOXYGEN)
-    namespace Detail
+    using ::v8::juice::bind::BindKeyType;
+    /**
+       Base interface for converting from native objects to JS
+       objects. By default it uses GetBoundNative() to find
+       a match. Specializations may be provided to use custom
+       conversions.
+    */
+    template <typename JST>
+    struct JSToNative
     {
-	using ::v8::juice::bind::BindKeyType;
-	/**
-	   Base interface for converting from native objects to JS
-	   objects. By default it uses GetBoundNative() to find
-	   a match. Specializations may be provided to use custom
-	   conversions.
-	*/
-	template <typename JST>
-	struct to_native_f
+	typedef JST * result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & jv ) const
 	{
-	    typedef JST * result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & jv ) const
-	    {
-		// 	    External * ex = External::Cast( *jv );
-		///CERR << "ex == " << ex << " data="<<(ex?ex->Value():0)<<"\n";
-		// 	    return ex ? ::v8::juice::bind::GetBoundNative<type>( *ex ) : 0;
-		// requires specialization
-		return ::v8::juice::bind::GetBoundNative<JST>( cx, jv );
-		//return 0;
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return this->operator()( 0, h );
-	    }
-	};
-	template <typename JST>
-	struct to_native_f<JST *> : to_native_f<JST> {};
-
-
-	template <>
-	struct to_native_f<ValueHandle>
+	    // 	    External * ex = External::Cast( *jv );
+	    ///CERR << "ex == " << ex << " data="<<(ex?ex->Value():0)<<"\n";
+	    // 	    return ex ? ::v8::juice::bind::GetBoundNative<type>( *ex ) : 0;
+	    // requires specialization
+	    return ::v8::juice::bind::GetBoundNative<JST>( cx, jv );
+	    //return 0;
+	}
+	result_type operator()( ValueHandle const & h ) const
 	{
-	    typedef ValueHandle result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return h;
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return this->operator()( 0, h );
-	    }
-	};
+	    return this->operator()( 0, h );
+	}
+    };
+    template <typename JST>
+    struct JSToNative<JST *> : JSToNative<JST> {};
 
-	template <>
-	struct to_native_f<void>
+
+    template <>
+    struct JSToNative<ValueHandle>
+    {
+	typedef ValueHandle result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
-	    typedef void result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return;
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return;
-	    }
-	};
-
-	template <>
-	struct to_native_f<void *>
+	    return h;
+	}
+	result_type operator()( ValueHandle const & h ) const
 	{
-	    typedef void * result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		if( h.IsEmpty() || ! h->IsExternal() ) return 0;
-		return External::Cast(*h)->Value();
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return this->operator()( 0, h );
-	    }
-	};
+	    return this->operator()( 0, h );
+	}
+    };
 
-	template <>
-	struct to_native_f<int16_t>
+    template <>
+    struct JSToNative<void>
+    {
+	typedef void result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
-	    typedef int16_t result_type;
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return h->IsNumber()
-		    ? static_cast<result_type>(h->Int32Value())
-		    : 0;
-	    }
-	    result_type operator()( BindKeyType, ValueHandle const & h ) const
-	    {
-		return this->operator()( h );
-	    }
-	};	
-
-	template <>
-	struct to_native_f<uint16_t>
+	    return;
+	}
+	result_type operator()( ValueHandle const & h ) const
 	{
-	    typedef uint16_t result_type;
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return h->IsNumber()
-		    ? static_cast<result_type>(h->Int32Value())
-		    : 0;
-	    }
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return this->operator()( h );
-	    }
-	};
+	    return;
+	}
+    };
 
-	template <>
-	struct to_native_f<int32_t>
+    template <>
+    struct JSToNative<void *>
+    {
+	typedef void * result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
-	    typedef int32_t result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return this->operator()( h );
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		// FIXME: try to lexically cast, if we can
-		return h->IsNumber()
-		    ? h->Int32Value()
-		    : 0;
-	    }
-	};
-
-	template <>
-	struct to_native_f<uint32_t>
+	    if( h.IsEmpty() || ! h->IsExternal() ) return 0;
+	    return External::Cast(*h)->Value();
+	}
+	result_type operator()( ValueHandle const & h ) const
 	{
-	    typedef uint32_t result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return this->operator()( h );
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return h->IsNumber()
-		    ? static_cast<result_type>(h->Uint32Value())
-		    : 0;
-	    }
-	};
+	    return this->operator()( 0, h );
+	}
+    };
 
-
-	template <>
-	struct to_native_f<int64_t>
+    template <>
+    struct JSToNative<int16_t>
+    {
+	typedef int16_t result_type;
+	result_type operator()( ValueHandle const & h ) const
 	{
-	    typedef int64_t result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return h->IsNumber()
-		    ? static_cast<result_type>(h->IntegerValue())
-		    : 0;
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return this->operator()( 0, h );
-	    }
-	};
-
-	template <>
-	struct to_native_f<uint64_t>
+	    return h->IsNumber()
+		? static_cast<result_type>(h->Int32Value())
+		: 0;
+	}
+	result_type operator()( BindKeyType, ValueHandle const & h ) const
 	{
-	    typedef uint64_t result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return this->operator()( h );
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return h->IsNumber()
-		    ? static_cast<result_type>(h->IntegerValue())
-		    : 0;
-	    }
-	};
+	    return this->operator()( h );
+	}
+    };	
 
-	template <>
-	struct to_native_f<double>
+    template <>
+    struct JSToNative<uint16_t>
+    {
+	typedef uint16_t result_type;
+	result_type operator()( ValueHandle const & h ) const
 	{
-	    typedef double result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return h->IsNumber()
-		    ? h->NumberValue()
-		    : 0;
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return this->operator()( 0, h );
-	    }
-	};
+	    return h->IsNumber()
+		? static_cast<result_type>(h->Int32Value())
+		: 0;
+	}
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	{
+	    return this->operator()( h );
+	}
+    };
 
-	template <>
-	struct to_native_f<bool>
+    template <>
+    struct JSToNative<int32_t>
+    {
+	typedef int32_t result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
-	    typedef bool result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return h->BooleanValue();
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return this->operator()( 0, h );
-	    }
-	};
+	    return this->operator()( h );
+	}
+	result_type operator()( ValueHandle const & h ) const
+	{
+	    // FIXME: try to lexically cast, if we can
+	    return h->IsNumber()
+		? h->Int32Value()
+		: 0;
+	}
+    };
 
-	template <>
-	struct to_native_f<std::string>
+    template <>
+    struct JSToNative<uint32_t>
+    {
+	typedef uint32_t result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
-	    typedef std::string result_type;
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
-	    { // this causes a crash deep in v8 in some cases.
-		String::AsciiValue asc( h );
-		return std::string( *asc ? *asc : "" );
-	    }
-	    result_type operator()( ValueHandle const & h ) const
-	    {
-		return this->operator()( 0, h );
-	    }
-	};
+	    return this->operator()( h );
+	}
+	result_type operator()( ValueHandle const & h ) const
+	{
+	    return h->IsNumber()
+		? static_cast<result_type>(h->Uint32Value())
+		: 0;
+	}
+    };
+
+
+    template <>
+    struct JSToNative<int64_t>
+    {
+	typedef int64_t result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	{
+	    return h->IsNumber()
+		? static_cast<result_type>(h->IntegerValue())
+		: 0;
+	}
+	result_type operator()( ValueHandle const & h ) const
+	{
+	    return this->operator()( 0, h );
+	}
+    };
+
+    template <>
+    struct JSToNative<uint64_t>
+    {
+	typedef uint64_t result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	{
+	    return this->operator()( h );
+	}
+	result_type operator()( ValueHandle const & h ) const
+	{
+	    return h->IsNumber()
+		? static_cast<result_type>(h->IntegerValue())
+		: 0;
+	}
+    };
+
+    template <>
+    struct JSToNative<double>
+    {
+	typedef double result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	{
+	    return h->IsNumber()
+		? h->NumberValue()
+		: 0;
+	}
+	result_type operator()( ValueHandle const & h ) const
+	{
+	    return this->operator()( 0, h );
+	}
+    };
+
+    template <>
+    struct JSToNative<bool>
+    {
+	typedef bool result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	{
+	    return h->BooleanValue();
+	}
+	result_type operator()( ValueHandle const & h ) const
+	{
+	    return this->operator()( 0, h );
+	}
+    };
+
+    template <>
+    struct JSToNative<std::string>
+    {
+	typedef std::string result_type;
+	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	{ // this causes a crash deep in v8 in some cases.
+	    String::AsciiValue asc( h );
+	    return std::string( *asc ? *asc : "" );
+	}
+	result_type operator()( ValueHandle const & h ) const
+	{
+	    return this->operator()( 0, h );
+	}
+    };
 
 #if 0 // 
-	/**
-	   Nonono! This will Cause Grief when used together with CastFromJS()
-	   because the returned pointer will refer to a now-dead std::string
-	   after the return.
+    /**
+       Nonono! This will Cause Grief when used together with CastFromJS()
+       because the returned pointer will refer to a now-dead std::string
+       after the return.
 
-	   This specialization requires that a single copy per
-	   conversion be used. Do not use a shared/static instance for
-	   conversions! To enforce this, the operator()() is
-	   non-const.
-	*/
-	template <>
-	struct to_native_f<char const *>
+       This specialization requires that a single copy per
+       conversion be used. Do not use a shared/static instance for
+       conversions! To enforce this, the operator()() is
+       non-const.
+    */
+    template <>
+    struct JSToNative<char const *>
+    {
+    private:
+	std::string kludge;
+    public:
+	typedef char const * result_type;
+	result_type operator()( ValueHandle const & h )
 	{
-	private:
-	    std::string kludge;
-	    public:
-	    typedef char const * result_type;
-	    result_type operator()( ValueHandle const & h )
-	    {
-		this->kludge = to_native_f<std::string>()( h );
-		return this->kludge.c_str();
-	    }
-	    result_type operator()( BindKeyType, ValueHandle const & h )
-	    {
-		return this->operator()( h );
-	    }
-	};
+	    this->kludge = JSToNative<std::string>()( h );
+	    return this->kludge.c_str();
+	}
+	result_type operator()( BindKeyType, ValueHandle const & h )
+	{
+	    return this->operator()( h );
+	}
+    };
 #else
-	/** Not great, but a happy medium. */
-	template <>
-	struct to_native_f<char const *> : to_native_f<std::string> {};
+    /** Not great, but a happy medium. */
+    template <>
+    struct JSToNative<char const *> : JSToNative<std::string> {};
 #endif
 
-    }
-#endif // !DOXYGEN
-
     /**
-       Converts h to an object of type NT, using Detail::to_native_f<NT> to do
+       Converts h to an object of type NT, using JSToNative<NT> to do
        the conversion. For most conversions it is normal to pass 0 for cx, but
        for conversions to work with native types bound via BindNative() this
        function must be given the proper context key.
     */
     template <typename NT>
-    typename Detail::to_native_f<NT>::result_type CastFromJS( ::v8::juice::bind::BindKeyType cx, ValueHandle const & h )
+    typename JSToNative<NT>::result_type CastFromJS( ::v8::juice::bind::BindKeyType cx, ValueHandle const & h )
     {
-	typedef Detail::to_native_f<NT> F;
-	typedef typename Detail::to_native_f<NT>::result_type RT;
+	typedef JSToNative<NT> F;
+	typedef typename JSToNative<NT>::result_type RT;
 	return (RT) F()( cx, h );
 	// ^^^ that cast is to try to support returning void (MS compilers are known
 	// to require a cast for that).
@@ -604,33 +608,33 @@ namespace convert {
        using the ::v8::bind API. This includes POD types.
     */
     template <typename NT>
-    typename Detail::to_native_f<NT>::result_type CastFromJS( ValueHandle const & h )
+    typename JSToNative<NT>::result_type CastFromJS( ValueHandle const & h )
     {
-	typedef Detail::to_native_f<NT> F;
-	typedef typename Detail::to_native_f<NT>::result_type RT;
+	typedef JSToNative<NT> F;
+	typedef typename JSToNative<NT>::result_type RT;
 	return (RT) F()( h );
 	// ^^^ that cast is to try to support returning void (MS compilers are known
 	// to require a cast for that).
     }
 
-    /** Convenience instance of to_native_f. */
-    static const Detail::to_native_f<int16_t> JSToInt16 = Detail::to_native_f<int16_t>();
-    /** Convenience instance of to_native_f. */
-    static const Detail::to_native_f<uint16_t> JSToUInt16 = Detail::to_native_f<uint16_t>();
-    /** Convenience instance of to_native_f. */
-    static const Detail::to_native_f<int32_t> JSToInt32 = Detail::to_native_f<int32_t>();
-    /** Convenience instance of to_native_f. */
-    static const Detail::to_native_f<uint32_t> JSToUInt32 = Detail::to_native_f<uint32_t>();
-    /** Convenience instance of to_native_f. */
-    static const Detail::to_native_f<int64_t> JSToInt64 = Detail::to_native_f<int64_t>();
-    /** Convenience instance of to_native_f. */
-    static const Detail::to_native_f<uint64_t> JSToUInt64 = Detail::to_native_f<uint64_t>();
-    /** Convenience instance of to_native_f. */
-    static const Detail::to_native_f<double> JSToDouble = Detail::to_native_f<double>();
-    /** Convenience instance of to_native_f. */
-    static const Detail::to_native_f<bool> JSToBool = Detail::to_native_f<bool>();
-    /** Convenience instance of to_native_f. */
-    static const Detail::to_native_f<std::string> JSToStdString = Detail::to_native_f<std::string>();
+    /** Convenience instance of JSToNative. */
+    static const JSToNative<int16_t> JSToInt16 = JSToNative<int16_t>();
+    /** Convenience instance of JSToNative. */
+    static const JSToNative<uint16_t> JSToUInt16 = JSToNative<uint16_t>();
+    /** Convenience instance of JSToNative. */
+    static const JSToNative<int32_t> JSToInt32 = JSToNative<int32_t>();
+    /** Convenience instance of JSToNative. */
+    static const JSToNative<uint32_t> JSToUInt32 = JSToNative<uint32_t>();
+    /** Convenience instance of JSToNative. */
+    static const JSToNative<int64_t> JSToInt64 = JSToNative<int64_t>();
+    /** Convenience instance of JSToNative. */
+    static const JSToNative<uint64_t> JSToUInt64 = JSToNative<uint64_t>();
+    /** Convenience instance of JSToNative. */
+    static const JSToNative<double> JSToDouble = JSToNative<double>();
+    /** Convenience instance of JSToNative. */
+    static const JSToNative<bool> JSToBool = JSToNative<bool>();
+    /** Convenience instance of JSToNative. */
+    static const JSToNative<std::string> JSToStdString = JSToNative<std::string>();
 
     /**
        Adds these script-side features to the given target object:
