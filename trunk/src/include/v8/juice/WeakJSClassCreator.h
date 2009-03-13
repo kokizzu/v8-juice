@@ -379,7 +379,7 @@ namespace juice {
 		: (*it).second.first;
 	}
 
-#if 0
+#if 1
 	/** Reimplemented to DO NOTHING, as the number is defined
 	    by the WeakJSClassCreatorOps specialization. When changing
 	    it here, we lose the ability to know where the object
@@ -483,13 +483,13 @@ namespace juice {
 
 	/**
 	   Unbinds native and destroys it using CleanupFunctor.
+
+	   Must only be called from weak_callback().
 	*/
 	static void the_cleaner( WrappedType * native )
 	{
-	    //CERR << "the_cleaner( native@"<<native<<")\n";
 	    if( native )
 	    {
-		typeCheck().erase( native );
 		ClassOpsType::Dtor( native );
 	    }
 	}
@@ -502,9 +502,10 @@ namespace juice {
 	{
 	    //CERR << "weak callback @"<<nobj<<"\n";
 	    Local<Object> jobj( Object::Cast(*pv) );
-	    if( jobj->InternalFieldCount() != (FieldCount) ) return;
+
+	    if( jobj->InternalFieldCount() != (FieldCount) ) return; // and warn on this, too!
 	    Local<Value> lv( jobj->GetInternalField(NativeFieldIndex) );
-	    if( lv.IsEmpty() || !lv->IsExternal() ) return;
+	    if( lv.IsEmpty() || !lv->IsExternal() ) return; // and this!
 	    /**
 	       We have to ensure that we have no dangling External in JS space. This
 	       is so that functions like IODevice.close() can act safely with the
@@ -514,7 +515,23 @@ namespace juice {
 	    jobj->SetInternalField(NativeFieldIndex,Null());
 	    pv.Dispose();
 	    pv.Clear();
+#if 0
+	    // Not safe (can crash) b/c this might get called after v8 context is gone:
+	    WrappedType * native = GetNative(pv);
+	    if( ! native ) return; // we need a way to warn if this happens!
+	    //the_cleaner( static_cast<WrappedType*>( nobj ) );
+	    the_cleaner( native );//static_cast<WrappedType*>( nobj ) );
+#endif
+#if 0 // this works okay but i hate casts
 	    the_cleaner( static_cast<WrappedType*>( nobj ) );
+#else
+	    TypeCheckIter it = typeCheck().find( nobj );
+	    if( typeCheck().end() == it ) // serious error
+	    {
+		return;
+	    }
+	    the_cleaner( (*it).second.first );
+#endif
 	}
 
 	/**
