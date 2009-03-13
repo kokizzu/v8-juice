@@ -224,18 +224,27 @@ _WTF?_ Every function-wrapping framework i've seen so far passes
 function pointers as function arguments to the function templates (got
 that?). In this one, we pass the function pointer as a _template
 parameter_ instead of as a function argument! Why? It's ugly, but
-there's a reason for it: it costs us nothing at runtime. If we passed
-pointers to functions as the arguments, we would have to create a small
-wrapper object for _each_ binding (that is, one per class/member
+there are reasons for it.
+
+First, it is compile-time typesafe and this allows us to set up the
+callbacks such that it is impossible to mis-cast a (`void*`) pointer
+to a (`T*`) (in fact, no casts are used at all for this, even though
+v8 internally gives us only (`void*`) handles).
+
+Secondly, it costs us nothing at runtime. If we passed
+pointers to functions as the arguments, we would have to create a
+small wrapper object for _each_ binding (that is, one per class/member
 combination), and the wrapper's only purpose would be to forward the
-call to a specific native object (which is found at runtime of course).
-We would have no logical place to store the call-wrappers for later cleanup (long
-story) and we would effectively introduce a memory leak for every bound
-function. By using function pointers as template parameters, we bind the
+call to a specific native object (which is found at runtime of
+course).  We would have no logical place to store the call-wrappers
+for later cleanup (long story) and we would effectively introduce a
+memory leak for every bound function.
+
+By using function pointers as template parameters, we bind the
 function pointers at compile time and therefor need no intermediary
-call-proxy object instance. We _still_ have plenty of internal proxy functions,
-but they require no dynamic memory and are bound (and possibly inlined) at
-compile-time.
+call-proxy object instance. We _still_ have plenty of internal proxy
+functions, but they require no dynamic memory and are bound (and
+possibly inlined) at compile-time.
 
 The primary down-side to this approach, as opposed to passing function
 pointers as _function_ arguments (not _template_ arguments), is that the
@@ -272,14 +281,13 @@ directly handle).
 
 ==Example of using !ClassBinder==
 
-Here's an example of how `ClassBinder` can be used...
+Here's an example of how `ClassBinder` can be used.
 
 First we need a native type. Oh, look, here's one:
 
 {{{
 struct my_native
 {
-    std::string str;
     int func1() { return 42; }
     int func2(int x) { return x*2; }
     double func3(int x,int y) { return x*y; }
@@ -309,9 +317,7 @@ namespace v8 { namespace juice {
 	static WrappedType * Ctor( Arguments const & argv,
 				   std::string & exceptionText)
 	{
-	    my_native * obj = new my_native;
-	    obj->str = "hi, world";
-	    return obj;
+            return = new my_native;
 	}
 
 	static void Dtor( WrappedType * obj )
@@ -321,6 +327,8 @@ namespace v8 { namespace juice {
     };
 }} // namespaces
 }}}
+
+That example is feature-complete and ready for copy/paste into your source files.
 
 The following weird code hooks `my_native` in with the `v8::juice::convert` API, so that we
 can use `CastToJS()` and `CastFromJS()` with `my_native`. We want that in this case because
@@ -364,7 +372,9 @@ Or we can simplify that by doing the following from _global_ _scope_ code:
 #include <v8/juice/WeakJSClassCreator-CastOps.h>
 }}}
 
-That will generate the complete wrapper shown above.
+That will generate the complete wrapper shown above. It can be included multiple times in the same
+file. Each time it is included `WEAK_CLASS_TYPE` must be defined anew, as the header file
+`#undef`s it to allow such usage.
 
 If the native type will never be passed as a parameter or returned
 from a function (i.e. it will only be the `this` object) then these
@@ -376,16 +386,18 @@ And now what we originally set out to to: bind `my_native` with JS:
     typedef ClassBinder<my_native> WT;
     WT w( v8::Context()->GetCurrent()->Global() );
     typedef my_native MY;
-    w.BindMemFunc< int, &MY::func1>( "func1" );
-    w.BindMemFunc< int, int, &MY::func2 >( "func2" );
-    w.BindMemFunc< std::string,&MY::hi >( "hi" );
-    w.BindMemFunc< MY *,&MY::me >( "me" );
-    w.BindMemFunc< bool,MY *,&MY::him >( "him" );
-    w.BindMemFunc< double,int,int,&MY::func3 >( "func3" );
-    w.BindMemFunc< void,&MY::avoid >( "avoid" );
-    w.BindMemFunc< void,int,&MY::avoid1 >( "avoid1" );
-    w.BindMemFunc< void,int,double,&MY::avoid2 >( "avoid2" );
-    w.BindMemFunc< double,int,int,int,&MY::takes3 >( "takes3" );
+    w.Set("prop1", String::New("this is my first property"))
+      .Set("answer", Integer::New('*'));
+    w.BindMemFunc< int, &MY::func1>( "func1" )
+     .BindMemFunc< int, int, &MY::func2 >( "func2" )
+     .BindMemFunc< std::string,&MY::hi >( "hi" )
+     .BindMemFunc< MY *,&MY::me >( "me" )
+     .BindMemFunc< bool,MY *,&MY::him >( "him" )
+     .BindMemFunc< double,int,int,&MY::func3 >( "func3" )
+     .BindMemFunc< void,&MY::avoid >( "avoid" )
+     .BindMemFunc< void,int,&MY::avoid1 >( "avoid1" )
+     .BindMemFunc< void,int,double,&MY::avoid2 >( "avoid2" )
+     .BindMemFunc< double,int,int,int,&MY::takes3 >( "takes3" );
     w.Seal();
 }}}
 
