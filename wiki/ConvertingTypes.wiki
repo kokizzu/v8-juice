@@ -47,7 +47,9 @@ For those averse to template arguments, there are a number of convenience instan
 }}}
 
 
-=Achtung: not for noobs=
+=Implementing custom conversions=
+
+==Achtung: not for noobs==
 
 Forewarning: customizing the type conversions requires a fair amount of
 knowledge in how to use and abuse C++ templates. DO NOT just blindly
@@ -59,7 +61,7 @@ often takes patience and experience to be able to decypher such problems
 
 Good luck!
 
-=Adding custom native-to-JS conversions=
+==Custom native-to-JS conversions==
 
 To make our own types support work with `CastToJS()` we have to provide
 template specialization for `NativeToJS<>`, as shown below.
@@ -86,7 +88,7 @@ it will fail loudly, but (and this depends on `MyType`) it may pick up a differe
 inappropriate converter.
 
 
-=Adding custom JS-to-native conversions=
+==Custom JS-to-native conversions==
 
 The converse of `NativeToJS<>` is of course `JSToNative<>`:
 
