@@ -32,7 +32,6 @@
 
 namespace v8 { namespace juice { namespace whio {
 
-    namespace bind = ::v8::juice::bind;
     //namespace juice = ::v8::juice;
     using namespace ::v8::juice::convert;
 
@@ -166,7 +165,7 @@ namespace v8 { namespace juice { namespace whio {
 	      typename DevT::type * (*ctor)( Arguments const &, std::string & ) >
     struct DevClassOps
     {
-	enum { ExtraInternalFieldCount = 1 V8_JUICE_BUG_NUMBER(6) };
+	enum { ExtraInternalFieldCount = 0 };
 	typedef typename DevT::type WrappedType;
 	static WrappedType * Ctor( Arguments const & argv,
 			    std::string & exceptionText)
@@ -176,17 +175,15 @@ namespace v8 { namespace juice { namespace whio {
 	    if( d )
 	    {
 		::v8::juice::cleanup::AddToCleanup(d, cleanup_callback );
-		bind::BindNative( d, d );
 	    }
 	    return d;
 	}
 
 	static void Dtor( WrappedType * obj )
 	{
-	    //CERR << "Dtor() passing on @"<<obj<<'\n';
+	    CERR << "Dtor() passing on @"<<obj<<'\n';
 	    if( obj )
 	    {
-		bind::UnbindNative( 0, obj, obj );
 		::v8::juice::cleanup::RemoveFromCleanup(obj);
 		obj->api->finalize(obj);
 	    }
