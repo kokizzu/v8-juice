@@ -32,9 +32,55 @@ Handle<Value> v3 = cv::CastToJS( myType ); // we can add custom conversions!
 The `CastToJS()` and `CastFromJS()` routines are very small functions which delegate all work to template a specialization of the class `NativeToJS<>` resp. `JSToNative<>`. Specializations are already installed for all of the base POD types (except (`char const *`) - see below), and clients can provide their own to do any conversion they like. An example of this is shown on [CreatingJSClasses the creating-new-classes page].
 
 = Adding custom JS-to-native conversions=
+
+To make our own types support work with `CastToJS()` we have to provide
+template specialization for `NativeToJS<>`, as shown below.
+
+{{{
+namespace v8 { namespace juice { namespace convert {
+template <>
+struct NativeToJS<MyType>
+{
+    Handle<Value> operator()( MyType const * n ) const
+    {
+        // This impl works together with WeakJSClassCreator():
+        return ::v8::juice::WeakJSClassCreator<MyType>::GetObject( n );
+    }
+};
+} } } // namespaces
+}}}
+
+
+The important thing is that this specialization is available before
+any client code calls (however indirectly) `CastToJS<MyType>(...)`. If it is not,
+the compiler will try to pick up another instantiation of the template. With luck
+it will fail loudly, but (and this depends on `MyType`) it may pick up a different,
+inappropriate converter.
+
 = Adding custom native-to-JS conversions=
 
-TODO: there's much more to document here, but it's late and i'm tired. And i'd rather be coding, except that i'm so tired.
+The converse of `NativeToJS<>` is of course `JSToNative<>`:
+
+{{{
+namespace v8 { namespace juice { namespace convert {
+template <>
+struct JSToNative<MyType>
+{
+       typedef MyType * result_type;
+         result_type operator()( Handle<Value> const & h ) const
+         {
+            // This impl works together with WeakJSClassCreator():
+            return ::v8::juice::WeakJSClassCreator<MyType>::GetNative( h );
+         }
+        // This overload is an evolutionary artefact and will likely be removed from the API at some point:
+         result_type operator()( ::v8::juice::bind::BindKeyType, Handle<Value> const & jv ) const
+         {
+             return this->operator()( h );
+         }
+};
+} } } // namespaces
+}}}
+
 
 =The `(char const *)` problem=
 
