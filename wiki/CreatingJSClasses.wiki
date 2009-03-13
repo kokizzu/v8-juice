@@ -338,9 +338,18 @@ namespace v8 { namespace juice { namespace convert {
 } } } // namespaces
 }}}
 
+Or we can simplify that by doing the following from _global_ _scope_ code:
+
+{{{
+#define WEAK_CLASS_TYPE MyType
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
+}}}
+
+That will generate the complete wrapper shown above.
+
 If the native type will never be passed as a parameter or returned
 from a function (i.e. it will only be the `this` object) then these
-conversions are not required.
+conversions are not strictly required.
 
 And now what we originally set out to to: bind `my_native` with JS:
 
@@ -362,7 +371,7 @@ And now what we originally set out to to: bind `my_native` with JS:
 }}}
 
 Again, it's ugly, but it also has no extra runtime memory costs other than that needed by
-the v8 internals and the conversion from JS to native.
+the v8 internals and the conversion from JS to native. It also means the internals have to do no ugly casts from void to T (it does one cast, but it's known to be safe because it cannot possibly be passed the wrong type).
 
 And in JS it looks like this:
 
