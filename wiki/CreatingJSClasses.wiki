@@ -341,7 +341,7 @@ namespace v8 { namespace juice { namespace convert {
 Or we can simplify that by doing the following from _global_ _scope_ code:
 
 {{{
-#define WEAK_CLASS_TYPE MyType
+#define WEAK_CLASS_TYPE my_native
 #include <v8/juice/WeakJSClassCreator-CastOps.h>
 }}}
 
