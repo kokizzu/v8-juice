@@ -371,7 +371,7 @@ And now what we originally set out to to: bind `my_native` with JS:
 }}}
 
 Again, it's ugly, but it also has no extra runtime memory costs other than that needed by
-the v8 internals and the conversion from JS to native. It also means the internals have to do no ugly casts from void to T (it does one cast, but it's known to be safe because it cannot possibly be passed the wrong type).
+the v8 internals and the conversion from JS to native.
 
 And in JS it looks like this:
 
@@ -397,6 +397,7 @@ true
 12
 }}}
 
+An interesting feature of class binding framework is that it's compile-time typesafe. Though v8 uses `void *` as the parameter type for destruction callbacks, the implementation uses a mix of templates, private functions, and an internal void-to-native mapping to ensure that only the correct types can, e.g., be passed to the correct destructor, and that `CastFromJS<TypeB>()` cannot cast (using the default conversions) to `TypeA`. The implementation is believed to be 100% typesafe.
 
 =Real-world examples=
 
