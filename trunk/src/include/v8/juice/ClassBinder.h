@@ -153,8 +153,8 @@ namespace juice {
        typedef ClassBinder<MyType> WC;
        WC c( "MyType", objectToAddClassTo );
        c.Set(...)
-           .BindMemFunc<void,&MyType::doSomething>("doSomething")
-	   .Seal(); // must be the last call made on this object.
+       .BindMemFunc<void,&MyType::doSomething>("doSomething")
+       .Seal(); // must be the last call made on this object.
        \endcode
 
        That's all there is to it. More functionality is provided via
@@ -227,8 +227,10 @@ namespace juice {
 	    return *this;
 	}
 
-#if 1
-	// const members not yet working
+	/**
+	   Overload requiring a WrappedType const member function taking 1
+	   arg and returning RV.
+	*/
 	template <typename RV, RV (WrappedType::*Func)() const>
 	ClassBinder & BindMemFunc( char const * name )
 	{
@@ -236,7 +238,7 @@ namespace juice {
 	    this->Set(name, Detail::MemFuncCallOp<Caller>::Call );
 	    return *this;
 	}
-#endif
+
 	/**
 	   Overload requiring a WrappedType member function taking 1
 	   arg and returning RV.
@@ -293,8 +295,6 @@ namespace juice {
 	    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
 	    return *this;
 	}
-
-
     }; // class ClassBinder
 
 }} /* namespaces */

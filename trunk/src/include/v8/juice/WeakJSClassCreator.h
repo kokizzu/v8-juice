@@ -44,19 +44,6 @@ namespace juice {
     namespace Detail
     {
 	/**
-	   A functor to delete objects.
-	*/
-	struct ObjectDeleter
-	{
-	    /** Calls (delete obj). */
-	    template <typename T>
-	    void operator()( T * obj ) const
-	    {
-		if( obj ) delete obj;
-	    }
-	};
-
-	/**
 	   An internal helper type for only use by WeakJSClassCreator.
 
 	   Actual must be WeakJSClassCreator::WrappedType.
@@ -301,7 +288,7 @@ namespace juice {
          .Set(...)
 	 .Set(...)
 	 .Set(...)
-	 .Seal(); // must be the last call made on this object.
+	 .Seal(); // must be the last setter call made on this object.
        \endcode
 
        That's all there is to it. More functionality is provided via
@@ -310,7 +297,7 @@ namespace juice {
        and for destroying instances of the generated class.
     */
     template <typename WrappedT>
-    class WeakJSClassCreator : public JSClassCreator
+    class WeakJSClassCreator : public JSClassCreator, public WeakJSClassCreatorOps<WrappedT>
     {
     public:
 	/**
@@ -324,6 +311,15 @@ namespace juice {
 	   be different from the WrappedT template parameter!
 	*/
 	typedef typename ClassOpsType::WrappedType WrappedType;
+
+    private:
+	enum Internal {
+	/** The internal field number where we store the wrapped object. */
+	NativeFieldIndex = ClassOpsType::ExtraInternalFieldCount,
+	/** The number of internal fields. */
+	FieldCount = NativeFieldIndex + 1
+	};
+    public:
 
 	/**
 	   Starts the setup of a new class. It will be populated into
@@ -374,7 +370,7 @@ namespace juice {
 	static WrappedType * GetSelf( Local<Object> h )
 	{
 	    if( h.IsEmpty() || (h->InternalFieldCount() != (FieldCount)) ) return 0;
-	    Local<Value> lv( h->GetInternalField(NativeInternalField) );
+	    Local<Value> lv( h->GetInternalField(NativeFieldIndex) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
 	    Local<External> ex( External::Cast(*lv) );
 	    TypeCheckIter it = typeCheck().find( ex->Value() );
@@ -383,6 +379,7 @@ namespace juice {
 		: (*it).second.first;
 	}
 
+#if 0
 	/** Reimplemented to DO NOTHING, as the number is defined
 	    by the WeakJSClassCreatorOps specialization. When changing
 	    it here, we lose the ability to know where the object
@@ -395,6 +392,7 @@ namespace juice {
  	    //this->JSClassCreator::SetInteralFieldCount( n + 1 );
 	    return *this;
  	}
+#endif
 
 	/**
 	   Like GetSelf(), but takes a Handle to a value. This can be
@@ -482,18 +480,7 @@ namespace juice {
 	    // the instance of the map must depend only on WrappedType.
 	    return TypeCheck::Map();
 	}
-	enum Internal {
-	/** The internal field number where we store the wrapped object. */
-	NativeInternalField = ClassOpsType::ExtraInternalFieldCount,
-	/** The number of internal fields. */
-	FieldCount = NativeInternalField + 1
-	};
 
-	// Should we make them copyable? Might be useful at some
-	// point, so down-stream code has access to the JS-side
-	// constructor/prototype and such.
-	//WeakJSClassCreator & operator=(WeakJSClassCreator const &);
-	//WeakJSClassCreator(WeakJSClassCreator const &);
 	/**
 	   Unbinds native and destroys it using CleanupFunctor.
 	*/
@@ -516,7 +503,7 @@ namespace juice {
 	    //CERR << "weak callback @"<<nobj<<"\n";
 	    Local<Object> jobj( Object::Cast(*pv) );
 	    if( jobj->InternalFieldCount() != (FieldCount) ) return;
-	    Local<Value> lv( jobj->GetInternalField(NativeInternalField) );
+	    Local<Value> lv( jobj->GetInternalField(NativeFieldIndex) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return;
 	    /**
 	       We have to ensure that we have no dangling External in JS space. This
@@ -524,7 +511,7 @@ namespace juice {
 	       knowledge that member funcs called after that won't get a dangling
 	       pointer. Without this, some code will crash in that case.
 	    */
-	    jobj->SetInternalField(NativeInternalField,Null());
+	    jobj->SetInternalField(NativeFieldIndex,Null());
 	    pv.Dispose();
 	    pv.Clear();
 	    the_cleaner( static_cast<WrappedType*>( nobj ) );
@@ -541,7 +528,7 @@ namespace juice {
 	{
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
-	    self->SetInternalField( NativeInternalField, External::New(obj) );
+	    self->SetInternalField( NativeFieldIndex, External::New(obj) );
 	    typeCheck().insert( std::make_pair( obj, std::make_pair( obj, self ) ) );
 	    return self;
 	}

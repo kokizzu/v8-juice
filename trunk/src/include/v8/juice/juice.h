@@ -28,6 +28,16 @@ from that, there are tons of API docs here amongst the humble header files.
 */
 namespace {}
 
+/**
+   A macro which evaluates to nothing bug can be used to mark places
+   which are known to be associated with (or the cause of) a certain
+   bug number. The N parameter should be a number from the bug list
+   on the home page:
+
+   http://code.google.com/p/v8-juice/issues
+*/
+#define V8_JUICE_BUG_NUMBER(N)
+
 namespace v8 {
 
 /**
