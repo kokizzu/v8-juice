@@ -251,10 +251,6 @@ conversion limitations (and features) of that API. As an exception, it supports
 member functions returning `void` (which the `v8::juice::convert` API cannot
 directly handle).
 
-TODO: wrapping of const member functions. Requires generation of one or
-two more template specializations (per member function arg count) for
-some internal types.
-
 ==Example of using !ClassBinder==
 
 Here's an example of how `ClassBinder` can be used...
@@ -366,7 +362,7 @@ And now what we originally set out to to: bind `my_native` with JS:
 }}}
 
 Again, it's ugly, but it also has no extra runtime memory costs other than that needed by
-the v8 internals.
+the v8 internals and the conversion from JS to native.
 
 And in JS it looks like this:
 
