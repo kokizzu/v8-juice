@@ -399,6 +399,26 @@ true
 
 An interesting feature of class binding framework is that it's compile-time typesafe. Though v8 uses `void *` as the parameter type for destruction callbacks, the implementation uses a mix of templates, private functions, and an internal void-to-native mapping to ensure that only the correct types can, e.g., be passed to the correct destructor, and that `CastFromJS<TypeB>()` cannot cast (using the default conversions) to `TypeA`. The implementation is believed to be 100% typesafe.
 
+==Extra internal fields==
+
+The `WeakJSClassCreatorOps<T>` interface defines a constant integer value names `ExtraInternalFieldCount`, which can normally be left at 0.
+
+If a wrapper needs access to more internal fields for client-side use,
+define `ExtraInternalFieldCount` to be some other number. In v8 client
+code, clients conventional store their native data in the internal
+fields numbered 0 to (N-1), where N is the number of fields. To avoid
+interfering with this convention, `WeakJSClassCreator` stores its
+internal binding at field number N (that is, one past the last
+client-defined field). When the class is defined the internal field
+count is set to (`ExtraInternalFieldCount`+1) and the wrapper
+internals use that last position for its internal use. The client is
+then free to use slots 0..(N-1), as is conventional.
+
+That said, i haven't yet seen any v8 client code which would benefit
+from having more than one internal data field. Might be handy in some
+cases, but it would in general seem easier to bind one native object and
+store any other bound data there.
+
 =Real-world examples=
 
 There are some real-world examples of using these types in the v8-juice source tree:
