@@ -139,12 +139,12 @@ namespace v8 { namespace juice {
 	template <>
 	struct JSToNative<my_native>
 	{
-	    typedef my_native * result_type;
-	    result_type operator()( ValueHandle const & h ) const
+	    typedef my_native * ResultType;
+	    ResultType operator()( ValueHandle const & h ) const
 	    {
 		return ::v8::juice::WeakJSClassCreator<my_native>::GetNative(h);
 	    }
-	    result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	    ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	    {
 		return this->operator()( h );
 	    }

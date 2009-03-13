@@ -156,7 +156,6 @@ namespace v8 { namespace juice { namespace whio {
     struct OutStream : StreamBase
     {
     };
-
     /**
        Used with WeakJSClassCreator for whio_dev and whio_stream.
 
@@ -167,7 +166,7 @@ namespace v8 { namespace juice { namespace whio {
 	      typename DevT::type * (*ctor)( Arguments const &, std::string & ) >
     struct DevClassOps
     {
-	enum { ExtraInternalFieldCount = 0 };
+	enum { ExtraInternalFieldCount = 1 V8_JUICE_BUG_NUMBER(6) };
 	typedef typename DevT::type WrappedType;
 	static WrappedType * Ctor( Arguments const & argv,
 			    std::string & exceptionText)
@@ -177,7 +176,7 @@ namespace v8 { namespace juice { namespace whio {
 	    if( d )
 	    {
 		::v8::juice::cleanup::AddToCleanup(d, cleanup_callback );
-		//bind::BindNative( 0, d, d );
+		bind::BindNative( d, d );
 	    }
 	    return d;
 	}
@@ -187,7 +186,7 @@ namespace v8 { namespace juice { namespace whio {
 	    //CERR << "Dtor() passing on @"<<obj<<'\n';
 	    if( obj )
 	    {
-		//bind::UnbindNative( 0, obj, obj );
+		bind::UnbindNative( 0, obj, obj );
 		::v8::juice::cleanup::RemoveFromCleanup(obj);
 		obj->api->finalize(obj);
 	    }
@@ -255,24 +254,30 @@ namespace v8 { namespace juice { namespace whio {
 	static char const * ClassName() { return "ByteArray"; }
     };
 
-namespace whio {
+} } //namespaces
 
-    /**
-       Casts v to (T*). T must be one of IOBase, IODevice, InStream,
-       or OutStream.
-    */
-    template <typename T>
-    static typename WeakJSClassCreator<T>::WrappedType * dev_cast( Handle< Value > const & v )
-    {
-	return WeakJSClassCreator<T>::GetNative( v );
-    }
+namespace WHIO = ::v8::juice::whio;
+
+#define WEAK_CLASS_TYPE WHIO::IODevice
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
+
+#define WEAK_CLASS_TYPE WHIO::StreamBase
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
+
+// 	template <>
+// 	struct JSToNative<WHIO::IODevice> : WhioJSToNative<WHIO::IODevice> {};
+// //     template <>
+// //     struct JSToNative<WHIO::InStream> : WhioJSToNative<WHIO::InStream> {};
+// //     template <>
+// //     struct JSToNative<WHIO::OutStream> : WhioJSToNative<WHIO::OutStream> {};
+// 	template <>
+// 	struct JSToNative<WHIO::StreamBase> : WhioJSToNative<WHIO::StreamBase> {};
+
+namespace v8 { namespace juice { namespace whio {
+	
 // Helper macros for args and type checking:
 #define ARGS(COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
-#if 0
-#  define DEVH(PT,H) PT::type * dev = dev_cast< PT >( H )
-#else
-#  define DEVH(T,H) WeakJSClassCreator<T>::WrappedType * dev = WeakJSClassCreator<T>::GetSelf( H )
-#endif
+#define DEVH(T,H) WeakJSClassCreator<T>::WrappedType * dev = WeakJSClassCreator<T>::GetSelf( H )
 #define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer not found (maybe already destroyed?)!")
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
 #define DEVTHIS(T) DEVHT(T,argv.This())
@@ -367,7 +372,7 @@ namespace whio {
 	if( (3 == argc) && argv[0]->IsObject() )
 	{ // (IODevice,lower,upper)
 	    Local<Object> par( Object::Cast(*argv[0]) );
-	    whio_dev * iod = dev_cast<IODevice>(par);
+	    whio_dev * iod = CastFromJS<IODevice>(par);
 	    if( iod )
 	    {
 		whio_size_t low = CastFromJS<whio_size_t>(argv[1]);
@@ -490,7 +495,7 @@ namespace whio {
 	    //CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
 	    return dev;
 	}
-	whio_dev * iod = dev_cast<whio_dev>(argv[0]);
+	whio_dev * iod = CastFromJS<IODevice>( argv[0] );
 	if( iod )
 	{ // ctor(IODevice)
 	    Local<Object> par( Object::Cast(*argv[0]) );

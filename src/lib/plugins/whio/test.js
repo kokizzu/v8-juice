@@ -222,8 +222,8 @@ function tryByteArray()
     print(ba);
     ba.close();
 }
-tryOne();
-tryOnlyOut();
+//tryOne();
+//tryOnlyOut();
 tryMemory();
 trySubdev();
 tryBadStream();

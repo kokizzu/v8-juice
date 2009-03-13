@@ -295,8 +295,8 @@ namespace convert {
     template <typename JST>
     struct JSToNative
     {
-	typedef JST * result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & jv ) const
+	typedef JST * ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & jv ) const
 	{
 	    // 	    External * ex = External::Cast( *jv );
 	    ///CERR << "ex == " << ex << " data="<<(ex?ex->Value():0)<<"\n";
@@ -305,7 +305,7 @@ namespace convert {
 	    return ::v8::juice::bind::GetBoundNative<JST>( cx, jv );
 	    //return 0;
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return this->operator()( 0, h );
 	}
@@ -319,12 +319,12 @@ namespace convert {
     template <>
     struct JSToNative<ValueHandle>
     {
-	typedef ValueHandle result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef ValueHandle ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    return h;
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return this->operator()( 0, h );
 	}
@@ -333,12 +333,12 @@ namespace convert {
     template <>
     struct JSToNative<void>
     {
-	typedef void result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef void ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    return;
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return;
 	}
@@ -347,13 +347,13 @@ namespace convert {
     template <>
     struct JSToNative<void *>
     {
-	typedef void * result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef void * ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    if( h.IsEmpty() || ! h->IsExternal() ) return 0;
 	    return External::Cast(*h)->Value();
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return this->operator()( 0, h );
 	}
@@ -362,14 +362,14 @@ namespace convert {
     template <>
     struct JSToNative<int16_t>
     {
-	typedef int16_t result_type;
-	result_type operator()( ValueHandle const & h ) const
+	typedef int16_t ResultType;
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
-		? static_cast<result_type>(h->Int32Value())
+		? static_cast<ResultType>(h->Int32Value())
 		: 0;
 	}
-	result_type operator()( BindKeyType, ValueHandle const & h ) const
+	ResultType operator()( BindKeyType, ValueHandle const & h ) const
 	{
 	    return this->operator()( h );
 	}
@@ -378,14 +378,14 @@ namespace convert {
     template <>
     struct JSToNative<uint16_t>
     {
-	typedef uint16_t result_type;
-	result_type operator()( ValueHandle const & h ) const
+	typedef uint16_t ResultType;
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
-		? static_cast<result_type>(h->Int32Value())
+		? static_cast<ResultType>(h->Int32Value())
 		: 0;
 	}
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    return this->operator()( h );
 	}
@@ -394,12 +394,12 @@ namespace convert {
     template <>
     struct JSToNative<int32_t>
     {
-	typedef int32_t result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef int32_t ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    return this->operator()( h );
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    // FIXME: try to lexically cast, if we can
 	    return h->IsNumber()
@@ -411,15 +411,15 @@ namespace convert {
     template <>
     struct JSToNative<uint32_t>
     {
-	typedef uint32_t result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef uint32_t ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    return this->operator()( h );
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
-		? static_cast<result_type>(h->Uint32Value())
+		? static_cast<ResultType>(h->Uint32Value())
 		: 0;
 	}
     };
@@ -428,14 +428,14 @@ namespace convert {
     template <>
     struct JSToNative<int64_t>
     {
-	typedef int64_t result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef int64_t ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
-		? static_cast<result_type>(h->IntegerValue())
+		? static_cast<ResultType>(h->IntegerValue())
 		: 0;
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return this->operator()( 0, h );
 	}
@@ -444,15 +444,15 @@ namespace convert {
     template <>
     struct JSToNative<uint64_t>
     {
-	typedef uint64_t result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef uint64_t ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    return this->operator()( h );
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
-		? static_cast<result_type>(h->IntegerValue())
+		? static_cast<ResultType>(h->IntegerValue())
 		: 0;
 	}
     };
@@ -460,14 +460,14 @@ namespace convert {
     template <>
     struct JSToNative<double>
     {
-	typedef double result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef double ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
 		? h->NumberValue()
 		: 0;
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return this->operator()( 0, h );
 	}
@@ -476,12 +476,12 @@ namespace convert {
     template <>
     struct JSToNative<bool>
     {
-	typedef bool result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef bool ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{
 	    return h->BooleanValue();
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return this->operator()( 0, h );
 	}
@@ -490,13 +490,13 @@ namespace convert {
     template <>
     struct JSToNative<std::string>
     {
-	typedef std::string result_type;
-	result_type operator()( BindKeyType cx, ValueHandle const & h ) const
+	typedef std::string ResultType;
+	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
 	{ // this causes a crash deep in v8 in some cases.
 	    String::AsciiValue asc( h );
 	    return std::string( *asc ? *asc : "" );
 	}
-	result_type operator()( ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return this->operator()( 0, h );
 	}
@@ -519,13 +519,13 @@ namespace convert {
     private:
 	std::string kludge;
     public:
-	typedef char const * result_type;
-	result_type operator()( ValueHandle const & h )
+	typedef char const * ResultType;
+	ResultType operator()( ValueHandle const & h )
 	{
 	    this->kludge = JSToNative<std::string>()( h );
 	    return this->kludge.c_str();
 	}
-	result_type operator()( BindKeyType, ValueHandle const & h )
+	ResultType operator()( BindKeyType, ValueHandle const & h )
 	{
 	    return this->operator()( h );
 	}
@@ -543,10 +543,10 @@ namespace convert {
        function must be given the proper context key.
     */
     template <typename NT>
-    typename JSToNative<NT>::result_type CastFromJS( ::v8::juice::bind::BindKeyType cx, ValueHandle const & h )
+    typename JSToNative<NT>::ResultType CastFromJS( ::v8::juice::bind::BindKeyType cx, ValueHandle const & h )
     {
 	typedef JSToNative<NT> F;
-	typedef typename JSToNative<NT>::result_type RT;
+	typedef typename JSToNative<NT>::ResultType RT;
 	return (RT) F()( cx, h );
 	// ^^^ that cast is to try to support returning void (MS compilers are known
 	// to require a cast for that).
@@ -557,10 +557,10 @@ namespace convert {
        using the ::v8::bind API. This includes POD types.
     */
     template <typename NT>
-    typename JSToNative<NT>::result_type CastFromJS( ValueHandle const & h )
+    typename JSToNative<NT>::ResultType CastFromJS( ValueHandle const & h )
     {
 	typedef JSToNative<NT> F;
-	typedef typename JSToNative<NT>::result_type RT;
+	typedef typename JSToNative<NT>::ResultType RT;
 	return (RT) F()( h );
 	// ^^^ that cast is to try to support returning void (MS compilers are known
 	// to require a cast for that).
@@ -657,8 +657,8 @@ namespace convert {
     template <typename ListT>
     struct JSToNative_list
     {
-	typedef ListT result_type;
-	result_type operator()( ValueHandle jv ) const
+	typedef ListT ResultType;
+	ResultType operator()( ValueHandle jv ) const
 	{
 	    typedef typename ListT::const_iterator IT;
 	    typedef typename ListT::value_type VALT;

@@ -223,6 +223,15 @@ namespace bind {
     }
 
     /**
+       Equivalent to BindNative( 0, key, obj ).
+    */
+    template <typename NT>
+    bool BindNative( BindKeyType key,  NT * obj )
+    {
+	return BindNative( 0, key, obj );
+    }
+
+    /**
        Returns the NT object (if any) bound to the given context
        and lookup key, or 0 if BindNative() has not been called for
        that combination of arguments.
