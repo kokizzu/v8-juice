@@ -124,50 +124,10 @@ namespace v8 { namespace juice {
 	    }
 	}
     };
-    namespace convert {
-	// Required for CastTo/FromJS() to work:
-	template <>
-	struct NativeToJS<my_native>
-	{
-	    ValueHandle operator()( my_native * p ) const
-	    {
-		Handle<Object> jo = ::v8::juice::WeakJSClassCreator<my_native>::GetJSObject(p);
-		if( jo.IsEmpty() ) return Null();
-		else return jo;
-	    }
-	};
-	template <>
-	struct JSToNative<my_native>
-	{
-	    typedef my_native * ResultType;
-	    ResultType operator()( ValueHandle const & h ) const
-	    {
-		return ::v8::juice::WeakJSClassCreator<my_native>::GetNative(h);
-	    }
-	    ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
-	    {
-		return this->operator()( h );
-	    }
-
-	};
-    } // namespace convert
 }} // v8::juice
 
-// template <typename T, typename RV, typename A1  >
-// struct MemFuncType< RV (T::*)(A1) >
-// {
-//     typedef T Type;
-//     typedef RV ReturnType;
-//     typedef ReturnType (T::*MemFunc)(A1);
-// };
-
-
-template <typename T, typename RV>
-struct MemFuncSig0
-{
-    typedef T Type;
-    typedef RV (T::*Member)();
-};
+#define WEAK_CLASS_TYPE my_native
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
 
 #include <v8/juice/ClassBinder.h>
 
