@@ -39,7 +39,7 @@ namespace v8 { namespace juice {
 
     std::string PathFinder::path_separator() const
     {
-	return ( ( PathFinder * ) this )->pathseparator;
+	return this->pathseparator;
     }
 
     void PathFinder::path_separator( const std::string & sep )
