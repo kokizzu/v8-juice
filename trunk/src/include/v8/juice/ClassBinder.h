@@ -141,14 +141,9 @@ namespace juice {
        The extended functionality includes support for binding member
        functions of the wrapped type. It has some limitations on the
        automatic type conversion (see convert::CastToJS() and
-       convert::CastFromJS(), as those are used for all casting). A
-       notable limitation is that it doesn't currenly handle const
-       member funcs. It does handle void return values, though CastFromJS()
-       does not. The simplest way to get around constness problems is to
-       create a very thin wrapper class around the to-be-wrapped type,
-       make its members non-const, and use that proxy to access the real
-       object. A real bound native is never truly const as far as the JS
-       engine is concerned, in any case.
+       convert::CastFromJS(), as those are used for all casting).
+       It does handle void return values, though CastFromJS()
+       does not.
 
        Example (see also: WeakJSClassCreator)
 
@@ -158,11 +153,23 @@ namespace juice {
        typedef ClassBinder<MyType> WC;
        WC c( "MyType", objectToAddClassTo );
        c.Set(...)
-	 .Seal(); // must be the last call made on this object.
+           .BindMemFunc<void,&MyType::doSomething>("doSomething")
+	   .Seal(); // must be the last call made on this object.
        \endcode
 
        That's all there is to it. More functionality is provided via
        the base classes.
+
+       If you've got some weird arguments which cannot be used through
+       the casting system, you may be able to partially work around it
+       by creating a very thin wrapper class around the to-be-wrapped
+       type, make the appropriate conversions there, and use that
+       proxy to access the real object.
+
+       Tip: if a compiler error tells you that there's "no matching
+       function BindMemFunc()" then one or more of the template types
+       passed to BindMemFunc() does not match the exact function
+       signature of the function pointer template parameter.
     */
     template <typename WrappedT>
     class ClassBinder : public WeakJSClassCreator<WrappedT>
