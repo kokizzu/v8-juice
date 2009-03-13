@@ -9,8 +9,12 @@ are at the top. Dates written extra large are release dates. This contains only 
 http://code.google.com/p/v8-juice/source/browse/
 
 ----
-*2009 March 12*
+
+*2009 March 12* (after the release, i think)
   * Got binding to non-const member functions working.
+
+==*2009 March 12*==
+  * Released new version.
 
 *2009 March 9/10*
   * Added initial JS class creation helpers. See [CreatingJSClasses] wiki page for info.
