@@ -124,10 +124,10 @@ namespace v8 { namespace juice {
 	    }
 	}
     };
-    namespace convert { namespace Detail {
+    namespace convert {
 	// Required for CastTo/FromJS() to work:
 	template <>
-	struct to_js_f<my_native>
+	struct NativeToJS<my_native>
 	{
 	    ValueHandle operator()( my_native * p ) const
 	    {
@@ -137,7 +137,7 @@ namespace v8 { namespace juice {
 	    }
 	};
 	template <>
-	struct to_native_f<my_native>
+	struct JSToNative<my_native>
 	{
 	    typedef my_native * result_type;
 	    result_type operator()( ValueHandle const & h ) const
@@ -150,8 +150,7 @@ namespace v8 { namespace juice {
 	    }
 
 	};
-
-    }}
+    } // namespace convert
 }} // v8::juice
 
 // template <typename T, typename RV, typename A1  >
@@ -178,10 +177,6 @@ int my_fwd( V8CxH & cx )
     typedef ClassBinder<my_native> WT;
     WT w( cx->Global() );
 
-#if 0
-    //w.Set("func1", MemFuncCallOp< my_native, MemFuncCallOp0<my_native,int,&my_native::func1> >::Call );
-    //w.Set("func2", MemFuncCallOp< my_native, MemFuncCallOp1<my_native,int,int,&my_native::func2> >::Call );
-#else
     //BindMemFunc( w, "func1", &my_native::func1 );
     typedef my_native MY;
     w.BindMemFunc< int, &MY::func1>( "func1" );
@@ -194,7 +189,6 @@ int my_fwd( V8CxH & cx )
     w.BindMemFunc< void,int,&MY::avoid1 >( "avoid1" );
     w.BindMemFunc< void,int,double,&MY::avoid2 >( "avoid2" );
     w.BindMemFunc< double,int,int,int,&MY::takes3 >( "takes3" );
-#endif
     w.Seal();
     return 0;
 }
