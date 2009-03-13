@@ -3,16 +3,18 @@ function dumpPF(p,list)
 {
     if( !(p instanceof PathFinder) ) throw new Error("p is-not-a PathFinder! Type="+(typeof p));
     var li = (list instanceof Array) ? list : ['fossil','who','ls','nope'];
-    print("PathFinder:",p.pathString);
+    print("PathFinder:",p.pathString());
     for( k in li ) {
 	print('\tfind("'+li[k]+'") =',p.find(li[k]));
     }
 }
 function tryOne()
 {
-    var p = new PathFinder("/home/stephan/bin:/usr/bin:/bin");
+    var p = new PathFinder();
+    p.setPathString("/home/stephan/bin:/usr/bin:/bin");
     dumpPF(p);
-    print('getPathSeparator()=',p.getPathSeparator());
+    print('pathSeparator()=',p.pathSeparator());
+    print('pathArray()=',p.pathArray());
 }
 
 
