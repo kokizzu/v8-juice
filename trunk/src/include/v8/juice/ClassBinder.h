@@ -57,6 +57,18 @@ namespace juice {
 	    }
 	};
 
+	template <typename T, typename RV, RV (T::*Func)() const>
+	struct MemFuncCallOp0<const T,RV,Func>
+	{
+	    typedef const T Type;
+	    enum { Arity = 0 };
+	    static Handle<Value> Call( Type * obj, Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
+		return convert::CastToJS( (RV) (obj->*Func)() );
+	    }
+	};
+
 	template <typename T, void (T::*Func)()>
 	struct MemFuncCallOp0<T, void, Func >
 	{
@@ -69,7 +81,22 @@ namespace juice {
 		return Undefined();
 	    }
 	};
+
+	template <typename T, void (T::*Func)() const>
+	struct MemFuncCallOp0<const T, void, Func >
+	{
+	    typedef const T Type;
+	    enum { Arity = 0 };
+	    static Handle<Value> Call( Type * obj, Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
+		(void) (obj->*Func)();
+		return Undefined();
+	    }
+	};
+
 #include "ClassBinder-MemFuncCallOpN.h" // generated code
+
 	/**
 	   Helper used by ClassBinder::AddMemberFunc(). CallOpType
 	   must be an existing MemFuncCallOpN type, where N is an
@@ -116,8 +143,14 @@ namespace juice {
        automatic type conversion (see convert::CastToJS() and
        convert::CastFromJS(), as those are used for all casting). A
        notable limitation is that it doesn't currenly handle const
-       member funcs or void return values - those currently require
-       implementing v8::InvocationCallback handlers for them.
+       member funcs. It does handle void return values, though CastFromJS()
+       does not. The simplest way to get around constness problems is to
+       create a very thin wrapper class around the to-be-wrapped type,
+       make its members non-const, and use that proxy to access the real
+       object. A real bound native is never truly const as far as the JS
+       engine is concerned, in any case.
+
+       Example (see also: WeakJSClassCreator)
 
        \code
        ...
@@ -129,29 +162,56 @@ namespace juice {
        \endcode
 
        That's all there is to it. More functionality is provided via
-       the JSClassCreator base class, and there are several static
-       member functions for "casting" between the JS/Native worlds
-       and for destroying instances of the generated class.
+       the base classes.
     */
     template <typename WrappedT>
     class ClassBinder : public WeakJSClassCreator<WrappedT>
     {
     public:
+	/** Convenience typedef. */
 	typedef WeakJSClassCreator<WrappedT> ParentType;
+	/**
+	   The actual wrapped native type, which may differ from the
+	   WrappedT template parameter. It is always the same as
+	   WeakJSClassCreatorOps<WrappedT>::WrappedType.
+
+	   It is sometimes useful to hide some internal native type
+	   (or opaque pointer type) via a marker class, in which case
+	   this type would be passed MyMarkerClass as the template
+	   type and the ops specialization would define WrappedType
+	   to be the internal type. This has proven useful in the
+	   i/o plugin, where we don't want to expose the underlying
+	   i/o library implementation to potential users.
+	*/
 	typedef typename ParentType::WrappedType WrappedType;
+	/**
+	   Convenience typedef. Always the same as
+	   WeakJSClassCreatorOps<WrappedT>.
+	*/
 	typedef typename ParentType::ClassOpsType ClassOpsType;
 
+	/**
+	   Identical to the parent class ctor with the same signature.
+	*/
 	explicit ClassBinder( Handle<Object> target )
 	    : ParentType( target )
 	{
 	}
 
+	/**
+	   Identical to the parent class ctor with the same signature.
+	*/
 	explicit ClassBinder()
 	    : ParentType()
 	{
 	}
+
+	/** Does nothing. */
 	virtual ~ClassBinder() {}
 
+	/**
+	   Binds the given nullary member function to the given name.
+	*/
 	template <typename RV, RV (WrappedType::*Func)()>
 	ClassBinder & BindMemFunc( char const * name )
 	{
@@ -160,8 +220,8 @@ namespace juice {
 	    return *this;
 	}
 
-#if 0
-	// not working
+#if 1
+	// const members not yet working
 	template <typename RV, RV (WrappedType::*Func)() const>
 	ClassBinder & BindMemFunc( char const * name )
 	{
@@ -226,7 +286,6 @@ namespace juice {
 	    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
 	    return *this;
 	}
-
 
 
     }; // class ClassBinder
