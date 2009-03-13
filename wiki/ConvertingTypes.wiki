@@ -37,6 +37,16 @@ base POD types (except (`char const *`) - see below), and clients can provide
 their own to do any conversion they like. An example of this is shown on
 [CreatingJSClasses the creating-new-classes page].
 
+
+For those averse to template arguments, there are a number of convenience instantiations of the `NativeToJS` template which can be used like this:
+
+{{{
+  int32_t i = JSToInt32(...);
+  std::string s( JSToStdString(...) );
+  bool b = JSToBool(...);
+}}}
+
+
 =Achtung: not for noobs=
 
 Forewarning: customizing the type conversions requires a fair amount of
@@ -117,11 +127,3 @@ char const * v = CastFromJS(myJSVal);
 }}}
 
 The problem here is ownership and lifetime of the string bytes. v8 does not document them (and can't realistically provide any requirements which we would need for this conversion). We _can_ write a conversion routine for this, and it would probably work 99% of the time, but its results would technically be undefined. As a workaround, client code should use `std::string` instead (at least for `CastFromJS()`) or implement `JSToNative<>` and/or `NativeToJS<>` specializations for their string type of choice. The `CastToJS()` function is overloaded for (`char const *`) and "does the right thing", but `CastFromJS()` cannot handle such strings as transparently as it can most other types.
-
-For those averse to template arguments, there are a number of convenience instantiations of the `NativeToJS` template which can be used like this:
-
-{{{
-  int32_t i = JSToInt32(...);
-  std::string s( JSToStdString(...) );
-  bool b = JSToBool(...);
-}}}
