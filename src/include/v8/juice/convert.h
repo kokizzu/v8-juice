@@ -202,59 +202,6 @@ namespace convert {
     // 	};
 
 
-    /**
-       NativeToJS classes which act on list types compatible with the
-       STL can subclass this to get an implementation.
-    */
-    template <typename ListT>
-    struct NativeToJS_list
-    {
-	ValueHandle operator()( ListT const & li ) const
-	{
-	    typedef typename ListT::const_iterator IT;
-	    IT it = li.begin();
-	    size_t sz = li.size();
-	    Handle<Array> rv( Array::New( static_cast<int>(sz) ) );
-	    for( int i = 0; li.end() != it; ++it, ++i )
-	    {
-		rv->Set( Integer::New(i), CastToJS( *it ) );
-	    }
-	    return rv;
-	}
-    };
-
-    /** Partial specialization for std::list<>. */
-    template <typename T>
-    struct NativeToJS< std::list<T> > : NativeToJS_list< std::list<T> > {};
-
-    /** Partial specialization for std::vector<>. */
-    template <typename T>
-    struct NativeToJS< std::vector<T> > : NativeToJS_list< std::vector<T> > {};
-
-    /**
-       NativeToJS classes which act on map types compatible with the
-       STL can subclass this to get an implementation.
-    */
-    template <typename MapT>
-    struct NativeToJS_map
-    {
-	ValueHandle operator()( MapT const & li ) const
-	{
-	    typedef typename MapT::const_iterator IT;
-	    IT it( li.begin() );
-	    size_t sz = li.size();
-	    Handle<Object> rv( Object::New() );
-	    for( int i = 0; li.end() != it; ++it, ++i )
-	    {
-		rv->Set( CastToJS( (*it).first ), CastToJS( (*it).second ) );
-	    }
-	    return rv;
-	}
-    };
-
-    /** Partial specialization for std::map<>. */
-    template <typename KeyT,typename ValT>
-    struct NativeToJS< std::map<KeyT,ValT> > : NativeToJS_map< std::map<KeyT,ValT> > {};
 
 #if 0
     // apparently doesn't do what i want...
@@ -365,6 +312,8 @@ namespace convert {
     };
     template <typename JST>
     struct JSToNative<JST *> : JSToNative<JST> {};
+    template <typename JST>
+    struct JSToNative<JST const &> : JSToNative<JST> {};
 
 
     template <>
@@ -650,6 +599,88 @@ namespace convert {
     */
     ::v8::Handle< ::v8::Value > SetupAddon( ::v8::Handle< ::v8::Object > target );
 				       
+
+
+    /**
+       NativeToJS classes which act on list types compatible with the
+       STL can subclass this to get an implementation.
+    */
+    template <typename ListT>
+    struct NativeToJS_list
+    {
+	ValueHandle operator()( ListT const & li ) const
+	{
+	    typedef typename ListT::const_iterator IT;
+	    IT it = li.begin();
+	    size_t sz = li.size();
+	    Handle<Array> rv( Array::New( static_cast<int>(sz) ) );
+	    for( int i = 0; li.end() != it; ++it, ++i )
+	    {
+		rv->Set( Integer::New(i), CastToJS( *it ) );
+	    }
+	    return rv;
+	}
+    };
+    /** Partial specialization for std::list<>. */
+    template <typename T>
+    struct NativeToJS< std::list<T> > : NativeToJS_list< std::list<T> > {};
+    /** Partial specialization for std::vector<>. */
+    template <typename T>
+    struct NativeToJS< std::vector<T> > : NativeToJS_list< std::vector<T> > {};
+
+    /**
+       NativeToJS classes which act on map types compatible with the
+       STL can subclass this to get an implementation.
+    */
+    template <typename MapT>
+    struct NativeToJS_map
+    {
+	ValueHandle operator()( MapT const & li ) const
+	{
+	    typedef typename MapT::const_iterator IT;
+	    IT it( li.begin() );
+	    size_t sz = li.size();
+	    Handle<Object> rv( Object::New() );
+	    for( int i = 0; li.end() != it; ++it, ++i )
+	    {
+		rv->Set( CastToJS( (*it).first ), CastToJS( (*it).second ) );
+	    }
+	    return rv;
+	}
+    };
+
+    /** Partial specialization for std::map<>. */
+    template <typename KeyT,typename ValT>
+    struct NativeToJS< std::map<KeyT,ValT> > : NativeToJS_map< std::map<KeyT,ValT> > {};
+
+
+    template <typename ListT>
+    struct JSToNative_list
+    {
+	typedef ListT result_type;
+	result_type operator()( ValueHandle jv ) const
+	{
+	    typedef typename ListT::const_iterator IT;
+	    typedef typename ListT::value_type VALT;
+	    ListT li;
+	    if( ! jv->IsArray() ) return li;
+	    Handle<Array> ar( Array::Cast(*jv) );
+	    uint32_t ndx = 0;
+	    for( ; ar->Has(ndx); ++ndx )
+	    {
+		li.push_back( CastFromJS<VALT>( ar->Get(Integer::New(ndx)) ) );
+	    }
+	    return li;
+	}
+    };
+
+    /** Partial specialization for std::list<>. */
+    template <typename T>
+    struct JSToNative< std::list<T> > : JSToNative_list< std::list<T> > {};
+
+    /** Partial specialization for std::vector<>. */
+    template <typename T>
+    struct JSToNative< std::vector<T> > : JSToNative_list< std::vector<T> > {};
 
 }}} /* namespaces */
 
