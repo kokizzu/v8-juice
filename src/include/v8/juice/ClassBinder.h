@@ -45,6 +45,11 @@ namespace juice {
 	using namespace v8;
 	using namespace v8::juice;
 
+	/**
+	   A helper type for forwarding JS arguments to member functions taking 0
+	   arguments. The classes MemFuncCaller(1..N) are generated but follow
+	   this class' API.
+	*/
 	struct MemFuncCaller0
 	{
 	    enum { Arity = 0 };
@@ -83,6 +88,12 @@ namespace juice {
 	    }
 	};
 
+	/**
+	   A helper type for forwarding function calls on objects bound via WeakJSClassCreator
+	   through native member functions. This type supports only nullary functions, and
+	   the generated classes WeakMemFuncCaller(1..N) each provide support for a different
+	   number of arguments.
+	*/
 	struct WeakMemFuncCaller0 : MemFuncCaller0
 	{
 	    template <typename WeakWrappedType, typename RV>
@@ -125,7 +136,9 @@ namespace juice {
 #include "ClassBinder-MemFuncCaller.h" // generated code
 
 	/** An internal helper type for converting v8::Arguments to native args
-	    and passing them on to the given native member function.
+	    and passing them on to the given native member function. This type
+	    supports only functions with no arguments. The generated classes
+	    MemFuncCallOp(1..N) add support for various argument counts.
 	*/
 	template <typename T, typename RV, RV (T::*Func)()  >
 	struct MemFuncCallOp0
@@ -225,29 +238,40 @@ namespace juice {
 	    typedef WeakJSClassCreator<Type> Wrapper;
 	    static Handle<Value> Call( Arguments const & argv )
 	    {
-#if 0
-		Type * obj = Wrapper::GetSelf( argv.This() );
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp<>::Call() could not find native 'this' object!"));
-		CallOpType::Call( obj, argv );
-		return Undefined();
-#else
 		return CallOpType::CallOnWeakSelf( argv );
-#endif
 	    }
 	};
     }
 #endif // DOXYGEN
 
-#if 1
-    //template <typename NativeType, typename RV, RV (NativeType::*Func)()>
+#if 0 // not yet read for prime-time
+    /**
+    */
+    template <typename WrappedType, typename RV, RV (WrappedType::*Func)()>
+    void WeakBindMemFunc( WeakJSClassCreator<WrappedType> & tgt, char const * name )
+    {
+	typedef Detail::MemFuncCallOp0< WrappedType, RV, Func > Caller;
+	tgt.Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
+    }
+    
+    /**
+       Overloaded to handle const member functions.
+    */
+    template <typename WrappedType,typename RV, RV (WrappedType::*Func)() const>
+    void WeakBindMemFunc( WeakJSClassCreator<WrappedType> & tgt, char const * name )
+    {
+	typedef Detail::MemFuncCallOp0< const typename WeakJSClassCreator<WrappedType>::WrappedType, RV, Func > Caller;
+	tgt.Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
+    }
+
     template <typename NativeType, typename RV>
-    Handle<Value> CallWeakMemFunc( Arguments const & argv, RV (NativeType::*MemFunc)()  )
+    Handle<Value> CallWeakMemFunc( RV (NativeType::*MemFunc)(), Arguments const & argv  )
     {
 	typedef Detail::WeakMemFuncCaller0 Caller;
 	return Caller::CallOnWeakSelf<NativeType>( MemFunc, argv );
     }
     template <typename NativeType, typename RV>
-    Handle<Value> CallWeakMemFunc( Arguments const & argv, const RV (NativeType::*MemFunc)() const )
+    Handle<Value> CallWeakMemFunc( const RV (NativeType::*MemFunc)() const, Arguments const & argv )
     {
 	typedef Detail::WeakMemFuncCaller0 Caller;
 	return Caller::CallOnWeakSelf<const NativeType>( MemFunc, argv );
@@ -338,8 +362,7 @@ namespace juice {
 	virtual ~ClassBinder() {}
 
 	/**
-	   Overload requiring a WrappedType const member function taking no
-	   arg and returning RV.
+	   Binds the member function Func to the given name.
 	*/
 	template <typename RV, RV (WrappedType::*Func)()>
 	ClassBinder & BindMemFunc( char const * name )
