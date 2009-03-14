@@ -1,5 +1,5 @@
 #summary Overview of the source tree structure and conventions
-#labels Phase-Implementation
+#labels Phase-Implementation,Topic-Project
 
 The source tree has a relatively elaborate setup, with ease-of-expansion being a primary goal. It's based primarily off of the tree used in the libs11n project, and this structure has proven to be very flexible over the years.
 
