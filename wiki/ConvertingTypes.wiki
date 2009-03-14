@@ -38,12 +38,13 @@ their own to do any conversion they like. An example of this is shown on
 [CreatingJSClasses the creating-new-classes page].
 
 
-For those averse to template arguments, there are a number of convenience instantiations of the `NativeToJS` template which can be used like this:
+For those averse to template arguments, there are a number of convenience instantiations of the `JSToNative` and `NativeToJS` template which can be used like this:
 
 {{{
   int32_t i = JSToInt32(...);
   std::string s( JSToStdString(...) );
   bool b = JSToBool(...);
+  return DoubleToJS(42.42);
 }}}
 
 
