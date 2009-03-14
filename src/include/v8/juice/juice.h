@@ -1,6 +1,7 @@
 #ifndef CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED
 #define CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED
 #include <v8.h>
+#include "juice-config.h"
 
 /** @mainpage v8-juice
 

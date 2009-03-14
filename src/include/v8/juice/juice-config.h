@@ -6,6 +6,11 @@
 #define v8_juice_LIBRARY_VERSION_STRING "20090312"
 #define v8_juice_LIBRARY_VERSION 20090312
 
+/**
+	Path used by v8::juice::IncludesPath()
+*/
+#define v8_juice_CONFIG_SCRIPTS_PATH std::string(".:/home/stephan/lib/v8/juice/20090312/js:/home/stephan/lib/v8/juice/js")
+
 #define v8_juice_HOME_PAGE "http://code.google.com/p/v8-juice"
 
 #endif // code_google_com_p_v8_juice_CONFIG_HPP_INCLUDED
