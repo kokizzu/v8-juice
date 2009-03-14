@@ -1,5 +1,5 @@
 #summary More sources of documentation
-#labels Phase-UserDocs,Featured
+#labels Phase-UserDocs,Featured,Topic-Project
 
 This library and its supporting code have various documentation sources:
 
