@@ -3,7 +3,9 @@ function dumpPF(p,list)
 {
     if( !(p instanceof PathFinder) ) throw new Error("p is-not-a PathFinder! Type="+(typeof p));
     var li = (list instanceof Array) ? list : ['fossil','who','ls','nope','emacs','gcc'];
-    print("PathFinder:",p.pathString());
+    print("PathFinder:");
+    print("\tPath =",p.pathArray());
+    print("\tExtensions =",p.extensionsArray() );
     for( k in li ) {
 	print('\tfind("'+li[k]+'") =',p.find(li[k]));
     }
@@ -23,6 +25,11 @@ function tryOne()
 tryOne();
 print('PathFinder.shared =',PathFinder.shared);
 dumpPF(PathFinder.shared.plugins,['v8-juice-whio','v8-juice-sqlite3']);
+var inc = PathFinder.shared.include;
+var ar = inc.pathArray();
+ar.push('js');
+inc.setPathArray(ar);
+dumpPF(PathFinder.shared.include,['pf']);
 //dumpPF(PathFinder.shared.include);
 //dumpPF(new Number(3)); // should throw
 //PathFinder.shared.plugins.callMemFunc();

@@ -6,8 +6,9 @@
 #include <string>
 #include <list>
 #include <map>
-
+#include <v8.h> // only for SetupPathFinderClass()
 namespace v8 { namespace juice {
+
     /**
        PathFinder searches for files using a set of prefixes
        (paths) and suffixes (file extensions).
@@ -207,6 +208,41 @@ namespace v8 { namespace juice {
        Shared instance of PathFinder used for searching for scripts.
     */
     PathFinder & ScriptsPath();
+
+    /**
+
+    Sets up script-side access to the PathFinder class and to the
+    shared PathFinder instance available via
+    v8::juice::plugin::PluginsPath().
+
+    After calling this, the shared plugin path is available script-side
+    as the object 'PathFinder.shared.plugins'. Modifying that object
+    will modify the search path for plugin loading.
+
+    The returned object has the following functions
+    and functions:
+
+    - String pathString()
+    - int setPathString( String ) 
+    - Array pathArray()
+    - int setPathArray( Array ) 
+    - String pathSeparator()
+    - void setPathSeparator( String ) 
+    - Array extensionsArray()
+    - int setExtensionsArray( Array ) 
+    - String extensionsString()
+    - int setExtensionsString( String ) 
+    - void addPathString( String ) 
+    - void addExtensionString( String ) 
+    - String find( String ) 
+    - void clearCache()
+    - bool isEmpty()
+
+    For the full JS-side API docs see:
+
+    http://code.google.com/p/v8-juice/wiki/ClassPathFinder
+    */
+    v8::Handle< ::v8::Value > SetupPathFinderClass(const ::v8::Handle< ::v8::Object > target );
 
 }} // namespaces
 

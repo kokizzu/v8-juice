@@ -2,8 +2,8 @@
 class MyType
 func std::string voodoo(int)
 prop howdy CastToJS("Hi, there! How're ya?")
-func int func2(int)
 func int func1()
+func int func2=functionTwo(int)
 func double func3(int , int)
 func std::string hi()
 func my_native* me()
