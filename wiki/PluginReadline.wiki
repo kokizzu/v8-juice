@@ -1,5 +1,5 @@
 #summary Plugin for minimal GNU Readline or BSD Editine support
-#labels Phase-UserDocs
+#labels Phase-UserDocs,Topic-Plugins
 
 The readline plugin provides a minimal API for reading user input from the keyboard. It can be configured (via compile-time options) to use GNU Readline, BSD Editline, or plain stdin as its input source. The programming interface is the same, however.
 
