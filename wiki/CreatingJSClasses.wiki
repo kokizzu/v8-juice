@@ -1,4 +1,4 @@
-#summary Creating JS classes from C++
+#summary Creating new JS classes from C++ and binding C++ classes to JS
 #labels Phase-UserDocs,Featured,Topic-CPlusPlus
 
 *Achtung:* this page documents the _current_ state of the library, which might be five minutes or a thousand years newer than any given version found on the downloads page.
@@ -330,11 +330,7 @@ namespace v8 { namespace juice {
 
 That example is feature-complete and ready for copy/paste into your source files.
 
-The following weird code hooks `my_native` in with the `v8::juice::convert` API, so that we
-can use `CastToJS()` and `CastFromJS()` with `my_native`. We want that in this case because
-some of the `my_native` members take or return pointers to `my_native` objects. Since the function
-forwarding mechanism uses `CastToJS()` and `CastFromJS()` for all type conversions, we want to be able to
-hook in to that:
+The following weird code hooks `my_native` in with the `v8::juice::convert` API, so that we can use `CastToJS()` and `CastFromJS()` with `my_native`. We want that in this case because some of the `my_native` members take or return pointers to `my_native` objects. Since the function forwarding mechanism uses `CastToJS()` and `CastFromJS()` for all type conversions, we want to be able to hook in to that:
 
 {{{
 namespace v8 { namespace juice { namespace convert {
@@ -402,7 +398,7 @@ And now what we originally set out to to: bind `my_native` with JS:
 }}}
 
 Again, it's ugly, but it also has no extra runtime memory costs other than that needed by
-the v8 internals and the conversion from JS to native.
+the v8 internals and the conversion from JS to native. While it isn't demonstrated here, `const` member functions can also be found.
 
 And in JS it looks like this:
 
@@ -428,11 +424,11 @@ true
 12
 }}}
 
-An interesting feature of class binding framework is that it's compile-time typesafe. Though v8 uses `void *` as the parameter type for destruction callbacks, the implementation uses a mix of templates, private functions, and an internal void-to-native mapping to ensure that only the correct types can, e.g., be passed to the correct destructor, and that `CastFromJS<TypeB>()` cannot cast (using the default conversions) to `TypeA`. The implementation is believed to be 100% typesafe.
+An interesting feature of the class binding framework is that it's compile-time typesafe. Though v8 uses `void *` as the parameter type for destruction callbacks, the implementation uses a mix of class templates, private static functions, and an internal void-to-native mapping to ensure that only the correct types can, e.g., be passed to the correct destructor, and that `CastFromJS<TypeB>()` cannot cast (using the default conversions) to `TypeA`. The implementation is believed to be 100% typesafe.
 
 =Real-world examples=
 
 There are some real-world examples of using these types in the v8-juice source tree:
 
-  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-js.cc Pathfinder-js.cc] is a fairly straightforward example which wraps the `v8::juice::PathFinder` class (or parts of it). Search that file for `SetupPathFinderClass` and you'll jump right to the relevant parts.
-  * Or the much more detailed [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/v8-whio.cc v8-whio.cc] implements the [PluginWhio whio plugin]. This example is way more convoluted than normal, largely because it contains some evolutionary cruft from the various phases of WeakJSClassCreator's development. It also demonstrates `WeakJSClassCreator<T>` where `WeakJSClassCreator<T>::WrappedType` is-not `T`, which might be interesting to someone out there.
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-js.cc Pathfinder-js.cc] is a fairly straightforward example which wraps the majority of the `v8::juice::PathFinder` class using `ClassBinder`. Search that file for `SetupPathFinderClass` and you'll jump right to the relevant parts.
+  * Or the much more detailed [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/v8-whio.cc v8-whio.cc] implements the [PluginWhio whio plugin]. This example is way more convoluted than normal, largely because it contains much evolutionary cruft from the various phases of WeakJSClassCreator's development. It also demonstrates `WeakJSClassCreator<T>` where `WeakJSClassCreator<T>::WrappedType` is-not `T`, which might be interesting to someone out there.
