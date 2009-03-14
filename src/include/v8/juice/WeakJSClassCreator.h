@@ -147,6 +147,17 @@ namespace juice {
 	static char const * ClassName();
     };
 
+    /** Required specialization for certain template type passing to work as expected. */
+    template <typename T>
+    struct WeakJSClassCreatorOps<T const> : WeakJSClassCreatorOps<T> {};
+    /** Required specialization for certain template type passing to work as expected. */
+    template <typename T>
+    struct WeakJSClassCreatorOps<T *> : WeakJSClassCreatorOps<T> {};
+    /** Required specialization for certain template type passing to work as expected. */
+    template <typename T>
+    struct WeakJSClassCreatorOps<T const *> : WeakJSClassCreatorOps<T> {};
+
+
     /**
        WeakOpsNoop is a helper for use in the early stages of
        implementing WeakJSClassCreatorOps specializations. The idea is

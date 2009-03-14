@@ -197,6 +197,10 @@ namespace juice {
 	   Sets this JS class to inherit the given parent.
 
 	   Returns this object.
+
+	   Note that this has NOTHING to do with any inhertance which
+	   may or may not apply to any native objects attached to
+	   JS instances created via this interface.
 	*/
 	JSClassCreator & Inherit( Handle< FunctionTemplate > parent );
 
