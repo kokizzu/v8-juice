@@ -330,11 +330,33 @@ namespace v8 { namespace juice {
 
 That example is feature-complete and ready for copy/paste into your source files.
 
-The following weird code hooks `my_native` in with the `v8::juice::convert` API, so that we can use `CastToJS()` and `CastFromJS()` with `my_native`. We want that in this case because some of the `my_native` members take or return pointers to `my_native` objects. Since the function forwarding mechanism uses `CastToJS()` and `CastFromJS()` for all type conversions, we want to be able to hook in to that:
+The following macro hooks `my_native` in with the `v8::juice::convert`
+API, so that we can use `CastToJS()` and `CastFromJS()` with
+`my_native`. We want that in this case because some of the `my_native`
+members take or return pointers to `my_native` objects. Since the
+function forwarding mechanism uses `CastToJS()` and `CastFromJS()` for
+all type conversions, we want to be able to hook in to that so that `my_native`
+objects can also be cast:
+
+{{{
+#define WEAK_CLASS_TYPE my_native
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
+}}}
+
+(That must be called from global-scope code!)
+
+That will generate the complete wrapper shown above. It can be included multiple times in the same
+file. Each time it is included `WEAK_CLASS_TYPE` must be defined anew, as the header file
+`#undef`s it on each call to `#include`.
+
+If the native type will never be passed as a parameter or returned
+from a function (i.e. it will only be the `this` object) then these
+conversions are not strictly required.
+
+For the extremely curious, that macro generates something like the following:
 
 {{{
 namespace v8 { namespace juice { namespace convert {
-	// Required for CastTo/FromJS() to work:
 	template <>
 	struct NativeToJS<my_native>
 	{
@@ -361,20 +383,7 @@ namespace v8 { namespace juice { namespace convert {
 } } } // namespaces
 }}}
 
-Or we can simplify that by doing the following from _global_ _scope_ code:
-
-{{{
-#define WEAK_CLASS_TYPE my_native
-#include <v8/juice/WeakJSClassCreator-CastOps.h>
-}}}
-
-That will generate the complete wrapper shown above. It can be included multiple times in the same
-file. Each time it is included `WEAK_CLASS_TYPE` must be defined anew, as the header file
-`#undef`s it to allow such usage.
-
-If the native type will never be passed as a parameter or returned
-from a function (i.e. it will only be the `this` object) then these
-conversions are not strictly required.
+(See the [ConvertingTypes type conversions page] for the details.)
 
 And now what we originally set out to to: bind `my_native` with JS:
 
