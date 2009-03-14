@@ -95,7 +95,7 @@ namespace v8 { namespace juice {
     static Handle<Value> pf_get_path_string( Local< String > property, const AccessorInfo &info )
     {
 	PHT(info.This());
-	return CastToJS( p->path_string() );
+	return CastToJS( p->PathString() );
     }
 
     static void pf_set_path_string( Local< String > property, Local< Value > value, const AccessorInfo &info )
@@ -114,7 +114,7 @@ namespace v8 { namespace juice {
     {
 	PHV(info.This());
 	if( ! value->IsArray() ) TOSS("Path value is-not-an Array!");
-	PathFinder::string_list li( p->path() );
+	PathFinder::StringList li( p->path() );
 	Handle<Array> ar( Array::Cast( *value ) );
 	li.clear();
 	for( uint32_t i = 0; ; ++i )
@@ -127,7 +127,7 @@ namespace v8 { namespace juice {
     static Handle<Value> pf_get_path_sep( Local< String > property, const AccessorInfo &info )
     {
 	PHT(info.This());
-	return CastToJS( p->path_separator() );
+	return CastToJS( p->PathSeparator() );
     }
 
     static void pf_set_path_sep( Local< String > property, Local< Value > value, const AccessorInfo &info )
@@ -136,7 +136,7 @@ namespace v8 { namespace juice {
 	std::string sep( JSToStdString(value) );
 	if( ! sep.empty() )
 	{
-	    p->path_separator( sep );
+	    p->PathSeparator( sep );
 	}
     }
 
@@ -161,22 +161,22 @@ namespace v8 { namespace juice {
 	PW pw;
 	typedef PW::WrappedType PF;
 	//WeakBindMemFunc<PW::WrappedType,std::string, &PF::pathString>( pw, "pathString" );
-	pw.BindMemFunc< std::string, &PF::path_string >( "pathString" );
-	pw.BindMemFunc< size_t, std::string const &, &PF::path >( "setPathString" );
-	pw.BindMemFunc< PathFinder::string_list, &PF::path >( "pathArray" );
-	pw.BindMemFunc< size_t, PathFinder::string_list const &, &PF::path >( "setPathArray" );
-	pw.BindMemFunc< std::string, &PF::path_separator >( "pathSeparator" );
-	pw.BindMemFunc< void, std::string const &, &PF::path_separator >( "setPathSeparator" );
-	pw.BindMemFunc< PathFinder::string_list, &PF::extensions >( "extensionsArray" );
-	pw.BindMemFunc< size_t, PathFinder::string_list const &, &PF::extensions >( "setExtensionsArray" );
-	pw.BindMemFunc< std::string, &PF::extensions_string >( "extensionsString" );
-	pw.BindMemFunc< size_t, const std::string &, &PF::extensions >( "setExtensionsString" );
-	pw.BindMemFunc< void, std::string const &, &PF::add_path >( "addPathString" );
-	pw.BindMemFunc< void, std::string const &, &PF::add_extension >( "addExtensionString" );
-	pw.BindMemFunc< std::string, std::string const &, &PF::find >( "find" );
-	pw.BindMemFunc< void, &PF::clear_cache >( "clearCache" );
-	pw.BindMemFunc< bool, &PF::empty >( "isEmpty" );
-	pw.Set( "dirSeparator", CastToJS( PF::dir_separator() ), v8::ReadOnly );
+	pw.BindMemFunc< std::string, &PF::PathString >( "pathString" );
+	pw.BindMemFunc< size_t, std::string const &, &PF::Path >( "setPathString" );
+	pw.BindMemFunc< PathFinder::StringList, &PF::Path >( "pathArray" );
+	pw.BindMemFunc< size_t, PathFinder::StringList const &, &PF::Path >( "setPathArray" );
+	pw.BindMemFunc< std::string, &PF::PathSeparator >( "pathSeparator" );
+	pw.BindMemFunc< void, std::string const &, &PF::PathSeparator >( "setPathSeparator" );
+	pw.BindMemFunc< PathFinder::StringList, &PF::Extensions >( "extensionsArray" );
+	pw.BindMemFunc< size_t, PathFinder::StringList const &, &PF::Extensions >( "setExtensionsArray" );
+	pw.BindMemFunc< std::string, &PF::ExtensionsString >( "extensionsString" );
+	pw.BindMemFunc< size_t, const std::string &, &PF::Extensions >( "setExtensionsString" );
+	pw.BindMemFunc< void, std::string const &, &PF::AddPath >( "addPathString" );
+	pw.BindMemFunc< void, std::string const &, &PF::AddExtension >( "addExtensionString" );
+	pw.BindMemFunc< std::string, std::string const &, &PF::Find >( "find" );
+	pw.BindMemFunc< void, &PF::ClearCache >( "clearCache" );
+	pw.BindMemFunc< bool, &PF::IsEmpty >( "isEmpty" );
+	pw.Set( "dirSeparator", CastToJS( PF::DirSeparator() ), v8::ReadOnly );
 
 	//pw.BindMemFunc<void,&PF::callMemFunc>(("callMemFunc");
 
@@ -186,7 +186,7 @@ namespace v8 { namespace juice {
 	{
 	    // Install an instance wrapping the v8::juice::plugin::PluginsPath() shared object:
 	    Handle<Value> pfex( External::New( &::v8::juice::plugin::PluginsPath() ) );
-	    Handle<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
+	    Local<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
 	    shared->Set(String::New("plugins"), pfobj );
 	}
 
@@ -194,7 +194,7 @@ namespace v8 { namespace juice {
 	{
 	    // Includes includes path:
 	    Handle<Value> pfex( External::New( &::v8::juice::ScriptsPath() ) );
-	    Handle<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
+	    Local<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
 	    shared->Set(String::New("include"), pfobj );
 	}
 	return target;
