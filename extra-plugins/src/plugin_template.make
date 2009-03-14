@@ -25,6 +25,7 @@ ifeq (,$(jconfig))
 $(error libv8-juice-config was not found in the PATH!)
 endif
 
+CXXFLAGS += -g3 -Wall
 CPPFLAGS += $(shell $(jconfig) --includes)
 JUICE_VERSION := $(shell $(jconfig) --version)
 
