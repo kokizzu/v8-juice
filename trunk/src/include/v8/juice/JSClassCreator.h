@@ -65,8 +65,8 @@ namespace juice {
 	Handle<Object> target;
 	Handle<FunctionTemplate> ctorTmpl;
 	Local<ObjectTemplate> proto;
-	JSClassCreator( JSClassCreator const & ); // not implemented
-	JSClassCreator & operator=( JSClassCreator const & ); // not implemented
+ 	JSClassCreator( JSClassCreator const & ); // not implemented
+ 	JSClassCreator & operator=( JSClassCreator const & ); // not implemented
 	bool hasTarget;
     public:
 	/**
@@ -165,7 +165,7 @@ namespace juice {
 	   undefined). The returned object is owned by the JS engine,
 	   and it may be Empty() (v8's way of signaling an exception).
 	*/
-	Local<Object> NewInstance( int argc, Handle<Value> argv[] );
+	virtual Local<Object> NewInstance( int argc, Handle<Value> argv[] );
 
 	/**
 	   Sets a property with the given name and value.
