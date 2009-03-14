@@ -4,7 +4,7 @@
 *Achtung:* some of the plugins were broken with recent (20090312) changes/improvements in the core lib and need some significant reworking before they'll be useful again. The affected plugins are:
 
   * ncurses
-  * sqlite3
+  * ~~sqlite3~~ (still needs some mow reworking, but works now (20090314))
 
 they need to be reworked to use the newer [CreatingJSClasses native bindings mechanism], as they currently use a very unsafe JS-to-native argument passing convention which can (and often does) lead to segfaults.
 
