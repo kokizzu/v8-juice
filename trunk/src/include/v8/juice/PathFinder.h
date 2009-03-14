@@ -173,7 +173,8 @@ namespace v8 { namespace juice {
 	   uses a cache. When caching it will always return
 	   the same result for any given resourcename.
 	*/
-	std::string find( const std::string & resourcename, bool check_cache = true ) const;
+	std::string find( const std::string & resourcename, bool check_cache ) const;
+	std::string find( const std::string & resourcename ) const { return this->find(resourcename,true); }
 
 	/**
 	   Empties the hit-cache used by find().
@@ -183,7 +184,7 @@ namespace v8 { namespace juice {
 	/**
 	   Returns a list of all items added via add_path() and path().
 	*/
-	const string_list & path() const;
+	string_list path() const;
 
 	/** Non-const overload, intended mainly for serialization
 	    purposes. */
