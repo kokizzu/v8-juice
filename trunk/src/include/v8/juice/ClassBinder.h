@@ -45,94 +45,215 @@ namespace juice {
 	using namespace v8;
 	using namespace v8::juice;
 
+	struct MemFuncCaller0
+	{
+	    enum { Arity = 0 };
+	    template <typename T, typename RV>
+	    static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
+		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+		return convert::CastToJS<RV>( (obj->*MemFunc)() );
+	    }
+
+	    template <typename T, typename RV>
+	    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
+		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+		return convert::CastToJS<RV>( (obj->*MemFunc)() );
+	    }
+
+	    template <typename T>
+	    static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
+		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+		(obj->*MemFunc)();
+		return Undefined();
+	    }
+
+	    template <typename T>
+	    static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
+		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+		(obj->*MemFunc)();
+		return Undefined();
+	    }
+	};
+
+	struct WeakMemFuncCaller0 : MemFuncCaller0
+	{
+	    template <typename WeakWrappedType, typename RV>
+	    static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)(), Arguments const & argv )
+	    {
+		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+		typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+		if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+		return Call( obj, func, argv );
+	    }
+
+	    template <typename WeakWrappedType, typename RV>
+	    static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)() const, Arguments const & argv )
+	    {
+		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+		typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+		if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+		return Call( obj, func, argv );
+	    }
+
+	    template <typename WeakWrappedType>
+	    static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)(), Arguments const & argv )
+	    {
+		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+		typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+		if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+		return Call( obj, func, argv );
+	    }
+
+	    template <typename WeakWrappedType>
+	    static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)() const, Arguments const & argv )
+	    {
+		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+		typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+		if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+		return Call( obj, func, argv );
+	    }
+	};
+
+#include "ClassBinder-MemFuncCaller.h" // generated code
+
+	/** An internal helper type for converting v8::Arguments to native args
+	    and passing them on to the given native member function.
+	*/
 	template <typename T, typename RV, RV (T::*Func)()  >
 	struct MemFuncCallOp0
 	{
 	    typedef T Type;
 	    enum { Arity = 0 };
+	    typedef RV (T::*FuncSig)();
+	    typedef WeakMemFuncCaller0 OpBase;
 	    static Handle<Value> Call( Type * obj, Arguments const & argv )
 	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
-		return convert::CastToJS( (RV) (obj->*Func)() );
+		return OpBase::Call( obj, Func, argv );
+	    }
+	    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+	    {
+		return OpBase::CallOnWeakSelf<Type>( Func, argv );
 	    }
 	};
 
+	/** Specializations for const members. */
 	template <typename T, typename RV, RV (T::*Func)() const>
 	struct MemFuncCallOp0<const T,RV,Func>
 	{
-	    typedef const T Type;
+	    typedef T Type;
 	    enum { Arity = 0 };
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
+	    typedef WeakMemFuncCaller0 OpBase;
+	    static Handle<Value> Call( Type const * obj, Arguments const & argv )
 	    {
 		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
 		return convert::CastToJS( (RV) (obj->*Func)() );
 	    }
+	    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+	    {
+		return OpBase::CallOnWeakSelf<const Type>( Func, argv );
+	    }
 	};
 
+	/** Specializations for members returning void. */
 	template <typename T, void (T::*Func)()>
 	struct MemFuncCallOp0<T, void, Func >
 	{
 	    typedef T Type;
-	    enum { Arity = 0 };
+	    typedef WeakMemFuncCaller0 OpBase;
 	    static Handle<Value> Call( Type * obj, Arguments const & argv )
 	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
-		(void) (obj->*Func)();
-		return Undefined();
+		//if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
+		return OpBase::Call( obj, Func, argv );
+	    }
+	    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+	    {
+		return OpBase::CallOnWeakSelf<Type>( Func, argv );
 	    }
 	};
 
+	/** Specializations for const members returning void. */
 	template <typename T, void (T::*Func)() const>
 	struct MemFuncCallOp0<const T, void, Func >
 	{
-	    typedef const T Type;
-	    enum { Arity = 0 };
-	    static Handle<Value> Call( Type * obj, Arguments const & argv )
+	    typedef T Type;
+	    typedef WeakMemFuncCaller0 OpBase;
+	    static Handle<Value> Call( Type const * obj, Arguments const & argv )
 	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
-		(void) (obj->*Func)();
-		return Undefined();
+		return OpBase::Call( obj, Func, argv );
+	    }
+	    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+	    {
+		return OpBase::CallOnWeakSelf<const Type>( Func, argv );
 	    }
 	};
 
-#include "ClassBinder-MemFuncCallOpN.h" // generated code
+#include "ClassBinder-MemFuncCallOps.h" // generated code
 
 	/**
 	   Helper used by ClassBinder::AddMemberFunc(). CallOpType
 	   must be an existing MemFuncCallOpN type, where N is an
 	   integer value.
 	*/
-	template <typename CallOpType,typename RT = bool>
+	template <typename CallOpType,typename RT>
 	struct MemFuncCallOp
 	{
-	    typedef typename CallOpType::Type Type;
-	    enum { Arity = CallOpType::Arity };
+ 	    typedef typename CallOpType::Type Type;
 	    typedef WeakJSClassCreator<Type> Wrapper;
 	    static Handle<Value> Call( Arguments const & argv )
 	    {
-		Type * obj = Wrapper::GetSelf( argv.This() );
-		if( ! obj ) return ThrowException(String::New("MemberForwarder<>::Call() could not find native 'this' object!"));
-		return convert::CastToJS( CallOpType::Call( obj, argv ) );
+		return CallOpType::CallOnWeakSelf( argv );
 	    }
 	};
 
+	/**
+	   Helper used by ClassBinder::AddMemberFunc(). CallOpType
+	   must be an existing MemFuncCallOpN type, where N is an
+	   integer value.
+	*/
 	template <typename CallOpType>
 	struct MemFuncCallOp<CallOpType,void>
 	{
 	    typedef typename CallOpType::Type Type;
-	    enum { Arity = CallOpType::Arity };
 	    typedef WeakJSClassCreator<Type> Wrapper;
 	    static Handle<Value> Call( Arguments const & argv )
 	    {
+#if 0
 		Type * obj = Wrapper::GetSelf( argv.This() );
-		if( ! obj ) return ThrowException(String::New("MemberForwarder<>::Call() could not find native 'this' object!"));
+		if( ! obj ) return ThrowException(String::New("MemFuncCallOp<>::Call() could not find native 'this' object!"));
 		CallOpType::Call( obj, argv );
 		return Undefined();
+#else
+		return CallOpType::CallOnWeakSelf( argv );
+#endif
 	    }
 	};
-
     }
 #endif // DOXYGEN
+
+#if 1
+    //template <typename NativeType, typename RV, RV (NativeType::*Func)()>
+    template <typename NativeType, typename RV>
+    Handle<Value> CallWeakMemFunc( Arguments const & argv, RV (NativeType::*MemFunc)()  )
+    {
+	typedef Detail::WeakMemFuncCaller0 Caller;
+	return Caller::CallOnWeakSelf<NativeType>( MemFunc, argv );
+    }
+    template <typename NativeType, typename RV>
+    Handle<Value> CallWeakMemFunc( Arguments const & argv, const RV (NativeType::*MemFunc)() const )
+    {
+	typedef Detail::WeakMemFuncCaller0 Caller;
+	return Caller::CallOnWeakSelf<const NativeType>( MemFunc, argv );
+    }
+#endif
+
     /**
        ClassBinder is a WeakJSClassCreator subclass which adds some
        binding features which required other v8::juice APIs (as opposed
@@ -217,7 +338,8 @@ namespace juice {
 	virtual ~ClassBinder() {}
 
 	/**
-	   Binds the given nullary member function to the given name.
+	   Overload requiring a WrappedType const member function taking no
+	   arg and returning RV.
 	*/
 	template <typename RV, RV (WrappedType::*Func)()>
 	ClassBinder & BindMemFunc( char const * name )
@@ -228,90 +350,17 @@ namespace juice {
 	}
 
 	/**
-	   Overload requiring a WrappedType const member function taking 1
+	   Overload requiring a WrappedType const member function taking no
 	   arg and returning RV.
 	*/
 	template <typename RV, RV (WrappedType::*Func)() const>
 	ClassBinder & BindMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp0< const WrappedType, RV, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp<Caller>::Call );
-	    return *this;
-	}
-
-#if 0
-	/**
-	   Overload requiring a WrappedType member function taking 1
-	   arg and returning RV.
-	*/
-	template < typename RV, typename A1, RV (WrappedType::*Func)(A1) >
-	ClassBinder & BindMemFunc( char const * name )
-	{
-	    typedef Detail::MemFuncCallOp1< WrappedType, RV, A1, Func > Caller;
 	    this->Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
 	    return *this;
 	}
-
-	/**
-	   Overload requiring a WrappedType const member function taking 1
-	   arg and returning RV.
-	*/
-	template < typename RV, typename A1, RV (WrappedType::*Func)(A1) const >
-	ClassBinder & BindMemFunc( char const * name )
-	{
-	    typedef Detail::MemFuncCallOp1< const WrappedType, RV, A1, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
-	    return *this;
-	}
-
-	/**
-	   Overload requiring a WrappedType member function taking 2
-	   args and returning RV.
-	*/
-	template <  typename RV, typename A0, typename A1, RV (WrappedType::*Func)( A0 , A1 ) >
-	ClassBinder & BindMemFunc( char const * name )
-	{
-	    typedef Detail::MemFuncCallOp2< WrappedType, RV, A0, A1, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp< Caller,RV >::Call );
-	    return *this;
-	}
-
-	/**
-	   Overload requiring a WrappedType member function taking 2
-	   args and returning RV.
-	*/
-	template <  typename RV, typename A0, typename A1, RV (WrappedType::*Func)( A0 , A1 ) const >
-	ClassBinder & BindMemFunc( char const * name )
-	{
-	    typedef Detail::MemFuncCallOp2< const WrappedType, RV, A0, A1, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp< Caller,RV >::Call );
-	    return *this;
-	}
-
-	/**
-	   Overload requiring a WrappedType member function taking 3 args and returning RV.
-	*/
-	template <  typename RV, typename A0, typename A1, typename A2, RV (WrappedType::*Func)( A0, A1, A2 ) >
-	ClassBinder & BindMemFunc( char const * name )
-	{
-	    typedef Detail::MemFuncCallOp3< WrappedType, RV,  A0, A1, A2, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
-	    return *this;
-	}
-
-	/**
-	   Overload requiring a WrappedType const member function taking 3 args and returning RV.
-	*/
-	template <  typename RV, typename A0, typename A1, typename A2, RV (WrappedType::*Func)( A0, A1, A2 ) const >
-	ClassBinder & BindMemFunc( char const * name )
-	{
-	    typedef Detail::MemFuncCallOp3< const WrappedType, RV,  A0, A1, A2, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
-	    return *this;
-	}
-#else
 #include "ClassBinder-BindMemFunc.h" // generated code
-#endif
 
     }; // class ClassBinder
 

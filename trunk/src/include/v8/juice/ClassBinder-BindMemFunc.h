@@ -1,5 +1,4 @@
 // GENERATED CODE! Edit at your own risk!
-#if ! defined(DOXYGEN)
 /**
    Overload requiring a WrappedType member function
    taking 1 args and returning RV.
@@ -110,4 +109,3 @@ ClassBinder & BindMemFunc( char const * name )
     this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
     return *this;
 }
-#endif //if !defined(DOXYGEN)

@@ -5,7 +5,8 @@
 count=${1-0}
 
 test "$count" -gt 0 || {
-    echo "Usage: $0 NUMBER (>0) [COMMAND=BindMemFunc]"
+    echo "Usage: $0 NUMBER (>=0) [COMMAND=BindMemFunc]"
+    echo "Commands: MemFuncCallOps, BindMemFunc, MemFuncCaller"
     exit 1
 }
 
@@ -16,8 +17,12 @@ ttlist="WrappedType, RV,"
 tmplsigV="typename WrappedType, void, "
 aTDecl=""
 aTParam=""
+castCalls=""
 at=0
 callop=MemFuncCallOp${count}
+MemFuncCaller=MemFuncCaller
+callBase=${MemFuncCaller}${count}
+callBaseWeak=WeakMemFuncCaller${count}
 
 function makeLists()
 {
@@ -29,9 +34,11 @@ function makeLists()
 	tmplsigV="${tmplsigV} ${AT},"
 	aTDecl="${aTDecl} typename ${AT}"
 	aTParam="${aTParam} ${AT}"
+	castCalls="${castCalls} convert::CastFromJS< ${AT} >(argv[${at}])"
 	test $at -ne $((count-1)) && {
 	    aTDecl="${aTDecl}, "
 	    aTParam="${aTParam},"
+	    castCalls="${castCalls},"
 	}
     done
     #tmplsig="${tmplsig} RV (WrappedType::*Func)(${aTParam})";
@@ -41,100 +48,185 @@ function makeLists()
     tmplspecV="WrappedType, void, ${aTParam}, void ${funcSig}"
 }
 
-function makeOps1()
+
+function makeCallBase()
 {
-    ####################
-    # Primary ${callop} template:
-    echo "/** Member function call forwarder for member functions taking ${count} arguments. */"
-    echo "template < ${tmplsig} >"
-    echo -e "struct ${callop}\n{"
-    cat <<EOF
-enum { Arity = $count };
-typedef WrappedType Type;
-static Handle<Value> Call( Type * obj, Arguments const & argv )
-{
-    if( ! obj ) return ThrowException(String::New("${callop}::Call(): Native object is null!"));
-    else if( argv.Length() < Arity ) return ThrowException(String::New("${callop}::Call(): wrong argument count!"));
-	return convert::CastToJS( (RV) (obj->*Func)(
-EOF
-for (( at = 0; at < count; at = at + 1)); do
-    local T="A${at}"
-    echo -en "\t\tconvert::CastFromJS< ${T} >(argv[${at}])"
-    test $at -ne $((count-1)) && echo "," || echo
-done
-echo -e ") );\n}\n};"
-        #echo aTDecl=$aTDecl
-        #echo aTParam=$aTParam
-        ####################
-        # void specialization for ${callop} template:
-echo "/** Specialization for member functions taking ${count} args and returning void. */"
-echo "template < ${tmplsigV} >"
-echo -e "struct ${callop}< WrappedType,void,${aTParam}, Func >\n{"
 cat <<EOF
-enum { Arity = $count };
-typedef WrappedType Type;
-static Handle<Value> Call( Type * obj, Arguments const & argv )
+/**
+A helper class for forwarding JS arguments to member functions
+taking ${count} arguments.
+*/
+struct ${callBase}
 {
-    if( ! obj ) return ThrowException(String::New("${callop}::Call(): Native object is null!"));
-    else if( argv.Length() < Arity ) return ThrowException(String::New("${callop}::Call(): wrong argument count!"));
-	(obj->*Func)(
+    enum { Arity = ${count} };
+
+    template <typename T, typename RV, ${aTDecl}>
+    static Handle<Value> Call( T * obj, RV (T::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("${callBase}::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+	//return convert::CastToJS( (RV) (obj->*Func)( ${castCalls} ) );
+
+	return convert::CastToJS<RV>( (obj->*MemFunc)( ${castCalls} ) );
+    }
+    
+    template <typename T, typename RV, ${aTDecl}>
+    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("${callBase}::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( (obj->*MemFunc)(${castCalls} ) );
+    }
+    
+    template <typename T, ${aTDecl}>
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("${callBase}::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+	(obj->*MemFunc)(${castCalls} );
+	return Undefined();
+    }
+
+    template <typename T, ${aTDecl} >
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("${callBase}::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+	(obj->*MemFunc)(${castCalls} );
+	return Undefined();
+    }
+};
+struct ${callBaseWeak} : ${callBase}
+{
+    enum { Arity = ${count} };
+
+    template <typename WeakWrappedType, typename RV, ${aTDecl} >
+    static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)(${aTParam}), Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+	return Call( obj, func, argv );
+    }
+    
+    template <typename WeakWrappedType, typename RV, ${aTDecl} >
+    static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)(${aTParam}) const, Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+	return Call( obj, func, argv );
+    }
+    
+    template <typename WeakWrappedType, ${aTDecl} >
+    static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)(${aTParam}), Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+	return Call( obj, func, argv );
+    }
+    
+    template <typename WeakWrappedType, ${aTDecl} >
+    static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)(${aTParam}) const, Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+        return Call( obj, func, argv );
+    }
+
+};
 EOF
-for (( at = 0; at < count; at = at + 1)); do
-    local T="A${at}"
-    echo -en "\t\tconvert::CastFromJS< ${T} >(argv[${at}])"
-    test $at -ne $((count-1)) && echo "," || echo
-done
-echo -e "\t\t);\n\t\treturn ::v8::Undefined();\n\t}\n};"
+} # makeCallBase()
+
+
+function makeMemFuncCallOps()
+{
+    cat <<EOF
+/**
+    Member function call forwarder for member functions taking ${count} arguments.
+*/
+template < ${tmplsig} >
+struct ${callop}
+{
+    enum { Arity = $count };
+    typedef WrappedType Type;
+    typedef ${callBaseWeak} OpBase;
+    static Handle<Value> Call( Type * obj, Arguments const & argv )
+    {
+	return OpBase::Call( obj, Func, argv );
+    }
+    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+    {
+	return OpBase::CallOnWeakSelf<Type>( Func, argv );
+    }
+};
+
+/**
+    Specialization for member functions taking ${count} args and returning void.
+*/
+template < ${tmplsigV} >
+struct ${callop}< WrappedType,void,${aTParam}, Func >
+{
+    enum { Arity = $count };
+    typedef WrappedType Type;
+    typedef ${callBaseWeak} OpBase;
+    static Handle<Value> Call( Type * obj, Arguments const & argv )
+    {
+	return OpBase::Call( obj, Func, argv );
+    }
+    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+    {
+	return OpBase::CallOnWeakSelf<Type>( Func, argv );
+    }
+};
+EOF
 echo
 return
 }
 
-function makeOpsConst()
+function makeMemFuncCallOpsConst()
 {
-    ####################
-    # Primary ${callop} template:
-    echo "/** Member function call forwarder for const member functions taking ${count} arguments. */"
-    echo "template < typename WrappedType, typename RV, ${aTDecl}, RV ${funcSig} const >"
-    echo -e "struct ${callop}<const WrappedType, RV,${aTParam}, Func>\n{"
     cat <<EOF
-enum { Arity = $count };
-typedef const WrappedType Type;
-static Handle<Value> Call( Type const * obj, Arguments const & argv )
+/**
+    Member function call forwarder for const member functions taking ${count} arguments
+    and returning RV.
+*/
+template < typename WrappedType, typename RV, ${aTDecl}, RV ${funcSig} const >
+struct ${callop}< const WrappedType, RV,${aTParam}, Func>
 {
-    if( ! obj ) return ThrowException(String::New("${callop}::Call(): Native object is null!"));
-    else if( argv.Length() < Arity ) return ThrowException(String::New("${callop}::Call(): wrong argument count!"));
-	return convert::CastToJS( (RV) (obj->*Func)(
-EOF
-for (( at = 0; at < count; at = at + 1)); do
-    local T="A${at}"
-    echo -en "\t\tconvert::CastFromJS< ${T} >(argv[${at}])"
-    test $at -ne $((count-1)) && echo "," || echo
-done
-echo -e ") );\n}\n};"
-        #echo aTDecl=$aTDecl
-        #echo aTParam=$aTParam
-        ####################
-        # void specialization for ${callop} template:
-echo "/** Specialization for const member functions taking ${count} args and returning void. */"
-    echo "template < typename WrappedType, ${aTDecl}, void ${funcSig} const >"
-    echo -e "struct ${callop}< const WrappedType,void,${aTParam}, Func >\n{"
-cat <<EOF
-enum { Arity = $count };
-typedef const WrappedType Type;
-static Handle<Value> Call( Type const * obj, Arguments const & argv )
+    enum { Arity = $count };
+    typedef WrappedType Type;
+    typedef ${callBaseWeak} OpBase;
+    static Handle<Value> Call( Type const * obj, Arguments const & argv )
+    {
+	return OpBase::Call( obj, Func, argv );
+    }
+    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+    {
+	return OpBase::CallOnWeakSelf<const Type>( Func, argv );
+    }
+};
+
+/**
+    Specialization for const member functions taking ${count} args and returning void.
+*/
+template < typename WrappedType, ${aTDecl}, void ${funcSig} const >
+struct ${callop}< const WrappedType,void,${aTParam}, Func >
 {
-    if( ! obj ) return ThrowException(String::New("${callop}::Call(): Native object is null!"));
-    else if( argv.Length() < Arity ) return ThrowException(String::New("${callop}::Call(): wrong argument count!"));
-	(obj->*Func)(
+    enum { Arity = $count };
+    typedef WrappedType Type;
+    static Handle<Value> Call( Type const * obj, Arguments const & argv )
+    {
+	return OpBase::Call( obj, Func, argv );
+    }
+    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+    {
+	return OpBase::CallOnWeakSelf<const Type>( Func, argv );
+    }
+};
 EOF
-for (( at = 0; at < count; at = at + 1)); do
-    local T="A${at}"
-    echo -en "\t\tconvert::CastFromJS< ${T} >(argv[${at}])"
-    test $at -ne $((count-1)) && echo "," || echo
-done
-echo -e "\t\t);\n\t\treturn ::v8::Undefined();\n\t}\n};"
-echo
-return
 }
 
 function makeBindFunc()
@@ -155,7 +247,6 @@ EOF
 
 }
 
-
 makeLists
 false && {
     echo funcSig=${funcSig}
@@ -166,14 +257,17 @@ false && {
 
 
 case $command in
-    BindMemFunc)
+    'BindMemFunc')
         makeBindFunc | sed -e 's/CONSTNESS //g'
 	makeBindFunc | sed -e 's/CONSTNESS /const /g'
 	;;
-    MemFuncCallOps)
-	    makeOps1
-	    makeOpsConst
+    'MemFuncCallOps')
+	    makeMemFuncCallOps
+	    #makeMemFuncCallOpsConst
 	    ;;
+    'MemFuncCaller')
+	makeCallBase
+	;;
     *)
 	echo "Unhandled command: ${command}"
 	exit 2
