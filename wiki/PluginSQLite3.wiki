@@ -1,5 +1,5 @@
 #summary JS Bindings for SQLite3
-#labels Phase-UserDocs
+#labels Phase-UserDocs,Topic-Plugins
 
 =The sqlite3 bindings=
 
