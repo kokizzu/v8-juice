@@ -11,8 +11,7 @@ The class can be added to a JS engine by calling `v8::SetupPathFinderClass()`, d
 == JS API ==
 
 || *Functions* || *Notes* ||
-|| `new PathFinder([path=''[,[extensions=''][,delimiter=':']]])` || Creates a new !PathFinder with the given search path, extensions, and delimiter. ||
-|| `pathString()` || Search path as a delimited string. ||
+|| `new PathFinder( [path=''], [extensions=''], [delimiter=':'])` || Creates a new !PathFinder with the given search path, extensions, and delimiter. ||
 || `String pathString()` || Search path as a delimited string. ||
 || `int setPathString( String )`  || Sets the search path. May be delimited. ||
 || `Array pathArray()` || Search path as an array. ||
@@ -32,3 +31,18 @@ The class can be added to a JS engine by calling `v8::SetupPathFinderClass()`, d
 || `dirSeparator` (read-only) || The platform-specific character used to separate directory names in a path. This is `\` on Windows and `/` everywhere else. ||
 
 Note that because the values in a !PathFinder object are internally native types, it is not possible to directly change them via JS objects. e.g. `obj.pathArray()[3]='/home'` will have no effect, as the object returned from `pathArray()` is necessarily a copy of the native data.
+
+=Shared !PathFinder Instances=
+
+When the class is added to an object, the setup routine also creates shared !PathFinder objects, accessible via the shared JS object `PathFinder.shared`. The list of shared objects is:
+
+  * `PathFinder.shared.plugins` = the same object as `v8::juice::plugin::PluginPath()`.
+  * `PathFinder.shared.include` = Not yet added, but will be used for searching for `include()`ed scripts.
+
+
+For example:
+
+{{{
+print(PathFinder.shared.plugins.find("MyPlugin"));
+// ^^^ searches for MyPlugin.(dll|so) but does not open it
+}}}
