@@ -189,6 +189,7 @@ namespace sq3 {
 	~DBInfo()
 	{
 	    bind::UnbindNative( this, this );
+	    // FIXME: finalize any open statements.
 	    if( dbh )
 	    {
 		//CERR << "Closing sqlite3 handle @"<<dbh<<'\n';
@@ -275,14 +276,14 @@ namespace sq3 {
 	    sq3::DBInfo * db = new sq3::DBInfo;
 	    db->dbh = dbh;
 	    db->jsobj = argv.This();
-	    CERR << "Created DBInfo object @"<<db<<'\n';
+	    //CERR << "Created DBInfo object @"<<db<<'\n';
 	    cleanup::AddToCleanup( db, cleanup_callback );
 	    return db;
 	}
 	static void Dtor( WrappedType * obj )
 	{
 	    cleanup::RemoveFromCleanup( obj );
-	    CERR << "Destroying DBInfo object @"<<obj<<'\n';
+	    //CERR << "Destroying DBInfo object @"<<obj<<'\n';
 	    delete obj;
 	}
 	static void cleanup_callback( void * obj )
@@ -299,7 +300,7 @@ namespace sq3 {
     using namespace ::v8;
     using namespace ::v8::juice;
 
-    typedef WeakJSClassCreator<DBInfo> DBJSClass;
+    typedef WeakJSClassCreator<DBInfo> DBWeakWrap;
 
 
 #define ASSERTARGS(FUNCNAME,COND) if(!(COND)) return ThrowException(String::New(# FUNCNAME "(): assertion failed: " # COND))
@@ -437,7 +438,7 @@ namespace sq3 {
     JS_WRAPPER(sq3_open)
     {
 // 	std::string errmsg;
-// 	DBInfo * db = DBJSClass::Ctor( argv, errmsg );
+// 	DBInfo * db = DBWeakWrap::Ctor( argv, errmsg );
 	ASSERTARGS(sqlite3_open,(argv.Length()==1));
 	Handle<Value> arg0( argv[0] );
 	TryCatch tryer;
@@ -446,7 +447,7 @@ namespace sq3 {
 	{
 	    return ThrowException(tryer.Exception());
 	}
-	DBInfo * db = DBJSClass::GetSelf(dbjo);
+	DBInfo * db = DBWeakWrap::GetSelf(dbjo);
 	if( ! db )
 	{
 	    return ThrowException(String::New("Internal error: created wrapped native but could not convert JS object back to the native!"));
@@ -474,7 +475,7 @@ namespace sq3 {
     {
 	ASSERTARGS(sqlite3_close,(argv.Length()==1));
 	DB_ARG( argv[0] );
-	DBJSClass::DestroyObject(argv[0]);
+	DBWeakWrap::DestroyObject(argv[0]);
 	return Handle<Value>();
     }
 
@@ -1001,6 +1002,7 @@ namespace sq3 {
 					   const int argc,
 					   ::sqlite3_value **argv )
     {
+#define DOUT if(0) CERR
 	CallbackInfo * fi = 0;
 	fi = static_cast<CallbackInfo *>( sqlite3_user_data( context ) );
 	if( ! fi )
@@ -1008,11 +1010,11 @@ namespace sq3 {
 	    return;// ThrowException( String::New("sqlite_func_forwarder_impl() internal error: called without bound native data.") );
 	}
 	fi->return_val = Undefined();
-	if(0)
+	if(1)
 	{
-	    CERR << "function type id: " << funcid << ", fi=@"<<fi<<'\n';
-	    CERR << "fi->bogo: " << fi->bogo << '\n';
-	    CERR << "fi->func_name: " << fi->func_name
+	    DOUT << "function type id: " << funcid << ", fi=@"<<fi<<'\n';
+	    DOUT << "fi->bogo: " << fi->bogo << '\n';
+	    DOUT << "fi->func_name: " << fi->func_name
 		 << ", fi->func->IsFunction()="<<fi->func->IsFunction()
 		// << ", fi->func toString="<<CastFromJS<std::string>(fi->func)
 		 <<'\n';
@@ -1028,7 +1030,7 @@ namespace sq3 {
 		std::ostringstream os;
 		os << "sqlite3_func_forwarder_impl("<<funcid<<",context,"<<argc<<",array) was passed a bad 1st argument.";
 		fi->cb_exception = Exception::Error( String::New(os.str().c_str()) );
-		CERR << os.str() << '\n';
+		DOUT << os.str() << '\n';
 		//return ThrowException(String::New(os.str().c_str()));
 	    }
 	    return;
@@ -1041,7 +1043,7 @@ namespace sq3 {
 		os << "sqlite3_func_forwarder_impl("<<funcid<<",context,"<<argc<<",array) could not determine which function to run!"
 		     << " func="<<CastFromJS<std::string>(thefunc)<<'\n';
 		fi->cb_exception = Exception::Error( String::New(os.str().c_str()) );
-		CERR << os.str() << '\n';
+		DOUT << os.str() << '\n';
 		//return ThrowException(String::New(os.str().c_str()));
 	    }
 	    return;
@@ -1079,13 +1081,13 @@ namespace sq3 {
 	{
 	    if( vlen )
 	    {
-		//CERR << "Going to create an array of "<<vlen<<" items. Vector has space for "<<valvec.size()<<'\n';
+		DOUT << "Going to create an array of "<<vlen<<" items. Vector has space for "<<valvec.size()<<'\n';
 		array = Array::New( vlen );
 		for( int i = 0; i < vlen; ++i )
 		{
 		    //bool rc =
 		    array->Set( Integer::New( static_cast<int>(i) ), valvec[i] );
-		    //CERR << "argv["<<i<<"] == "<<CastFromJS<std::string>(valvec[i])<<'\n';
+		    //DOUT << "argv["<<i<<"] == "<<CastFromJS<std::string>(valvec[i])<<'\n';
 		}
 	    }
 	}
@@ -1102,15 +1104,16 @@ namespace sq3 {
 	{
 	    realargs[argpos++] = array;
 	}
-	//CERR << "Calling JS-side "<<fi->func_name<<"() with "<<realArgC<<" arguments...\n";
 	assert( ! thefunc.IsEmpty() && thefunc->IsFunction() );
+	assert( fi->self->IsObject() );
 	TryCatch tryer;
-	try
-	{
-	    fi->return_val = thefunc->Call( fi->self, realArgC, &realargs[0] );
-	}
-	catch(...)
-	{}
+	DOUT << "Calling JS-side "<<fi->func_name<<"() with "<<realArgC<<" arguments...\n";
+	Handle<Value> * av = &realargs[0];
+	DOUT << (void const *) av << ", size="<<realargs.size()<< '\n';
+	fi->return_val =
+	    thefunc->Call( fi->self, realArgC, av );
+	    //thefunc->Call( thefunc, realArgC, av );
+	DOUT << "Survived the Call()\n";
 	for( int i = 0; i < argc; ++i )
 	{
 	    sqlite3_value * val = argv[i];
@@ -1193,6 +1196,7 @@ namespace sq3 {
 	    void (*xStep)(sqlite3_context*,int,sqlite3_value**) = 0; //sqlite_func_step_forwarder
 	    void (*xFinal)(sqlite3_context*) = 0; //sqlite_func_finalize_forwarder
 
+	    int gotFunc = 0;
 #define BAIL(N) return ThrowException(String::New("Argument #" # N " is not a Function!"))
 	    Handle<Value> arg( argv[5] );
 	    if( arg->IsFunction() )
@@ -1205,9 +1209,10 @@ namespace sq3 {
 		//CERR << "setting fi.func: " <<CastFromJS<std::string>(fi.func)<<"\n";
 		xFunc = sqlite_func_forwarder;
 		assert( fi.func->IsFunction() );
-		db->jsobj->Set( String::New("reftest"), fi.func );
+		//db->jsobj->Set( String::New("reftest"), fi.func );
+		gotFunc |= 0x01;
 	    }
-	    else BAIL(5);
+	    //else BAIL(5);
 
 	    if( argc > 6 )
 	    {
@@ -1216,7 +1221,10 @@ namespace sq3 {
 		{
 		    //CERR << "setting fi.func_step\n";
 		    fi.func_step = Persistent<Function>::New( Handle<Function>(Function::Cast( *arg )) );
+		    assert( fi.func_step->IsFunction() );
+		    //db->jsobj->Set( String::New("reftest"), fi.func_step );
 		    xStep = sqlite_func_step_forwarder;
+		    gotFunc |= 0x02;
 		}
 		else BAIL(6);
 	    }
@@ -1227,12 +1235,32 @@ namespace sq3 {
 		{
 		    //CERR << "setting fi.func_final\n";
 		    fi.func_final = Persistent<Function>::New( Handle<Function>( Function::Cast( *arg ) ) );
+		    assert( fi.func_final->IsFunction() );
 		    xFinal = sqlite_func_finalize_forwarder;
+		    gotFunc |= 0x04;
 		}
 		else BAIL(7);
 	    }
 #undef BAIL
 	    
+#define FUNC_COMBOS "Error: function parameters 6-8 must be " \
+		"in the combinations "			      \
+		"(func1,null,null), (null,func2,func3)"
+	    if( ! (gotFunc & 0x01) )
+	    {
+		if( ! (gotFunc & 0x06) )
+		{
+		    return ThrowException(String::New(FUNC_COMBOS));
+		}
+	    }
+	    else
+	    {
+		if( gotFunc & 0x06 )
+		{
+		    return ThrowException(String::New(FUNC_COMBOS));
+		}
+	    }
+
 	    rc = ::sqlite3_create_function( db->dbh,
 					    fnameC, // func name
 					    nArg, // arg count, or -1 for "any"
@@ -1258,17 +1286,6 @@ namespace sq3 {
 		     <<'\n';
 
 	    }
-	}
-	if(0)
-	{ /**
-	     Trying to narrow down exactly where/why fi.func is losing its value before the callback
-	     is triggered. If i call it here using sqlite3_exec() it works as expected. But if its
-	     not called until after this func returns, fi.func loses its Function value somewhere.
-	  */
-	    std::ostringstream sql;
-	    //sql << "select "<<fi.func_name<<"(7,11,13);";
-	    sql << "select "<<fi.func_name<<"(9,11,17,23,27);";
-	    sqlite3_exec( db->dbh, sql.str().c_str(), 0, 0, 0 );
 	}
 	return CastToJS( rc );
     }
@@ -1436,7 +1453,7 @@ namespace sq3 {
     {
 
 #if 1 // just testing..
-	DBJSClass gen(gl);
+	DBWeakWrap gen(gl);
 	gen.Seal();
 	if( DBInfo::js_ctor.IsEmpty() )
 	{
