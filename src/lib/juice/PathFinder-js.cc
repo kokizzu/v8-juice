@@ -23,93 +23,13 @@ namespace v8 { namespace juice {
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
 
-    // TODO: must write a thin wrapper over PathFinder
-    // due to constness and reference passing issues.
-
-    template <>
-    struct WeakJSClassCreatorOps<PathFinder>;
-
-    class PFJS
-    {
-    private:
-	PathFinder * pf;
-	bool ownsPF;
-    public:
-	PFJS( const std::string & path = std::string(), const std::string & ext = std::string(), const std::string & pathsep = ":" )
-	    : pf( new PathFinder(path,ext,pathsep)),
-	      ownsPF(true)
-	{
-	}
-	explicit PFJS( PathFinder * shared )
-	    : pf( shared ),
-	    ownsPF(false)
-	{
-	}
-
-	~PFJS()
-	{
-	    if( pf && ownsPF ) delete pf;
-	}
-
-	std::string pathString() const
-	{
-	    return pf->path_string();
-	}
-	std::string pathSeparator() const
-	{
-	    return pf->path_separator();
-	}
-
-	void setPathSeparator(std::string const &v)
-	{
-	    pf->path_separator(v);
-	}
-
-	void setPathString( std::string const & v)
-	{
-	    pf->path(v);
-	}
-
-	void setPathArray( PathFinder::string_list v )
-	{
-	    pf->path(v);
-	}
-	PathFinder::string_list pathArray()
-	{
-	    return pf->path();
-	}
-
-	std::string find( std::string const & f ) const
-	{
-	    return pf->find(f);
-	}
-
-	int tryConst() const
-	{
-	    return 42;
-	}
-
-	void tryConstV() const
-	{
-	}
-
-#if 1
-	int nonBoundFunction() { CERR << "nonBoundFunction()\n"; return 17; }
-
-	static Handle<Value> callMemFunc( Arguments const & argv )
-	{
-	    return ::v8::juice::CallWeakMemFunc<PFJS,int>( argv, &PFJS::nonBoundFunction );
-	}
-#endif
-    };
-
     /** Required specialization of WeakJSClassCreatorOps<> for use
 	with WeakJSClassCreator<PathFinder>. */
     template <>
     struct WeakJSClassCreatorOps<PathFinder>
     {
 	enum { ExtraInternalFieldCount = 0 };
-	typedef PFJS WrappedType;
+	typedef PathFinder WrappedType;
 	static char const * ClassName() { return "PathFinder"; }
 	static WrappedType * Ctor( Arguments const & argv,
 				   std::string & exceptionText)
@@ -120,9 +40,9 @@ namespace v8 { namespace juice {
 		External * ex = External::Cast( *argv[0] );
 		if( ex )
 		{
-		    PathFinder * xp = static_cast<PathFinder*>(ex->Value());
+		    WrappedType * xp = static_cast<WrappedType*>(ex->Value());
 		    if( ! xp ) return 0;
-		    return new PFJS(xp);
+		    return xp;
 		}
 		else
 		{
@@ -134,11 +54,11 @@ namespace v8 { namespace juice {
 	    std::string a1 = (argc>1) ? JSToStdString(argv[1]) : "";
 	    std::string a2 = (argc>2) ? JSToStdString(argv[2]) : ":";
 	    //CERR << "PathFinder(["<<a0<<"], ["<<a1<<"], ["<<a2<<"])\n";
-	    PFJS * pf = new PFJS( a0, a1, a2 );
+	    WrappedType * pf = new WrappedType( a0, a1, a2 );
 	    if( pf )
 	    {
 		cleanup::AddToCleanup(pf, cleanup_callback );
-		bind::BindNative( 0, pf, pf );
+		//bind::BindNative( 0, pf, pf );
 	    }
 	    return pf;
 	}
@@ -148,7 +68,7 @@ namespace v8 { namespace juice {
 	    //CERR << "Dtor() passing on @"<<obj<<'\n';
 	    if( obj )
 	    {
-		bind::UnbindNative( 0, obj, obj );
+		//bind::UnbindNative( 0, obj, obj );
 		cleanup::RemoveFromCleanup(obj);
 		delete obj;
 	    }
@@ -160,9 +80,6 @@ namespace v8 { namespace juice {
 	    Dtor( static_cast<WrappedType*>(obj) );
 	}
     };
-
-//     template <>
-//     struct WeakJSClassCreatorOps<PFJS> : WeakJSClassCreatorOps<PathFinder> {};
 
 #if 0 // old/unused, but might be a useful reference point later on for member var binding:
 #define ARGS(FUNC,COND) const int argc = argv.Length(); if( !(COND) ) TOSS(FUNC "(): argument assertion failed: " # COND)
@@ -238,20 +155,18 @@ namespace v8 { namespace juice {
 	HandleScope scope;
 	typedef ClassBinder<PathFinder> PW;
 	PW pw;
+	typedef PW::WrappedType PF;
+	//WeakBindMemFunc<PW::WrappedType,std::string, &PF::pathString>( pw, "pathString" );
+	pw.BindMemFunc< std::string, &PF::path_string >( "pathString" );
+	pw.BindMemFunc< size_t, std::string const &, &PF::path >( "setPathString" );
+	pw.BindMemFunc< PathFinder::string_list, &PF::path >( "pathArray" );
+	pw.BindMemFunc< size_t, PathFinder::string_list const &, &PF::path >( "setPathArray" );
+	pw.BindMemFunc< std::string, &PF::path_separator >( "pathSeparator" );
+	pw.BindMemFunc< void, std::string const &, &PF::path_separator >( "setPathSeparator" );
+	pw.BindMemFunc< std::string, std::string const &, &PF::find >( "find" );
 
-	pw.BindMemFunc< std::string, &PFJS::pathString >( "pathString" );
-	pw.BindMemFunc< std::string, &PFJS::pathSeparator >( "pathSeparator" );
-	pw.BindMemFunc< int, &PFJS::tryConst >( "tryConst" );
-	pw.BindMemFunc< void, &PFJS::tryConstV >( "tryConstV" );
-	pw.BindMemFunc< PathFinder::string_list, &PFJS::pathArray >( "pathArray" );
-#if 1
-	pw.BindMemFunc< void, std::string const &, &PFJS::setPathString >( "setPathString" );
-	pw.BindMemFunc< void, std::string const &, &PFJS::setPathSeparator >( "setPathSeparator" );
-	pw.BindMemFunc< void, PathFinder::string_list, &PFJS::setPathArray >( "setPathArray" );
-	pw.BindMemFunc< std::string, std::string const &, &PFJS::find >( "find" );
-#endif
-	//pw.BindMemFunc<void,&PFJS::callMemFunc>(("callMemFunc");
-	pw.Set("callMemFunc", PFJS::callMemFunc );
+	//pw.BindMemFunc<void,&PF::callMemFunc>(("callMemFunc");
+
 	target->Set( String::New(PW::ClassOpsType::ClassName()), pw.Seal() );
 	Handle<Object> shared = Object::New();
 	pw.CtorTemplate()->GetFunction()->Set(JSTR("shared"),shared);

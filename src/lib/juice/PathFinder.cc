@@ -67,7 +67,7 @@ namespace v8 { namespace juice {
 	return this->join_list( this->paths, this->pathseparator );
     }
 
-    const PathFinder::string_list & PathFinder::path() const
+    PathFinder::string_list PathFinder::path() const
     {
 	return this->paths;
     }
