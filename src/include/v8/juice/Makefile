@@ -11,10 +11,12 @@ $(CB.GEN):
 define ClassBinder.GenCode
 ClassBinder-$(1).h:
 	@echo "// GENERATED CODE! Edit at your own risk!" > $$@; \
+	echo "#if !defined(DOXYGEN)" >> $$@; \
 	x=1; while test $$$$x -le $$(CB.COUNT); do \
 		bash $$(CB.GEN) $$$$x $(1) || exit; \
 		x=$$$$((x +1 )); \
 	done >> $$@; \
+	echo "#endif // if !defined(DOXYGEN)" >> $$@; \
 	echo "Created $$@ for 1..$$(CB.COUNT) arguments."
 genclean-$(1):
 	@echo "Cleaning up ClassBinder-$(1).* generated files."

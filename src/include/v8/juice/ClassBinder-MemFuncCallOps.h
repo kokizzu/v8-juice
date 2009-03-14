@@ -1,4 +1,5 @@
 // GENERATED CODE! Edit at your own risk!
+#if !defined(DOXYGEN)
 /**
     Member function call forwarder for member functions taking 1 arguments.
 */
@@ -303,3 +304,4 @@ struct MemFuncCallOp8< WrappedType,void, A0, A1, A2, A3, A4, A5, A6, A7, Func >
     }
 };
 
+#endif // if !defined(DOXYGEN)
