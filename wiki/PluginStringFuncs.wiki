@@ -1,5 +1,5 @@
 #summary Plugin providing supplemental string utilities
-#labels Phase-UserDocs,Topic-Plugins
+#labels Phase-UserDocs,Topic-Plugins,Topic-JS-API
 
 This plugin provides the following JS-side functions:
 
