@@ -308,7 +308,7 @@ namespace juice {
        and for destroying instances of the generated class.
     */
     template <typename WrappedT>
-    class WeakJSClassCreator : public JSClassCreator, public WeakJSClassCreatorOps<WrappedT>
+    class WeakJSClassCreator : public JSClassCreator//, public WeakJSClassCreatorOps<WrappedT>
     {
     public:
 	/**
