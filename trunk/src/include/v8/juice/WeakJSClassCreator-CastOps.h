@@ -1,17 +1,5 @@
 /**
-   This is a "supermacro" for installing JSToNative and NativeToJS
-   specializations for types wrapped using WeakJSClassCreator.
-
-   To use this supermacro, do the following from global-scope
-   code:
-
-   \code
-   #define WEAK_CLASS_TYPE myns::MyClass
-   #include <v8/juice/WeakJSClassCreator-CastOps.h>
-   \endcode
-
-   and repeat for each class. There is no need to undef WEAK_CLASS_TYPE
-   because this macro does that.
+   See the docs below...
 */
 #if ! defined(WEAK_CLASS_TYPE)
 #error "You must define WEAK_CLASS_TYPE before including this file!"
@@ -19,6 +7,21 @@
 
 namespace v8 { namespace juice { namespace convert {
 
+    /**
+       This is a "supermacro" for installing JSToNative and NativeToJS
+       specializations for types wrapped using WeakJSClassCreator.
+
+       To use this supermacro, do the following from global-scope
+       code:
+
+       \code
+       #define WEAK_CLASS_TYPE myns::MyClass
+       #include <v8/juice/WeakJSClassCreator-CastOps.h>
+       \endcode
+
+       and repeat for each class. There is no need to undef WEAK_CLASS_TYPE
+       because this macro does that.
+    */
     template <>
     struct NativeToJS< WEAK_CLASS_TYPE >
     {
@@ -30,7 +33,10 @@ namespace v8 { namespace juice { namespace convert {
 	    else return jo;
 	}
     };
-    
+
+    /**
+       See NativeToJS< WEAK_CLASS_TYPE > for full details.
+     */
     template <>
     struct JSToNative< WEAK_CLASS_TYPE >
     {
@@ -49,4 +55,3 @@ namespace v8 { namespace juice { namespace convert {
 } } }
 
 #undef WEAK_CLASS_TYPE
-
