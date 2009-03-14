@@ -59,14 +59,16 @@ namespace convert {
 
     /**
        Base instantiation for T-to-ValueHandle conversion functor.
+       Must be specialized or it will not compile.
     */
     template <typename NT>
     struct NativeToJS
     {
 	template <typename X>
 	ValueHandle operator()( X const & ) const;
-	// won't compile if not specialized.
+	// must be specialized.
     };
+
     template <typename NT>
     struct NativeToJS<NT *> : NativeToJS<NT> {};
 
@@ -76,31 +78,19 @@ namespace convert {
     template <typename NT>
     struct NativeToJS<const NT &> : NativeToJS<NT> {};
 
-    // 	{
-    // 	    /**
-    // 	       Returns a v8::External which references &p (not p directly,
-    // 	       because of the non-constness of the argument!).
-    // 	    */
-    // 	    ValueHandle operator()( NT const * p ) const
-    // 	    {
-    // 		return External::New( &p );
-    // 	    }
-    // 	};
-
     template <>
     struct NativeToJS<void>
     {
 	/**
-	   Returns a v8::External which references &p (not p directly,
-	   because of the non-constness of the argument!).
+	   Returns Undefined().
 	*/
-	template <typename AnyT>
-	ValueHandle operator()( AnyT const &  ) const
+	ValueHandle operator()(...) const
 	{
 	    return ::v8::Undefined();
 	}
     };
 
+#if !defined(DOXYGEN)
     /**
        Base implementation for "small" integer conversions (<=32
        bits).
@@ -113,6 +103,7 @@ namespace convert {
 	    return Integer::New( static_cast<int32_t>(v) );
 	}
     };
+#endif // if !defined(DOXYGEN)
 
     template <>
     struct NativeToJS<int16_t> : NativeToJS_int_small<int16_t> {};
@@ -126,6 +117,7 @@ namespace convert {
     template <>
     struct NativeToJS<uint32_t> : NativeToJS_int_small<uint32_t> {};
 
+#if !defined(DOXYGEN)
     /**
        Base implementation for "big" numeric conversions (>32 bits).
     */
@@ -137,6 +129,7 @@ namespace convert {
 	    return Number::New( static_cast<double>(v) );
 	}
     };
+#endif // if !defined(DOXYGEN)
 
     template <>
     struct NativeToJS<int64_t> : NativeToJS_int_big<int64_t> {};
@@ -191,6 +184,16 @@ namespace convert {
 	    return li;
 	}
     };
+
+    template <>
+    struct NativeToJS< ::v8::InvocationCallback >
+    {
+	ValueHandle operator()( ::v8::InvocationCallback f ) const
+	{
+	    return ::v8::FunctionTemplate::New(f)->GetFunction();
+	}
+    };
+
 
     // 	template <>
     // 	struct NativeToJS< ::v8::Function >
@@ -600,7 +603,82 @@ namespace convert {
     ::v8::Handle< ::v8::Value > SetupAddon( ::v8::Handle< ::v8::Object > target );
 				       
 
+    /**
+       A utility to append entries to a JS array.
 
+       It is intended to be used like this:
+
+       \code
+       Handle<Object> obj = ...;
+       ObjectPropSetter set(obj);
+       set("propOne", CastToJS(32) )
+          ("propTwo", ... )
+	  (32, ... )
+	  ("func1", CastToJS( anInvocationCallback ) ) // "should" work
+	  ;
+       \endcode
+    */
+    class ObjectPropSetter
+    {
+    private:
+	Handle< ::v8::Object > target;
+    public:
+	/**
+	   Initializes this object to use the given array
+	   as its append target. Results are undefined if
+	   target is not a valid Object.
+	*/
+	explicit ObjectPropSetter( Handle< ::v8::Object > obj ) :target(obj)
+	{}
+	~ObjectPropSetter(){}
+
+	/**
+	   Adds an arbitrary property to the target object.
+	*/
+	template <typename T>
+	ObjectPropSetter & operator()( Handle<Value> key, T const & v )
+	{
+	    this->target->Set(key, CastToJS(v));
+	    return *this;
+	}
+
+	/**
+	   Adds a numeric property to the target object.
+	*/
+	template <typename T>
+	ObjectPropSetter & operator()( int32_t ndx, T const & v )
+	{
+	    return this->operator()( Integer::New(ndx), v );
+	}
+
+	/**
+	   Adds a string-keyed property to the target object.
+	*/
+	template <typename T>
+	ObjectPropSetter & operator()( char const * key, T const & v )
+	{
+	    return this->operator()( String::New(key), v );
+	}
+
+	/**
+	   Adds an arbtirary property to the target object.
+	*/
+	template <typename T1, typename T2>
+	ObjectPropSetter & operator()( Handle<Value> key, Handle<Value> v )
+	{
+	    return this->operator()( key, v );
+	}
+
+	/**
+	   Returns this object's
+	*/
+	Handle< ::v8::Object > Object() const
+	{
+	    return this->target;
+	}
+    };
+
+#if !defined(DOXYGEN)
     /**
        NativeToJS classes which act on list types compatible with the
        STL can subclass this to get an implementation.
@@ -612,15 +690,26 @@ namespace convert {
 	{
 	    typedef typename ListT::const_iterator IT;
 	    IT it = li.begin();
-	    size_t sz = li.size();
+	    const size_t sz = li.size();
+#if 0
 	    Handle<Array> rv( Array::New( static_cast<int>(sz) ) );
 	    for( int i = 0; li.end() != it; ++it, ++i )
 	    {
 		rv->Set( Integer::New(i), CastToJS( *it ) );
 	    }
 	    return rv;
+#else
+	    ObjectPropSetter app(Array::New( static_cast<int>(sz) ));
+	    for( int32_t i = 0; li.end() != it; ++it, ++i )
+	    {
+		app( i, CastToJS( *it ) );
+	    }
+	    return app.Object();
+#endif
 	}
     };
+#endif // if !defined(DOXYGEN)
+
     /** Partial specialization for std::list<>. */
     template <typename T>
     struct NativeToJS< std::list<T> > : NativeToJS_list< std::list<T> > {};
@@ -628,6 +717,7 @@ namespace convert {
     template <typename T>
     struct NativeToJS< std::vector<T> > : NativeToJS_list< std::vector<T> > {};
 
+#if !defined(DOXYGEN)
     /**
        NativeToJS classes which act on map types compatible with the
        STL can subclass this to get an implementation.
@@ -648,12 +738,16 @@ namespace convert {
 	    return rv;
 	}
     };
+#endif // if !defined(DOXYGEN)
 
     /** Partial specialization for std::map<>. */
     template <typename KeyT,typename ValT>
     struct NativeToJS< std::map<KeyT,ValT> > : NativeToJS_map< std::map<KeyT,ValT> > {};
 
 
+
+
+#if !defined(DOXYGEN)
     template <typename ListT>
     struct JSToNative_list
     {
@@ -673,6 +767,7 @@ namespace convert {
 	    return li;
 	}
     };
+#endif // if !defined(DOXYGEN)
 
     /** Partial specialization for std::list<>. */
     template <typename T>
