@@ -1,10 +1,21 @@
 #include <v8/juice/juice.h>
 
-#include <ostream>
+#include <iostream>
+#include <fstream>
 #include <sstream>
+#include <iterator>
 #include <v8/juice/PathFinder.h>
 #include <v8/juice/Phoenix.h>
 #include "whprintf.h"
+#include <v8/juice/convert.h>
+
+// #ifndef CERR
+// #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+// #endif
+// #ifndef COUT
+// #define COUT std::cout << __FILE__ << ":" << std::dec << __LINE__ << " : "
+// #endif
+
 namespace v8 { namespace juice {
 
     using namespace v8;
@@ -26,6 +37,56 @@ namespace v8 { namespace juice {
 	    PathFinder_includes_context,
 	    PathFinder_phoenix_initializer> PHX;
 	return PHX::instance();
+    }
+
+    Handle<Value> IncludeScript( Arguments const & argv )
+    {
+	Handle<Value> rv = Undefined();
+	Handle<Value> exc;
+	for (int i = 0; i < argv.Length(); i++)
+	{
+	    HandleScope handle_scope;
+	    String::Utf8Value fname( argv[i]->ToString() );
+	    if( !*fname || !**fname )
+	    {
+		return ThrowException(v8::String::New("Filename argument is empty!"));
+	    }
+	    std::ostringstream os;
+	    {
+		std::ifstream is( *fname );
+		if( ! is.good() )
+		{
+		    os.str("");
+		    os << "Error opening file "<<*fname<<"!";
+		    return ThrowException(v8::String::New(os.str().c_str()));
+		}
+		is >> std::noskipws;
+		std::copy( std::istream_iterator<char>(is),
+                           std::istream_iterator<char>(),
+			   std::ostream_iterator<char>(os) );
+	    }
+	    std::string src = os.str();
+	    Handle<String> jsrc( String::New( src.c_str(), static_cast<int>( src.size() ) ) );
+	    {
+		TryCatch tryer;
+		Handle<Script> Scr( Script::Compile( jsrc, argv[i] ) );
+		if( Scr.IsEmpty() )
+		{
+		    return ThrowException(tryer.Exception());
+		}
+		rv = Scr->Run();
+		if( rv.IsEmpty() )
+		{
+		    //return ThrowException(tryer.Exception());
+		    exc = tryer.Exception();
+		}
+	    }
+	    if( ! exc.IsEmpty() )
+	    {
+		return ThrowException(exc);
+	    }
+	}
+	return rv;
     }
 
 
