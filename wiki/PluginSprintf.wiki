@@ -1,5 +1,5 @@
 #summary sprintf() for JS
-#labels Topic-Plugins,Phase-UserDocs
+#labels Topic-Plugins,Phase-UserDocs,Topic-JS-API
 
 (This is now part of [PluginStringFuncs the stringfuncs plugin].)
 
