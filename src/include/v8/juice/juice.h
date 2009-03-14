@@ -70,6 +70,13 @@ namespace juice {
 	*/
 	Handle<Value> ThrowException(char const * fmt,...);
 
+    /**
+       This can be registered as a JS function to provide an include()
+       feature.  It reads the given file as JS, using the search path
+       specified by ScriptsPath(). Returns the result of evaluting the file,
+       or an exception on error.
+    */
+    Handle<Value> IncludeScript( Arguments const & argv );
 }} // namespace
 
 #endif // CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED

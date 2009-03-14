@@ -43,6 +43,7 @@
 #define COUT std::cout << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
 
+#include <v8/juice/juice.h>
 #include <v8/juice/convert.h>
 #include <v8/juice/bind.h>
 #include <v8/juice/plugin.h>
@@ -284,11 +285,13 @@ int main(int argc, char* argv[]) {
 	global->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
 	// Bind the global 'load' function to the C++ Load callback.
 	global->Set(v8::String::New("load"), v8::FunctionTemplate::New(Load));
-	global->Set(v8::String::New("load_plugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));
 	// Bind the 'quit' function
 	global->Set(v8::String::New("quit"), v8::FunctionTemplate::New(Quit));
 	// Bind the 'version' function
 	global->Set(v8::String::New("version"), v8::FunctionTemplate::New(Version));
+
+	global->Set(v8::String::New("include"), v8::FunctionTemplate::New(v8::juice::IncludeScript) );
+	global->Set(v8::String::New("load_plugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));
 
 	// Create a new execution environment containing the built-in
 	// functions
@@ -309,9 +312,9 @@ int main(int argc, char* argv[]) {
 	if(1)
 	{
 	    //my_test( context );
-	    my_class_test( context );
+	    //my_class_test( context );
 	    my_fwd(context);
-	    my_bind_test( context );
+	    //my_bind_test( context );
 	}
 	bool run_shell = (argc == 1);
 	for (int i = 1; i < argc; i++) {
