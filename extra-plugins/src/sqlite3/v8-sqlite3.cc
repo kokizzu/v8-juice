@@ -12,38 +12,13 @@
 
    Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
 
-   License: same as v8 (see below)
+   License: Public Domain
 
    Pedantic license note: much of this code was ported from the
    SpiderApe JS/sqlite3 bindings (http://SpiderApe.sf.net). Though
    that code is MPL, i wrote it, and am re-licensing this copy to
-   conform to v8 conventions.
+   be in the Public Domain.
 */
-// Copyright 2009 Stephan Beal. All rights reserved.  Redistribution
-// and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//     * Redistributions of source code must retain the above copyright
-//       notice, this list of conditions and the following disclaimer.
-//     * Redistributions in binary form must reproduce the above
-//       copyright notice, this list of conditions and the following
-//       disclaimer in the documentation and/or other materials provided
-//       with the distribution.
-//     * Neither the name of Google Inc. nor the names of its
-//       contributors may be used to endorse or promote products derived
-//       from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 
@@ -73,6 +48,7 @@
 #include <v8.h>
 #include <v8/juice/convert.h>
 #include <v8/juice/plugin.h>
+#include <v8/juice/cleanup.h>
 #include <v8/juice/WeakJSClassCreator.h>
 
 /**
@@ -193,11 +169,8 @@ namespace sq3 {
 	   Not necessary - can be removed. We use v8::External to pass
 	   DBInfo objects around, instead of a full-fledged Object.
 	*/
-	static Persistent<ObjectTemplate> js_prototype;
-	/**
-	   A context for use with BindNative() and friends.
-	*/
-	static const void * bind_context;
+	//static Persistent<ObjectTemplate> js_prototype;
+	static Persistent<Function> js_ctor;
 	
 	/**
 	   Creates a new
@@ -207,7 +180,7 @@ namespace sq3 {
 		   encoding(SQLITE_UTF8),
 		   userFuncs()
 	{
-	    bind::BindNative( DBInfo::bind_context, this, this );
+	    bind::BindNative( this, this );
 	}
 	/**
 	   Unbinds this object from the JS/native bindings. Does not
@@ -215,7 +188,7 @@ namespace sq3 {
 	*/
 	~DBInfo()
 	{
-	    bind::UnbindNative( DBInfo::bind_context, this, this );
+	    bind::UnbindNative( this, this );
 	    if( dbh )
 	    {
 		//CERR << "Closing sqlite3 handle @"<<dbh<<'\n';
@@ -224,20 +197,13 @@ namespace sq3 {
 	    }
 	}
 
-	/**
-	   Returns the DBInfo object (if any) bound to the given JS value.
-	*/
-	static DBInfo * GetNative( Handle<Value> const id )
-	{
-	    return bind::GetBoundNative<DBInfo>( DBInfo::bind_context, id );
-	}
 
 	/**
 	   Gets the sqlite3_stmt (if any) associated with given JS value.
 	*/
 	static sqlite3_stmt * GetStatement( Handle<Value> const id )
 	{
-	    return bind::GetBoundNative<sqlite3_stmt>( DBInfo::bind_context, id );
+	    return bind::GetBoundNative<sqlite3_stmt>( id );
 	}
 
 	/**
@@ -246,7 +212,7 @@ namespace sq3 {
 	*/
 	void AddStatement( sqlite3_stmt * st )
 	{
-	    bind::BindNative( DBInfo::bind_context, st, st );
+	    bind::BindNative( st, st );
 	    DBInfo::stmt[st] = this;
 	}
 
@@ -258,7 +224,7 @@ namespace sq3 {
 	void RemoveStatement( sqlite3_stmt * st )
 	{
 	    DBInfo::stmt.erase(st);
-	    bind::UnbindNative( DBInfo::bind_context, st, st );
+	    bind::UnbindNative( st, st );
 	    return;
 	}
 
@@ -273,38 +239,13 @@ namespace sq3 {
 	}
 
     };
-    Persistent<ObjectTemplate> DBInfo::js_prototype;
+    //Persistent<ObjectTemplate> DBInfo::js_prototype;
+    Persistent<Function> DBInfo::js_ctor;
     DBInfo::StmtMap DBInfo::stmt;
-    void const * DBInfo::bind_context = &DBInfo::js_prototype;
-
-    sqlite3 * GetNativeDBHandle( Handle<Value> const & h )
-    {
-	DBInfo * db = DBInfo::GetNative( h );
-	return db ? db->dbh : 0;
-    }
 
 } // namespaces sq3
 
-#define ASSERTARGS(FUNCNAME,COND) if(!(COND)) return ThrowException(String::New(# FUNCNAME "(): assertion failed: " # COND))
-
-#define DB_ARG(HND) DBInfo * db = DBInfo::GetNative( HND );			\
-	if( ! db ) return ThrowException(String::New("Argument is not a sqlite3 handle!"))
-
-#define STMT_ARG(HND) sqlite3_stmt * stmt = DBInfo::GetStatement( HND )
-#define STMT_ARG_OR(HND,RV) STMT_ARG(HND);	\
-	if( ! stmt ) return RV
-#define STMT_ARG_THROW(HND) STMT_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_stmt handle!")))
-
-#define SQCX_ARG(HND) sqlite3_context * sqcx = bind::GetBoundNative<sqlite3_context>( DBInfo::bind_context, HND )
-#define SQCX_ARG_OR(HND,RV) SQCX_ARG(HND);	\
-	if( ! sqcx ) return RV
-#define SQCX_ARG_THROW(HND) SQCX_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_context handle!")))
-
-#define SQVAL_ARG(HND) sqlite3_value * sqval = bind::GetBoundNative<sqlite3_value>( DBInfo::bind_context, HND )
-#define SQVAL_ARG_OR(HND,RV) SQVAL_ARG(HND);	\
-	if( ! sqval ) return RV
-#define SQVAL_ARG_THROW(HND) SQVAL_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_value handle!")))
-
+    using namespace convert;
     template <>
     struct WeakJSClassCreatorOps<sq3::DBInfo>
     {
@@ -313,21 +254,73 @@ namespace sq3 {
 	ExtraInternalFieldCount = 0
 	};
 	static char const * ClassName() { return "SQLite3"; }
-	static WrappedType * Ctor( Arguments const &  /*argv*/,
+	static WrappedType * Ctor( Arguments const & argv,
 				   std::string & exceptionText )
 	{
-	    exceptionText = "Not yet implemented.";
-	    return 0;
+	    if( argv.Length() != 1 )
+	    {
+		exceptionText = "Constructor usage: (string filename)";
+		return 0;
+	    }
+	    std::string name( JSToStdString(argv[0]) );
+	    sqlite3 * dbh = 0;
+	    int rc = sqlite3_open( name.c_str(), &dbh );
+	    if( SQLITE_OK != rc )
+	    {
+		std::ostringstream os;
+		os << "sqlite3_open(\""<<name<<"\") failed with error code "<<rc<<'!';
+		exceptionText = os.str();
+		return 0;
+	    }
+	    sq3::DBInfo * db = new sq3::DBInfo;
+	    db->dbh = dbh;
+	    db->jsobj = argv.This();
+	    CERR << "Created DBInfo object @"<<db<<'\n';
+	    cleanup::AddToCleanup( db, cleanup_callback );
+	    return db;
 	}
 	static void Dtor( WrappedType * obj )
 	{
+	    cleanup::RemoveFromCleanup( obj );
+	    CERR << "Destroying DBInfo object @"<<obj<<'\n';
 	    delete obj;
 	}
+	static void cleanup_callback( void * obj )
+	{
+	    Dtor( static_cast<WrappedType *>( obj ) );
+	}
     };
+} } // namespaces
 
+#define WEAK_CLASS_TYPE v8::juice::sq3::DBInfo
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
+namespace v8 { namespace juice {
 namespace sq3 {
+    using namespace ::v8;
+    using namespace ::v8::juice;
 
-    typedef WeakJSClassCreator<DBInfo> WeakWrap;
+    typedef WeakJSClassCreator<DBInfo> DBJSClass;
+
+
+#define ASSERTARGS(FUNCNAME,COND) if(!(COND)) return ThrowException(String::New(# FUNCNAME "(): assertion failed: " # COND))
+
+#define DB_ARG(HND) DBInfo * db = CastFromJS<DBInfo>( HND );			\
+	if( ! db ) return ThrowException(String::New("Argument is not a sqlite3 handle!"))
+
+#define STMT_ARG(HND) sqlite3_stmt * stmt = DBInfo::GetStatement( HND )
+#define STMT_ARG_OR(HND,RV) STMT_ARG(HND);	\
+	if( ! stmt ) return RV
+#define STMT_ARG_THROW(HND) STMT_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_stmt handle!")))
+
+#define SQCX_ARG(HND) sqlite3_context * sqcx = bind::GetBoundNative<sqlite3_context>( HND )
+#define SQCX_ARG_OR(HND,RV) SQCX_ARG(HND);	\
+	if( ! sqcx ) return RV
+#define SQCX_ARG_THROW(HND) SQCX_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_context handle!")))
+
+#define SQVAL_ARG(HND) sqlite3_value * sqval = bind::GetBoundNative<sqlite3_value>( HND )
+#define SQVAL_ARG_OR(HND,RV) SQVAL_ARG(HND);	\
+	if( ! sqval ) return RV
+#define SQVAL_ARG_THROW(HND) SQVAL_ARG_OR(HND,ThrowException(String::New("Argument is not a sqlite3_value handle!")))
 
 
     /**
@@ -397,10 +390,9 @@ namespace sq3 {
        as a JavaScript string, in the context of the object associated
        with the context's DBInfo "parent" object.
     */
-    static void sql_callback_js_eval(
-				     sqlite3_context *context,
-				     int argc,
-				     sqlite3_value **argv )
+    static void sql_callback_js_eval( sqlite3_context *context,
+				      int argc,
+				      sqlite3_value **argv )
     {
 	if( 0 == argc ) return;
 	// TODO: eval all args as JS code.
@@ -415,13 +407,14 @@ namespace sq3 {
 	//HandleScope sentry;
 	TryCatch tryer;
         Local<Value> rv;
-	Local<Function> eval = Function::Cast( *(db->jsobj->Get(String::New("eval"))) );
+	Local<Object> evalObj = Context::GetCurrent()->Global();
+	Local<Function> eval = Function::Cast( *(evalObj->Get(String::New("eval"))) );
     	for( int i = 0; i < argc; ++i )
 	{
 	    char const * cp = reinterpret_cast<char const *>( sqlite3_value_text( argv[i] ) );
 	    if( ! cp || !*cp ) continue;
 	    Local<Value> arg = String::New( cp, sqlite3_value_bytes( argv[i] ) );
-	    rv = eval->Call( db->jsobj, 1, &arg );
+	    rv = eval->Call( evalObj, 1, &arg );
 	    if( rv.IsEmpty() )
 	    {
 		break;
@@ -444,50 +437,44 @@ namespace sq3 {
     JS_WRAPPER(sq3_open)
     {
 // 	std::string errmsg;
-// 	DBInfo * db = WeakWrap::Ctor( argv, errmsg );
-
+// 	DBInfo * db = DBJSClass::Ctor( argv, errmsg );
 	ASSERTARGS(sqlite3_open,(argv.Length()==1));
-	std::string name( CastFromJS<std::string>( argv[0] ) );
-	if( name.empty() )
+	Handle<Value> arg0( argv[0] );
+	TryCatch tryer;
+	Local<Object> dbjo = DBInfo::js_ctor->NewInstance(1, &arg0 );
+	if( dbjo.IsEmpty() )
 	{
-	    return ThrowException( String::New("First argument must be a database file name!") );
+	    return ThrowException(tryer.Exception());
 	}
-	sqlite3 * dbh = 0;
-	int rc = sqlite3_open( name.c_str(), &dbh );
-	if( SQLITE_OK != rc )
+	DBInfo * db = DBJSClass::GetSelf(dbjo);
+	if( ! db )
 	{
-	    std::ostringstream os;
-	    os << "sqlite3_open(\""<<name<<"\") failed with error code "<<rc<<'!';
-	    return ThrowException( String::New(os.str().c_str()) );
+	    return ThrowException(String::New("Internal error: created wrapped native but could not convert JS object back to the native!"));
 	}
-	DBInfo * db = new DBInfo;
-	db->dbh = dbh;
-	db->jsobj = argv.This();
-
 	if(1)
 	{ // register js_eval() SQL func
-	    rc = ::sqlite3_create_function( db->dbh,
-					    "js_eval", // func name
-					    -1, // arg count, or -1 for "any"
-					    SQLITE_UTF8, // encoding
-					    db, // arbitrary user data
-					    sql_callback_js_eval,// void (*xFunc)(sqlite3_context*,int,sqlite3_value**),
-					    0,// void (*xStep)(sqlite3_context*,int,sqlite3_value**),
-					    0 // void (*xFinal)(sqlite3_context*)
-					    );
+	    int rc = ::sqlite3_create_function( db->dbh,
+						"js_eval", // func name
+						-1, // arg count, or -1 for "any"
+						SQLITE_UTF8, // encoding
+						db, // arbitrary user data
+						sql_callback_js_eval,// void (*xFunc)(sqlite3_context*,int,sqlite3_value**),
+						0,// void (*xStep)(sqlite3_context*,int,sqlite3_value**),
+						0 // void (*xFinal)(sqlite3_context*)
+						);
 	    if( SQLITE_OK != rc )
 	    {
 		CERR << "Registration of js_eval() failed with rc "<<rc<<"!\n";
 	    }
 	}
-	return External::New( db );
+	return dbjo;
     }
 
     JS_WRAPPER(sq3_close)
     {
 	ASSERTARGS(sqlite3_close,(argv.Length()==1));
 	DB_ARG( argv[0] );
-	delete db;
+	DBJSClass::DestroyObject(argv[0]);
 	return Handle<Value>();
     }
 
@@ -1072,7 +1059,7 @@ namespace sq3 {
 	//jsval sqcxjv = ape::bind::get_next_resource_id<sqlite3_context>( fi->context );
 	//ape::bind::scoped_binder<sqlite3_context> scx_sentry( fi->context, sqcxjv, *context );
 	Handle<External> sqcxjv = External::New( context );
-	bind::ScopedBinder<sqlite3_context> scx_sentry( DBInfo::bind_context, context, context );
+	bind::ScopedBinder<sqlite3_context> scx_sentry( context, context );
 
 	typedef Handle<Value> HV;
 	typedef std::vector< HV > VecT;
@@ -1082,7 +1069,7 @@ namespace sq3 {
 	{
 	    sqlite3_value * val = argv[i];
 	    valvec[i] = External::New( val );
-	    bind::BindNative( DBInfo::bind_context, val, val );
+	    bind::BindNative( val, val );
 	}
 	//#define CLEANUP for( int i = 0; i < argc; ++i ) ape::bind::unbind_native< ::sqlite3_value >( fi->context, valvec[i], argv[i] );
 	//#define CLEANUP for( int i = 0; i < argc; ++i ) unbind_impl( fi->context, argv[i] );
@@ -1127,7 +1114,7 @@ namespace sq3 {
 	for( int i = 0; i < argc; ++i )
 	{
 	    sqlite3_value * val = argv[i];
-	    bind::UnbindNative<sqlite3_value>( DBInfo::bind_context, val, val );
+	    bind::UnbindNative<sqlite3_value>( val, val );
 	}
 	if( fi->return_val.IsEmpty() )
 	{
@@ -1447,17 +1434,17 @@ namespace sq3 {
 
     Handle<Value> SetupAddon( Handle<Object> gl )
     {
-#if 0
-	if( DBInfo::js_prototype.IsEmpty() )
-	{
-	    Handle<ObjectTemplate> wtf = ObjectTemplate::New();
-	    DBInfo::js_prototype = Persistent<ObjectTemplate>::New( wtf );
-	}
-#endif
 
 #if 1 // just testing..
-	WeakWrap gen(gl);
+	DBJSClass gen(gl);
 	gen.Seal();
+	if( DBInfo::js_ctor.IsEmpty() )
+	{
+	    DBInfo::js_ctor = Persistent<Function>::New( gen.CtorTemplate()->GetFunction() );
+	    //Handle<ObjectTemplate> wtf = ObjectTemplate::New();
+	    //DBInfo::js_prototype = Persistent<ObjectTemplate>::New( wtf );
+	}
+
 #endif
 
 #define ADDFUNC(SUF) gl->Set(String::New("sqlite3_" # SUF), FunctionTemplate::New(sq3_ ## SUF)->GetFunction() )
