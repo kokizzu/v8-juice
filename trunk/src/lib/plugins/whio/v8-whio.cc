@@ -181,7 +181,7 @@ namespace v8 { namespace juice { namespace whio {
 
 	static void Dtor( WrappedType * obj )
 	{
-	    CERR << "Dtor() passing on @"<<obj<<'\n';
+	    //CERR << "Dtor() passing on @"<<obj<<'\n';
 	    if( obj )
 	    {
 		::v8::juice::cleanup::RemoveFromCleanup(obj);
@@ -347,6 +347,7 @@ namespace v8 { namespace juice { namespace whio {
 		}
 		else
 		{
+		    self->Set(JSTR(strings::fileName), argv[0], v8::ReadOnly );
 		    self->Set(JSTR(strings::canWrite), Boolean::New(true) );
 		    self->Set(JSTR(strings::canRead), Boolean::New(true) );
 		}
