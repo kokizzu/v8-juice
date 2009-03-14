@@ -1,6 +1,8 @@
 #summary JS Bindings for SQLite3
 #labels Phase-UserDocs,Topic-Plugins
 
+<wiki:toc max_depth="3"/>
+
 =The sqlite3 bindings=
 
 The sqlite3 bindings wrap about 60 sqlite3 functions for use in JavaScript, providing access to database files from script code.
