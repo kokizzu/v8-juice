@@ -19,6 +19,12 @@ Everything else one would "normally" need from script code is scriptable, includ
 These bindings are a direct port of the "original" bindings, which where implemented for SpiderMonkey and are described here:
 http://spiderape.sourceforge.net/plugins/sqlite/
 
+=JS API Docs=
+
+This plugin has its own manual, in ODT format, available from:
+
+http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/sqlite3/v8-juice-plugin-sqlite3.odt
+
 =Example=
 
 Here's a rather contrived example which i use when testing out the bindings:
