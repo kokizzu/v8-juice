@@ -25,9 +25,9 @@ namespace v8 { namespace juice {
     {
 	void operator()( PathFinder & t ) const
 	{
-	    t.path_separator(":");
-	    t.extensions(".js:.juice:.v8");
-	    t.path(v8_juice_CONFIG_SCRIPTS_PATH);
+	    t.PathSeparator(":");
+	    t.Extensions(".js:.juice:.v8");
+	    t.Path(v8_juice_CONFIG_SCRIPTS_PATH);
 	}
     };
 
@@ -49,7 +49,7 @@ namespace v8 { namespace juice {
 	    HandleScope handle_scope;
 	    // Man, everyone needs a different type of String value...
 	    std::string farg = convert::JSToStdString(argv[i]);
-	    std::string found = ScriptsPath().find( farg );
+	    std::string found = ScriptsPath().Find( farg );
 	    if( found.empty() )
 	    {
 		std::ostringstream os;

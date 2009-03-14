@@ -17,9 +17,9 @@ namespace v8 { namespace juice {
 
        <pre>
        PathFinder p;
-       p.path( "/lib:/usr/lib" );
-       p.extensions( ".a:.so" );
-       std::cout << p.find( "libz" ) << std::endl;
+       p.Path( "/lib:/usr/lib" );
+       p.Extensions( ".a:.so" );
+       std::cout << p.Find( "libz" ) << std::endl;
        </pre>
 
        That would print an empty string if it finds nothing, or a
@@ -51,7 +51,7 @@ namespace v8 { namespace juice {
 
 	   TODO: consider using a std::set instead of a std::list.
 	*/
-	typedef std::list<std::string> string_list;
+	typedef std::list<std::string> StringList;
 
 	/**
 	   Creates object with the given path/extension/separator list.
@@ -61,40 +61,40 @@ namespace v8 { namespace juice {
 	virtual ~PathFinder();
 
 	/**
-	   Returns a path_separator()-separated string of all paths
-	   added via add/path().
+	   Returns a PathSeparator()-separated string of all paths
+	   added via add/Path().
 	*/
-	std::string path_string() const;
+	std::string PathString() const;
 
 	/**
 	   Sets the string used as a separator for the
-	   string-based variants of path(), extentions(), etc.
+	   string-based variants of Path(), extentions(), etc.
 	   If sep.empty() then a default of ":" is set instead
 	   (we cannot tokenize paths based on an empty separator).
 	*/
-	void path_separator( const std::string & sep );
+	void PathSeparator( const std::string & sep );
 
 	/**
 	   Returns the path separator string. Default is ":";
 	*/
-	std::string path_separator() const;
+	std::string PathSeparator() const;
 
 	/**
-	   Sets the path to p, which should be a path_separator()-delimited string.
+	   Sets the path to p, which should be a PathSeparator()-delimited string.
 	   Returns the number of path elements parsed from p.
 	*/
-	virtual std::size_t path( const std::string & p );
+	virtual std::size_t Path( const std::string & p );
 
 	/**
 	   Sets the path to the given list of directories.
 	   Returns the number of elements in the list.
 	*/
-	virtual std::size_t path( const string_list & p );
+	virtual std::size_t Path( const StringList & p );
 
 	/**
 	   Adds p to the path. May be path_separtor()-delimited.
 	*/
-	virtual void add_path( const std::string & p );
+	virtual void AddPath( const std::string & p );
 
 	/**
 	   Adds a "search extension." Sample:
@@ -106,30 +106,30 @@ namespace v8 { namespace juice {
 	   and those with non-traditional extensions, like
 	   "foo_EXT".
 	*/
-	virtual void add_extension( const std::string & ext );
+	virtual void AddExtension( const std::string & ext );
 	/**
-	   like add_extension(), but overwrites extension list.
+	   like AddExtension(), but overwrites extension list.
 	   Returns the number of entries parsed from the string.
 	*/
-	virtual std::size_t extensions( const std::string & ext );
+	virtual std::size_t Extensions( const std::string & ext );
 	/**
 	   Sets the extensions list to the given list.
 	   Returns the number of entries in p.
 	*/
-	virtual std::size_t extensions( const string_list & p );
+	virtual std::size_t Extensions( const StringList & p );
 
 	/**
-	   Returns the path_separator()-delimited listed of file
+	   Returns the PathSeparator()-delimited listed of file
 	   suffixes to use when searching for a path.
 	*/
-	std::string extensions_string() const;
+	std::string ExtensionsString() const;
 	/**
 	   Returns this object's extensions list.
 	*/
-	string_list extensions() const;
+	StringList Extensions() const;
 
 	/** Non-const overload, intended for serialization. */
-	string_list & extensions();
+	StringList & Extensions();
 
 	/**
 	   Helper function to collapse a list into a string.
@@ -137,18 +137,18 @@ namespace v8 { namespace juice {
 	   This function was changed from a normal member to
 	   static member in s11n version 1.1.3.
 	*/
-	static std::string join_list( const string_list & list, const std::string & separator );
+	static std::string JoinList( const StringList & list, const std::string & separator );
 
 	/**
 	   Returns true if path is readable.
 	*/
-	static bool is_accessible( const std::string & path );
+	static bool IsAccessible( const std::string & path );
 
 	/**
 	   Returns the "base name" of the given string: any part
 	   following the final directory separator character.
 	*/
-	static std::string basename( const std::string & );
+	static std::string BaseName( const std::string & );
 
 	/**
 	   Returns a platform-dependent directory separator. This
@@ -157,7 +157,7 @@ namespace v8 { namespace juice {
 	   Windows: '\\'
 	   Everyone else: '/'
 	*/
-	static std::string dir_separator();
+	static std::string DirSeparator();
 
 	/**
 	   Returns the full path of the given resource,
@@ -174,30 +174,30 @@ namespace v8 { namespace juice {
 	   uses a cache. When caching it will always return
 	   the same result for any given resourcename.
 	*/
-	std::string find( const std::string & resourcename, bool check_cache ) const;
-	/** Equivalent to find(resourcename,true). */
-	std::string find( const std::string & resourcename ) const { return this->find(resourcename,true); }
+	std::string Find( const std::string & resourcename, bool check_cache ) const;
+	/** Equivalent to Find(resourcename,true). */
+	std::string Find( const std::string & resourcename ) const { return this->Find(resourcename,true); }
 
 	/**
-	   Empties the hit-cache used by find().
+	   Empties the hit-cache used by Find().
 	*/
-	void clear_cache();
+	void ClearCache();
 
 	/**
-	   Returns a list of all items added via add_path() and path().
+	   Returns a list of all items added via AddPath() and path().
 	*/
-	string_list path() const;
+	StringList Path() const;
 
 	/** Non-const overload, intended mainly for serialization
 	    purposes. */
-	string_list & path();
+	StringList & Path();
 
 	/** Returns true if this object has no paths or extensions. */
-	bool empty() const;
+	bool IsEmpty() const;
 
     private:
-	string_list paths;
-	string_list exts;
+	StringList paths;
+	StringList exts;
 	std::string pathseparator;
 	typedef std::map < std::string, std::string > StringStringMap;
 	typedef StringStringMap::iterator StringStringIterator;

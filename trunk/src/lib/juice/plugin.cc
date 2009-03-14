@@ -34,9 +34,9 @@ namespace plugin {
     {
 	void operator()( PathFinder & t ) const
 	{
-	    t.path(v8_juice_plugin_CONFIG_PLUGINS_PATH);
-	    t.extensions(v8_juice_plugin_CONFIG_DLL_EXTENSIONS);
-	    t.path_separator(v8_juice_plugin_CONFIG_PATH_SEPARATOR);
+	    t.Path(v8_juice_plugin_CONFIG_PLUGINS_PATH);
+	    t.Extensions(v8_juice_plugin_CONFIG_DLL_EXTENSIONS);
+	    t.PathSeparator(v8_juice_plugin_CONFIG_PATH_SEPARATOR);
 	}
     };
 
@@ -93,7 +93,7 @@ namespace plugin {
 	    std::ostringstream os;
 	    os << "LoadPlugin(\""<<modname<<"\") DLL error message: dll=["<<fn<<"]: "
 	       << errmsg
-	       << "\nPluginPath()=["<<PluginsPath().path_string()<<']';
+	       << "\nPluginPath()=["<<PluginsPath().PathString()<<']';
 	    errmsg = os.str();
 	    return ThrowException( String::New(errmsg.c_str(),
 					       static_cast<int>(errmsg.size())) );
@@ -102,7 +102,7 @@ namespace plugin {
 	{
 	    std::ostringstream os;
 	    os << "LoadPlugin(\""<<modname<<"\"): No DLL found in path "
-	       << '['<<PluginsPath().path_string()<<']';
+	       << '['<<PluginsPath().PathString()<<']';
 	    errmsg = os.str();
 	    return ThrowException( String::New(errmsg.c_str(),
 					       static_cast<int>(errmsg.size())) );
@@ -135,8 +135,8 @@ namespace plugin {
     /** Used by the platform-specific open() implementations. */
     static std::string FindPlugin( const std::string & basename )
     {
-	// CERR << "find("<<basename<<")... path="<<path().path_string()<<"\nextensions="<<path().extensions_string()<<"\n";
-	return PluginsPath().find( basename );
+	// CERR << "find("<<basename<<")... path="<<Path().PathString()<<"\nextensions="<<Path().extensions_string()<<"\n";
+	return PluginsPath().Find( basename );
     }
 
 

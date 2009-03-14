@@ -21,39 +21,39 @@ namespace v8 { namespace juice {
 
     PathFinder::~PathFinder()
     {
-	// DTOROUT(PathFinder) << this->path_string() << std::endl;
+	// DTOROUT(PathFinder) << this->PathString() << std::endl;
     }
 
     PathFinder::PathFinder( const std::string & p, const std::string & e, const std::string & pathsep )
     {
-	this->path_separator( pathsep );
-	this->path( p );
-	this->extensions( e );
+	this->PathSeparator( pathsep );
+	this->Path( p );
+	this->Extensions( e );
     }
 
 
-    bool PathFinder::empty() const
+    bool PathFinder::IsEmpty() const
     {
 	return this->paths.empty() && this->exts.empty();
     }
 
-    std::string PathFinder::path_separator() const
+    std::string PathFinder::PathSeparator() const
     {
 	return this->pathseparator;
     }
 
-    void PathFinder::path_separator( const std::string & sep )
+    void PathFinder::PathSeparator( const std::string & sep )
     {
 	this->pathseparator = sep.empty() ? ":" : sep;
     }
 
-    std::string PathFinder::join_list( const string_list & list, const std::string & separator )
+    std::string PathFinder::JoinList( const StringList & list, const std::string & separator )
     {
 	std::string ret;
 	unsigned long count = list.size();
 	unsigned long at = 0;
-	string_list::const_iterator it = list.begin();
-	string_list::const_iterator et = list.end();
+	StringList::const_iterator it = list.begin();
+	StringList::const_iterator et = list.end();
 	for(; it != et; ++it )
 	{
 
@@ -62,32 +62,32 @@ namespace v8 { namespace juice {
 	}
 	return ret;
     }
-    std::string PathFinder::path_string() const
+    std::string PathFinder::PathString() const
     {
-	return this->join_list( this->paths, this->pathseparator );
+	return this->JoinList( this->paths, this->pathseparator );
     }
 
-    PathFinder::string_list PathFinder::path() const
-    {
-	return this->paths;
-    }
-
-    PathFinder::string_list & PathFinder::path()
+    PathFinder::StringList PathFinder::Path() const
     {
 	return this->paths;
     }
 
-    std::string PathFinder::extensions_string() const
+    PathFinder::StringList & PathFinder::Path()
     {
-	return this->join_list( this->exts, this->pathseparator );
+	return this->paths;
     }
 
-    PathFinder::string_list PathFinder::extensions() const
+    std::string PathFinder::ExtensionsString() const
+    {
+	return this->JoinList( this->exts, this->pathseparator );
+    }
+
+    PathFinder::StringList PathFinder::Extensions() const
     {
 	return this->exts;
     }
 
-    PathFinder::string_list & PathFinder::extensions()
+    PathFinder::StringList & PathFinder::Extensions()
     {
 	return this->exts;
     }
@@ -117,43 +117,43 @@ namespace v8 { namespace juice {
 	return c;
     }
 
-    std::size_t PathFinder::path( const std::string & p )
+    std::size_t PathFinder::Path( const std::string & p )
     {
 	this->paths.erase( this->paths.begin(), this->paths.end() );
 	return tokenize_to_list( p, this->paths, this->pathseparator );
     }
 
-    std::size_t PathFinder::path( const PathFinder::string_list & p )
+    std::size_t PathFinder::Path( const PathFinder::StringList & p )
     {
 	this->paths = p;
 	return this->paths.size();
     }
 
-    void PathFinder::add_path( const std::string & p )
+    void PathFinder::AddPath( const std::string & p )
     {
 	tokenize_to_list( p, this->paths, this->pathseparator );
     }
 
 
-    std::size_t PathFinder::extensions( const std::string & p )
+    std::size_t PathFinder::Extensions( const std::string & p )
     {
 	this->exts.erase( this->exts.begin(), this->exts.end() );
 	return tokenize_to_list( p, this->exts, this->pathseparator );
     }
 
-    std::size_t PathFinder::extensions( const PathFinder::string_list & e )
+    std::size_t PathFinder::Extensions( const PathFinder::StringList & e )
     {
 	this->exts = e;
 	return this->exts.size();
     }
 
-    void PathFinder::add_extension( const std::string & p )
+    void PathFinder::AddExtension( const std::string & p )
     {
 	tokenize_to_list( p, this->exts, this->pathseparator );
     }
 
     // static
-    bool PathFinder::is_accessible( const std::string & path )
+    bool PathFinder::IsAccessible( const std::string & path )
     {
 #if WIN32
 #  define CHECKACCESS _access
@@ -168,16 +168,16 @@ namespace v8 { namespace juice {
 #undef CHECKRIGHTS
     }
 
-    std::string PathFinder::basename( const std::string & name )
+    std::string PathFinder::BaseName( const std::string & name )
     {
-	std::string::size_type slashat = name.find_last_of( PathFinder::dir_separator() );
+	std::string::size_type slashat = name.find_last_of( PathFinder::DirSeparator() );
 	if ( slashat == std::string::npos )
 	    return name;
 	return name.substr( slashat + 1 );
     }
 
 
-    std::string PathFinder::dir_separator()
+    std::string PathFinder::DirSeparator()
     {
 #if WIN32
 	return std::string( "\\" );
@@ -187,16 +187,16 @@ namespace v8 { namespace juice {
     }
 
 
-    std::string PathFinder::find( const std::string & resource, bool check_cache ) const
+    std::string PathFinder::Find( const std::string & resource, bool check_cache ) const
     {
-	//static const std::string NOT_FOUND = "PathFinder::find() : no findie";
+	//static const std::string NOT_FOUND = "PathFinder::Find() : no findie";
 	if( resource.empty() ) return resource;
 
 #define CHECKPATH(CHECKAT)						\
-        if( ! CHECKAT.empty() && PathFinder::is_accessible( CHECKAT ) ) \
+        if( ! CHECKAT.empty() && PathFinder::IsAccessible( CHECKAT ) ) \
         { this->hitcache[resource] = CHECKAT; return CHECKAT; }
 
-	//CERR << "find( " << resource << " )" << std::endl;
+	//CERR << "Find( " << resource << " )" << std::endl;
 	if( check_cache )
 	{
 	    std::map <std::string,std::string>::iterator mapiter;
@@ -206,13 +206,13 @@ namespace v8 { namespace juice {
 
 	CHECKPATH( resource );
 
-	string_list::const_iterator piter = this->paths.begin();
-	string_list::const_iterator eiter = this->exts.begin();
+	StringList::const_iterator piter = this->paths.begin();
+	StringList::const_iterator eiter = this->exts.begin();
 
 	std::string path;
 	std::string ext;
 
-	if ( PathFinder::is_accessible( resource ) )
+	if ( PathFinder::IsAccessible( resource ) )
 	    return resource;
 
 	piter = this->paths.begin();
@@ -222,11 +222,11 @@ namespace v8 { namespace juice {
 	    path = ( *piter );
 	    if ( !path.empty() )
 	    {
-		path += PathFinder::dir_separator();
+		path += PathFinder::DirSeparator();
 	    }
 	    ++piter;
 	    checkhere = path + resource;
-	    //CERR << "find( " << resource << " ) checking " << checkhere << std::endl;
+	    //CERR << "Find( " << resource << " ) checking " << checkhere << std::endl;
 	    CHECKPATH( checkhere );
 	    eiter = this->exts.begin();
 	    while ( eiter != this->exts.end() )
@@ -234,17 +234,17 @@ namespace v8 { namespace juice {
 		ext = ( *eiter );
 		++eiter;
 		checkhere = path + resource + ext;
-		//CERR << "find( " << resource << " ) checking " << checkhere << std::endl;
+		//CERR << "Find( " << resource << " ) checking " << checkhere << std::endl;
 		CHECKPATH( checkhere );
 	    }
 	}
-	//CERR << "find( "<<resource<<" ): not found :(" << std::endl;
+	//CERR << "Find( "<<resource<<" ): not found :(" << std::endl;
 	// so arguable:
 	// this->hitcache[resource] = "";
 	return std::string();
     }
 #undef CHECKPATH
-    void PathFinder::clear_cache()
+    void PathFinder::ClearCache()
     {
 	this->hitcache.clear();
     }
