@@ -1,5 +1,5 @@
 #summary Informal summary of differences between versions.
-#labels Featured,Phase-UserDocs
+#labels Featured,Phase-UserDocs,Topic-Project
 
 =v8-juice ChangeLog=
 
