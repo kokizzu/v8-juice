@@ -16,7 +16,7 @@ else
 # end no-doxygen warning
 ########################################################################
 # Start doxygen stuff...
-  Doxyfile: Doxyfile.at
+  Doxyfile: |Doxyfile.at
   doxygen.inputs := $(toc2.top_srcdir)/src/include
   # doxygen.use_dot := 1
   include $(toc2.dirs.makefiles)/doxygen.make
