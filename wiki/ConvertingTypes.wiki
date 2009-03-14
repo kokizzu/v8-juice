@@ -130,6 +130,16 @@ char const * v = CastFromJS(myJSVal);
 
 The problem here is ownership and lifetime of the string bytes. v8 does not document them (and can't realistically provide any requirements which we would need for this conversion). We _can_ write a conversion routine for this, and it would probably work 99% of the time, but its results would technically be undefined. As a workaround, client code should use `std::string` instead (at least for `CastFromJS()`) or implement `JSToNative<>` and/or `NativeToJS<>` specializations for their string type of choice. The `CastToJS()` function is overloaded for (`char const *`) and "does the right thing", but `CastFromJS()` cannot handle such strings as transparently as it can most other types.
 
+=Forwarding to functions=
+
+The `v8::juice::convert` namespace contains functions named `FwdToFuncN()`, where `N` is the number of arguments they expect, which use the casting framework to marshal calls between JS and native functions.
+
+The [CreatingClasses ClassBinder class] can also bind member functions.
+
+TODOs:
+  * Refactor `FwdToFuncN()` to use a mechanism similar to what the !ClassBinder member bindings do, as this allows us to use `void` return types.
+  * Consolidate the `FwdToFuncN()` and !ClassBinder call forwarding API. Right now they are completely separate beasts and have some inconsistencies (e.g. !ClassBinder's code can handle void returns whereas `FwdToFunc` cannot.
+
 =Silly Examples=
 
 Here are some examples of the things one can do with the type conversions API:
