@@ -1,0 +1,14 @@
+# sample input file for createClassBinder.js
+class MyType
+func std::string voodoo(int)
+prop howdy CastToJS("Hi, there! How're ya?")
+func int func2(int)
+func int func1()
+func double func3(int , int)
+func std::string hi()
+func my_native* me()
+func bool him(my_native *)
+func void avoid()
+func void avoid1(int)
+func void avoid2(int,double )
+func double takes3(int, int, int)
