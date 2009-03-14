@@ -357,29 +357,25 @@ For the extremely curious, that macro generates something like the following:
 
 {{{
 namespace v8 { namespace juice { namespace convert {
-	template <>
-	struct NativeToJS<my_native>
-	{
-	    Handle<Value> operator()( my_native * p ) const
-	    {
-		Handle<Object> jo = ::v8::juice::WeakJSClassCreator<my_native>::GetJSObject(p);
-		if( jo.IsEmpty() ) return Null();
-		else return jo;
-	    }
-	};
-	template <>
-	struct JSToNative<my_native>
-	{
-	    typedef my_native * result_type;
-	    result_type operator()( Handle<Value> const & h ) const
-	    {
-		return ::v8::juice::WeakJSClassCreator<my_native>::GetNative(h);
-	    }
-	    result_type operator()( ::v8::juice::bind::BindKeyType /*ignored*/, Handle<Value> const & h ) const
-	    {
-		return this->operator()( h );
-	    }
-	};
+template <>
+struct NativeToJS<my_native>
+{
+    Handle<Value> operator()( my_native * p ) const
+    {
+	Handle<Object> jo = ::v8::juice::WeakJSClassCreator<my_native>::GetJSObject(p);
+	if( jo.IsEmpty() ) return Null();
+	else return jo;
+    }
+};
+template <>
+struct JSToNative<my_native>
+{
+    typedef my_native * result_type;
+    result_type operator()( Handle<Value> const & h ) const
+    {
+	return ::v8::juice::WeakJSClassCreator<my_native>::GetNative(h);
+    }
+};
 } } } // namespaces
 }}}
 
