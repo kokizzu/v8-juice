@@ -41,12 +41,23 @@ namespace v8 { namespace juice {
 
     Handle<Value> IncludeScript( Arguments const & argv )
     {
+	HandleScope scope;
 	Handle<Value> rv = Undefined();
 	Handle<Value> exc;
 	for (int i = 0; i < argv.Length(); i++)
 	{
 	    HandleScope handle_scope;
-	    String::Utf8Value fname( argv[i]->ToString() );
+	    // Man, everyone needs a different type of String value...
+	    std::string farg = convert::JSToStdString(argv[i]);
+	    std::string found = ScriptsPath().find( farg );
+	    if( found.empty() )
+	    {
+		std::ostringstream os;
+		os << "Could not find file ["<<farg<<"] in ScriptsPath()!";
+		return ThrowException(v8::String::New(os.str().c_str()));
+	    }
+	    Handle<String> fnameS( String::New(found.c_str()) );
+	    String::Utf8Value fname( fnameS );
 	    if( !*fname || !**fname )
 	    {
 		return ThrowException(v8::String::New("Filename argument is empty!"));
@@ -67,20 +78,26 @@ namespace v8 { namespace juice {
 	    }
 	    std::string src = os.str();
 	    Handle<String> jsrc( String::New( src.c_str(), static_cast<int>( src.size() ) ) );
+	    do
 	    {
 		TryCatch tryer;
-		Handle<Script> Scr( Script::Compile( jsrc, argv[i] ) );
+		tryer.SetCaptureMessage(true);
+		tryer.SetVerbose(true);
+		Handle<Script> Scr( Script::Compile( jsrc, convert::CastToJS(found) ) );
 		if( Scr.IsEmpty() )
 		{
-		    return ThrowException(tryer.Exception());
+		    exc = tryer.Exception();
+		    break;
 		}
 		rv = Scr->Run();
 		if( rv.IsEmpty() )
 		{
 		    //return ThrowException(tryer.Exception());
 		    exc = tryer.Exception();
+		    break;
 		}
-	    }
+		//tryer.Reset();
+	    } while(false);
 	    if( ! exc.IsEmpty() )
 	    {
 		return ThrowException(exc);
