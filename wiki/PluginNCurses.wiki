@@ -1,5 +1,5 @@
 #summary JS bindings for ncurses
-#labels Phase-UserDocs
+#labels Phase-UserDocs,Topic-Plugins
 
 ==The ncurses bindings==
 
