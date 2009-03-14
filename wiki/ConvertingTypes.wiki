@@ -129,3 +129,35 @@ char const * v = CastFromJS(myJSVal);
 }}}
 
 The problem here is ownership and lifetime of the string bytes. v8 does not document them (and can't realistically provide any requirements which we would need for this conversion). We _can_ write a conversion routine for this, and it would probably work 99% of the time, but its results would technically be undefined. As a workaround, client code should use `std::string` instead (at least for `CastFromJS()`) or implement `JSToNative<>` and/or `NativeToJS<>` specializations for their string type of choice. The `CastToJS()` function is overloaded for (`char const *`) and "does the right thing", but `CastFromJS()` cannot handle such strings as transparently as it can most other types.
+
+=Silly Examples=
+
+Here are some examples of the things one can do with the type conversions API:
+
+{{{
+std::list<int> li;
+... populate list ...
+Handle<Value> v( CastToJS( li ) ); // Array of strings
+}}}
+
+That will work for _any_ list-contained type which is supported by the casting API. Ergo:
+
+{{{
+typedef list<std::string> StringList;
+typedef list<StringList> ListList;
+ListList li;
+... populate li ...
+Handle<Value> v( CastToJS( li ) ); // Array of Arrays of strings
+}}}
+
+And that means that we can use `ClassBinder` to bind to member functions which take or return arguments of those types, too.
+
+And how about:
+
+{{{
+StringList sl = CastFromJS<StringList>( someJSVal );
+}}}
+
+That will result in a populated list, but only if `someJSVal` is-an object of Array type. If it is, each entry in the array will be cast using `CastFromJS<StringList::value_type>()`.
+
+See <tt>[http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/convert.h convert.h]</tt> for how such conversions are implemented (search that file for `ListT`).
