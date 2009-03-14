@@ -109,3 +109,69 @@ ClassBinder & BindMemFunc( char const * name )
     this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
     return *this;
 }
+/**
+   Overload requiring a WrappedType member function
+   taking 6 args and returning RV.
+*/
+template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (WrappedType::*Func)( A0, A1, A2, A3, A4, A5)  >
+ClassBinder & BindMemFunc( char const * name )
+{
+    typedef Detail::MemFuncCallOp6< WrappedType, RV,  A0, A1, A2, A3, A4, A5, Func > Caller;
+    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    return *this;
+}
+/**
+   Overload requiring a WrappedType const member function
+   taking 6 args and returning RV.
+*/
+template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (WrappedType::*Func)( A0, A1, A2, A3, A4, A5)  const >
+ClassBinder & BindMemFunc( char const * name )
+{
+    typedef Detail::MemFuncCallOp6< const WrappedType, RV,  A0, A1, A2, A3, A4, A5, Func > Caller;
+    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    return *this;
+}
+/**
+   Overload requiring a WrappedType member function
+   taking 7 args and returning RV.
+*/
+template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (WrappedType::*Func)( A0, A1, A2, A3, A4, A5, A6)  >
+ClassBinder & BindMemFunc( char const * name )
+{
+    typedef Detail::MemFuncCallOp7< WrappedType, RV,  A0, A1, A2, A3, A4, A5, A6, Func > Caller;
+    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    return *this;
+}
+/**
+   Overload requiring a WrappedType const member function
+   taking 7 args and returning RV.
+*/
+template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (WrappedType::*Func)( A0, A1, A2, A3, A4, A5, A6)  const >
+ClassBinder & BindMemFunc( char const * name )
+{
+    typedef Detail::MemFuncCallOp7< const WrappedType, RV,  A0, A1, A2, A3, A4, A5, A6, Func > Caller;
+    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    return *this;
+}
+/**
+   Overload requiring a WrappedType member function
+   taking 8 args and returning RV.
+*/
+template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (WrappedType::*Func)( A0, A1, A2, A3, A4, A5, A6, A7)  >
+ClassBinder & BindMemFunc( char const * name )
+{
+    typedef Detail::MemFuncCallOp8< WrappedType, RV,  A0, A1, A2, A3, A4, A5, A6, A7, Func > Caller;
+    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    return *this;
+}
+/**
+   Overload requiring a WrappedType const member function
+   taking 8 args and returning RV.
+*/
+template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (WrappedType::*Func)( A0, A1, A2, A3, A4, A5, A6, A7)  const >
+ClassBinder & BindMemFunc( char const * name )
+{
+    typedef Detail::MemFuncCallOp8< const WrappedType, RV,  A0, A1, A2, A3, A4, A5, A6, A7, Func > Caller;
+    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    return *this;
+}
