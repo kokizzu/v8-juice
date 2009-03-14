@@ -9,6 +9,11 @@ are at the top. Dates written extra large are release dates. This contains only 
 http://code.google.com/p/v8-juice/source/browse/
 
 ----
+*2009 March 13/14*
+  * Refactored member function binding code significantly.
+  * Many minor cleanups.
+  * Completely wrapped [PathFinderClass the PathFinder class] in JS using only `ClassBinder`.
+
 
 *2009 March 12* (after the release, i think)
   * Got binding to non-const member functions working.
