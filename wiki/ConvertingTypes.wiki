@@ -1,5 +1,5 @@
 #summary Converting between JS and native types
-#labels Phase-UserDocs
+#labels Phase-UserDocs,Topic-CPlusPlus
 
 <wiki:toc max_depth="3" />
 
