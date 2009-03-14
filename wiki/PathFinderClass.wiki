@@ -4,9 +4,9 @@
 = !PathFinder =
 
 The `v8::juice::PathFinder` class responsible for doing all file searching
-which v8-juice does. This currently means looking for DLLs, but could just as easily mean finding source files to include into a script or image files to process.
+which v8-juice does. This currently means looking for DLLs, but could just as easily mean finding source files to include into a script or image files to process. This class has been used for a number of years in other projects
 
-The class can be added to a JS engine by calling `v8::SetupPathFinderClass()`, declared in `plugin.h`.
+The class can be added to a JS engine by calling `v8::SetupPathFinderClass()`, declared in `PathFinder.h`.
 
 == JS API ==
 
@@ -30,7 +30,7 @@ The class can be added to a JS engine by calling `v8::SetupPathFinderClass()`, d
 || *Properties* || *Notes* ||
 || `dirSeparator` (read-only) || The platform-specific character used to separate directory names in a path. This is `\` on Windows and `/` everywhere else. ||
 
-Note that because the values in a !PathFinder object are internally native types, it is not possible to directly change them via JS objects. e.g. `obj.pathArray()[3]='/home'` will have no effect, as the object returned from `pathArray()` is necessarily a copy of the native data.
+Note that because the values in a !PathFinder object are internally native types, it is not possible to directly change them via JS objects. e.g. `obj.pathArray()[3]='/home'` will have no effect, as the object returned from `pathArray()` is necessarily a copy of the native data. All of the accessors are functions, as opposed to properties, to try to help avoid any confusion on that point.
 
 =Shared !PathFinder Instances=
 
