@@ -110,7 +110,7 @@ if(0)
     sqlite3_sleep( 1000 );
 }
 
-if(1) // broken in the porting process
+if(1)
 {
     print("js_eval() test...");
     sqlite3_exec( my.db, "select js_eval('sqlite3_select_int(my.db,''select count(*) from t'')')");
