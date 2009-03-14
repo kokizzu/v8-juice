@@ -1,5 +1,5 @@
 #summary Extending v8 with plugins
-#labels Phase-UserDocs,Featured
+#labels Phase-UserDocs,Featured,Topic-Plugins
 
 *Achtung:* some of the plugins were broken with recent (20090312) changes/improvements in the core lib and need some significant reworking before they'll be useful again. The affected plugins are:
 
