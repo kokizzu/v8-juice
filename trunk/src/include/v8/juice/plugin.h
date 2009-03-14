@@ -9,34 +9,37 @@ namespace v8 {
 namespace juice {
 class PathFinder; // Declared in PathFinder.h
 /**
-   Not completely working.
 
    Sets up script-side access to the PathFinder class and to the
    shared PathFinder instance available via
-   v8::juice::plugin::PluginPath().
+   v8::juice::plugin::PluginsPath().
 
    After calling this, the shared plugin path is available script-side
    as the object 'PathFinder.shared.plugins'. Modifying that object
    will modify the search path for plugin loading.
 
    The returned object has the following functions
-   and properties:
+   and functions:
 
-   - string pathString (read/write-on-assign), as per
-   PathFinder::path_string().
+   - String pathString()
+   - int setPathString( String ) 
+   - Array pathArray()
+   - int setPathArray( Array ) 
+   - String pathSeparator()
+   - void setPathSeparator( String ) 
+   - Array extensionsArray()
+   - int setExtensionsArray( Array ) 
+   - String extensionsString()
+   - int setExtensionsString( String ) 
+   - void addPathString( String ) 
+   - void addExtensionString( String ) 
+   - String find( String ) 
+   - void clearCache()
+   - bool isEmpty()
 
-   - Array pathArray (read/write-on-assign), as per
-   PathFinder::path(). For changes to take effect in the native
-   object, path_array must be directly assigned to from the array,
-   rather than modifying a reference to it. When traversing this
-   array, do not reference it directly, as that will actually create a
-   new array object. Make a copy, traverse/modify that copy, and
-   reassign if you make any changes.
-   
-   - string pathSeparator (read/write-on-assign)
+   For the full JS-side API docs see:
 
-   - string find(string[,bool]), as per PathFinder::find()
-
+   http://code.google.com/p/v8-juice/wiki/ClassPathFinder
 */
 Handle<Value> SetupPathFinderClass(const Handle<Object> target );
 /**
@@ -65,10 +68,10 @@ namespace plugin {
        name need not have a file extension (a platform-specific
        extension will be used if needed) or directory element(s) (or
        it may have a relative path). It will be sought using the lookup
-       path defined by the PluginPath() object.
+       path defined by the PluginsPath() object.
 
        The library search path can be inspected and modified using
-       the PluginPath() function.
+       the PluginsPath() function.
 
        If a DLL is found but opening fails for some reason,
        this routine throws a JS exception with platform-specific
@@ -107,7 +110,7 @@ namespace plugin {
 
        - Target object is-not-a Object
 
-       - No DLL can be found for the given name. (The PluginPath()
+       - No DLL can be found for the given name. (The PluginsPath()
        object is used to do the lookups.)
 
        - A DLL is found, but the native DLL opening routine fails
@@ -272,10 +275,10 @@ namespace plugin {
 
     /**
        Returns the shared object used for finding plugins based on
-       partial names and lookup paths. See PluginPath.h for the full
+       partial names and lookup paths. See PluginsPath.h for the full
        details.
     */
-    PathFinder & PluginPath();
+    PathFinder & PluginsPath();
 
     /** @typedef Handle<Value> (*PluginInitFunction)( Handle<Object> target )
        Callback type for plugins initialized via

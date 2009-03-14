@@ -23,6 +23,9 @@ namespace v8 { namespace juice {
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
 
+    enum {
+    MagicExternalArgc = 1
+    };
     /** Required specialization of WeakJSClassCreatorOps<> for use
 	with WeakJSClassCreator<PathFinder>. */
     template <>
@@ -35,11 +38,12 @@ namespace v8 { namespace juice {
 				   std::string & exceptionText)
 	{
 	    const int argc = argv.Length();
-	    if( (1 == argc) && argv[0]->IsExternal() )
+	    if( (MagicExternalArgc == argc) && argv[0]->IsExternal() )
 	    {
 		External * ex = External::Cast( *argv[0] );
 		if( ex )
 		{
+		    //CERR << "Creating from external instance...\n";
 		    WrappedType * xp = static_cast<WrappedType*>(ex->Value());
 		    if( ! xp ) return 0;
 		    return xp;
@@ -163,7 +167,16 @@ namespace v8 { namespace juice {
 	pw.BindMemFunc< size_t, PathFinder::string_list const &, &PF::path >( "setPathArray" );
 	pw.BindMemFunc< std::string, &PF::path_separator >( "pathSeparator" );
 	pw.BindMemFunc< void, std::string const &, &PF::path_separator >( "setPathSeparator" );
+	pw.BindMemFunc< PathFinder::string_list, &PF::extensions >( "extensionsArray" );
+	pw.BindMemFunc< size_t, PathFinder::string_list const &, &PF::extensions >( "setExtensionsArray" );
+	pw.BindMemFunc< std::string, &PF::extensions_string >( "extensionsString" );
+	pw.BindMemFunc< size_t, const std::string &, &PF::extensions >( "setExtensionsString" );
+	pw.BindMemFunc< void, std::string const &, &PF::add_path >( "addPathString" );
+	pw.BindMemFunc< void, std::string const &, &PF::add_extension >( "addExtensionString" );
 	pw.BindMemFunc< std::string, std::string const &, &PF::find >( "find" );
+	pw.BindMemFunc< void, &PF::clear_cache >( "clearCache" );
+	pw.BindMemFunc< bool, &PF::empty >( "isEmpty" );
+	pw.Set( "dirSeparator", CastToJS( PF::dir_separator() ), v8::ReadOnly );
 
 	//pw.BindMemFunc<void,&PF::callMemFunc>(("callMemFunc");
 
@@ -171,21 +184,18 @@ namespace v8 { namespace juice {
 	Handle<Object> shared = Object::New();
 	pw.CtorTemplate()->GetFunction()->Set(JSTR("shared"),shared);
 	{
-	    // Install an instance wrapping the v8::juice::plugin::PluginPath() shared object:
-	    Handle<Value> pfex( External::New( &::v8::juice::plugin::PluginPath() ) );
-	    Handle<Object> pfobj = pw.NewInstance( 1, &pfex );
+	    // Install an instance wrapping the v8::juice::plugin::PluginsPath() shared object:
+	    Handle<Value> pfex( External::New( &::v8::juice::plugin::PluginsPath() ) );
+	    Handle<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
 	    shared->Set(String::New("plugins"), pfobj );
 	}
 
-	if(0) // we don't yet have an include() func for JS...
+	if(1)
 	{
 	    // Includes includes path:
-	    std::vector<Handle<Value> > vec(3,Null());
-	    vec[0] = JSTR(".");
-	    vec[1] = JSTR(".js:.v8:.juice:.v8-juice");
-	    vec[2] = JSTR(":");
-	    Handle<Object> pfInc = pw.NewInstance( 3, &vec[0] );
-	    shared->Set(String::New("include"), pfInc );
+	    Handle<Value> pfex( External::New( &::v8::juice::ScriptsPath() ) );
+	    Handle<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
+	    shared->Set(String::New("include"), pfobj );
 	}
 	return target;
     }

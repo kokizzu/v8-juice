@@ -125,7 +125,7 @@ namespace v8 { namespace juice {
 	/**
 	   Returns this object's extensions list.
 	*/
-	const string_list & extensions() const;
+	string_list extensions() const;
 
 	/** Non-const overload, intended for serialization. */
 	string_list & extensions();
@@ -174,6 +174,7 @@ namespace v8 { namespace juice {
 	   the same result for any given resourcename.
 	*/
 	std::string find( const std::string & resourcename, bool check_cache ) const;
+	/** Equivalent to find(resourcename,true). */
 	std::string find( const std::string & resourcename ) const { return this->find(resourcename,true); }
 
 	/**
@@ -202,6 +203,10 @@ namespace v8 { namespace juice {
 	mutable StringStringMap hitcache;
     };
 
+    /**
+       Shared instance of PathFinder used for searching for scripts.
+    */
+    PathFinder & ScriptsPath();
 
 }} // namespaces
 

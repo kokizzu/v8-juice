@@ -29,9 +29,9 @@ namespace plugin {
     using namespace ::v8;
     using ::v8::juice::PathFinder;
 
+    struct PathFinder_plugins_context {};
     struct PathFinder_phoenix_initializer
     {
-	/** Does nothing: This class is called no_op for a reason ;) */
 	void operator()( PathFinder & t ) const
 	{
 	    t.path(v8_juice_plugin_CONFIG_PLUGINS_PATH);
@@ -40,10 +40,10 @@ namespace plugin {
 	}
     };
 
-    PathFinder & PluginPath()
+    PathFinder & PluginsPath()
     {
 	typedef ::v8::juice::Detail::phoenix<PathFinder,
-	    PathFinder,
+	    PathFinder_plugins_context,
 	    PathFinder_phoenix_initializer> PHX;
 	return PHX::instance();
     }
@@ -93,7 +93,7 @@ namespace plugin {
 	    std::ostringstream os;
 	    os << "LoadPlugin(\""<<modname<<"\") DLL error message: dll=["<<fn<<"]: "
 	       << errmsg
-	       << "\nPluginPath()=["<<PluginPath().path_string()<<']';
+	       << "\nPluginPath()=["<<PluginsPath().path_string()<<']';
 	    errmsg = os.str();
 	    return ThrowException( String::New(errmsg.c_str(),
 					       static_cast<int>(errmsg.size())) );
@@ -102,7 +102,7 @@ namespace plugin {
 	{
 	    std::ostringstream os;
 	    os << "LoadPlugin(\""<<modname<<"\"): No DLL found in path "
-	       << '['<<PluginPath().path_string()<<']';
+	       << '['<<PluginsPath().path_string()<<']';
 	    errmsg = os.str();
 	    return ThrowException( String::New(errmsg.c_str(),
 					       static_cast<int>(errmsg.size())) );
@@ -136,7 +136,7 @@ namespace plugin {
     static std::string FindPlugin( const std::string & basename )
     {
 	// CERR << "find("<<basename<<")... path="<<path().path_string()<<"\nextensions="<<path().extensions_string()<<"\n";
-	return PluginPath().find( basename );
+	return PluginsPath().find( basename );
     }
 
 
