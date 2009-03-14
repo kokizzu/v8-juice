@@ -28,7 +28,7 @@ namespace v8 { namespace juice { namespace convert {
 	typedef ::v8::juice::WeakJSClassCreator< WEAK_CLASS_TYPE > WT;
 	Handle<Value> operator()( WT::WrappedType * p ) const
 	{
-	    ::v8::Handle< ::v8::Object > jo = WT::GetJSObject(p);
+	    ::v8::Handle< ::v8::Object > jo( WT::GetJSObject(p) );
 	    if( jo.IsEmpty() ) return Null();
 	    else return jo;
 	}
@@ -45,10 +45,6 @@ namespace v8 { namespace juice { namespace convert {
 	ResultType operator()( Handle<Value> const & h ) const
 	{
 	    return WT::GetNative(h);
-	}
-	ResultType operator()( ::v8::juice::bind::BindKeyType /*ignored*/, Handle<Value> const & h ) const
-	{
-	    return this->operator()( h );
 	}
     };
 
