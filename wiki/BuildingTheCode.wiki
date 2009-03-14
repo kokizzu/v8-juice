@@ -1,5 +1,5 @@
 #summary Configuring and building the source tree
-#labels Phase-UserDocs,Phase-Implementation,Featured
+#labels Phase-UserDocs,Phase-Implementation,Featured,Topic-Project
 
 <wiki:toc max_depth="3" />
 
