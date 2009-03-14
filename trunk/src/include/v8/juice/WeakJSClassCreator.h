@@ -479,6 +479,24 @@ namespace juice {
 	    else return (*it).second.second;
 	}
 
+        // Without this, gcc isn't seeing the two-arg overload!
+        using JSClassCreator::NewInstance;
+
+	/**
+	   Similar to the two-argument form of NewInstance(), but on
+	   success it assigns obj to the new native object.
+	*/
+	Local<Object> NewInstance( int argc, Handle<Value> argv[], WrappedType * & obj )
+	{
+	    Local<Object> ji = JSClassCreator::NewInstance( argc, argv );
+	    if( ! ji.IsEmpty() && ji->IsObject() )
+	    {
+		obj = GetNative( ji );
+	    }
+	    return ji;
+	}
+
+
     private:
 	typedef Detail::WrapperTypeChecker<WrappedType> TypeCheck;
 	typedef typename TypeCheck::ObjBindT ObjBindT;
