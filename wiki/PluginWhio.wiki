@@ -1,5 +1,5 @@
 #summary I/O classes for JS
-#labels Phase-UserDocs
+#labels Phase-UserDocs,Topic-Plugins
 
 *Achtung #1:* these docs are for the current version in the subversion
 source tree (i document here as changes are made). If you are using an "older" version,
