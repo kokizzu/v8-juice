@@ -35,6 +35,8 @@ To be able to load new plugins from JS code, we first have to add a small amount
   gl->Set(String::New("loadPlugin"), v8::juice::plugin::LoadPlugin );
 }}}
 
+That will create the loader function (name it whatever you like) in the specified object (it need not be the global object).
+
 That's all you need to do to enable the plugins support.
 
 On Linux systems (and probably other Unices), your application must be linked with the `-export-dynamic` (also known as `-rdynamic`) flag, or DLLs may not be able to load properly (they won't be able to see the native LoadPlugin API provided by the application!).
@@ -93,6 +95,8 @@ PREFIX/lib/v8/juice/plugin
 }}}
 
 Where `PREFIX` is the installation prefix (see [BuildingTheCode]) and `JUICE_VERSION` is the version of the library (set during the configuration process).
+
+
 
 ==DLLs are _never_ unloaded==
 
