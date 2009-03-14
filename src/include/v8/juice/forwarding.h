@@ -60,12 +60,10 @@ namespace v8 { namespace juice { namespace convert {
 #endif // !DOXYGEN
 
     /**
-       Identical to FwdToFunc1(), but for functions taking 0
-       arguments. The cx argument is ignored, but exists for
-       consistency with the other FwdToFuncN() functions.
+       Identical to FwdToFunc1() but expects a function taking 0 arguments.
     */
     template <typename ReturnT, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc0( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc0( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 0 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 0 arguments!"));
 	return CastToJS( func() );
@@ -77,79 +75,53 @@ namespace v8 { namespace juice { namespace convert {
        CastToJS(), and returned.
 
        This routine will only work with types which work with
-       CastFromJS() and CastToJS(). Native types will by default be
-       sought using ::v8::juice::bind::GetBoundNative(), using the given
-       binder context as he first parameter to that function. For the
-       "standard" POD types, the converter will normally ignore the cx
-       parameter, and 0 can safely be passed.
+       CastFromJS() and CastToJS().
 
        For all functions of this family (FwdToFunc2(), etc.), if
-       argv.Length() is not exactly the correct number then a JS-side
-       exception is thrown - the return value will be that of
-       ::v8::ThrowException() (which isn't really documented :/).
+       argv.Length() is not *exactly* the correct number then a
+       JS-side exception is thrown - the return value will be that of
+       ::v8::ThrowException() (what exactly that return value is,
+       isn't really documented :/).
 
        Notable limitations:
 
-       - (char const *) parameters will not be properly converted
-       because the CastFromJS() implementation for those uses
-       std::string as a proxy, which cannot be implicitly converted
-       to (char const *).
+       - Can only convert argument types handled by CastFromJS().
 
-       - Arguments with reference qualifiers wont work for non-JS-standard
-       types, e.g. a parameter type of (T const &). For the standard types,
-       const references should work okay but non-const references will not.
-
-       - Pointer arguments are handled correctly for custom types but
-       not for JS-standard types (which are necessarily passed by
-       value because we don't have a pointer to their native
-       representations).
-
-       - Non-pointer/reference-qualified custom types will not work, because
-       CastFromJS() and friends pass around pointers.
-
-       - Void return types are not handled correctly (won't compile).
-
-       - All native types relying on CastFromJS() must be bound with
-       the same context key (the cx parameter).
-
-       - When passing copyable args by const reference (e.g. std::string const &),
-       the template types passed must be without the reference part (and optionally
-       without the const).
-
-       Some of these limitations can be solved by adding another level
-       or two of template-based indirection. Maybe that will happen
-       someday, maybe not.
+       Some of the related limitations (e.g. can't handle void
+       returns) can be solved by adding another level or two of
+       template-based indirection. Maybe that will happen someday,
+       maybe not.
     */
     template <typename ReturnT, typename A1, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc1( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc1( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 1 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 1 argument!"));
-	return CastToJS( func( CastFromJS<A1>( cx, argv[0] ) ) );
+	return CastToJS( func( CastFromJS<A1>( argv[0] ) ) );
     }
 
     /**
        Identical to FwdToFunc1(), but for functions taking 2 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc2( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc2( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 2 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 2 arguments!"));
 	return CastToJS( func(
-			      CastFromJS<A1>( cx, argv[0] ),
-			      CastFromJS<A2>( cx, argv[1] ) ) );
+			      CastFromJS<A1>( argv[0] ),
+			      CastFromJS<A2>( argv[1] ) ) );
     }
 
     /**
        Identical to FwdToFunc1(), but for functions taking 3 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc3( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc3( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 3 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 3 arguments!"));
 	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( cx, argv[0] ),
-			      CastFromJS<A2>( cx, argv[1] ),
-			      CastFromJS<A3>( cx, argv[2] )
+			      CastFromJS<A1>( argv[0] ),
+			      CastFromJS<A2>( argv[1] ),
+			      CastFromJS<A3>( argv[2] )
 			      ) );
     }
 
@@ -157,14 +129,14 @@ namespace v8 { namespace juice { namespace convert {
        Identical to FwdToFunc1(), but for functions taking 4 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc4( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc4( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 4 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 4 arguments!"));
 	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( cx, argv[0] ),
-			      CastFromJS<A2>( cx, argv[1] ),
-			      CastFromJS<A3>( cx, argv[2] ),
-			      CastFromJS<A4>( cx, argv[3] )
+			      CastFromJS<A1>( argv[0] ),
+			      CastFromJS<A2>( argv[1] ),
+			      CastFromJS<A3>( argv[2] ),
+			      CastFromJS<A4>( argv[3] )
 			      ) );
     }
 
@@ -172,15 +144,15 @@ namespace v8 { namespace juice { namespace convert {
        Identical to FwdToFunc1(), but for functions taking 5 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc5( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc5( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 5 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 5 arguments!"));
 	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( cx, argv[0] ),
-			      CastFromJS<A2>( cx, argv[1] ),
-			      CastFromJS<A3>( cx, argv[2] ),
-			      CastFromJS<A4>( cx, argv[3] ),
-			      CastFromJS<A5>( cx, argv[4] )
+			      CastFromJS<A1>( argv[0] ),
+			      CastFromJS<A2>( argv[1] ),
+			      CastFromJS<A3>( argv[2] ),
+			      CastFromJS<A4>( argv[3] ),
+			      CastFromJS<A5>( argv[4] )
 			      ) );
     }
 
@@ -188,16 +160,16 @@ namespace v8 { namespace juice { namespace convert {
        Identical to FwdToFunc1(), but for functions taking 6 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc6( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc6( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 6 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 6 arguments!"));
 	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( cx, argv[0] ),
-			      CastFromJS<A2>( cx, argv[1] ),
-			      CastFromJS<A3>( cx, argv[2] ),
-			      CastFromJS<A4>( cx, argv[3] ),
-			      CastFromJS<A5>( cx, argv[4] ),
-			      CastFromJS<A6>( cx, argv[5] )
+			      CastFromJS<A1>( argv[0] ),
+			      CastFromJS<A2>( argv[1] ),
+			      CastFromJS<A3>( argv[2] ),
+			      CastFromJS<A4>( argv[3] ),
+			      CastFromJS<A5>( argv[4] ),
+			      CastFromJS<A6>( argv[5] )
 			      ) );
     }
 
@@ -205,17 +177,17 @@ namespace v8 { namespace juice { namespace convert {
        Identical to FwdToFunc1(), but for functions taking 7 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc7( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc7( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 7 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 7 arguments!"));
 	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( cx, argv[0] ),
-			      CastFromJS<A2>( cx, argv[1] ),
-			      CastFromJS<A3>( cx, argv[2] ),
-			      CastFromJS<A4>( cx, argv[3] ),
-			      CastFromJS<A5>( cx, argv[4] ),
-			      CastFromJS<A6>( cx, argv[5] ),
-			      CastFromJS<A7>( cx, argv[6] )
+			      CastFromJS<A1>( argv[0] ),
+			      CastFromJS<A2>( argv[1] ),
+			      CastFromJS<A3>( argv[2] ),
+			      CastFromJS<A4>( argv[3] ),
+			      CastFromJS<A5>( argv[4] ),
+			      CastFromJS<A6>( argv[5] ),
+			      CastFromJS<A7>( argv[6] )
 			      ) );
     }
 
@@ -223,18 +195,18 @@ namespace v8 { namespace juice { namespace convert {
        Identical to FwdToFunc1(), but for functions taking 8 arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc8( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc8( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 8 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 8 arguments!"));
 	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( cx, argv[0] ),
-			      CastFromJS<A2>( cx, argv[1] ),
-			      CastFromJS<A3>( cx, argv[2] ),
-			      CastFromJS<A4>( cx, argv[3] ),
-			      CastFromJS<A5>( cx, argv[4] ),
-			      CastFromJS<A6>( cx, argv[5] ),
-			      CastFromJS<A7>( cx, argv[6] ),
-			      CastFromJS<A8>( cx, argv[7] )
+			      CastFromJS<A1>( argv[0] ),
+			      CastFromJS<A2>( argv[1] ),
+			      CastFromJS<A3>( argv[2] ),
+			      CastFromJS<A4>( argv[3] ),
+			      CastFromJS<A5>( argv[4] ),
+			      CastFromJS<A6>( argv[5] ),
+			      CastFromJS<A7>( argv[6] ),
+			      CastFromJS<A8>( argv[7] )
 			      ));
     }
 
@@ -244,19 +216,19 @@ namespace v8 { namespace juice { namespace convert {
        has a function or two which take this many arguments.
     */
     template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc9( ::v8::juice::bind::BindKeyType cx, Func func, ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc9( Func func, ::v8::Arguments const & argv )
     {
 	if( argv.Length() != 9 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 9 arguments!"));
 	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( cx, argv[0] ),
-			      CastFromJS<A2>( cx, argv[1] ),
-			      CastFromJS<A3>( cx, argv[2] ),
-			      CastFromJS<A4>( cx, argv[3] ),
-			      CastFromJS<A5>( cx, argv[4] ),
-			      CastFromJS<A6>( cx, argv[5] ),
-			      CastFromJS<A7>( cx, argv[6] ),
-			      CastFromJS<A8>( cx, argv[7] ),
-			      CastFromJS<A9>( cx, argv[9] )
+			      CastFromJS<A1>( argv[0] ),
+			      CastFromJS<A2>( argv[1] ),
+			      CastFromJS<A3>( argv[2] ),
+			      CastFromJS<A4>( argv[3] ),
+			      CastFromJS<A5>( argv[4] ),
+			      CastFromJS<A6>( argv[5] ),
+			      CastFromJS<A7>( argv[6] ),
+			      CastFromJS<A8>( argv[7] ),
+			      CastFromJS<A9>( argv[9] )
 			      ));
     }
 

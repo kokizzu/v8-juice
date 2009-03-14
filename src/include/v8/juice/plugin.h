@@ -7,41 +7,7 @@
 
 namespace v8 {
 namespace juice {
-class PathFinder; // Declared in PathFinder.h
-/**
-
-   Sets up script-side access to the PathFinder class and to the
-   shared PathFinder instance available via
-   v8::juice::plugin::PluginsPath().
-
-   After calling this, the shared plugin path is available script-side
-   as the object 'PathFinder.shared.plugins'. Modifying that object
-   will modify the search path for plugin loading.
-
-   The returned object has the following functions
-   and functions:
-
-   - String pathString()
-   - int setPathString( String ) 
-   - Array pathArray()
-   - int setPathArray( Array ) 
-   - String pathSeparator()
-   - void setPathSeparator( String ) 
-   - Array extensionsArray()
-   - int setExtensionsArray( Array ) 
-   - String extensionsString()
-   - int setExtensionsString( String ) 
-   - void addPathString( String ) 
-   - void addExtensionString( String ) 
-   - String find( String ) 
-   - void clearCache()
-   - bool isEmpty()
-
-   For the full JS-side API docs see:
-
-   http://code.google.com/p/v8-juice/wiki/ClassPathFinder
-*/
-Handle<Value> SetupPathFinderClass(const Handle<Object> target );
+    class PathFinder; // declared in PathFinder.h
 /**
    The plugin namespace encapsulates an API for dynamically loading
    JS functionality via plugins (DLLs/shared libraries).

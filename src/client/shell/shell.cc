@@ -1,3 +1,7 @@
+#if defined(NDEBUG)
+#undef NDEBUG
+#endif
+#include <cassert>
 // Copyright 2008 the V8 project authors. All rights reserved.
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -42,9 +46,9 @@
 #include <v8/juice/convert.h>
 #include <v8/juice/bind.h>
 #include <v8/juice/plugin.h>
+#include <v8/juice/PathFinder.h>
 #include <v8/juice/cleanup.h>
 #include <v8/juice/WeakJSClassCreator.h>
-//#include <v8/juice/v8-classwrap.h> // failed experiment
 
 namespace bind = ::v8::juice::bind;
 
@@ -78,7 +82,7 @@ struct my_native
     std::string hi() { return "hi!"; }
 
     my_native * me() { CERR << "my_native::me()="<<this<<'\n';return this; }
-    bool him(my_native * him) { CERR << "my_native::him("<<him<<")\n"; return true; }
+    bool him(my_native * him) { CERR << "my_native::him("<<him<<")\n"; return 0 != him; }
 
     void avoid() {CERR << "my_native::avoid()="<<this<<'\n'; }
     void avoid1(int x ) {CERR << "my_native::avoid1("<<x<<")="<<this<<'\n'; }
@@ -154,7 +158,6 @@ int my_fwd( V8CxH & cx )
 }
 
 
-
 int my_test( V8CxH & cx )
 {
     using namespace v8::juice::convert;
@@ -185,6 +188,13 @@ int my_test( V8CxH & cx )
     return 0;
 }
 
+struct bind_tester
+{
+    std::string str;
+    bind_tester() : str("hi, world!")
+    {}
+};
+
 int my_bind_test2( V8CxH & cx )
 {
     using namespace v8::juice::convert;
@@ -193,7 +203,7 @@ int my_bind_test2( V8CxH & cx )
     v8::HandleScope handle_scope;
     V8LObject gl = cx->Global();
     Local<Value> jv = gl->Get( String::New("MyNative") );
-    my_native * n = GetBoundNative<my_native>( 0, jv );
+    bind_tester * n = GetBoundNative<bind_tester>( jv );
     if( ! n )
     {
 	CERR << "ERROR: Could not fetch MyNative as an External!\n";
@@ -201,8 +211,7 @@ int my_bind_test2( V8CxH & cx )
     }
     COUT << "MyNative = " << n << " == ["<<(n?n->str:"<NULL>")<<"]\n";
 #if 1
-    // Fix this:
-    n = CastFromJS<my_native>( 0, jv );
+    n = CastFromJS<bind_tester>( jv );
     COUT << "MyNative = " << n << " == ["<<(n?n->str:"<NULL>")<<"]\n";
 #endif
     return 0;
@@ -214,25 +223,26 @@ int my_bind_test( V8CxH & cx )
     using namespace v8::juice::bind;
     using namespace v8;
     v8::HandleScope handle_scope;
-    my_native mynat;
-    mynat.str = "hi, world";
+    bind_tester mynat;
+    mynat.str = "hi, world?";
     Local<External> ex = External::New( &mynat );
-    bool rc = BindNative( 0, **ex, &mynat );
-    COUT << "bind rc = " << rc << '\n';
-    my_native * bs = GetBoundNative<my_native>( 0, **ex );
+    bool rc = BindNative( ex, &mynat );
+    COUT << "bind key@"<<ex->Value() << " to @"<<&mynat<<", rc = " << rc << '\n';
+    bind_tester * bs = GetBoundNative<bind_tester>( ex );
     COUT << "bound mynat = " << bs << " == ["<<(bs?bs->str:"<NULL>")<<"]\n";
     V8LObject gl = cx->Global();
 
 //     Local<BoundNative> bn = BoundNative::New( &mynat );
-//     COUT << "bn->Value<my_native>() == "<<bn->Value<my_native>()<<'\n';
+//     COUT << "bn->Value<bind_tester>() == "<<bn->Value<bind_tester>()<<'\n';
 
     gl->Set( String::New("MyNative"), ex );
     my_bind_test2( cx );
-    rc = UnbindNative( 0, **ex, &mynat );
+    rc = UnbindNative( ex, &mynat );
     COUT << "unbind rc = " << rc << '\n';
-    rc = UnbindNative( 0, **ex, &mynat );
+    rc = UnbindNative( ex, &mynat );
     COUT << "unbind rc = " << rc << '\n';
-    bs = GetBoundNative<my_native>( 0, **ex );
+    bs = GetBoundNative<bind_tester>( ex );
+    assert( 0 == bs );
     COUT << "unbind bs = " << bs << " == ["<<(bs?bs->str:"<NULL>")<<"]\n";
     return 0;
 }
@@ -299,9 +309,9 @@ int main(int argc, char* argv[]) {
 	if(1)
 	{
 	    //my_test( context );
-	    //my_bind_test( context );
 	    my_class_test( context );
 	    my_fwd(context);
+	    my_bind_test( context );
 	}
 	bool run_shell = (argc == 1);
 	for (int i = 1; i < argc; i++) {

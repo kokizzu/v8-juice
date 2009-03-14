@@ -299,18 +299,9 @@ namespace convert {
     struct JSToNative
     {
 	typedef JST * ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & jv ) const
-	{
-	    // 	    External * ex = External::Cast( *jv );
-	    ///CERR << "ex == " << ex << " data="<<(ex?ex->Value():0)<<"\n";
-	    // 	    return ex ? ::v8::juice::bind::GetBoundNative<type>( *ex ) : 0;
-	    // requires specialization
-	    return ::v8::juice::bind::GetBoundNative<JST>( cx, jv );
-	    //return 0;
-	}
 	ResultType operator()( ValueHandle const & h ) const
 	{
-	    return this->operator()( 0, h );
+	    return ::v8::juice::bind::GetBoundNative<JST>( h );
 	}
     };
     template <typename JST>
@@ -323,13 +314,9 @@ namespace convert {
     struct JSToNative<ValueHandle>
     {
 	typedef ValueHandle ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
-	{
-	    return h;
-	}
 	ResultType operator()( ValueHandle const & h ) const
 	{
-	    return this->operator()( 0, h );
+	    return h;
 	}
     };
 
@@ -337,10 +324,6 @@ namespace convert {
     struct JSToNative<void>
     {
 	typedef void ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
-	{
-	    return;
-	}
 	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return;
@@ -351,14 +334,10 @@ namespace convert {
     struct JSToNative<void *>
     {
 	typedef void * ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    if( h.IsEmpty() || ! h->IsExternal() ) return 0;
 	    return External::Cast(*h)->Value();
-	}
-	ResultType operator()( ValueHandle const & h ) const
-	{
-	    return this->operator()( 0, h );
 	}
     };
 
@@ -372,10 +351,6 @@ namespace convert {
 		? static_cast<ResultType>(h->Int32Value())
 		: 0;
 	}
-	ResultType operator()( BindKeyType, ValueHandle const & h ) const
-	{
-	    return this->operator()( h );
-	}
     };	
 
     template <>
@@ -388,20 +363,12 @@ namespace convert {
 		? static_cast<ResultType>(h->Int32Value())
 		: 0;
 	}
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
-	{
-	    return this->operator()( h );
-	}
     };
 
     template <>
     struct JSToNative<int32_t>
     {
 	typedef int32_t ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
-	{
-	    return this->operator()( h );
-	}
 	ResultType operator()( ValueHandle const & h ) const
 	{
 	    // FIXME: try to lexically cast, if we can
@@ -415,10 +382,6 @@ namespace convert {
     struct JSToNative<uint32_t>
     {
 	typedef uint32_t ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
-	{
-	    return this->operator()( h );
-	}
 	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
@@ -432,15 +395,11 @@ namespace convert {
     struct JSToNative<int64_t>
     {
 	typedef int64_t ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->IntegerValue())
 		: 0;
-	}
-	ResultType operator()( ValueHandle const & h ) const
-	{
-	    return this->operator()( 0, h );
 	}
     };
 
@@ -448,10 +407,6 @@ namespace convert {
     struct JSToNative<uint64_t>
     {
 	typedef uint64_t ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
-	{
-	    return this->operator()( h );
-	}
 	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
@@ -464,15 +419,11 @@ namespace convert {
     struct JSToNative<double>
     {
 	typedef double ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
+	ResultType operator()( ValueHandle const & h ) const
 	{
 	    return h->IsNumber()
 		? h->NumberValue()
 		: 0;
-	}
-	ResultType operator()( ValueHandle const & h ) const
-	{
-	    return this->operator()( 0, h );
 	}
     };
 
@@ -480,13 +431,9 @@ namespace convert {
     struct JSToNative<bool>
     {
 	typedef bool ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
-	{
-	    return h->BooleanValue();
-	}
 	ResultType operator()( ValueHandle const & h ) const
 	{
-	    return this->operator()( 0, h );
+	    return h->BooleanValue();
 	}
     };
 
@@ -494,14 +441,10 @@ namespace convert {
     struct JSToNative<std::string>
     {
 	typedef std::string ResultType;
-	ResultType operator()( BindKeyType cx, ValueHandle const & h ) const
-	{ // this causes a crash deep in v8 in some cases.
-	    String::AsciiValue asc( h );
-	    return std::string( *asc ? *asc : "" );
-	}
 	ResultType operator()( ValueHandle const & h ) const
 	{
-	    return this->operator()( 0, h );
+	    String::AsciiValue asc( h );
+	    return std::string( *asc ? *asc : "" );
 	}
     };
 
@@ -528,10 +471,6 @@ namespace convert {
 	    this->kludge = JSToNative<std::string>()( h );
 	    return this->kludge.c_str();
 	}
-	ResultType operator()( BindKeyType, ValueHandle const & h )
-	{
-	    return this->operator()( h );
-	}
     };
 #else
     /** Not great, but a happy medium. */
@@ -541,32 +480,14 @@ namespace convert {
 
     /**
        Converts h to an object of type NT, using JSToNative<NT> to do
-       the conversion. For most conversions it is normal to pass 0 for cx, but
-       for conversions to work with native types bound via BindNative() this
-       function must be given the proper context key.
-    */
-    template <typename NT>
-    typename JSToNative<NT>::ResultType CastFromJS( ::v8::juice::bind::BindKeyType cx, ValueHandle const & h )
-    {
-	typedef JSToNative<NT> F;
-	typedef typename JSToNative<NT>::ResultType RT;
-	return (RT) F()( cx, h );
-	// ^^^ that cast is to try to support returning void (MS compilers are known
-	// to require a cast for that).
-    }
-
-    /**
-       Convenience overload intended for types which are not fetched
-       using the ::v8::bind API. This includes POD types.
+       the conversion.
     */
     template <typename NT>
     typename JSToNative<NT>::ResultType CastFromJS( ValueHandle const & h )
     {
+
 	typedef JSToNative<NT> F;
-	typedef typename JSToNative<NT>::ResultType RT;
-	return (RT) F()( h );
-	// ^^^ that cast is to try to support returning void (MS compilers are known
-	// to require a cast for that).
+	return F()( h );
     }
 
     /** Convenience instance of JSToNative. */
@@ -743,8 +664,6 @@ namespace convert {
     /** Partial specialization for std::map<>. */
     template <typename KeyT,typename ValT>
     struct NativeToJS< std::map<KeyT,ValT> > : NativeToJS_map< std::map<KeyT,ValT> > {};
-
-
 
 
 #if !defined(DOXYGEN)

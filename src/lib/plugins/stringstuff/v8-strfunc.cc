@@ -53,7 +53,7 @@ namespace str {
 
     static Handle< Value > v8_quote_js( const Arguments & argv )
     {
-	return FwdToFunc1<std::string,std::string>( 0, quote_js_string, argv );
+	return FwdToFunc1<std::string,std::string>( quote_js_string, argv );
 	//return FwdToFunc1<std::string,std::string const &>( 0, quote_js_string, argv );
 	//return StdStringToJS( quote_js_string( JSToStdString(argv[0]) ) );
     }

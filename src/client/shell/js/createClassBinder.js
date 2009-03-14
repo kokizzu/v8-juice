@@ -2,6 +2,8 @@
 Reads a simple grammar from stdin and creates v8::juice::ClassBinder
 code for it (sending it to stdout).
 
+Requires the v8-juice-whio plugin for i/o.
+
 File format:
 
 One record per line. Record types/syntax
@@ -11,6 +13,9 @@ func returnType funcName( argType1, ... argTypeN )
 prop key aJSValue
 # comment line - ignored
 
+A 'func' record's funtion name field may be in the form "nativeName=scriptName",
+in which case the name after the '=' will be used for the JS function.
+
 Empty lines and extraneous spaces are ignored.
 
 For example:
@@ -18,6 +23,7 @@ For example:
 ###################################
 class MyType
 func std::string voodoo(int)
+func int calc_something=calculateSomething(int,int,double)
 prop howdy CastToJS("Hi, there! How're ya?")
 prop yo Integer::New(42)
 ###################################
@@ -96,11 +102,19 @@ function doLine() {
       }
       case 'func':
 	  //print("FUNC:",line);
-	  var pat = /^\s*func\s+(\S+)\s+(\w+)\s*\((.+)?\)\s*$/;
+	  var pat = /^\s*func\s+(\S+)\s+([^(]+)\s*\((.+)?\)\s*$/;
 	  var rx = checkPat(pat);
 	  var rest = rx[3] ? rx[3] : "";
-	  wr.funcs[rx[2]] = {
-	      name:rx[2],
+	  var fn = rx[2];
+	  var name = {cpp:fn,js:fn};
+	  var fn2 = null;
+	  if( (fn2 = /(\w+)=(\w+)/.exec(fn)) )
+	  {
+	      name.cpp = fn2[1];
+	      name.js = fn2[2];
+	  }
+	  wr.funcs[name.cpp] = {
+	      name:name,
 	      returnType:rx[1],
 	      argString:rest,
 	      args:(rest.length ? rest.split(/\s*,\s*/) : [])
@@ -125,7 +139,7 @@ function printWrapperInfo() {
     for( var k in wr.funcs )
     {
 	var f = wr.funcs[k];
-	print("FUNCITON["+k+"] =",f.returnType,f.name,'(',f.args.join(','),')');
+	print("FUNCITON["+k+"] =",f.returnType,f.name.cpp,'(',f.args.join(','),')');
     }
 }
 
@@ -157,8 +171,8 @@ function dumpBinder() {
 	{
 	    out.write(", "+f.args.join(", "));
 	}
-	out.write(", &"+wr.className+"::"+f.name+" >");
-	out.write('("'+f.name+'");');
+	out.write(", &"+wr.className+"::"+f.name.cpp+" >");
+	out.write('("'+f.name.js+'");');
 	out.rewind();
 	var line = out.read(out.size());
 	print(line);
@@ -174,7 +188,7 @@ function main() {
     {
 	readAll();
 	while( doLine() ) {}
-	//printWrapperInfo();
+	printWrapperInfo();
 	dumpBinder();
     }
     catch(e) {
