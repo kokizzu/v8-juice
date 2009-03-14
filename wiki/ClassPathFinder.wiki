@@ -1,5 +1,5 @@
 #summary JS API reference for PathFinder class
-#labels Phase-UserDocs,Domain-JS-API
+#labels Phase-UserDocs,Topic-JS-API
 
 = !PathFinder =
 
