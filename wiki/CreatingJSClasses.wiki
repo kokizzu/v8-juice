@@ -1,5 +1,5 @@
 #summary Creating JS classes from C++
-#labels Phase-UserDocs,Featured
+#labels Phase-UserDocs,Featured,Topic-CPlusPlus
 
 *Achtung:* this page documents the _current_ state of the library, which might be five minutes or a thousand years newer than any given version found on the downloads page.
 
