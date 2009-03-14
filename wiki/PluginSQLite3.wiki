@@ -25,6 +25,11 @@ This plugin has its own manual, in ODT format, available from:
 
 http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/sqlite3/v8-juice-plugin-sqlite3.odt
 
+=Known problems=
+
+  * _NEVER_ dereference (print, assign a property to, or even check for booleaness) any handle type given back from this library. The DB handle type is (now) an Object and can be safely manipulated, but the handles used by `sqlite3_prepare()`, `sqlite3_value_xxx()`, and `sqlite3_result_xxx()` are internally `v8::External` handles and _will_ cause a crash if they are dereferenced from script code. This might be fixed at some point.
+  * The `sqlite3_create_function()` API may crash when used with aggregate functions, for reasons i don't at all understand (it seems that my function handles may be disappearing again).
+
 =Example=
 
 Here's a rather contrived example which i use when testing out the bindings:
