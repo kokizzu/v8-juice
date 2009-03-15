@@ -1,6 +1,8 @@
 #summary Critic and comments about v8
 #labels Topic-BitchAndMoan,Topic-v8
 
+<wiki:toc max_depth="3"/>
+
 =Criticisms=
 
 In my experience, these are the significant problems and caveats associated with binding classes in JS, as demonstration on the [CreatingJSClasses] page.
