@@ -351,7 +351,7 @@ The `Cursor` class is used for iterating over a result set. See the brief exampl
 || `Array columnNames()` || An array of all column names. ||
 || `double getDouble(int ndx)` || The value of the given 0-based result column, converted to a double. If the index is out of bounds it throws. ||
 || `int getInt(int ndx)` || Like `getDouble()`, but for integer values. ||
-|| `int getInt64(int ndx)` || Like `getDouble()`, but for 64-bit integer values. || The value of the given 0-based result column, converted to a 64-bit integer. ||
+|| `int getInt64(int ndx)` || Like `getDouble()`, but for 64-bit integer values.
 || `string getString(int ndx)` || Like `getDouble()`, but for string values. ||
 || `bool isNull(int ndx)` || Returns true if the given column has an SQL NULL value. ||
 || `int reset()` || Equivalent to calling `reset()` on this object's associated Statement. ||
