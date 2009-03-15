@@ -1283,6 +1283,12 @@ namespace sq3 {
 		*/
 		int reset();
 
+		/**
+		   Calls sqlite3_clear() on the underlying statement
+		   handle and returns the result.
+		*/
+		int clear_bindings();
+
 		/** Returns the column count of this prepared
 		    statement, or -1 on error.  May return 0 for
 		    queries which has no return value (e.g. UPDATE).

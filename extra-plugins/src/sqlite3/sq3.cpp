@@ -312,6 +312,13 @@ namespace sq3 {
 			: SQLITE_ERROR;
 	}
 
+	int statement::clear_bindings()
+	{
+		return this->m_stmt.get()
+			? sqlite3_clear_bindings( this->m_stmt.get() )
+			: SQLITE_ERROR;
+	}
+
 	int statement::colcount()
 	{
 		return this->m_stmt.get()
