@@ -3,7 +3,7 @@
 
 <wiki:toc max_depth="3"/>
 
-=Comments and critic regarding v8=
+=Non-critic Commentary=
 
 ==Why use v8?==
 
