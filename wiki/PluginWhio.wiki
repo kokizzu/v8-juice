@@ -109,20 +109,20 @@ In addition to the interface defined by IOBase, it has:
 || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
 || `new IODevice(":memory:" [, int startingSize=0])` || Opens a read/write i/o device which uses RAM as its storage. It starts out at the given size and grows on demand. ||
 || `new IODevice(IODevice,int lower,int upper)`|| Creates a new IODevice which acts as a proxy for a subset of the original device's range. This is described in more detail below. The parent device must outlive the new device. ||
-|| `int error()` || Returns a platform-specific non-0 value if the device has an error state. ||
+|| `int error()` || Returns a platform-specific non-0 value if the device has an error state. `isGood()` is equivalent to `(0 == dev.error())`.||
 || `int clearError()` || Tries to clear any error state and EOF marker. Returns 0 on success. ||
 || `bool eof()` || Returns true if the device is at (or past) its EOF. ||
 || `int tell()` || Returns the current position within the underlying device. ||
 || `int seek(int offset[, int whence=IOBase.SEEK_SET])` || Sets the current position to offset, relative to whence, which must be one of `whio.IOBase.SEEK_SET`, `whio.IOBase.SEET_CUR`, or `whio.IOBase.SEEK_END`. Returns the new position. ||
-|| `int flush()` || Tries to flush any existing write data, if applicable. Some device types might to other handling here. Returns 0 on success. ||
+|| `int flush()` || Tries to flush any existing write data, if applicable. Some device types might do other handling here. Returns 0 on success. ||
 || `int truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
 || `int size()` || Returns the current size of the device. ||
 || `int rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
 || *Properties* (read-only) || *Notes* ||
 || `IODevice ioDevice` || Only for devices created with the `IODevice(IODevice,int,int)` constructor, this points to the subdevice's pointed-to device. ||
 || `string fileName` || Only for objects which are associated with a file. ||
-|| `bool canWrite` || Value depends on how the device was opened. It is not always possible for the stream opener to know if a given stream supports writing (e.g. stdin), and this value may be set incorrectly for those cases. Writing to such a stream will cause the normal write failure, nothing catastrophic. ||
-|| `bool canRead` || Value depends on how the device was opened. For files this value is always true, even if the file being opened cannot support reading (e.g. stdout). That is because the open() routines don't have enough information to know that. In a case like that, reading would fail in the normal manner. ||
+|| `bool canWrite` || Value depends on how the device was opened. It is not always possible for the stream opener to know if a given stream supports writing (e.g. "/dev/stdin"), and this value may be set incorrectly for those cases. Writing to such a stream will cause the normal write failure, nothing catastrophic. ||
+|| `bool canRead` || Value depends on how the device was opened. For files this value is always true, even if the file being opened cannot support reading (e.g. stdout). That is because the open() routines don't have enough information to know that the device cannot be read (or written to, in the case of stdin). In a case like that, reading (or writing) will fail in the normal manner. ||
 
 
 ===SEEK_SET and friends===
