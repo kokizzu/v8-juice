@@ -294,12 +294,12 @@ db.close();
 
 ==sqlite3.Statement class==
 
-The `Statement` class represents a single SQL prepared statement.
+The `Statement` class represents a single SQL prepared statement. A prepared statement is an SQL string which has been "compiled" for use with the database engine, and they are critical for implementing all but the most utterly basic SQL queries.
 
 ===Function list===
 
 || *Functions* || *Notes* ||
-|| `new Statement(DB [,string sql])` || Creates a new prepared statement for the given db. If no sql is given `prepare()` must be called. If sql is given and it cannot be compiled then the ctor throws. ||
+|| `new Statement(DB [,string sql])` || Creates a new prepared statement for the given db. If no sql is given `prepare()` must be called before the object is used. If sql is given and it cannot be compiled then the ctor throws. ||
 || `int bindDouble( int ndx, double val )` || Binds a value as a double to the given index (1-based!) in the query. ||
 || `int bindInt(int ndx, int val)` || Binds a value as an int to the given index (1-based!) in the query. ||
 || `int bindInt64(int ndx, int val)` || Binds a value as a 64-bit integer to the given index (1-based!) in the query. ||
@@ -344,16 +344,17 @@ The `Cursor` class is used for iterating over a result set. See the brief exampl
 ===Function list===
 
 || *Functions* || *Notes* ||
-|| Construction || Call `Statement.getCursor()` to create a Cursor object. ||
+|| Constructor || Call `Statement.getCursor()` to create a Cursor object. ||
 || `void finalize()` || Destroys the cursor. _MUST_ be called _BEFORE_ the associated statement is finalized. See `Statement.finalize()` for details. ||
 || `int columnCount()` || The number of columns in this result set. ||
 || `string columnName(int ndx)` || The column name of the 0-based result column. (In contrast to the SQL bind interface, which uses 1-based indexes!) ||
 || `Array columnNames()` || An array of all column names. ||
-|| `double getDouble(int ndx)` || The value of the given 0-based result column, converted to a double. ||
-|| `int getInt(int ndx)` || The value of the given 0-based result column, converted to an integer. ||
-|| `int getInt64(int ndx)` || The value of the given 0-based result column, converted to a 64-bit integer. ||
-|| `string getString(int ndx)` || The value of the given 0-based result column, converted to a string. ||
+|| `double getDouble(int ndx)` || The value of the given 0-based result column, converted to a double. If the index is out of bounds it throws. ||
+|| `int getInt(int ndx)` || Like `getDouble()`, but for integer values. ||
+|| `int getInt64(int ndx)` || Like `getDouble()`, but for 64-bit integer values. || The value of the given 0-based result column, converted to a 64-bit integer. ||
+|| `string getString(int ndx)` || Like `getDouble()`, but for string values. ||
 || `bool isNull(int ndx)` || Returns true if the given column has an SQL NULL value. ||
 || `int reset()` || Equivalent to calling `reset()` on this object's associated Statement. ||
 || `int step()` || Steps one result row and returns the result of [http://sqlite.org/c3ref/step.html sqlite3_step()]. In general `SQLITE_OK`, `SQLITE_ROW`, or `SQLITE_DONE` may be success values, depending on the SQL code being executed. ||
 
+All cursors which refer to a Statement object all refer to the same underlying statement, so reseting one of them will reset the statement for all related cursors. Also note that when a cursor is finalized, the underlying statement is reset (this has a long history in the underying C++ implementation, and is not easily changed due to the reference counting involved).
