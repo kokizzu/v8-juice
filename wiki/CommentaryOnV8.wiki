@@ -3,9 +3,30 @@
 
 <wiki:toc max_depth="3"/>
 
+=Comments=
+
+==Why use v8?==
+
+For several years i've maintained a project called [http://SpiderApe.sf.net SpiderApe], which is basically a library like v8-juice but built for the !SpiderMonkey !JavaScript engine (the only used by Mozilla and friends). !SpiderMonkey isn't actually all that bad except that it suffers from a serious lack of documentation, especially for threading-related issues. i haven't written any code for Monkey in some time, and when i found out about v8 (late February, 2009) i was very excited to finally have access to a C++-based JS engine. So i started hacking.
+
+My initial experiments took the form of porting sqlite3 bindings from Monkey to v8-juice. Ninety percent of the code was a 1-to-1 copy, mostly changing the names of the JS/C++ conversion operators. So, on the surface v8 and Monkey would seem to have very similar interfaces and semantics (they don't, actually, but the usages are nonetheless very similar). So then came the question, "why use v8 if the client code looks just like Monkey code?" One good reason is that v8 allows us to register object destructors for use by the garbage collector. (However, i only found out later that the v8 GC is never guaranteed to call those destructors - see below for a rant on that topic.)
+
+Anyway... at this point my v8 usage is experimental in nature. It's got several design aspects which notably hinder some of my early use-cases (see below), and at this point it's not certain whether i'll be sticking with v8 or not.
+
 =Criticisms=
 
 In my experience, these are the significant problems and caveats associated with binding classes in JS, as demonstration on the [CreatingJSClasses] page.
+
+==No GC guaranty==
+
+  "Let me explain. No, no, there is too much. Let me sum up." - Inigo Montoya
+
+v8 allows us to register "weak pointer callbacks" which get called when a given JS object is to be destructed by the GC system. However, even if we register destructors, v8 may decide to never call the GC. Doh. So we still never get a guaranty that our destructors are all. This is, in my opinion, a half-ass non-solution. For bound types which require a destructor call for proper cleanup, it is useless as a cleanup mechanism, requiring the client to build add-on GC support. That, in turn, requires adding some form of API which we can call to say "clean up any objects which v8 didn't get around to cleaning up." That intrudes not only on the library author, but also on any clients of that library (i.e. its intrusive). Another wrench in this approach is that we, at the library level, cannot know if v8 is done working yet (i.e. if the app using our library may still need to execute JS code). This can only be known by the top-level app which creates the v8 context.
+
+Anyway... there's lots more bitching and moaning to do here, but i've already said it all elsewhere and i'm just beating a dead horse.
+
+Oh, except to say: reportedly, the reason which v8 never guarantees that GC will be called (even when it is shutting down and therefore cannot be executing client-side JS code), is for "performance reason." So, it trades performance for leaks. Great. Just what we need in a script-language library, where objects are indiscriminately created by the thousands by script users who have no idea what the underlying call to `malloc()` just robbed them of.
+
 
 ==The Stack and static functions==
 
