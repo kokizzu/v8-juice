@@ -28,12 +28,12 @@ It will install to the default v8-juice plugins directory.
 
 
 {{{
-var my = {};
+var my = {fn:"my.history"};
 load_plugin('v8-juice-readline',my);
-if( my.readline.loadHistory(fn) ) {
-    print("Loaded history file",fn);
+if( my.readline.loadHistory(my.fn) ) {
+    print("Loaded history file",my.fn);
 } else {
-    print("Couldn't load history file",fn);
+    print("Couldn't load history file",my.fn);
 }
 var s;
 while( undefined != (s = my.readline.read("Enter something (Ctrl-D quits): ")) )
