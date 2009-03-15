@@ -21,6 +21,7 @@
 */
 
 #include <vector>
+#include <set>
 
 #include <iostream> /* only for debuggering */
 #ifndef CERR
@@ -95,7 +96,7 @@ char const * strings::classCursor = "Cursor";
 class DBWrapper// : public v8::juice::WrappedClassBase<DBWrapper>
 {
 public:
-    typedef v8::juice::WrappedClassBase<DBWrapper> ScriptedBase;
+    //typedef v8::juice::WrappedClassBase<DBWrapper> ScriptedBase;
     /**
        Database handle. This type owns handles associated
        with it.
@@ -144,6 +145,18 @@ public:
     HV vacuum();
     HV clear();
 
+    /**
+       T must be one of: int, int64_t, std::string, double
+    */
+    template <typename T>
+    HV executeT( std::string const & sql )
+    {
+        T val;
+        if( SQLITE_OK != proxy.execute( sql, val ) )
+        { TOSS("Execution of SQL failed!"); }
+        return CastToJS(val);
+    }
+
     static DBWrapper * GetNative( HV );
     static DBWrapper * GetNative( Local<Object> );
 
@@ -171,10 +184,16 @@ public:
     HV finalize();
     HV prepare( Arguments const & );
 
+    /**
+       bind() impl for T, which must be one of: int, int64_t, double
+     */
+    template <typename T>
+    HV bindNum( int ndx, T val )
+    {
+        return CastToJS( proxy.bind(ndx,val) );
+    }
+
     HV bindNull( int ndx ) { return CastToJS(proxy.bind(ndx)); }
-    HV bindInt( int ndx, int val ) { return CastToJS(proxy.bind(ndx,val)); }
-    HV bindInt64( int ndx, int64_t val ) { return CastToJS(proxy.bind(ndx,val)); }
-    HV bindDouble( int ndx, double val ) { return CastToJS(proxy.bind(ndx,val)); }
     HV bindText( int ndx, std::string const & val, uint32_t len )
     {
         if( len > val.size() ) len = val.size();
@@ -192,6 +211,9 @@ public:
     static StmtWrapper * GetNative( Local<Object> );
 
     HV getCursor();
+
+    HV execute() { return CastToJS(proxy.execute()); }
+
 };
 Persistent<Function> StmtWrapper::js_ctor;
 
@@ -210,7 +232,7 @@ public:
     }
 
     typedef Handle<Value> HV;
-    HV close() { proxy.close(); return ::v8::Undefined(); }
+    HV finalize();
     HV columnCount() { return CastToJS(proxy.colcount()); }
     HV step() { return CastToJS(proxy.step()); }
     HV reset() { return CastToJS(proxy.reset()); }
@@ -221,6 +243,21 @@ public:
         if( SQLITE_OK != proxy.colname( index, name) )
         {TOSS("Error getting column info!");}
         return CastToJS(name);
+    }
+
+    HV columnNames()
+    {
+        const int c = proxy.colcount();
+        HandleScope sentry;
+        Handle<Array> ar( Array::New(c) );
+        std::string name;
+        for( int i = 0; i < c; ++i )
+        {
+            if( SQLITE_OK != proxy.colname( i, name) )
+            {TOSS("Error getting column info!");}
+            ar->Set( Integer::New(i),CastToJS(name) );
+        }
+        return ar;
     }
 
     HV isNull( int index )
@@ -278,11 +315,15 @@ struct BaseWeakOps
     static void Dtor( WrappedType * obj )
     {
         cleanup::RemoveFromCleanup( obj );
-        CERR << "Destroying wrapped object @"<<obj<<'\n';
+        CERR << "Destroying wrapped "<<ClassName()<<" object @"<<obj<<'\n';
         delete obj;
     }
     static void cleanup_callback( void * obj )
     {
+        // FIXME: for Cursors we need to first ensure
+        // that all Statements are cleaned up first, or else
+        // we can crash at cleanup time if Cursor.close() was
+        // never called by the client and the cursor was never GC'd
         Dtor( static_cast<WrappedType *>( obj ) );
     }
 };
@@ -323,6 +364,12 @@ namespace v8 { namespace juice {
     template <>
     struct WeakJSClassCreatorOps<StmtWrapper> : BaseWeakOps<StmtWrapper,strings::classStatement>
     {
+        typedef std::set<StmtWrapper*> GCList;
+        static GCList & gcList()
+        {
+            static GCList bob;
+            return bob;
+        }
         static WrappedType * Ctor( Arguments const & argv,
                                    std::string & exceptionText )
         {
@@ -342,14 +389,28 @@ namespace v8 { namespace juice {
             if( 2 == argc )
             {
                 st = new StmtWrapper( db, JSToStdString(argv[1]) );
+                if( ! st->proxy.is_prepared() )
+                {
+                    delete st;
+                    exceptionText = "sqlite3_prepare() failed!";
+                    return 0;
+                }
             }
             else
             {
                 st = new StmtWrapper( db );
             }
+            gcList().insert(st);
             CERR << "Created StmtWrapper object @"<<st<<'\n';
             AddToCleanup( st );
             return st;
+        }
+        static void Dtor( WrappedType * obj )
+        {
+            cleanup::RemoveFromCleanup( obj );
+            gcList().erase(obj);
+            CERR << "Destroying wrapped "<<ClassName()<<" object @"<<obj<<'\n';
+            delete obj;
         }
     };
 
@@ -394,16 +455,27 @@ typedef ClassBinder<DBWrapper> DBWeakWrap;
 typedef ClassBinder<StmtWrapper> StmtWeakWrap;
 typedef ClassBinder<CursorWrapper> CursorWeakWrap;
 
+#define ARGC int argc = argv.Length()
+#define ASSERTARGS(COND) if(!(COND)) return ThrowException(String::New("Arguments assertion failed: " # COND))
+
 
 Handle<Value> DBWrapper::close()
 {
     DBWeakWrap::DestroyObject( DBWeakWrap::GetJSObject(this) );
     return Undefined();
 }
+
+Handle<Value> CursorWrapper::finalize()
+{
+    CursorWeakWrap::DestroyObject( CursorWeakWrap::GetJSObject(this) );
+    return Undefined();
+}
+
 Handle<Value> DBWrapper::execute( Arguments const & argv )
 {
-    //return proxy.execute( sql.c_str() );
-    TOSS("Not yet implemented.");
+    ARGC; ASSERTARGS((argc==1)); // TODO: (sql,callbackFunc[, userData])
+    std::string sql( JSToStdString(argv[0]) );
+    return CastToJS(proxy.execute( sql.c_str() ) );
 }
 
 DBWrapper * DBWrapper::GetNative( Handle<Value> v )
@@ -458,8 +530,6 @@ StmtWrapper * StmtWrapper::GetNative( Local<Object> v )
 }
 
 
-#define ARGC int argc = argv.Length()
-#define ASSERTARGS(COND) if(!(COND)) return ThrowException(String::New("Arguments assertion failed: " # COND))
 
 
 #define DB_ARG(HND) DBWrapper * db = CastFromJS<DBWrapper>( HND );            \
@@ -567,19 +637,19 @@ JS_WRAPPER(sq3_bind_null)
 JS_WRAPPER(sq3_bind_int)
 {
     SETUP_STMTFWD((argc==3));
-    return st->bindInt( JSToInt32(argv[1]), JSToInt32(argv[2]) );
+    return st->bindNum( JSToInt32(argv[1]), JSToInt32(argv[2]) );
 }
 
 JS_WRAPPER(sq3_bind_int64)
 {
     SETUP_STMTFWD((argc==3));
-    return st->bindInt64( JSToInt32(argv[1]), JSToInt64(argv[2]) );
+    return st->bindNum( JSToInt32(argv[1]), JSToInt64(argv[2]) );
 }
 
 JS_WRAPPER(sq3_bind_double)
 {
     SETUP_STMTFWD((argc==3));
-    return st->bindDouble( JSToInt32(argv[1]), JSToDouble(argv[2]) );
+    return st->bindNum( JSToInt32(argv[1]), JSToDouble(argv[2]) );
 }
 
 JS_WRAPPER(sq3_bind_text)
@@ -635,21 +705,25 @@ static Handle<Value> SetupSQ3( Handle<Object> gl )
     gl->Set(JSTR("sqlite3"), sqobj);
     typedef Handle<Value> HV;
     {
-        DBWeakWrap gen(sqobj);
+        DBWeakWrap wr(sqobj);
         typedef DBWrapper DBW;
-        gen.BindMemFunc< HV, &DBW::close >( "close" );
-        gen.BindMemFunc< HV, &DBW::changes >( "changes" );
-        gen.BindMemFunc< HV, &DBW::insertid >( "lastInsertID" );
-        gen.BindMemFunc< HV, int, &DBW::setbusytimeout >( "setBusyTimeout" );
-        gen.BindMemFunc< &DBW::execute >("execute");
-        gen.BindMemFunc< HV, &DBW::errmsg >("errorMessage");
-        gen.BindMemFunc< HV, &DBW::vacuum >("vacuum");
-        gen.BindMemFunc< HV, &DBW::clear >("clear");
-        gen.BindMemFunc< HV, std::string const &, &DBW::pragma >("execPragma");
-        gen.Seal();
+        wr.BindMemFunc< HV, &DBW::close >( "close" );
+        wr.BindMemFunc< HV, &DBW::changes >( "changes" );
+        wr.BindMemFunc< HV, &DBW::insertid >( "lastInsertID" );
+        wr.BindMemFunc< HV, int, &DBW::setbusytimeout >( "setBusyTimeout" );
+        wr.BindMemFunc< &DBW::execute >("execute");
+        wr.BindMemFunc< HV, &DBW::errmsg >("errorMessage");
+        wr.BindMemFunc< HV, &DBW::vacuum >("vacuum");
+        wr.BindMemFunc< HV, &DBW::clear >("clear");
+        wr.BindMemFunc< HV, std::string const &, &DBW::pragma >("execPragma");
+        wr.BindMemFunc< HV, std::string const &, &DBW::executeT<int> >( "executeInt" );
+        wr.BindMemFunc< HV, std::string const &, &DBW::executeT<int64_t> >( "executeInt64" );
+        wr.BindMemFunc< HV, std::string const &, &DBW::executeT<double> >( "executeDouble" );
+        wr.BindMemFunc< HV, std::string const &, &DBW::executeT<std::string> >( "executeString" );
+        wr.Seal();
         if( DBW::js_ctor.IsEmpty() )
         {
-            DBW::js_ctor = Persistent<Function>::New( gen.CtorTemplate()->GetFunction() );
+            DBW::js_ctor = Persistent<Function>::New( wr.CtorTemplate()->GetFunction() );
         }
     }
 
@@ -660,16 +734,16 @@ static Handle<Value> SetupSQ3( Handle<Object> gl )
         stmt.BindMemFunc< HV, &STW::finalize >("finalize");
         stmt.BindMemFunc< &STW::prepare >("prepare");
         stmt.BindMemFunc< bool, &STW::isPrepared >("isPrepared");
-
         stmt.BindMemFunc< HV, int, &STW::bindNull >( "bindNull" );
-        stmt.BindMemFunc< HV, int, int, &STW::bindInt >( "bindInt" );
-        stmt.BindMemFunc< HV, int, int64_t, &STW::bindInt64 >( "bindInt64" );
-        stmt.BindMemFunc< HV, int, double, &STW::bindDouble >( "bindDouble" );
+        stmt.BindMemFunc< HV, int, int, &STW::bindNum<int> >( "bindInt" );
+        stmt.BindMemFunc< HV, int, int64_t, &STW::bindNum<int64_t> >( "bindInt64" );
+        stmt.BindMemFunc< HV, int, double, &STW::bindNum<double> >( "bindDouble" );
         stmt.BindMemFunc< HV, int, std::string const &, &STW::bindText >( "bindText" );
         stmt.BindMemFunc< HV, &STW::columnCount >( "columnCount" );
         stmt.BindMemFunc< HV, &STW::reset >( "reset" );
         stmt.BindMemFunc< HV, &STW::clearBindings >( "clearBindings" );
         stmt.BindMemFunc< HV, &STW::getCursor >( "getCursor" );
+        stmt.BindMemFunc< HV, &STW::execute >( "execute" );
         stmt.Seal();
         if( STW::js_ctor.IsEmpty() )
         {
@@ -680,18 +754,17 @@ static Handle<Value> SetupSQ3( Handle<Object> gl )
     {
         CursorWeakWrap curs(sqobj);
         typedef CursorWrapper CURW;
-        curs.BindMemFunc< HV, &CURW::close >("close");
+        curs.BindMemFunc< HV, &CURW::finalize >("finalize");
         curs.BindMemFunc< HV, &CURW::columnCount >( "columnCount" );
         curs.BindMemFunc< HV, &CURW::step >( "step" );
         curs.BindMemFunc< HV, &CURW::reset >( "reset" );
         curs.BindMemFunc< HV, int, &CURW::columnName >( "columnName" );
+        curs.BindMemFunc< HV, &CURW::columnNames >( "columnNames" );
         curs.BindMemFunc< HV, int, &CURW::isNull >( "isNull" );
-
         curs.BindMemFunc< HV, int, &CURW::getT<int> >( "getInt" );
         curs.BindMemFunc< HV, int, &CURW::getT<int64_t> >( "getInt64" );
         curs.BindMemFunc< HV, int, &CURW::getT<double> >( "getDouble" );
         curs.BindMemFunc< HV, int, &CURW::getT<std::string> >( "getString" );
-
         curs.Seal();
         if( CURW::js_ctor.IsEmpty() )
         {

@@ -1,12 +1,21 @@
 print("Starting up...");
 
 load_plugin('v8-juice-sqlite3');
-var my = {db:0,stmt:0,file:"my.db"};
+var my = {db:0,
+          stmt:0,
+          sep:'\t',
+          file:"my.db"
+};
 
 my.db = new sqlite3.DB(my.file);
 //my.db = sqlite3_open(my.file);
 //print("Using sqlite3 version",sqlite3_libversion());
 print('db =',my.db);
+
+var rc = my.db.execute("create table if not exists bogo(a,b,c)");
+print("execute rc=",rc);
+print("execute val=",my.db.executeInt("select 8*8"));
+
 
 function tryOne(){
     print('changes =',sqlite3_changes(my.db));
@@ -20,7 +29,7 @@ function tryOne(){
         var curs = new sqlite3.Cursor(st);
         var rc = curs.step();
         print("step() rc=",rc,'errmsg=',my.db.errorMessage());
-        curs.close();
+        curs.finalize();
     }
     {
         st.prepare("insert into t values(?,?)");
@@ -36,7 +45,7 @@ function tryOne(){
             st.clearBindings();
             curs.reset();
         }
-        curs.close();
+        curs.finalize();
     }
     sql = "select * from t order by rowid desc limit 5";
     st.prepare(sql);
@@ -57,11 +66,21 @@ function tryOne(){
         }
     }
     var curs = new sqlite3.Cursor(st);
+    var colCount = curs.columnCount();
+    var colName =curs.columnName( colCount -1 );
+    var colNames = curs.columnNames();
+    print( colNames.join(my.sep) );
     for( var i = curs.step(); (SQLITE_ROW == (i = curs.step())); )
     {
-        print('cursor step #'+i+':',curs.columnName(1),'=',curs.getString(1));
+        //print('cursor step #'+i+':',colName,'=',curs.getString(colCount-1));
+        var ar = [];
+        for( var c = 0; c < colCount; ++c )
+        {
+            ar.push( curs.getString(c) );
+        }
+        print(ar.join(my.sep));
     }
-    curs.close();
+    curs.finalize();
     st.finalize();
 }
 
