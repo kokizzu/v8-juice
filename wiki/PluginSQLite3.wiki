@@ -1,7 +1,7 @@
 #summary JS Bindings for SQLite3
 #labels Phase-UserDocs,Topic-Plugins
 
-*Achtung:* this plugin is currently (20090315) being rewritten to accommodate recent changes in the v8-juice API.
+*ACHTUNG:* the current version (20090313+) of this plugin is sorely broken because its in the middle of a rewrite. Don't use it until this warning note goes away.
 
 <wiki:toc max_depth="3"/>
 
@@ -16,23 +16,24 @@ All of the most significant features of sqlite3 are supported except:
   *  The BLOB-related functions are missing. There would seem to be relatively few safe (in terms of type conversion) ways to use this from JS.
   *  The UTF16 functions are missing, as v8 does not directly support UTF16 (only in a roundabout manner).
 
-Everything else one would "normally" need from script code is scriptable, including custom SQL functions via `sqlite3_create_function()`. The API provides native-side access to the DB handles created from script code, so clients can extend their script-side DBs using functionality not provided by these bindings.
+Everything else one would "normally" need from script code is scriptable. The API provides native-side access to the DB handles created from script code, so clients can extend their script-side DBs using functionality not provided by these bindings.
 
-These bindings are a direct port of the "original" bindings, which where implemented for SpiderMonkey and are described here:
-http://spiderape.sourceforge.net/plugins/sqlite/
+=The C-style API=
 
-=JS API Docs=
+==JS API Docs==
 
-This plugin has its own manual, in ODT format, available from:
+The non-OO API of this plugin has its own manual, in ODT format, available from:
 
 http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/sqlite3/v8-juice-plugin-sqlite3.odt
 
-=Known problems=
+For the API of the object-oriented interface, see below.
 
-  * _NEVER_ dereference (print, assign a property to, or even check for booleaness) any handle type given back from this library. The DB handle type is (now) an Object and can be safely manipulated, but the handles used by `sqlite3_prepare()`, `sqlite3_value_xxx()`, and `sqlite3_result_xxx()` are internally `v8::External` handles and _will_ cause a crash if they are dereferenced from script code. This might be fixed at some point.
+==Known problems==
+
   * The `sqlite3_create_function()` API may crash when used with aggregate functions, for reasons i don't at all understand (it seems that my function handles may be disappearing again).
+  * Applies to the older C-style API, but not the rewrite:_NEVER_ dereference (print, assign a property to, or even check for booleaness) any handle type given back from this library. The DB handle type is (now) an Object and can be safely manipulated, but the handles used by `sqlite3_prepare()`, `sqlite3_value_xxx()`, and `sqlite3_result_xxx()` are internally `v8::External` handles and _will_ cause a crash if they are dereferenced from script code. This might be fixed at some point.
 
-=Example=
+==Example==
 
 Here's a rather contrived example which i use when testing out the bindings:
 
@@ -214,3 +215,145 @@ a	b	c
 Shuting down...
 Done!
 }}}
+
+
+=Object-oriented API=
+
+*ACHTUNG:* this is still very much in development. These docs
+represent the state of the code in subversion.
+
+This is an overview of the JS-side API for the object-oriented sqlite3 bindings.
+
+Summary of the classes:
+
+  * `sqlite3.DB` is a database object.
+  * `sqlite3.Statement` is a prepared SQL statement (analog to [http://sqlite.org/c3ref/prepare.html sqlite3_prepare_v2()]).
+  * `sqlite3.Cursor` is a helper type for  iterating over query results.
+
+TODOs:
+  * Many convenience routines are missing.
+  * Tie in to the non-OO API, so we can use them together. This is partially done but there's still lots to do.
+  * Callback functions (for `sqlite3_exec()` and `sqlite3_create_function()`)  are not yet implemented.
+
+==Error codes==
+
+Many routines in this API return integer error codes. These are always
+codes from the sqlite3 API, the most important of which are
+`SQLITE_OK`, `SQLITE_ROW`, and `SQLITE_DONE` (anything else is an
+error code, whereas these are success codes in different contexts).
+
+When the API encounters an error which is not reported by sqlite3 it
+will normally throw an exception.  For example, passing a non-db
+object to a function requiring one will cause an exception to be
+thrown.
+
+==Destruction of objects (IMPORTANT!)==
+
+The DB class has a `close()` method, and the Statement and Cursor classes each have a `finalize()` method. Each of these ends our use of the associated underlying native resources (e.g. the db handle or prepared statement). It is _critical_ that they be called by the user. Relying on the non-deterministic destruction via JS GC will eventually lead to problems. More info...
+
+`sqlite3_close()` will fail with an error if any statements are opened. Thus statements must be finalized (call `st.finalize()` on it when you're done). A Cursor object directly refers back to a specific statement and _must_ be destroyed (call `curs.close()`) _before_ the associated statement is finalized. If a statement is destroyed before the cursor is, it can cause the cursor to try to use a non-existent resource, causing a crash. If neither the statement nor the cursor are closed by the client then GC might eventually destroy them in the wrong order, leading to a crash at some arbitrary point in your application.
+
+So, to summarize:
+
+  * Always call `DB.close()` to close a `DB` object.
+  * Always call `Statement.finalize()` to destroy a `Statement` object.
+  * Always call `Cursor.finalize()` to close a `Cursor` object.
+
+
+
+==sqlite3.DB class==
+
+The `DB` class manages a single sqlite3 database connection.
+
+===Function list===
+
+|| *Functions* || *Notes* ||
+|| `new DB(String filename)` || Opens the given db or throws (remember that `:memory:` is a special name for in-memory databases. ||
+|| `changes()` || Returns the number of rows modified by the most recently completed SQL statement. ||
+|| `clear()` || _BE CAREFUL!!!_ Drops all tables and views in the database! ||
+|| `close()` || Closes the DB connection. No member functions should be called after this. ||
+|| `string errorMessage()` || Returns the current error text. Remember that sqlite3 uses the literal string "not an error" when there is no error! ||
+|| `int execPragma(String pragma)` || Convenience form of `execute("pragma ...")`. Argument must be in the form of an sqlite3 pragma without the leading `pragma` word, e.g. `SYNCHRONOUS=OFF`.||
+|| `int execute(String sql)` || Executes the given SQL and returns the result of `sqlite3_exec()`.||
+|| `double executeDouble(String sql)` || Executes the given SQL and returns the result as a double. If compilation of the SQL fails then it throws. ||
+|| `int executeInt(String sql)` || As for `executeDouble()`, but returns the value as an integer. ||
+|| `int executeInt64(String sql)` || As for `executeDouble()`, but returns the value as a 64-bit integer. ||
+|| `string executeString(String sql)` || As for `executeDouble()`, but returns the value as a string. ||
+|| `int lastInsertID()` || Returns the last row ID assigned via an insertion operation. ||
+|| `void setBusyTimeout(int ms)` || Sets the "busy timeout" of the underlying sqlite3 engine. ||
+|| `int vacuum()` || Vacuums the database, possibly shrinking its size. ||
+
+===Example===
+
+{{{
+var db = new sqlite3.DB("my.db");
+db.execute("create table if not exists t(a,b,c)");
+...
+db.close();
+}}}
+
+==sqlite3.Statement class==
+
+The `Statement` class represents a single SQL prepared statement.
+
+===Function list===
+
+|| *Functions* || *Notes* ||
+|| `new Statement(DB [,string sql])` || Creates a new prepared statement for the given db. If no sql is given `prepare()` must be called. If sql is given and it cannot be compiled then the ctor throws. ||
+|| `int bindDouble( int ndx, double val )` || Binds a value as a double to the given index (1-based!) in the query. ||
+|| `int bindInt(int ndx, int val)` || Binds a value as an int to the given index (1-based!) in the query. ||
+|| `int bindInt64(int ndx, int val)` || Binds a value as a 64-bit integer to the given index (1-based!) in the query. ||
+|| `int bindNull(int ndx)` || Binds NULL to the given index (1-based!) in the query. ||
+|| `int bindText(int ndx, string text [,length=text.length])` || Binds a value as a string to the given index (1-based!) in the query. If the 3rd argument is specified, only that many bytes (at most) are used. ||
+|| `int clearBindings()` || Nulls all bound values. ||
+|| `int columnCount()` || Returns the number of columns in the statement. ||
+|| `finalize()` || Destroys the statement. This must be called to ensure that the underlying statement is destroyed. Failing to do so may lead to failure in later DB operations, or even a crash when the app exits (and the statement tries to clean up). ||
+|| `Cursor getCursor()` || Returns a new Cursor object for traversing a query's results. ||
+|| `bool isPrepared()` || Returns true if the last `prepare()` succeeded. ||
+|| `int prepare(string sql)` || Prepares the given SQL for execution. Unlike the constructor, if compilation of the SQL fails then it returns a non-zero error code (as specified by `sqlite3_prepare()`). It is okay to re-use a Statement object by calling `prepare()` with new SQL code. ||
+|| `int reset()` || Resets the status of the query, such that looping over the results will start back at the beginning. ||
+
+===Example===
+
+{{{
+var st = new sqlite3.Statement(db,"select * from t");
+var sep = '\t';
+var curs = st.getCursor();
+var colCount = curs.columnCount();
+print( curs.columnNames().join(sep) );
+while( SQLITE_ROW == curs.step() )
+{
+        var ar = [];
+        for( var c = 0; c < colCount; ++c )
+        {
+            ar.push( curs.getString(c) );
+        }
+        print(ar.join(my.sep));
+}
+curs.finalize(); // IMPORTANT: not doing this may lead to a "locked" DB or even a crash during GC at shutdown.
+st.finalize(); // Again, IMPORTANT.
+}}}
+
+The various "bind" functions can be used to attach values to query string placeholders (e.g. `"insert into t values(?)"`).
+
+
+==sqlite3.Cursor class==
+
+The `Cursor` class is used for iterating over a result set. See the brief example above.
+
+===Function list===
+
+|| *Functions* || *Notes* ||
+|| Construction || Call `Statement.getCursor()` to create a Cursor object. ||
+|| `void finalize()` || Destroys the cursor. _MUST_ be called _BEFORE_ the associated statement is finalized. See `Statement.finalize()` for details. ||
+|| `int columnCount()` || The number of columns in this result set. ||
+|| `string columnName(int ndx)` || The column name of the 0-based result column. (In contrast to the SQL bind interface, which uses 1-based indexes!) ||
+|| `Array columnNames()` || An array of all column names. ||
+|| `double getDouble(int ndx)` || The value of the given 0-based result column, converted to a double. ||
+|| `int getInt(int ndx)` || The value of the given 0-based result column, converted to an integer. ||
+|| `int getInt64(int ndx)` || The value of the given 0-based result column, converted to a 64-bit integer. ||
+|| `string getString(int ndx)` || The value of the given 0-based result column, converted to a string. ||
+|| `bool isNull(int ndx)` || Returns true if the given column has an SQL NULL value. ||
+|| `int reset()` || Equivalent to calling `reset()` on this object's associated Statement. ||
+|| `int step()` || Steps one result row and returns the result of [http://sqlite.org/c3ref/step.html sqlite3_step()]. In general `SQLITE_OK`, `SQLITE_ROW`, or `SQLITE_DONE` may be success values, depending on the SQL code being executed. ||
+
