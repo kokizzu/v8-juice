@@ -440,4 +440,4 @@ There are some real-world examples of using these types in the v8-juice source t
 
 =Real-world problems and caveats=
 
-See the [V8Criticisms v8 criticisms page].
+See the [CommentaryOnV8 v8 criticisms page].
