@@ -257,6 +257,30 @@ namespace juice {
 #endif
 
     /**
+       InvocationCallbackMember is a helper type for binding InvocationCallback-like
+       member functions. It requires that T be supported by WeakJSClassCreator. The Func
+       template parameter is the member invocation callback which we want to proxy.
+    */
+    template <typename T,
+              ::v8::Handle< ::v8::Value > (T::*Func)( ::v8::Arguments const & argv )
+              >
+    struct InvocationCallbackMember
+    {
+	/**
+           Extracts a native T object from argv using
+           WeakJSClassCreator<T>::GetSelf() and passes the call on to
+           obj->Func(). If no object can be found it throws a JS
+           exception, otherwise it returns the result of the proxied call.
+	*/
+	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
+	{
+            T * self = WeakJSClassCreator<T>::GetSelf( argv.This() );
+            if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
+            return (self->*Func)( argv );
+	}
+    };
+
+    /**
        ClassBinder is a WeakJSClassCreator subclass which adds some
        binding features which required other v8::juice APIs (as opposed
        to WeakJSClassCreator, which requires only core v8 functionality).
@@ -339,6 +363,13 @@ namespace juice {
 	/** Does nothing. */
 	virtual ~ClassBinder() {}
 
+        template < Handle<Value> (WrappedType::*Func)( Arguments const & ) >
+        ClassBinder & BindMemFunc( char const * name )
+        {
+            this->Set(name, InvocationCallbackMember<WrappedType,Func>::Call );
+            return *this;
+        }
+
 	/**
 	   Binds the member function Func to the given name.
 	*/
@@ -366,6 +397,30 @@ namespace juice {
     }; // class ClassBinder
 
 
+    /** Experimental. Don't use. */
+    template <typename WrappedT>
+    class WrappedClassBase
+    {
+    public:
+        typedef WrappedT WrappedType;
+        explicit WrappedClassBase( Handle<Object> jsThis )
+            : jself(jsThis)
+        {
+        }
+        explicit WrappedClassBase( Arguments const & argv )
+            : jself(argv.This())
+        {
+        }
+
+        virtual ~WrappedClassBase() {}
+
+        Handle<Object> GetJSSelf() const
+        {
+            return this->jself;
+        }
+    private:
+        Handle<Object> jself;
+    };
 
 }} /* namespaces */
 
