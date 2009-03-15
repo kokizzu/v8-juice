@@ -1,6 +1,8 @@
 #summary JS Bindings for SQLite3
 #labels Phase-UserDocs,Topic-Plugins
 
+*Achtung:* this plugin is currently (20090315) being rewritten to accommodate recent changes in the v8-juice API.
+
 <wiki:toc max_depth="3"/>
 
 =The sqlite3 bindings=
