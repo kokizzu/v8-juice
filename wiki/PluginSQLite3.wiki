@@ -18,6 +18,10 @@ All of the most significant features of sqlite3 are supported except:
 
 Everything else one would "normally" need from script code is scriptable. The API provides native-side access to the DB handles created from script code, so clients can extend their script-side DBs using functionality not provided by these bindings.
 
+==The source code==
+
+http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/sqlite3/
+
 =The C-style API=
 
 ==JS API Docs==
