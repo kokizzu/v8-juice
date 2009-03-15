@@ -1,4 +1,5 @@
 #summary Critic and comments about v8
+#labels Topic-BitchAndMoan,Topic-v8
 
 =Criticisms=
 
