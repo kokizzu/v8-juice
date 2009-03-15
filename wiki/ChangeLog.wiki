@@ -19,7 +19,7 @@ http://code.google.com/p/v8-juice/source/browse/
 
 
 *2009 March 12* (after the release, i think)
-  * Got binding to non-const member functions working.
+  * Got binding to non-const member functions, and those returning void, working.
 
 ==*2009 March 12*==
   * Released new version.
