@@ -53,6 +53,8 @@ See below for the complete class and function list.
 ==TODOs==
 
   * Make the vals from whio_rc.XXX available via whio.rc.XXX. whio_rc.SizeTError needs special handling due to (potentially) different sizes in the underlying numeric types.
+  * Either overload read/write() to take an Array of integers or add readBytes()/writeBytes(Array) to allow the safe reading/writing of non-ASCII data.
+  * Maybe create a !ByteArray class, which is just an in-memory IODevice. An implementation exists but it's real value is in doubt, so it's not published yet.
 
 =JS API for the whio classes=
 
