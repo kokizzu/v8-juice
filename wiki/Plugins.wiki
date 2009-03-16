@@ -4,7 +4,7 @@
 *Achtung:* some of the plugins were broken with recent (20090312) changes/improvements in the core lib and need some significant reworking before they'll be useful again. The affected plugins are:
 
   * ncurses
-  * ~~sqlite3~~ (still needs some mow reworking, but works now (20090314))
+  * ~~sqlite3~~ (still needs some more reworking, but it more or less works again (20090314))
 
 they need to be reworked to use the newer [CreatingJSClasses native bindings mechanism], as they currently use a very unsafe JS-to-native argument passing convention which can (and often does) lead to segfaults.
 
@@ -20,13 +20,21 @@ List of current plugins (in alphabetical order):
   * [PluginStringFuncs stringstuff]: supplemental string functions
   * [PluginWhio whio]: i/o device and stream classes
 
-The plugins which are "standalone" (have no hard dependencies on external/third-party software other than v8) are in the core source tree under [http://code.google.com/p/v8-juice/source/browse/trunk/src/#src/lib/plugins src/lib/plugins]. Those which have external dependencies live in [http://code.google.com/p/v8-juice/source/browse/#svn/extra-plugins the extra-plugins repository].
+The plugins which are "standalone" (have no hard dependencies on
+external/third-party software other than v8) are in the core source tree under
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/ trunk/src/lib/plugins]. Those which have external dependencies live in
+[http://code.google.com/p/v8-juice/source/browse/extra-plugins the
+extra-plugins repository].
 
-If your copy of juice is configured without plugins, the API for loading plugins will still be there (for consistency and binary compatibility), but the functions won't do anything useful.
+If your copy of juice is configured without plugins, the API for loading
+plugins will still be there (for consistency and binary compatibility), but
+the functions won't do anything useful.
 
 ==C++-side==
 
-To be able to load new plugins from JS code, we first have to add a small amount of C++ code:
+To be able to load new plugins from JS code, we first have to add a small amount of C++ code.
+
+First off, we need to add a plugin-loading function to our global JS object:
 
 {{{
 #include <v8/juice/plugin.h>
@@ -39,25 +47,43 @@ That will create the loader function (name it whatever you like) in the specifie
 
 That's all you need to do to enable the plugins support.
 
-On Linux systems (and probably other Unices), your application must be linked with the `-export-dynamic` (also known as `-rdynamic`) flag, or DLLs may not be able to load properly (they won't be able to see the native LoadPlugin API provided by the application!).
+On Linux systems (and probably other Unices), your application must be linked
+with the `-export-dynamic` (also known as `-rdynamic`) flag, or DLLs may not
+be able to load properly (they won't be able to see the native LoadPlugin API
+provided by the application!).
 
-Now, in the code which you want to link as a DLL you need to add a few small bits of code. First, we will assume you have a function with this signature:
+Now, in the code which you want to link as a DLL you need to add a few small
+bits of code. First, we will assume you have a function with this signature:
 
 {{{
 Handle<Value> SetupMyAddon( Handle<Object> target );
 }}}
 
-That exact signature is not technically required, but it is a convenient convention and it required by the macro-based plugin initialization approach shown below.
+That exact signature is not technically required, but it is a convenient
+convention and it is in fact required by the macro-based plugin initialization
+approach shown below.
 
-That routine should add the plugin's functionality, treating the given target object as the logical global object (whether it is or is not the real global object is up to the caller). On success it should return a non-exception.
+That routine should add the plugin's functionality, treating the given target
+object as the logical global object (whether it is or is not the real global
+object is up to the caller). On success it should return a non-exception.
 
-Now we set up a trigger which will call that init routine whenever the DLL is opened by adding the following macro somewhere in our implementation file (it doesn't matter where, as long as it's got file- or namespace-level scope):
+Now we set up a trigger which will call that init routine whenever the DLL is
+opened by adding the following macro somewhere in our implementation file (it
+doesn't matter where, as long as it's got file- or namespace-level scope):
 
 {{{
 V8_JUICE_PLUGIN_STATIC_INIT(SetupMyAddon);
 }}}
 
-Now, whenever `loadPlugin("MyPlugin")` opens the DLL, the initialization code will be run automatically and it can set up its JS state. Optionally, we can pass an Object as a second argument to `loadPlugin()` and that object will be used as the logical global object. Multiple plugins may live inside a single DLL, and the above macro needs to be called one time per plugin initialization function.
+Now, whenever `loadPlugin("MyPlugin")` opens the DLL, the initialization code
+will be run automatically and it can set up its JS state. Optionally, we can
+pass an Object as a second argument to `loadPlugin()` and that object will be
+used as the logical global object. Multiple plugins may live inside a single
+DLL, and the above macro needs to be called one time per plugin initialization
+function.
+
+The function name passed to the macro may not be qualified (i.e. no namespace
+part) because its name is used as part of a generated variable's name.
 
 ==JS-side==
 
@@ -76,7 +102,14 @@ loadPlugin("MyOtherPlugin",p2); // will pass p2 as the target object
 
 ==The plugins search path==
 
-From native code, you can use the `v8::juice::plugin::PluginsPath()` function to get access to a shared `v8::juice::PathFinder` object which is used to do the actual searches for plugins. The plugins path is accessible via JS code if it has been explicitly added using (see `v8::juice::plugin::SetupPathFinderClass()`). Once it is added to the JS engine, the plugins path is accessible via the shared JS object `PathFinder.shared.plugins` (it uses the same native instance returned by the PluginPath() function).
+From native code, you can use the `v8::juice::plugin::PluginsPath()` function
+to get access to a shared `v8::juice::PathFinder` object which is used to do
+the actual searches for plugins. The plugins path is accessible via JS code if
+it has been explicitly added using (see
+`v8::juice::plugin::SetupPathFinderClass()`). Once it is added to the JS
+engine, the plugins path is accessible via the shared JS object
+`PathFinder.shared.plugins` (it uses the same native instance returned by the
+!PluginsPath() function).
 
 For example:
 
@@ -86,15 +119,19 @@ print(PathFinder.shared.plugins.find("MyPlugin"));
 }}}
 
 
+See [PathFinderClass] for the complete JS API docs for the !PathFinder class.
+
 The default plugins search path is:
 {{{
 .
-PREFIX/lib/v8/juice/JUICE_VERSION/plugin
-PREFIX/lib/v8/juice/plugin
+PREFIX/lib/v8/juice/JUICE_VERSION
+PREFIX/lib/v8/juice
 (note to self: is that still correct?)
 }}}
 
-Where `PREFIX` is the installation prefix (see [BuildingTheCode]) and `JUICE_VERSION` is the version of the library (set during the configuration process).
+Where `PREFIX` is the installation prefix (see [BuildingTheCode]) and
+`JUICE_VERSION` is the version of the library (set during the configuration
+process).
 
 
 
@@ -136,7 +173,7 @@ unloaded DLLs, so we quickly removed it. After thinking about it for
 several years, i'm 100% convinced that no generic framework can make
 any safety guarantees for an unload, and even the most rigorous
 approaches to DLL unload can fail if any single init routine allocates
-memory outside of the DLL's address (e.g. registered a classloading
+memory outside of the DLL's address space (e.g. registered a classloading
 callback function in the main app) and fails to clean it up. If any
 client of that DLL managed to copy a pointer which was, unbeknownst to
 that client, generated from a DLL, the client will crash when he then
