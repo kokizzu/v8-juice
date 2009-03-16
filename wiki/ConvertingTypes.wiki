@@ -37,7 +37,7 @@ base POD types (except (`char const *`) - see below), and clients can provide
 their own to do any conversion they like. An example of this is shown on
 [CreatingJSClasses the creating-new-classes page].
 
-While such a framework might at first seem like syntactic sugar, it has important implications. Namely, we can write generic algorithms which are ignorant of the conversions they are doing. As an example, the library provides a pair of template functions which can act as property getters/setters for _arbitrary_ convertible member variables. The entire implementation is about 10 lines of code, half of which is error checking. Thus, instead of writing a custom getter/setter pair for each member variable, we can get away with a single implementation.
+While such a framework might at first seem like syntactic sugar, it has important implications. Namely, we can write generic algorithms which are ignorant of the conversions they are doing. As an example, the library provides a pair of template functions which can act as property getters/setters for _arbitrary_ convertible member variables. The entire implementation is about 10 lines of code, half of which is error checking. Thus, instead of writing a custom getter/setter pair for each member variable, we can get away with a single, trivial implementation.
 
 For those averse to template arguments, there are a number of convenience instantiations of the `JSToNative` and `NativeToJS` template which can be used like this:
 
@@ -67,7 +67,7 @@ Good luck!
 ==Custom native-to-JS conversions==
 
 To make our own types support work with `CastToJS()` we have to provide
-template specialization for `NativeToJS<>`. The example shown here works
+a template specialization for `NativeToJS<>`. The example shown here works
 in conjunction with [CreatingJSClasses WeakJSClassCreator] to do the conversion:
 
 {{{
@@ -85,11 +85,10 @@ struct NativeToJS<MyType>
 }}}
 
 
-The important thing is that this specialization is available before
+The important thing is that this specialization is available (visible in code) before
 any client code calls (however indirectly) `CastToJS<MyType>(...)`. If it is not,
 the compiler will try to pick up another instantiation of the template. With luck
-it will fail loudly, but (and this depends on the implicit native conversions possible for `MyType`) it may pick up a different, inappropriate converter.
-
+it will fail loudly, but (and this depends on the implicit native conversions possible for `MyType`) it may pick up a different, inappropriate converter. A good place for such a routine is directly after the class' declaration, though other circumstances may require a later placement. e.g. when used together with `WeakJSClassCreator`, the casting specializations must come after the `WeakJSClassCreatorOps<>` specialization has been declared (they are all normally defined where the are declared (inline) since they are all templates).
 
 ==Custom JS-to-native conversions==
 
