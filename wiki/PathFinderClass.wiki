@@ -11,21 +11,21 @@ The class can be added to a JS engine by calling `v8::SetupPathFinderClass()`, d
 == JS API ==
 
 || *Return type* || *Name/Signature* || *Notes* ||
-|| `PathFinder` || `new PathFinder( [path=''], [extensions=''], [delimiter=':'])` || Creates a new !PathFinder with the given search path, extensions, and delimiter. ||
+|| `PathFinder` || `new PathFinder( [string path=''], [string extensions=''], [string delimiter=':'])` || Creates a new !PathFinder with the given search path, extensions, and delimiter. ||
 || `String` || `pathString()` || Search path as a delimited string. ||
-|| `int` || `setPathString( String )`  || Sets the search path. May be delimited. ||
+|| `int` || `setPathString( String )`  || Sets the search path. May be delimited. e.g. `setPathString("/lib:/usr/lib")`||
 || `Array` || `pathArray()` || Search path as an array. ||
 || `int` || `setPathArray( Array )`  || Sets search path to the given list of dirs. ||
 || `String` || `pathSeparator()` || The delimiter used to split/join path lists. ||
-|| `void` || `setPathSeparator( character )`  || Sets path delimiter used to split/join paths.  ||
+|| `void` || `setPathSeparator( character )`  || Sets path delimiter used to split/join paths. Functions denoted as using a "delimited list" use this delimiter. ||
 || `Array` || `extensionsArray()` || List of search extensions, as an array. ||
-|| `int` || `setExtensionsArray( Array )`  || Sets list of search extensions.  ||
+|| `int` || `setExtensionsArray( Array )`  || Sets list of search extensions. ||
 || `String` || `extensionsString()` || List of search extensions as a delimited string. ||
-|| `int` || `setExtensionsString( String )`  || Set list of search extensions as a delimited string. ||
-|| `void` || `addPathString( String )`  || Adds a dir (or delimited list) to the search path. ||
+|| `int` || `setExtensionsString( String )`  || Set list of search extensions as a delimited string. e.g. `setExtensionsString(".exe:.bat:.com")` ||
+|| `void` || `addPathString( String )`  || Adds a dir (or delimited list) to the search path. e.g. `addPathString("/usr/local/bin:/home/me/bin")` ||
 || `void` || `addExtensionString( String )`  || Adds an extension (or delimited list) to the extensions search list. ||
-|| `String` || `find( String )`  || Searched for the given file. ||
-|| `void` || `clearCache()` || Clears the internal file lookup cache. ||
+|| `String` || `find( String basename )`  || Searches for the given file. It will search through all combinations of path+name+extension to try to find the file. ||
+|| `void` || `clearCache()` || Clears the internal file lookup cache which is used by `find()`. ||
 || `bool` || `isEmpty()` || Returns true only if this object has no path/search information. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `string` || `dirSeparator` (read-only) || The platform-specific character used to separate directory names in a path. This is `\` on Windows and `/` everywhere else. ||
@@ -40,7 +40,6 @@ shared !PathFinder objects, accessible via the shared JS object
 
   * `PathFinder.shared.plugins` = the same object as `v8::juice::plugin::PluginsPath()`.
   * `PathFinder.shared.include` = the same object as `v8::juice::ScriptsPath()`.
-
 
 For example:
 
