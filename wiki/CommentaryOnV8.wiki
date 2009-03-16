@@ -10,11 +10,11 @@
 For several years i've maintained a project called [http://SpiderApe.sf.net SpiderApe], which is basically a library like v8-juice but built for the !SpiderMonkey !JavaScript engine (the only used by Mozilla and friends). !SpiderMonkey isn't actually all that bad except that it suffers from a serious lack of documentation, especially for threading-related issues. i haven't written any code for Monkey in some time, and when i found out about v8 (late February, 2009) i was very excited to finally have access to a C++-based JS engine. So i started hacking.
 
 My initial experiments took the form of porting sqlite3 bindings from
-SpiderApe to v8-juice. Ninety percent of the code was a 1-to-1 copy, mostly
+!SpiderApe to v8-juice. Ninety percent of the code was a 1-to-1 copy, mostly
 changing the names of the JS/C++ conversion operators. So, on the surface v8
-and SpiderMonkey would seem to have very similar interfaces and semantics (they
+and !SpiderMonkey would seem to have very similar interfaces and semantics (they
 don't, actually, but the usages are nonetheless very similar). So then came
-the question, "why use v8 if the client code looks just like SpiderMonkey code?" One
+the question, "why use v8 if the client code looks just like !SpiderMonkey code?" One
 good reason is that v8 allows us to register object destructors for use by the
 garbage collector. (However, i only found out later that the v8 GC is never
 guaranteed to call those destructors - see below for a rant on that topic.)
