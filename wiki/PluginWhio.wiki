@@ -220,6 +220,8 @@ var dev = new whio.IODevice(":memory:");
 
 Creates an i/o device which uses RAM as storage, growing as necessary. It works just like a file-based i/o device, and can be used to buffer arbitrary data in memory. To specify a starting size of the device, pass it as the optional second parameter. Multiple in-memory devices can be created, but each has its own memory despite having the same name of `":memory:"`.
 
+There is a caveat, however: the memory used for the buffer is not reported to the v8 engine, which means that it can grow to larger than any limit which has been imposed on v8. Adding this awareness to v8 would actually require a significant performance overhead to all write operations, due to the generic nature of the underlying i/o device API (the JS wrapper doesn't actually know, after construction, that it's an in-memory device, and we'd have to query it on each write or truncate operation in order to figure out if it is). The memory associated with an in-memory device can be freed by calling the `truncate()` member (which might or might not actually free any memory, depending on the magnitude of the change in size, but this implementation explicitly frees the memory when `truncate(0)` is called).
+
 While it may not be immediately obvious, this is one easy way to buffer large amounts of text for later output, and "should" be more efficient than using string concatenation to build up very large strings. (See the big ugly warning at the top of this page regarding writing binary data this way!)
 
 If you want to ensure sequential, write-only access to a buffer until you are ready to send it, simply wrap up the IODevice in an !OutStream using `new OutStream(myDevice)`.
