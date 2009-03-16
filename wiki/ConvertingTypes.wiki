@@ -37,6 +37,7 @@ base POD types (except (`char const *`) - see below), and clients can provide
 their own to do any conversion they like. An example of this is shown on
 [CreatingJSClasses the creating-new-classes page].
 
+While such a framework might at first seem like syntactic sugar, it has important implications. Namely, we can write generic algorithms which are ignorant of the conversions they are doing. As an example, the library provides a pair of template functions which can act as property getters/setters for _arbitrary_ convertible member variables. The entire implementation is about 10 lines of code, half of which is error checking. Thus, instead of writing a custom getter/setter pair for each member variable, we can get away with a single implementation.
 
 For those averse to template arguments, there are a number of convenience instantiations of the `JSToNative` and `NativeToJS` template which can be used like this:
 
@@ -47,6 +48,7 @@ For those averse to template arguments, there are a number of convenience instan
   return DoubleToJS(42.42);
 }}}
 
+but then we're again stuck with the limitation of hard-coded conversion operator names, so these aren't very useful in generic algoriths.
 
 =Implementing custom conversions=
 
@@ -57,7 +59,7 @@ knowledge in how to use and abuse C++ templates. DO NOT just blindly
 copy/paste some example from this page without understanding what it does and
 how it gets triggered. One tiny little typing mistake can lead to literally
 hundreds of lines of compiler error messages (or weird link errors), and it
-often takes patience and experience to be able to decypher such problems
+often takes patience and experience to be able to decipher such problems
 ("dammit, it's a pointer, not a reference").
 
 Good luck!
@@ -86,8 +88,7 @@ struct NativeToJS<MyType>
 The important thing is that this specialization is available before
 any client code calls (however indirectly) `CastToJS<MyType>(...)`. If it is not,
 the compiler will try to pick up another instantiation of the template. With luck
-it will fail loudly, but (and this depends on `MyType`) it may pick up a different,
-inappropriate converter.
+it will fail loudly, but (and this depends on the implicit native conversions possible for `MyType`) it may pick up a different, inappropriate converter.
 
 
 ==Custom JS-to-native conversions==
@@ -109,6 +110,7 @@ struct JSToNative<MyType>
 } } } // namespaces
 }}}
 
+There's not much else to say about it, really.
 
 
 =The `(char const *)` problem=
@@ -125,7 +127,7 @@ This won't:
 char const * v = CastFromJS(myJSVal);
 }}}
 
-The problem here is ownership and lifetime of the string bytes. v8 does not document them (and can't realistically provide any requirements which we would need for this conversion). We _can_ write a conversion routine for this, and it would probably work 99% of the time, but its results would technically be undefined. As a workaround, client code should use `std::string` instead (at least for `CastFromJS()`) or implement `JSToNative<>` and/or `NativeToJS<>` specializations for their string type of choice. The `CastToJS()` function is overloaded for (`char const *`) and "does the right thing", but `CastFromJS()` cannot handle such strings as transparently as it can most other types.
+The problem here is ownership and lifetime of the string bytes. v8 does not document them (and also can't realistically provide any requirements which we would need for this conversion). We _can_ write a conversion routine for this, and it would probably work 99% of the time, but its results would technically be undefined. As a workaround, client code should use `std::string` instead (at least for `CastFromJS()`) or implement `JSToNative<>` and/or `NativeToJS<>` specializations for their string type of choice. The `CastToJS()` function is overloaded for (`char const *`) and "does the right thing", but `CastFromJS()` cannot handle such strings as transparently as it can most other types.
 
 =Forwarding to functions=
 
@@ -136,6 +138,10 @@ The [CreatingJSClasses ClassBinder class] can also bind member functions.
 TODOs:
   * Refactor `FwdToFuncN()` to use a mechanism similar to what the !ClassBinder member bindings do, as this allows us to use `void` return types.
   * Consolidate the `FwdToFuncN()` and !ClassBinder call forwarding API. Right now they are completely separate beasts and have some inconsistencies (e.g. !ClassBinder's code can handle void returns whereas `FwdToFunc` cannot).
+
+=Forwarding to member functions=
+
+Native classes which are bound using the [CreatingJSClasses ClassBinder class] can bind member functions as well as free functions. See that page for an example, or see [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h] for the API docs.
 
 =Silly Examples=
 
@@ -157,7 +163,7 @@ ListList li;
 Handle<Value> v( CastToJS( li ) ); // Array of Arrays of strings
 }}}
 
-And that means that we can use `ClassBinder` to bind to member functions which take or return arguments of those types, too.
+And that means that we can use `ClassBinder` to bind to member functions which take or return arguments of those types, and or member variables of those types, too.
 
 And how about:
 
