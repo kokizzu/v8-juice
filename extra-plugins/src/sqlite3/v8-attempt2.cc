@@ -93,10 +93,9 @@ char const * strings::classCursor = "Cursor";
    Internal type for binding sqlite3-related info to JS. It
    encapsulates a single db opened via sqlite3_open().
 */
-class DBWrapper// : public v8::juice::WrappedClassBase<DBWrapper>
+class DBWrapper
 {
 public:
-    //typedef v8::juice::WrappedClassBase<DBWrapper> ScriptedBase;
     /**
        Database handle. This type owns handles associated
        with it.
@@ -113,8 +112,7 @@ public:
     /**
        Creates a new
     */
-    DBWrapper(Handle<Object> jself, sqlite3 * d ) :
-        //ScriptedBase( jself ),
+    DBWrapper( sqlite3 * d ) :
         dbh(d),
         proxy()
     {
@@ -164,12 +162,11 @@ public:
 Persistent<Function> DBWrapper::js_ctor;
 
 
-class StmtWrapper// : public v8::juice::WrappedClassBase<StmtWrapper>
+class StmtWrapper
 {
 public:
     static Persistent<Function> js_ctor;
     sq3::statement proxy;
-    //typedef v8::juice::WrappedClassBase<StmtWrapper> ScriptedBase;
     StmtWrapper( DBWrapper * db, std::string sql )
         : proxy( db->proxy, sql )
     {
@@ -217,7 +214,7 @@ public:
 };
 Persistent<Function> StmtWrapper::js_ctor;
 
-class CursorWrapper// : public v8::juice::WrappedClassBase<StmtWrapper>
+class CursorWrapper
 {
 public:
     static Persistent<Function> js_ctor;
@@ -352,7 +349,7 @@ namespace v8 { namespace juice {
                 exceptionText = os.str();
                 return 0;
             }
-            DBWrapper * db = new DBWrapper(argv.This(), dbh);
+            DBWrapper * db = new DBWrapper(dbh);
             //db->jsobj = argv.This();
             CERR << "Created DBWrapper object @"<<db<<'\n';
             AddToCleanup( db );
@@ -467,7 +464,11 @@ Handle<Value> DBWrapper::close()
 
 Handle<Value> CursorWrapper::finalize()
 {
-    CursorWeakWrap::DestroyObject( CursorWeakWrap::GetJSObject(this) );
+    Handle<Object> self = CursorWeakWrap::GetJSObject(this);
+    if( self.IsEmpty() ) TOSS("finalize() couldn't get associated JS object!");
+    this->proxy.close(); // without this the object may not get disocnnected from its statement until after its statement is dead. Segfault.
+    CursorWeakWrap::DestroyObject( self );
+    //this->DestroySelf();
     return Undefined();
 }
 
@@ -510,6 +511,7 @@ Handle<Value> StmtWrapper::finalize()
 {
     int rc = proxy.finalize();
     StmtWeakWrap::DestroyObject( StmtWeakWrap::GetJSObject(this) );
+    //this->DestroySelf();
     return CastToJS( rc );
 }
 

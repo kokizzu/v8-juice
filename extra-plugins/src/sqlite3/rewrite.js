@@ -25,27 +25,31 @@ function tryOne(){
     
     var sql = "create table if not exists t(a,b);";
     var st = new sqlite3.Statement(my.db,sql);
+    if( 1 )
     {
-        var curs = new sqlite3.Cursor(st);
-        var rc = curs.step();
-        print("step() rc=",rc,'errmsg=',my.db.errorMessage());
-        curs.finalize();
-    }
-    {
-        st.prepare("insert into t values(?,?)");
-        var curs = //new sqlite3.Cursor(st);
-            st.getCursor();
-        var now = new Date();
-        for( var i = 0; i < 4; ++i )
         {
-            st.bindInt( 1, i );
-            st.bindText( 2, now+" #"+i );
+            var curs = st.getCursor(); //new sqlite3.Cursor(st);
             var rc = curs.step();
-            print("Insert RC =",rc);
-            st.clearBindings();
-            curs.reset();
+            curs.finalize();
+            print("step() rc=",rc,'errmsg=',my.db.errorMessage());
         }
-        curs.finalize();
+        if(1){
+            st.prepare("insert into t values(?,?)");
+            var curs = st.getCursor(); //new sqlite3.Cursor(st);
+            //st.getCursor();
+            var now = new Date();
+            for( var i = 0; i < 4; ++i )
+            {
+                st.bindInt( 1, i );
+                st.bindText( 2, now+" #"+i );
+                var rc = curs.step();
+                print("Insert RC =",rc);
+                st.clearBindings();
+                curs.reset();
+            }
+            curs.finalize();
+            print("Cursor finalized.");
+        }
     }
     sql = "select * from t order by rowid desc limit 5";
     st.prepare(sql);
