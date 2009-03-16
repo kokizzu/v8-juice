@@ -88,7 +88,34 @@ function tryOne(){
     st.finalize();
 }
 
-tryOne();
+function tryTwo()
+{
+    my.db.qualify = function(x) { return '`'+x+'`';}
+    my.db.escape = function(x) { return x.replace(/\'/g,"''");}
+    my.db.query = my.db.executeString;
+    print("escaped:",my.db.escape("He's not from'n 'round here."));
+    include("query");
+    Query.setDB( my.db );
+    var q = new Query(Query.SELECT)
+        .field('b')
+        .table('t')
+        .where("%f like '%%01:%%'",'b')
+        .limit(7);
+    print("Query:",q);
+    print( q.execute() );
+
+    var t = new Table("t");
+    q = t.select()
+        .field('b')
+        .where("%f like '%%01:%%'",'b')
+        .limit(7);
+    print("Query:",q);
+    print( q.execute() );
+
+}
+
+//tryOne();
+tryTwo();
 
 print("Shuting down...");
 //sqlite3_close( my.db );
