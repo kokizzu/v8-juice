@@ -37,7 +37,7 @@ base POD types (except (`char const *`) - see below), and clients can provide
 their own to do any conversion they like. An example of this is shown on
 [CreatingJSClasses the creating-new-classes page].
 
-While such a framework might at first seem like syntactic sugar, it has important implications. Namely, we can write generic algorithms which are ignorant of the conversions they are doing. As an example, the library provides a pair of template functions which can act as property getters/setters for _arbitrary_ convertible member variables. The entire implementation is about 10 lines of code, half of which is error checking. Thus, instead of writing a custom getter/setter pair for each member variable, we can get away with a single, trivial implementation.
+While such a framework might at first seem like syntactic sugar, it has important implications. Namely, we can write generic algorithms which are ignorant of the conversions they are doing. As an example, the library provides a pair of template functions which can act as property getters/setters for _arbitrary_ convertible member variables. The entire implementation is about 10 lines of code, half of which is error checking. Thus, instead of writing a custom getter/setter pair for each member variable, we can get away with a single, trivial implementation. From there, we can _"let the templates to the typing"_ (if i may now coin a phrase).
 
 For those averse to template arguments, there are a number of convenience instantiations of the `JSToNative` and `NativeToJS` template which can be used like this:
 
