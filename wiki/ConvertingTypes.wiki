@@ -149,10 +149,10 @@ Here are some examples of the things one can do with the type conversions API:
 {{{
 std::list<int> li;
 ... populate list ...
-Handle<Value> v( CastToJS( li ) ); // Array of strings
+Handle<Value> v( CastToJS( li ) ); // Array of Integers
 }}}
 
-That will work for _any_ list-contained type which is supported by the casting API. Ergo:
+That will work for _any_ list-contained type which is supported by the casting API. Ergo, a list containing lists also works:
 
 {{{
 typedef list<std::string> StringList;
