@@ -294,7 +294,8 @@ namespace v8 { namespace juice { namespace convert {
 	    {
 		vec[pos] = argv[i];
 	    }
-	    return proxy( argv.This(), argc, &vec[0] );
+            Handle<Value> * ar = vec.empty() ? &vec[0] : 0;
+	    return proxy( argv.This(), argc, ar );
 	}
     };
 

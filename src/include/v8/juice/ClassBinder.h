@@ -20,6 +20,14 @@ namespace juice {
 	using namespace v8;
 	using namespace v8::juice;
 
+        /**
+           Useless base instantiation - See the 0-specialization for details.
+        */
+        template <int Arity_>
+        struct MemFuncCaller
+        {
+            enum { Arity = Arity_ };
+        };
 	/**
 	   A helper type for forwarding JS arguments to member functions taking 0
 	   arguments. The classes MemFuncCaller(1..N) are generated but follow
@@ -28,7 +36,8 @@ namespace juice {
 	   All variants of this class except the nullary one throw if the argument
 	   list does not have at least the required number of parameters.
 	*/
-	struct MemFuncCaller0
+        template <>
+	struct MemFuncCaller<0>
 	{
 	    enum { Arity = 0 };
 	    template <typename T, typename RV>
@@ -66,20 +75,27 @@ namespace juice {
 	    }
 	};
 
+        /**
+           Useless base instantiation - See the 0-specialization for details.
+        */
+        template <int Arity>
+	struct WeakMemFuncCaller
+        {};
 	/**
 	   A helper type for forwarding function calls on objects bound via WeakJSClassCreator
 	   through native member functions. This type supports only nullary functions, and
 	   the generated classes WeakMemFuncCaller(1..N) each provide support for a different
 	   number of arguments.
 	*/
-	struct WeakMemFuncCaller0 : MemFuncCaller0
+        template <>
+	struct WeakMemFuncCaller<0> : MemFuncCaller<0>
 	{
 	    template <typename WeakWrappedType, typename RV>
 	    static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)(), Arguments const & argv )
 	    {
 		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
 		typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
 		return Call( obj, func, argv );
 	    }
 
@@ -88,7 +104,7 @@ namespace juice {
 	    {
 		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
 		typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
 		return Call( obj, func, argv );
 	    }
 
@@ -97,7 +113,7 @@ namespace juice {
 	    {
 		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
 		typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
 		return Call( obj, func, argv );
 	    }
 
@@ -106,7 +122,7 @@ namespace juice {
 	    {
 		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
 		typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
 		return Call( obj, func, argv );
 	    }
 	};
@@ -124,7 +140,7 @@ namespace juice {
 	    typedef T Type;
 	    enum { Arity = 0 };
 	    typedef RV (T::*FuncSig)();
-	    typedef WeakMemFuncCaller0 OpBase;
+	    typedef WeakMemFuncCaller<0> OpBase;
 	    static Handle<Value> Call( Type * obj, Arguments const & argv )
 	    {
 		return OpBase::Call( obj, Func, argv );
@@ -141,7 +157,7 @@ namespace juice {
 	{
 	    typedef T Type;
 	    enum { Arity = 0 };
-	    typedef WeakMemFuncCaller0 OpBase;
+	    typedef WeakMemFuncCaller<0> OpBase;
 	    static Handle<Value> Call( Type const * obj, Arguments const & argv )
 	    {
 		if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
@@ -158,7 +174,7 @@ namespace juice {
 	struct MemFuncCallOp0<T, void, Func >
 	{
 	    typedef T Type;
-	    typedef WeakMemFuncCaller0 OpBase;
+	    typedef WeakMemFuncCaller<0> OpBase;
 	    static Handle<Value> Call( Type * obj, Arguments const & argv )
 	    {
 		//if( ! obj ) return ThrowException(String::New("MemFuncCallOp0::Call(): Native object is null!"));
@@ -175,7 +191,7 @@ namespace juice {
 	struct MemFuncCallOp0<const T, void, Func >
 	{
 	    typedef T Type;
-	    typedef WeakMemFuncCaller0 OpBase;
+	    typedef WeakMemFuncCaller<0> OpBase;
 	    static Handle<Value> Call( Type const * obj, Arguments const & argv )
 	    {
 		return OpBase::Call( obj, Func, argv );
@@ -245,13 +261,13 @@ namespace juice {
     template <typename NativeType, typename RV>
     Handle<Value> CallWeakMemFunc( RV (NativeType::*MemFunc)(), Arguments const & argv  )
     {
-	typedef Detail::WeakMemFuncCaller0 Caller;
+	typedef Detail::WeakMemFuncCaller<0> Caller;
 	return Caller::CallOnWeakSelf<NativeType>( MemFunc, argv );
     }
     template <typename NativeType, typename RV>
     Handle<Value> CallWeakMemFunc( const RV (NativeType::*MemFunc)() const, Arguments const & argv )
     {
-	typedef Detail::WeakMemFuncCaller0 Caller;
+	typedef Detail::WeakMemFuncCaller<0> Caller;
 	return Caller::CallOnWeakSelf<const NativeType>( MemFunc, argv );
     }
 #endif
@@ -396,31 +412,6 @@ namespace juice {
 
     }; // class ClassBinder
 
-
-    /** Experimental. Don't use. */
-    template <typename WrappedT>
-    class WrappedClassBase
-    {
-    public:
-        typedef WrappedT WrappedType;
-        explicit WrappedClassBase( Handle<Object> jsThis )
-            : jself(jsThis)
-        {
-        }
-        explicit WrappedClassBase( Arguments const & argv )
-            : jself(argv.This())
-        {
-        }
-
-        virtual ~WrappedClassBase() {}
-
-        Handle<Object> GetJSSelf() const
-        {
-            return this->jself;
-        }
-    private:
-        Handle<Object> jself;
-    };
 
 }} /* namespaces */
 
