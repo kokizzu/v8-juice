@@ -46,4 +46,11 @@ For example:
 {{{
 print(PathFinder.shared.plugins.find("MyPlugin"));
 // ^^^ searches for MyPlugin.(dll|so) but does not open it
+
+var binsearch = new PathFinder("/usr/bin:/bin");
+print(binsearch.find('ls')); // prints: "/bin/ls"
+print(binsearch.find('gzip')); // prints: "/usr/bin/gzip"
+
+var libsearch = new PathFinder("/lib:/usr/lib", ".so:.a");
+print(libsearch.find("libz")); // prints "/usr/lib/libz.so"
 }}}
