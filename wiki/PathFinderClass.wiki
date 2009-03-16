@@ -56,3 +56,8 @@ print(binsearch.find('gzip')); // prints: "/usr/bin/gzip"
 var libsearch = new PathFinder("/lib:/usr/lib", ".so:.a");
 print(libsearch.find("libz")); // prints "/usr/lib/libz.so"
 }}}
+
+==TODOs==
+
+  * The ctor should allow arrays or strings for the various arguments.
+  * We really should do away with the delimited strings approach and go all-array, as we're just asking for problems on Windows platforms with ":"-delimited paths. i don't use Windows, so i'm not gonna worry about that too much.
