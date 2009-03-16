@@ -1,9 +1,9 @@
-#summary Comments and critic about v8
+#summary Comments and critique about v8
 #labels Topic-BitchAndMoan,Topic-v8
 
 <wiki:toc max_depth="3"/>
 
-=Non-critic Commentary=
+=Non-critique Commentary=
 
 ==Why use v8?==
 
