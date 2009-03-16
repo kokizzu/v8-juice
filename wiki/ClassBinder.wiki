@@ -1,4 +1,5 @@
 #summary Overview of the ClassBinder class
+#labels Topic-CPlusPlus,Phase-UserDocs
 
 This is an extension of the [CreatingJSClasses page about creating JS classes]. Please read that page before reading this one. The page for the [ConvertingTypes v8::juice type conversions API] might also be helpful.
 
