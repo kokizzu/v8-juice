@@ -131,11 +131,11 @@ The problem here is ownership and lifetime of the string bytes. v8 does not docu
 
 The `v8::juice::convert` namespace contains functions named `FwdToFuncN()`, where `N` is the number of arguments they expect, which use the casting framework to marshal calls between JS and native functions.
 
-The [CreatingJSClasses ClassBinder class] can also bind member functions.
+The [ClassBinder ClassBinder class] can also bind member functions.
 
 TODOs:
   * Refactor `FwdToFuncN()` to use a mechanism similar to what the !ClassBinder member bindings do, as this allows us to use `void` return types.
-  * Consolidate the `FwdToFuncN()` and !ClassBinder call forwarding API. Right now they are completely separate beasts and have some inconsistencies (e.g. !ClassBinder's code can handle void returns whereas `FwdToFunc` cannot).
+  * Consolidate the `FwdToFuncN()` and !ClassBinder call forwarding API. Right now they are completely separate beasts and have some inconsistencies (e.g. !ClassBinder's code can handle void returns whereas `FwdToFuncN()` cannot).
 
 =Forwarding to member functions/variables=
 
