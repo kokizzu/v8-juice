@@ -623,6 +623,72 @@ namespace juice {
 
     };
 
+    /**
+       This template can be used as an argument to
+       v8::ObjectTemplate::SetAccessor()'s Getter parameter to
+       generically tie a native member variable to a JS value.
+
+       Requirements:
+
+       - (WrappedType*) must be convertible via CastFromJS<WrappedType>().
+       - PropertyType must be convertible via CastToJS<PropertyType>().
+
+       Example:
+
+       Assume we have a native type Foo with a std::string member
+       called str. We are binding that type and can bind the member
+       variable with:
+
+       \code
+       myObjectTemplate.SetAccessor("foo",
+               WrappedMemVarGetter<Foo,std::string,&Foo::str>,
+               WrappedMemVarSetter<Foo,std::string,&Foo::str> );
+       \endcode
+
+       When using the JSClassWrapper interface, these can be passed to the
+       Set() overload which takes accessor information. e.g.:
+
+       \code
+       wrapper.Set( "str",
+                    WrappedMemVarGetter<Foo,std::string, &Foo::str>,
+                    WrappedMemVarGStter<Foo,std::string, &Foo::str> );
+       \endcode
+
+    */
+    template <typename WrappedType, typename PropertyType, PropertyType WrappedType::*MemVar>
+    Handle<Value> WrappedMemVarGetter(Local<String> property,
+                                      const AccessorInfo &info)
+    {
+        WrappedType * self = convert::CastFromJS<WrappedType>( info.This() );
+        if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+        return convert::CastToJS( (self->*MemVar) );
+    }
+
+    /**
+       This is the Setter counterpart of WrappedMemVarGetter(). See
+       that function for details and requirements.
+
+       If the underlying native object cannot be found then this
+       routine will trigger a JS exception, though it is currently
+       unclear whether this is actually legal in v8 (and difficult to
+       test, since the native bindings work so well ;).
+    */
+    template <typename WrappedType, typename PropertyType, PropertyType WrappedType::*MemVar>
+    void WrappedMemVarSetter(Local<String> property, Local<Value> value,
+                   const AccessorInfo& info)
+    {
+        WrappedType * self = convert::CastFromJS<WrappedType>( info.This() );
+        if( self )
+        {
+            self->*MemVar = convert::CastFromJS<PropertyType>( value );
+        }
+        else
+        {
+            // It is legal to do this from here?
+            ::v8::ThrowException(v8::String::New("Native member property setter could not access native This object!"));
+        }
+    }
+    
 }} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_WEAKCLASSGENERATOR_H_INCLUDED */
