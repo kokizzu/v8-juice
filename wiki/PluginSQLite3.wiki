@@ -1,7 +1,7 @@
 #summary JS Bindings for SQLite3
 #labels Phase-UserDocs,Topic-Plugins
 
-*ACHTUNG:* the current version (20090313+) of this plugin is sorely broken because its in the middle of a rewrite. Don't use it until this warning note goes away.
+*ACHTUNG:* the current version (20090313+) of the non-object-oriented version of this plugin is sorely broken because its in the middle of a rewrite. Don't use it until this warning note goes away. The OO API "should" be okay.
 
 <wiki:toc max_depth="3"/>
 
