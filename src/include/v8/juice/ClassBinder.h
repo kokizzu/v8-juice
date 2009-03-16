@@ -9,6 +9,7 @@
 */
 
 #include <v8.h>
+#include <v8/juice/convert.h>
 #include <v8/juice/WeakJSClassCreator.h>
 
 namespace v8 {
@@ -274,7 +275,7 @@ namespace juice {
 
     /**
        InvocationCallbackMember is a helper type for binding InvocationCallback-like
-       member functions. It requires that T be supported by WeakJSClassCreator. The Func
+       member functions. It requires that T be supported by CastFromJS(). The Func
        template parameter is the member invocation callback which we want to proxy.
     */
     template <typename T,
@@ -284,17 +285,93 @@ namespace juice {
     {
 	/**
            Extracts a native T object from argv using
-           WeakJSClassCreator<T>::GetSelf() and passes the call on to
+           CastFromJS(argv.This()) and passes the call on to
            obj->Func(). If no object can be found it throws a JS
-           exception, otherwise it returns the result of the proxied call.
+           exception, otherwise it returns the result of the proxied
+           call.
 	*/
 	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
 	{
-            T * self = WeakJSClassCreator<T>::GetSelf( argv.This() );
+            T * self = //WeakJSClassCreator<T>::GetSelf( argv.This() );
+                convert::CastFromJS<T>( argv.This() );
             if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
             return (self->*Func)( argv );
 	}
     };
+
+
+    /**
+       This template can be used as an argument to
+       v8::ObjectTemplate::SetAccessor()'s Getter parameter to
+       generically tie a native member variable to a JS value.
+
+       Requirements:
+
+       - (WrappedType*) must be convertible via CastFromJS<WrappedType>().
+       - PropertyType must be convertible via CastToJS<PropertyType>().
+
+       If the underlying native This object cannot be found then this
+       routine will trigger a JS exception.
+
+       Example:
+
+       Assume we have a native type Foo with a std::string member
+       called str. We can bind the member variable with:
+
+       \code
+       myObjectTemplate.SetAccessor("foo",
+               MemberVarGetter<Foo,std::string,&Foo::str>,
+               MemberVarSetter<Foo,std::string,&Foo::str> );
+       \endcode
+
+       When using the JSClassWrapper interface, these can be passed to the
+       Set() overload which takes accessor information. e.g.:
+
+       \code
+       wrapper.Set( "str",
+                    MemberVarGetter<Foo,std::string, &Foo::str>,
+                    MemberVarGStter<Foo,std::string, &Foo::str> );
+       \endcode
+
+       In almost 10 years of C++ coding, this is the first time i've ever had
+       a use for a pointer-to-member.
+    */
+    template <typename WrappedType, typename PropertyType, PropertyType WrappedType::*MemVar>
+    Handle<Value> MemberVarGetter(Local<String> property, const AccessorInfo &info)
+    {
+        WrappedType * self = convert::CastFromJS<WrappedType>( info.This() );
+        if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+        return convert::CastToJS( (self->*MemVar) );
+    }
+
+    /**
+       This is the Setter counterpart of MemberVarGetter(). See
+       that function for most of the details.
+
+       Requirements:
+
+       - (WrappedType*) must be convertible via CastFromJS<WrappedType>().
+       - PropertyType must be convertible via CastFromJS<PropertyType>().
+
+       If the underlying native This object cannot be found then this
+       routine will trigger a JS exception, though it is currently
+       unclear whether this is actually legal in v8 (and difficult to
+       test, since the native bindings work so well ;).
+    */
+    template <typename WrappedType, typename PropertyType, PropertyType WrappedType::*MemVar>
+    void MemberVarSetter(Local<String> property, Local<Value> value, const AccessorInfo& info)
+    {
+        WrappedType * self = convert::CastFromJS<WrappedType>( info.This() );
+        if( self )
+        {
+            self->*MemVar = convert::CastFromJS<PropertyType>( value );
+        }
+        else
+        {
+            // It is legal to do this from here?
+            ::v8::ThrowException(v8::String::New("Native member property setter could not access native This object!"));
+        }
+    }
 
     /**
        ClassBinder is a WeakJSClassCreator subclass which adds some
@@ -386,6 +463,28 @@ namespace juice {
             return *this;
         }
 
+        /**
+           Binds automatically-generated getter/setter functions to the given
+           member variable. See MemberVarGetter() and MemberVarSetter()
+           for the requirements of the templatized types.
+
+           If you only want to bind one of the getter OR the setter then
+           use the 5-argument variant of Set() instead and pass MemberVarGetter
+           or MemberVarGetter, as appropriate, to that function.
+        */
+        template <typename VarType, VarType WrappedType::*MemVar >
+        ClassBinder & BindMemVar( char const * name,
+                                  AccessControl settings = v8::PROHIBITS_OVERWRITING,
+                                  PropertyAttribute attribute = v8::DontDelete
+                                  )
+        {
+            this->Set( name,
+                       MemberVarGetter<WrappedType,VarType,MemVar>,
+                       MemberVarSetter<WrappedType,VarType,MemVar>,
+                       v8::Handle< v8::Value >(), settings, attribute );
+            return *this;
+        }
+
 	/**
 	   Binds the member function Func to the given name.
 	*/
@@ -412,72 +511,6 @@ namespace juice {
 
     }; // class ClassBinder
 
-
-    /**
-       This template can be used as an argument to
-       v8::ObjectTemplate::SetAccessor()'s Getter parameter to
-       generically tie a native member variable to a JS value.
-
-       Requirements:
-
-       - (WrappedType*) must be convertible via CastFromJS<WrappedType>().
-       - PropertyType must be convertible via CastToJS<PropertyType>().
-
-       Example:
-
-       Assume we have a native type Foo with a std::string member
-       called str. We are binding that type and can bind the member
-       variable with:
-
-       \code
-       myObjectTemplate.SetAccessor("foo",
-               WrappedMemVarGetter<Foo,std::string,&Foo::str>,
-               WrappedMemVarSetter<Foo,std::string,&Foo::str> );
-       \endcode
-
-       When using the JSClassWrapper interface, these can be passed to the
-       Set() overload which takes accessor information. e.g.:
-
-       \code
-       wrapper.Set( "str",
-                    WrappedMemVarGetter<Foo,std::string, &Foo::str>,
-                    WrappedMemVarGStter<Foo,std::string, &Foo::str> );
-       \endcode
-
-    */
-    template <typename WrappedType, typename PropertyType, PropertyType WrappedType::*MemVar>
-    Handle<Value> WrappedMemVarGetter(Local<String> property,
-                                      const AccessorInfo &info)
-    {
-        WrappedType * self = convert::CastFromJS<WrappedType>( info.This() );
-        if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
-        return convert::CastToJS( (self->*MemVar) );
-    }
-
-    /**
-       This is the Setter counterpart of WrappedMemVarGetter(). See
-       that function for details and requirements.
-
-       If the underlying native object cannot be found then this
-       routine will trigger a JS exception, though it is currently
-       unclear whether this is actually legal in v8 (and difficult to
-       test, since the native bindings work so well ;).
-    */
-    template <typename WrappedType, typename PropertyType, PropertyType WrappedType::*MemVar>
-    void WrappedMemVarSetter(Local<String> property, Local<Value> value,
-                   const AccessorInfo& info)
-    {
-        WrappedType * self = convert::CastFromJS<WrappedType>( info.This() );
-        if( self )
-        {
-            self->*MemVar = convert::CastFromJS<PropertyType>( value );
-        }
-        else
-        {
-            // It is legal to do this from here?
-            ::v8::ThrowException(v8::String::New("Native member property setter could not access native This object!"));
-        }
-    }
 
 }} /* namespaces */
 
