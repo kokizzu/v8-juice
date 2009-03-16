@@ -13,14 +13,17 @@ Unlike JSClassCreator and WeakJSClassCreator, !ClassBinder is not a
 standalone implementation which can be used as-is in arbitrary v8 client
 code - it requires [ConvertingTypes the v8-juice type conversions framework] in order to convert between native and JS types.
 
-An interesting feature of the class binding framework is that it's compile-time typesafe. Though v8 uses `void *` as the parameter type for destruction callbacks, the implementation uses a mix of class templates, private static functions, and an internal void-to-native mapping to ensure that only the correct types can, e.g., be passed to the correct destructor, and that `CastFromJS<TypeB>()` cannot cast (using the default conversions) to `TypeA`. The implementation is believed to be 100% typesafe.
+The source code and API documentation for this class is in 
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h].
+
+An interesting property of this class binding framework is that it's compile-time typesafe. Though v8 uses `void *` as the parameter type for destruction callbacks, the implementation uses a mix of class templates, private static functions, and an internal void-to-native mapping to ensure that only the correct types can, e.g., be passed to the correct destructor, and that `CastFromJS<TypeB>()` cannot cast (using the default conversions) to `TypeA`. The implementation is believed to be 100% typesafe.
+
 
 ==Binding member functions==
 
 The primary feature added by !ClassBinder is the ability to bind native
 member functions and variables of the wrapped type. The syntax for doing so is a tiny
-bit odd, but there's a reason for it which we'll explain after we
-demonstrate:
+bit odd, but there's a reason for it which we'll explain after we demonstrate:
 
 {{{
 int MyClass::func( double ); // function we want to wrap
