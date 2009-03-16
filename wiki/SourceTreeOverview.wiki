@@ -16,8 +16,8 @@ src/              All source code is under here...
   +-- lib/
     +-- juice/    The core library
     +-- plugins/  Plugins go under here
-      +-- sqlite3/
-      +-- ncurses/
+      +-- whio/
+      +-- stringstuff/
       ...
   +-- client/     Library client apps go under here
     +-- shell/    JS shell with juice functionality added on
@@ -45,20 +45,20 @@ The exact file extension for header files is up for debate. When in doubt, stick
 
 =Namespaces=
 
-The main library is in the `v8::juice` namespace. Code written for that library "should" be put in that namespace or a sub-namespace. Plugins and whatnot are free to use their own choice namespaces, and namespaces are encouraged to avoid collisions.
+The main library is in the `v8::juice` namespace. Code written for that library "should" be put in that namespace or a sub-namespace. Plugins and whatnot are free to use their own choice of namespaces, and namespaces are encouraged to avoid collisions.
 
 =Coding standards, naming conventions, etc.=
 
 These are conventions, not rules. And there are not many of them.
 
-Coding style is a personal choice, and anyone who takes the time and effort to contribute is more than welcomed to use whatever style they like. 4-space, 8-space, or N-space indention, with tabs, without tabs, or whatever. If it compiles and links, i'm happy.
+Coding style is a personal choice, and anyone who takes the time and effort to contribute is more than welcomed to use whatever style they like. 4-space, 8-space, or N-space indention, with tabs, without tabs, or whatever. If it compiles and links, i'm happy. And if it's ugly, i'll just tell xemacs to reindent it.
 
 Naming conventions:
 
-As a general rule, i try to follow v8's naming conventions !CamelCaseWithLeadingCapital). Occasionally (or more often) code will be imported from other open-source sources, and that code does not always get changed just to accommodate naming conventions, especially if it will not be part of the public API.
+As a general rule, i try to follow v8's naming convention of !CamelCaseWithLeadingCapital. Occasionally (or more often) code will be imported from other open-source sources, and that code does not always get changed just to accommodate naming conventions, especially if it will not be part of the public API.
 
 Core library code will always go in the `v8::juice` namespace or a sub-namespace. Global-scope code is never allowed except as private/static details in an implementation file (and even then a namespace, even an anonymous one, is strongly preferred).
 
 =Licensing=
 
-The code contains parts which are released under several licenses. The majority of it follows the same license as v8: the "new-style" BSD license. Much of it is Public Domain. In no case will GPL, or other virually-licensed (MPL, QPL, etc.), code be allowed in the tree (but is of course allowed for third-party plugins and such). The _LGPL_ is acceptable in certain contexts (e.g. plugins), but a less strict license is required for any core library code. Permissive, non-viral licenses such as Apache, MIT, zlib, etc., are generally acceptable for core library code.
+The code contains parts which are released under several licenses. The majority of it follows the same license as v8: the "new-style" BSD license. Much of it is Public Domain. In no case will GPL, or other virually-licensed (MPL, QPL, etc.), code be allowed into the main tree (but is of course allowed for third-party plugins and such). The _LGPL_ is acceptable in certain contexts (e.g. plugins), but a less strict license is required for any core library code. Permissive, non-viral licenses such as Apache, MIT, zlib, etc., are generally acceptable for core library code.
