@@ -403,7 +403,8 @@ And now what we originally set out to to: bind `my_native` with JS:
 }}}
 
 Again, it's ugly, but it also has no extra runtime memory costs other than that needed by
-the v8 internals and the conversion from JS to native. While it isn't demonstrated here, `const` member functions can also be bound.
+the v8 internals and the conversion from JS to native. While it isn't demonstrated here, `const` member functions can also be bound, as can member _variables_
+(see `v8::juice::WrappedMemVarGetter<>()` and `v8::juice::WrappedMemVarSetter<>()`).
 
 And in JS it looks like this:
 
