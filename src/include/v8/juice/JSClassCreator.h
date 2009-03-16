@@ -191,7 +191,7 @@ namespace juice {
 			      AccessorSetter  	setter = 0,
 			      Handle< Value >  	data = Handle< Value >(),
 			      AccessControl  	settings = v8::DEFAULT,
-			      PropertyAttribute attribute = None
+			      PropertyAttribute attribute = v8::None
 			      );
 	/**
 	   Sets this JS class to inherit the given parent.
