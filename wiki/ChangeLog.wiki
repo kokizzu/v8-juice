@@ -9,6 +9,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 http://code.google.com/p/v8-juice/source/browse/
 
 ----
+*2009 March 16*
+  * Added support for binding JS/C++ member variables (as opposed to functions). Supports all types which work with `CastToJS()` and `CastFromJS()`.
+
 *2009 March 15*
   * Started reimplementing the [PluginSQLite3 sqlite3 plugin] to use class binding, rather an v8::External, for most argument handling.
 
