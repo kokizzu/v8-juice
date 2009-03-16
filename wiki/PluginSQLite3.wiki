@@ -272,21 +272,21 @@ The `DB` class manages a single sqlite3 database connection.
 
 ===Function list===
 
-|| *Functions* || *Notes* ||
-|| `new DB(String filename)` || Opens the given db or throws (remember that `:memory:` is a special name for in-memory databases. ||
-|| `changes()` || Returns the number of rows modified by the most recently completed SQL statement. ||
-|| `clear()` || _BE CAREFUL!!!_ Drops all tables and views in the database! ||
-|| `close()` || Closes the DB connection. No member functions should be called after this. ||
-|| `string errorMessage()` || Returns the current error text. Remember that sqlite3 uses the literal string "not an error" when there is no error! ||
-|| `int execPragma(String pragma)` || Convenience form of `execute("pragma ...")`. Argument must be in the form of an sqlite3 pragma without the leading `pragma` word, e.g. `SYNCHRONOUS=OFF`.||
-|| `int execute(String sql)` || Executes the given SQL and returns the result of `sqlite3_exec()`.||
-|| `double executeDouble(String sql)` || Executes the given SQL and returns the result as a double. If compilation of the SQL fails then it throws. ||
-|| `int executeInt(String sql)` || As for `executeDouble()`, but returns the value as an integer. ||
-|| `int executeInt64(String sql)` || As for `executeDouble()`, but returns the value as a 64-bit integer. ||
-|| `string executeString(String sql)` || As for `executeDouble()`, but returns the value as a string. ||
-|| `int lastInsertID()` || Returns the last row ID assigned via an insertion operation. ||
-|| `void setBusyTimeout(int ms)` || Sets the "busy timeout" of the underlying sqlite3 engine. ||
-|| `int vacuum()` || Vacuums the database, possibly shrinking its size. ||
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `DB` || `new DB(String filename)` || Opens the given db or throws (remember that `:memory:` is a special name for in-memory databases. ||
+|| `int` || `changes()` || Returns the number of rows modified by the most recently completed SQL statement. ||
+|| `int` || `clear()` || _BE CAREFUL!!!_ Drops all tables and views in the database! ||
+|| `void` || `close()` || Closes the DB connection. No member functions should be called after this. ||
+|| `string` || `errorMessage()` || Returns the current error text. Remember that sqlite3 uses the literal string "not an error" when there is no error! ||
+|| `int` || `execPragma(String pragma)` || Convenience form of `execute("pragma ...")`. Argument must be in the form of an sqlite3 pragma without the leading `pragma` word, e.g. `SYNCHRONOUS=OFF`.||
+|| `int` || `execute(String sql)` || Executes the given SQL and returns the result of `sqlite3_exec()`.||
+|| `double` || `executeDouble(String sql)` || Executes the given SQL and returns the result as a double. If compilation of the SQL fails then it throws. ||
+|| `int` || `executeInt(String sql)` || As for `executeDouble()`, but returns the value as an integer. ||
+|| `int` || `executeInt64(String sql)` || As for `executeDouble()`, but returns the value as a 64-bit integer. ||
+|| `string` || `executeString(String sql)` || As for `executeDouble()`, but returns the value as a string. ||
+|| `int` || `lastInsertID()` || Returns the last row ID assigned via an insertion operation. ||
+|| `void` || `setBusyTimeout(int ms)` || Sets the "busy timeout" of the underlying sqlite3 engine. ||
+|| `int` || `vacuum()` || Vacuums the database, possibly shrinking its size. ||
 
 ===Example===
 
@@ -303,20 +303,20 @@ The `Statement` class represents a single SQL prepared statement. A prepared sta
 
 ===Function list===
 
-|| *Functions* || *Notes* ||
-|| `new Statement(DB [,string sql])` || Creates a new prepared statement for the given db. If no sql is given `prepare()` must be called before the object is used. If sql is given and it cannot be compiled then the ctor throws. ||
-|| `int bindDouble( int ndx, double val )` || Binds a value as a double to the given index (1-based!) in the query. ||
-|| `int bindInt(int ndx, int val)` || Binds a value as an int to the given index (1-based!) in the query. ||
-|| `int bindInt64(int ndx, int val)` || Binds a value as a 64-bit integer to the given index (1-based!) in the query. ||
-|| `int bindNull(int ndx)` || Binds NULL to the given index (1-based!) in the query. ||
-|| `int bindText(int ndx, string text [,length=text.length])` || Binds a value as a string to the given index (1-based!) in the query. If the 3rd argument is specified, only that many bytes (at most) are used. ||
-|| `int clearBindings()` || Nulls all bound values. ||
-|| `int columnCount()` || Returns the number of columns in the statement. ||
-|| `finalize()` || Destroys the statement. This must be called to ensure that the underlying statement is destroyed. Failing to do so may lead to failure in later DB operations, or even a crash when the app exits (and the statement tries to clean up). ||
-|| `Cursor getCursor()` || Returns a new Cursor object for traversing a query's results. ||
-|| `bool isPrepared()` || Returns true if the last `prepare()` succeeded. ||
-|| `int prepare(string sql)` || Prepares the given SQL for execution. Unlike the constructor, if compilation of the SQL fails then it returns a non-zero error code (as specified by `sqlite3_prepare()`). It is okay to re-use a Statement object by calling `prepare()` with new SQL code. ||
-|| `int reset()` || Resets the status of the query, such that looping over the results will start back at the beginning. ||
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `Statement` || `new Statement(DB [,string sql])` || Creates a new prepared statement for the given db. If no sql is given `prepare()` must be called before the object is used. If sql is given and it cannot be compiled then the ctor throws. ||
+|| `int` || `bindDouble( int ndx, double val )` || Binds a value as a double to the given index (1-based!) in the query. ||
+|| `int` || `bindInt(int ndx, int val)` || Binds a value as an int to the given index (1-based!) in the query. ||
+|| `int` || `bindInt64(int ndx, int val)` || Binds a value as a 64-bit integer to the given index (1-based!) in the query. ||
+|| `int` || `bindNull(int ndx)` || Binds NULL to the given index (1-based!) in the query. ||
+|| `int` || `bindText(int ndx, string text [,length=text.length])` || Binds a value as a string to the given index (1-based!) in the query. If the 3rd argument is specified, only that many bytes (at most) are used. ||
+|| `int` || `clearBindings()` || Nulls all bound values. ||
+|| `int` || `columnCount()` || Returns the number of columns in the statement. ||
+|| `void` || `finalize()` || Destroys the statement. This must be called to ensure that the underlying statement is destroyed. Failing to do so may lead to failure in later DB operations, or even a crash when the app exits (and the statement tries to clean up). ||
+|| `Cursor` || `getCursor()` || Returns a new Cursor object for traversing a query's results. ||
+|| `bool` || `isPrepared()` || Returns true if the last `prepare()` succeeded. ||
+|| `int` || `prepare(string sql)` || Prepares the given SQL for execution. Unlike the constructor, if compilation of the SQL fails then it returns a non-zero error code (as specified by `sqlite3_prepare()`). It is okay to re-use a Statement object by calling `prepare()` with new SQL code. ||
+|| `int` || `reset()` || Resets the status of the query, such that looping over the results will start back at the beginning. ||
 
 ===Example===
 
@@ -348,18 +348,18 @@ The `Cursor` class is used for iterating over a result set. See the brief exampl
 
 ===Function list===
 
-|| *Functions* || *Notes* ||
+|| *Return type* || *Name/Signature* || *Notes* ||
 || Constructor || Call `Statement.getCursor()` to create a Cursor object. ||
-|| `void finalize()` || Destroys the cursor. _MUST_ be called _BEFORE_ the associated statement is finalized. See `Statement.finalize()` for details. ||
-|| `int columnCount()` || The number of columns in this result set. ||
-|| `string columnName(int ndx)` || The column name of the 0-based result column. (In contrast to the SQL bind interface, which uses 1-based indexes!) ||
-|| `Array columnNames()` || An array of all column names. ||
-|| `double getDouble(int ndx)` || The value of the given 0-based result column, converted to a double. If the index is out of bounds it throws. ||
-|| `int getInt(int ndx)` || Like `getDouble()`, but for integer values. ||
-|| `int getInt64(int ndx)` || Like `getDouble()`, but for 64-bit integer values. ||
-|| `string getString(int ndx)` || Like `getDouble()`, but for string values. ||
-|| `bool isNull(int ndx)` || Returns true if the given column has an SQL NULL value. ||
-|| `int reset()` || Equivalent to calling `reset()` on this object's associated Statement. ||
-|| `int step()` || Steps one result row and returns the result of [http://sqlite.org/c3ref/step.html sqlite3_step()]. In general `SQLITE_OK`, `SQLITE_ROW`, or `SQLITE_DONE` may be success values, depending on the SQL code being executed. ||
+|| `void` || `finalize()` || Destroys the cursor. _MUST_ be called _BEFORE_ the associated statement is finalized. See `Statement.finalize()` for details. ||
+|| `int` || `columnCount()` || The number of columns in this result set. ||
+|| `string` || `columnName(int ndx)` || The column name of the 0-based result column. (In contrast to the SQL bind interface, which uses 1-based indexes!) ||
+|| `Array` || `columnNames()` || An array of all column names. ||
+|| `double` || `getDouble(int ndx)` || The value of the given 0-based result column, converted to a double. If the index is out of bounds it throws. ||
+|| `int` || `getInt(int ndx)` || Like `getDouble()`, but for integer values. ||
+|| `int` || `getInt64(int ndx)` || Like `getDouble()`, but for 64-bit integer values. ||
+|| `string` || `getString(int ndx)` || Like `getDouble()`, but for string values. ||
+|| `bool` || `isNull(int ndx)` || Returns true if the given column has an SQL NULL value. ||
+|| `int` || `reset()` || Equivalent to calling `reset()` on this object's associated Statement. ||
+|| `int` || `step()` || Steps one result row and returns the result of [http://sqlite.org/c3ref/step.html sqlite3_step()]. In general `SQLITE_OK`, `SQLITE_ROW`, or `SQLITE_DONE` may be success values, depending on the SQL code being executed. ||
 
 All cursors which refer to a Statement object all refer to the same underlying statement, so reseting one of them will reset the statement for all related cursors. Also note that when a cursor is finalized, the underlying statement is reset (this has a long history in the underying C++ implementation, and is not easily changed due to the reference counting involved).
