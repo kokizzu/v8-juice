@@ -77,7 +77,17 @@ Post-`main()` issues are a real-world problem all v8 clients face, especially an
 
 ==Narrowed Applicability due to Design Constraints==
 
-In my opinion, most of these problems are a direct side-effect of v8 having been primarily designed for use in a single application, namely the Google Chrome browser. (One of the v8 developers admitted so much when he said the reason v8 doesn't guaranty that GC will _ever_ be called was made on the basis of improving Chrome's performance.) This led them to make some design decisions which severely limit the more widespread integration of v8 in other applications. My biggest gripe here is that the JS state is all hidden away in shared data, accessible via static functions, instead of being associated with a context handle which is passed around to all client-side functions which use the API (as in !SpiderMonkey, and that approach eliminates most of the lifetime issues mentioned above).
+In my opinion, most of these problems are a direct side-effect of v8 having
+been primarily designed for use in a single application, namely the Google
+Chrome browser. (One of the v8 developers admitted so much when he said the
+reason v8 doesn't guaranty that GC will _ever_ be called was made on the basis
+of improving Chrome's performance.) This led them to make some design
+decisions which severely limit the more widespread integration of v8 in other
+applications. My biggest gripe here is that the JS state is all hidden away in
+shared data, accessible via static functions, instead of being associated with
+a context handle which is passed around to all client-side functions which use
+the API (as in !SpiderMonkey, and that approach goes a long way towards eliminating
+some of the lifetime issues mentioned above).
 
 ==WTFM==
 
