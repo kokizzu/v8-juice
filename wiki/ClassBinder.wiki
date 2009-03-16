@@ -2,16 +2,20 @@
 
 This is an extension of the [CreatingJSClasses page about creating JS classes]. Please read that page before reading this one. The page for the [ConvertingTypes v8::juice type conversions API] might also be helpful.
 
+<wiki:toc max_depth='3'/>
+
 =!ClassBinder=
 
-!ClassBinder is a WeakJSClassCreator subclass which makes use of
+!ClassBinder is a [CreatingJSClasses WeakJSClassCreator] subclass which makes use of
 v8-juice's type conversions API to add features to the class binding process.
 Unlike JSClassCreator and WeakJSClassCreator, !ClassBinder is not a
 standalone implementation which can be used as-is in arbitrary v8 client
-code - it requires the v8-juice type conversions framework.
+code - it requires [ConvertingTypes the v8-juice type conversions framework] in order to convert between native and JS types.
+
+==Binding member functions==
 
 The primary feature added by !ClassBinder is the ability to bind native
-member functions of the wrapped type. The syntax for doing so is a tiny
+member functions and variables of the wrapped type. The syntax for doing so is a tiny
 bit odd, but there's a reason for it which we'll explain after we
 demonstrate:
 
@@ -85,7 +89,29 @@ conversion limitations (and features) of that API. As an exception, it supports
 member functions returning `void` (which the `v8::juice::convert` API cannot
 directly handle).
 
-==Example of using !ClassBinder==
+==Binding member variables==
+
+Again, the syntax is ugly, but not as ugly as that for binding functions. If we have a type with a `std::string` member named `str`, we can bind that member with:
+
+{{{
+binder.Set( "str",
+     WrappedMemVarGetter<MY,std::string, &MY::str>,
+     WrappedMemVarSetter<MY,std::string, &MY::str> );
+}}}
+
+The `WrappedMemVarSetter<>()` and `WrappedMemVarGetter<>()` templates create functions which set/get the native member using [ConvertingTypes CastFromJS() and CastToJS()]. This means that we can also bind members which are pointers to other wrapped types, and access those transparently via JS. e.g. if the MY type has a member `MY * other`, we can bind that:
+
+{{{
+binder.Set( "str",
+     WrappedMemVarGetter<MY,MY *, &MY::other>,
+     WrappedMemVarSetter<MY,MY *, &MY::other> );
+}}}
+
+Though whether or not such an automatic conversion makes sense for your case is another question entirely (e.g. it might be possible to leak objects or other problems if client code doesn't manage such pointers in a manner which is kosher in your API).
+
+We can of course choose to apply only the getter or the setter if we like, to allow conversions in only one direction.
+
+=Example of using !ClassBinder=
 
 Here's an example of how `ClassBinder` can be used.
 
