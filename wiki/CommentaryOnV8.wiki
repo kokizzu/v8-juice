@@ -24,6 +24,8 @@ several design aspects which notably hinder some of my early use-cases (see
 below), and at this point it's not certain whether i'll be sticking with v8 or
 not.
 
+All of that said, i'm probably one of the world's biggest fans of Google's technology offerings, and i couldn't resist the chance to experiment with their JavaScript engine.
+
 =Criticisms=
 
 In my experience, these are the significant problems and caveats associated
