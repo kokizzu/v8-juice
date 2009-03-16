@@ -24,6 +24,8 @@ files are:
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/JSClassCreator.cc JSClassCreator.cc]
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/WeakJSClassCreator.h WeakJSClassCreator.h]
 
+The `ClassBinder` type described below extends `WeakJSClassCreator`, but relies on the [ConvertingTypes v8::juice type conversions API] and is therefore not standalone code.
+
 
 =JSClassCreator=
 
