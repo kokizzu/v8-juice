@@ -13,6 +13,8 @@ Unlike JSClassCreator and WeakJSClassCreator, !ClassBinder is not a
 standalone implementation which can be used as-is in arbitrary v8 client
 code - it requires [ConvertingTypes the v8-juice type conversions framework] in order to convert between native and JS types.
 
+An interesting feature of the class binding framework is that it's compile-time typesafe. Though v8 uses `void *` as the parameter type for destruction callbacks, the implementation uses a mix of class templates, private static functions, and an internal void-to-native mapping to ensure that only the correct types can, e.g., be passed to the correct destructor, and that `CastFromJS<TypeB>()` cannot cast (using the default conversions) to `TypeA`. The implementation is believed to be 100% typesafe.
+
 ==Binding member functions==
 
 The primary feature added by !ClassBinder is the ability to bind native
@@ -124,6 +126,8 @@ We can of course choose to apply only the getter or the setter if we like, to al
 
 Here's an example of how `ClassBinder` can be used.
 
+==A native type to bind==
+
 First we need a native type. Oh, look, here's one:
 
 {{{
@@ -139,11 +143,17 @@ struct my_native
     void avoid1(int x ) {}
     void avoid2(int x,double d ) {}
     double takes3(int x, int y, int z) { return x * y * z; }
-};
+    std::string str;
+    my_native * other;
+    my_native() : str(),other(0)
+    {}
 }}}
 
-Great, now that's out of the way. We need a
-`WeakJSClassCreatorOps<my_native>` specialization which defines the
+Great, now that's out of the way...
+
+==WeakJSClassCreatorOps specialization==
+
+We need a `WeakJSClassCreatorOps<my_native>` specialization which defines the
 common binding operations:
 
 {{{
@@ -170,6 +180,8 @@ namespace v8 { namespace juice {
 }}}
 
 That example is feature-complete and ready for copy/paste into your source files.
+
+==Set up automatic JS/C++ conversions==
 
 The following macro hooks `my_native` in with the `v8::juice::convert`
 API, so that we can use `CastToJS()` and `CastFromJS()` with
@@ -222,6 +234,8 @@ struct JSToNative<my_native>
 
 (See the [ConvertingTypes type conversions page] for the details.)
 
+==Bringing it all together==
+
 And now what we originally set out to to: bind `my_native` with JS:
 
 {{{
@@ -239,15 +253,19 @@ And now what we originally set out to to: bind `my_native` with JS:
      .BindMemFunc< void,&MY::avoid >( "avoid" )
      .BindMemFunc< void,int,&MY::avoid1 >( "avoid1" )
      .BindMemFunc< void,int,double,&MY::avoid2 >( "avoid2" )
-     .BindMemFunc< double,int,int,int,&MY::takes3 >( "takes3" );
+     .BindMemFunc< double,int,int,int,&MY::takes3 >( "takes3" )
+     .BindMemVar< std::string, &MY::str >("str")
+     .BindMemVar< MY *, &MY::other >("other")
     w.Seal();
 }}}
 
-Again, it's ugly, but it also has no extra runtime memory costs other than that needed by
-the v8 internals and the conversion from JS to native. While it isn't demonstrated here, `const` member functions can also be bound, as can member _variables_
-(see `v8::juice::WrappedMemVarGetter<>()` and `v8::juice::WrappedMemVarSetter<>()`).
+Again, the templates syntax is ugly, but it also has no extra runtime memory costs other than that needed by the v8 internals and the conversion from JS to native.
 
-And in JS it looks like this:
+While it isn't demonstrated here, `const` member functions can also be bound. For more information on binding member variables, see the API docs for `v8::juice::WrappedMemVarGetter<>()` and `v8::juice::WrappedMemVarSetter<>()` (in [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h]).
+
+==And finally... script code==
+
+Once we've done all that, here's what it looks like in JS:
 
 {{{
 var m = new MyNative();
@@ -257,18 +275,24 @@ print(m.func3(m.func1(),m.func2(m.func1())))
 print(m.him(m));
 print(m.me());
 print(m.takes3(2,2,3));
+print('m.str =',(m.str='bye, world!'));
+print('m.other =',m.other);
+m.other = new MyNative();
+m.other.str = "i am the other!";
+print('m.other.str =',m.other.str);
 }}}
 
 The output:
 
 {{{
-stephan@jareth:~/cvs/v8-juice/trunk/src/client/shell$ ./v8-juice-shell js/fwd.js
+stephan@jareth:~/cvs/v8-juice/trunk/src/client/shell$ v8-juice-shell js/fwd.js
 void returns: undefined undefined undefined
 hi!
 3528
 true
 [object Object]
 12
+m.str = bye, world!
+m.other = null
+m.other.str = i am the other!
 }}}
-
-An interesting feature of the class binding framework is that it's compile-time typesafe. Though v8 uses `void *` as the parameter type for destruction callbacks, the implementation uses a mix of class templates, private static functions, and an internal void-to-native mapping to ensure that only the correct types can, e.g., be passed to the correct destructor, and that `CastFromJS<TypeB>()` cannot cast (using the default conversions) to `TypeA`. The implementation is believed to be 100% typesafe.
