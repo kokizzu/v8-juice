@@ -33,6 +33,10 @@ This plugins provides the following features:
 When using the plugins API, you don't need to do anything C++-side to
 use this addon - simply load it as described on [Plugins the plugins page].
 
+When this plugin is registered it will create an object called `whio` inside the target object
+into which it is added (normally the global object). That `whio` object holds the rest of the
+classes and functions for this plugin.
+
 =JS usage=
 
 {{{
@@ -58,40 +62,40 @@ This class is abstract - it cannot be instantiated directly. However, it does sp
 
 The API for this class includes any routines which are common amongst the `InStream`, `OutStream`, and `IODevice` classes, but those classes sometimes provide their own implementations for these functions.
 
-||*Functions*||*Nodes||
-|| `string read(int length)` || Tries to read up to `length` bytes from the input source. Returns the data as a string, and the length of that string will equal the `length` parameter unless EOF is reached or a read error occurs. ||
-|| `int write(string data [,int length=data.length])` || Attempts to write `length` bytes of data. Returns the number of bytes actually written, which will be less than `length` on error ||
-|| `void close()` || Closes the stream. Do not use the object after calling this. ||
-|| `int flush()` || May (or may not) flush any device-specific cache. Returns 0 on success. ||
-|| `bool isGood()`  || Returns true if the object is in a usable state (i.e. there have been no i/o errors). ||
-|| *Properties* (read-only) || *Notes* ||
-|| `bool canWrite` and `bool canRead`|| Specify whether the object is capable of reading or writing. These are static - set when the device is opened and never changed, so don't use them for error checking. ||
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `string` || `read(int length)` || Tries to read up to `length` bytes from the input source. Returns the data as a string, and the length of that string will equal the `length` parameter unless EOF is reached or a read error occurs. ||
+|| `int` || `write(string data [,int length=data.length])` || Attempts to write `length` bytes of data. Returns the number of bytes actually written, which will be less than `length` on error ||
+|| `void` || `close()` || Closes the stream. Do not use the object after calling this. ||
+|| `int` || `flush()` || May (or may not) flush any device-specific cache. Returns 0 on success. ||
+|| `bool` || `isGood()`  || Returns true if the object is in a usable state (i.e. there have been no i/o errors). ||
+|| *Type* || *Properties* (read-only) || *Notes* ||
+|| `bool` || `canWrite` and `bool canRead`|| Specify whether the object is capable of reading or writing. These are static - set when the device is opened and never changed, so don't use them for error checking. ||
 
 ==!InStream Class==
 
 !InStream represents a read-only stream. In addition to the interface defined by IOBase, it has:
 
-|| *Functions* || *Notes* ||
-|| `new InStream(string file)` || Opens the given file in read mode. ||
-|| `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
-|| *Properties* (read-only) || *Notes* ||
-|| `IODevice ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
-|| `string fileName` || Only for objects which are associated with a file. ||
-|| `bool canWrite` || Always false for !OutStreams. ||
-|| `bool canRead` || Always true for !OutStreams. ||
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `InStream` || `new InStream(string file)` || Opens the given file in read mode. ||
+|| `InStream` || `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
+|| *Type* || *Properties* (read-only) || *Notes* ||
+|| `IODevice` || `ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
+|| `string` || `fileName` || Only for objects which are associated with a file. ||
+|| `bool` || `canWrite` || Always false for !OutStreams. ||
+|| `bool` || `canRead` || Always true for !OutStreams. ||
 
 ==!OutStream Class==
 
 !OutStream represents a write-only stream. In additions to the interface defined by IOBase, it has:
 
-|| *Functions* || *Notes* ||
-|| `new OutStream(string file[, bool truncate=false])` || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
-|| `new OutStream(IODevice)` || As for InStream(IODevice). If the device is not writable, no write operations on the new object will succeed.||
-|| *Properties* (read-only) || *Notes* ||
-|| `IODevice ioDevice` || Only for objects created with the `OutStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
-|| `string fileName` || Only for objects which are associated with a file. ||
-|| `bool canWrite` || Always true for !OutStreams. ||
-|| `bool canRead` || Always false for !OutStreams. ||
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `OutStream` || `new OutStream(string file[, bool truncate=false])` || Opens the given file in write-only mode, truncating it to 0 bytes if truncate is true, otherwise it is appended to ||
+|| `OutStream` || `new OutStream(IODevice)` || As for `InStream(IODevice)`. If the device is not writable, no write operations on the new object will succeed.||
+|| *Type* || *Properties* (read-only) || *Notes* ||
+|| `IODevice` || `ioDevice` || Only for objects created with the `OutStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
+|| `string` || `fileName` || Only for objects which are associated with a file. ||
+|| `bool` || `canWrite` || Always true for !OutStreams. ||
+|| `bool` || `canRead` || Always false for !OutStreams. ||
 
 
 ==IODevice Class==
@@ -105,31 +109,31 @@ time).
 
 In addition to the interface defined by IOBase, it has:
 
-|| *Functions*  || *Notes* ||
-|| `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
-|| `new IODevice(":memory:" [, int startingSize=0])` || Opens a read/write i/o device which uses RAM as its storage. It starts out at the given size and grows on demand. ||
-|| `new IODevice(IODevice,int lower,int upper)`|| Creates a new IODevice which acts as a proxy for a subset of the original device's range. This is described in more detail below. The parent device must outlive the new device. ||
-|| `int error()` || Returns a platform-specific non-0 value if the device has an error state. `isGood()` is equivalent to `(0 == dev.error())`.||
-|| `int clearError()` || Tries to clear any error state and EOF marker. Returns 0 on success. ||
-|| `bool eof()` || Returns true if the device is at (or past) its EOF. ||
-|| `int tell()` || Returns the current position within the underlying device. ||
-|| `int seek(int offset[, int whence=IOBase.SEEK_SET])` || Sets the current position to offset, relative to whence, which must be one of `whio.IOBase.SEEK_SET`, `whio.IOBase.SEET_CUR`, or `whio.IOBase.SEEK_END`. Returns the new position. ||
-|| `int flush()` || Tries to flush any existing write data, if applicable. Some device types might do other handling here. Returns 0 on success. ||
-|| `int truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
-|| `int size()` || Returns the current size of the device. ||
-|| `int rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
-|| *Properties* (read-only) || *Notes* ||
-|| `IODevice ioDevice` || Only for devices created with the `IODevice(IODevice,int,int)` constructor, this points to the subdevice's pointed-to device. ||
-|| `string fileName` || Only for objects which are associated with a file. ||
-|| `bool canWrite` || Value depends on how the device was opened. It is not always possible for the stream opener to know if a given stream supports writing (e.g. "/dev/stdin"), and this value may be set incorrectly for those cases. Writing to such a stream will cause the normal write failure, nothing catastrophic. ||
-|| `bool canRead` || Value depends on how the device was opened. For files this value is always true, even if the file being opened cannot support reading (e.g. stdout). That is because the open() routines don't have enough information to know that the device cannot be read (or written to, in the case of stdin). In a case like that, reading (or writing) will fail in the normal manner. ||
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `IODevice` || `new IODevice(string file,bool writeMode)` || Opens the given file for read and (if writeMode is true) write ||
+|| `IODevice` || `new IODevice(":memory:" [, int startingSize=0])` || Opens a read/write i/o device which uses RAM as its storage. It starts out at the given size and grows on demand. ||
+|| `IODevice` || `new IODevice(IODevice,int lower,int upper)`|| Creates a new IODevice which acts as a proxy for a subset of the original device's range. This is described in more detail below. The parent device must outlive the new device. ||
+|| `int` || `error()` || Returns a platform-specific non-0 value if the device has an error state. `isGood()` is equivalent to `(0 == dev.error())`.||
+|| `int` || `clearError()` || Tries to clear any error state and EOF marker. Returns 0 on success. ||
+|| `bool` || `eof()` || Returns true if the device is at (or past) its EOF. ||
+|| `int` || `tell()` || Returns the current position within the underlying device. ||
+|| `int` || `seek(int offset[, int whence=IOBase.SEEK_SET])` || Sets the current position to offset, relative to whence, which must be one of `whio.IOBase.SEEK_SET`, `whio.IOBase.SEET_CUR`, or `whio.IOBase.SEEK_END`. Returns the new position. ||
+|| `int` || `flush()` || Tries to flush any existing write data, if applicable. Some device types might do other handling here. Returns 0 on success. ||
+|| `int` || `truncate(int length)` || Truncates the device to the given length. Returns 0 on success. ||
+|| `int` || `size()` || Returns the current size of the device. ||
+|| `int` || `rewind()`|| Rewinds the internal device pointer. Returns 0 on success. ||
+|| *Type* || *Properties* (read-only) || *Notes* ||
+|| `IODevice` || `ioDevice` || Only for devices created with the `IODevice(IODevice,int,int)` constructor, this points to the subdevice's pointed-to device. ||
+|| `string` || `fileName` || Only for objects which are associated with a file. ||
+|| `bool` || `canWrite` || Value depends on how the device was opened. It is not always possible for the stream opener to know if a given stream supports writing (e.g. "/dev/stdin"), and this value may be set incorrectly for those cases. Writing to such a stream will cause the normal write failure, nothing catastrophic. ||
+|| `bool` || `canRead` || Value depends on how the device was opened. For files this value is always true, even if the file being opened cannot support reading (e.g. stdout). That is because the open() routines don't have enough information to know that the device cannot be read (or written to, in the case of stdin). In a case like that, reading (or writing) will fail in the normal manner. ||
 
 
 ===SEEK_SET and friends===
 
 `whio.IODevice.seek()` is semantically identical to the C function `fseek()`, and requires a second argument with one of these values:
 
-  * `whio.IOBase.SEEK_SET` means to move to that absolute position.
+  * `whio.IOBase.SEEK_SET` means to move to the given absolute position.
   * `whio.IOBase.SEEK_CUR` means to move relative to the current position.
   * `whio.IOBase.SEEK_END` means to move relative to the end of the device.
 
@@ -170,11 +174,11 @@ partition off access to various internal areas of
 
 Subdevices get an extra function compared to other IODevices:
 
-|| `int rebound( int lower, int upper )` || Changes the subdevice's lower and upper bounds, relative to the parent. Returns 0 on success. ||
+|| `int` || `rebound( int lower, int upper )` || Changes the subdevice's lower and upper bounds, relative to the parent. Returns 0 on success. ||
 
 And a new property:
 
-|| `IODevice ioDevice` || This points to the subdevice's pointed-to device. ||
+|| `IODevice` || `ioDevice` || This points to the subdevice's pointed-to device. ||
 
 
 ==Error reporting==
