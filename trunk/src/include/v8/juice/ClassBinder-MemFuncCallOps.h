@@ -8,7 +8,7 @@ struct MemFuncCallOp1
 {
     enum { Arity = 1 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller1 OpBase;
+    typedef WeakMemFuncCaller<1> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -27,7 +27,7 @@ struct MemFuncCallOp1< WrappedType,void, A0, Func >
 {
     enum { Arity = 1 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller1 OpBase;
+    typedef WeakMemFuncCaller<1> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -46,7 +46,7 @@ struct MemFuncCallOp2
 {
     enum { Arity = 2 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller2 OpBase;
+    typedef WeakMemFuncCaller<2> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -65,7 +65,7 @@ struct MemFuncCallOp2< WrappedType,void, A0, A1, Func >
 {
     enum { Arity = 2 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller2 OpBase;
+    typedef WeakMemFuncCaller<2> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -84,7 +84,7 @@ struct MemFuncCallOp3
 {
     enum { Arity = 3 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller3 OpBase;
+    typedef WeakMemFuncCaller<3> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -103,7 +103,7 @@ struct MemFuncCallOp3< WrappedType,void, A0, A1, A2, Func >
 {
     enum { Arity = 3 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller3 OpBase;
+    typedef WeakMemFuncCaller<3> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -122,7 +122,7 @@ struct MemFuncCallOp4
 {
     enum { Arity = 4 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller4 OpBase;
+    typedef WeakMemFuncCaller<4> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -141,7 +141,7 @@ struct MemFuncCallOp4< WrappedType,void, A0, A1, A2, A3, Func >
 {
     enum { Arity = 4 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller4 OpBase;
+    typedef WeakMemFuncCaller<4> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -160,7 +160,7 @@ struct MemFuncCallOp5
 {
     enum { Arity = 5 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller5 OpBase;
+    typedef WeakMemFuncCaller<5> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -179,7 +179,7 @@ struct MemFuncCallOp5< WrappedType,void, A0, A1, A2, A3, A4, Func >
 {
     enum { Arity = 5 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller5 OpBase;
+    typedef WeakMemFuncCaller<5> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -198,7 +198,7 @@ struct MemFuncCallOp6
 {
     enum { Arity = 6 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller6 OpBase;
+    typedef WeakMemFuncCaller<6> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -217,7 +217,7 @@ struct MemFuncCallOp6< WrappedType,void, A0, A1, A2, A3, A4, A5, Func >
 {
     enum { Arity = 6 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller6 OpBase;
+    typedef WeakMemFuncCaller<6> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -236,7 +236,7 @@ struct MemFuncCallOp7
 {
     enum { Arity = 7 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller7 OpBase;
+    typedef WeakMemFuncCaller<7> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -255,7 +255,7 @@ struct MemFuncCallOp7< WrappedType,void, A0, A1, A2, A3, A4, A5, A6, Func >
 {
     enum { Arity = 7 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller7 OpBase;
+    typedef WeakMemFuncCaller<7> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -274,7 +274,7 @@ struct MemFuncCallOp8
 {
     enum { Arity = 8 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller8 OpBase;
+    typedef WeakMemFuncCaller<8> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );
@@ -293,7 +293,7 @@ struct MemFuncCallOp8< WrappedType,void, A0, A1, A2, A3, A4, A5, A6, A7, Func >
 {
     enum { Arity = 8 };
     typedef WrappedType Type;
-    typedef WeakMemFuncCaller8 OpBase;
+    typedef WeakMemFuncCaller<8> OpBase;
     static Handle<Value> Call( Type * obj, Arguments const & argv )
     {
 	return OpBase::Call( obj, Func, argv );

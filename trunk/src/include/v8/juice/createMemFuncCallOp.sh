@@ -21,8 +21,8 @@ castCalls=""
 at=0
 callop=MemFuncCallOp${count}
 MemFuncCaller=MemFuncCaller
-callBase=${MemFuncCaller}${count}
-callBaseWeak=WeakMemFuncCaller${count}
+callBase="${MemFuncCaller}<${count}>"
+callBaseWeak="WeakMemFuncCaller<${count}>"
 
 function makeLists()
 {
@@ -56,6 +56,7 @@ cat <<EOF
 A helper class for forwarding JS arguments to member functions
 taking ${count} arguments.
 */
+template <>
 struct ${callBase}
 {
     enum { Arity = ${count} };
@@ -96,6 +97,7 @@ struct ${callBase}
 	return Undefined();
     }
 };
+template <>
 struct ${callBaseWeak} : ${callBase}
 {
     enum { Arity = ${count} };
@@ -105,7 +107,7 @@ struct ${callBaseWeak} : ${callBase}
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
 	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
-	if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+	if( ! obj ) return ThrowException(String::New("${callBaseWeak}::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
     
@@ -114,7 +116,7 @@ struct ${callBaseWeak} : ${callBase}
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
 	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
-	if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+	if( ! obj ) return ThrowException(String::New("${callBaseWeak}::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
     
@@ -123,7 +125,7 @@ struct ${callBaseWeak} : ${callBase}
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
 	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
-	if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+	if( ! obj ) return ThrowException(String::New("${callBaseWeak}::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
     
@@ -132,7 +134,7 @@ struct ${callBaseWeak} : ${callBase}
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
 	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
-	if( ! obj ) return ThrowException(String::New("MemFuncCaller0<>::Call() could not find native 'this' object!"));
+	if( ! obj ) return ThrowException(String::New("${callBaseWeak}::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
 

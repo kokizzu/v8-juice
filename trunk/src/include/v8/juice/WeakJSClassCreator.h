@@ -378,7 +378,7 @@ namespace juice {
 	   not created by this class, but this function makes every
 	   effort to ensure that it doesn't do anything too stupid.
 	*/
-	static WrappedType * GetSelf( Local<Object> h )
+	static WrappedType * GetSelf( Handle<Object> h )
 	{
 	    if( h.IsEmpty() || (h->InternalFieldCount() != (FieldCount)) ) return 0;
 	    Local<Value> lv( h->GetInternalField(NativeFieldIndex) );
@@ -445,7 +445,7 @@ namespace juice {
 	   Returns true if it passes a native object to the
 	   destructor, else false.
 	*/
-	static bool DestroyObject( Local<Object> jo )
+	static bool DestroyObject( Handle<Object> jo )
 	{
 	    WrappedType * t = GetSelf(jo); // sanity check
 	    if( ! t ) return false;
