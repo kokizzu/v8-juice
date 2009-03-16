@@ -8,7 +8,7 @@
 The `v8::juice::PathFinder` class responsible for doing all file searching
 which v8-juice does. This currently means looking for DLLs, but could just as easily mean finding source files to include into a script or image files to process. This class has been used for a number of years in other projects
 
-The class can be added to a JS engine by calling `v8::SetupPathFinderClass()`, declared in `PathFinder.h`.
+The class can be added to a JS engine by calling `v8::juice::SetupPathFinderClass()`, declared in [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/PathFinder.h PathFinder.h].
 
 == JS API ==
 
