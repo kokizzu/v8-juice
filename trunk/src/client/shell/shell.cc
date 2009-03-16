@@ -91,6 +91,9 @@ struct my_native
 
     double takes3(int x, int y, int z) { return x * y * z; }
 
+    my_native * other;
+    my_native() : str(),other(0)
+    {}
 };
 
 namespace v8 { namespace juice {
@@ -154,6 +157,14 @@ int my_fwd( V8CxH & cx )
     w.BindMemFunc< void,int,&MY::avoid1 >( "avoid1" );
     w.BindMemFunc< void,int,double,&MY::avoid2 >( "avoid2" );
     w.BindMemFunc< double,int,int,int,&MY::takes3 >( "takes3" );
+    w.Set( "str",
+           WrappedMemVarGetter<MY,std::string, &MY::str>,
+           WrappedMemVarSetter<MY,std::string, &MY::str>,
+           Handle<Value>(), v8::DEFAULT, v8::ReadOnly );
+    w.Set( "other",
+           WrappedMemVarGetter<MY,my_native *, &MY::other>,
+           WrappedMemVarSetter<MY,my_native *, &MY::other>,
+           Handle<Value>(), v8::DEFAULT, v8::ReadOnly );
     w.Seal();
     return 0;
 }
