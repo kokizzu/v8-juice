@@ -1,6 +1,8 @@
 #summary JS API reference for PathFinder class
 #labels Topic-JS-API,Phase-UserDocs
 
+<wiki:toc max_depth='3'/>
+
 = !PathFinder =
 
 The `v8::juice::PathFinder` class responsible for doing all file searching
@@ -32,7 +34,7 @@ The class can be added to a JS engine by calling `v8::SetupPathFinderClass()`, d
 
 Note that because the values in a !PathFinder object are internally native types, it is not possible to directly change them via JS objects. e.g. `obj.pathArray()[3]='/home'` will have no effect, as the object returned from `pathArray()` is necessarily a copy of the native data. All of the accessors are functions, as opposed to properties, to try to help avoid any confusion on that point.
 
-=Shared !PathFinder Instances=
+==Shared !PathFinder Instances==
 
 When the class is added to an object, the setup routine also creates a couple
 shared !PathFinder objects, accessible via the shared JS object
@@ -41,7 +43,7 @@ shared !PathFinder objects, accessible via the shared JS object
   * `PathFinder.shared.plugins` = the same object as `v8::juice::plugin::PluginsPath()`.
   * `PathFinder.shared.include` = the same object as `v8::juice::ScriptsPath()`.
 
-For example:
+==Examples==
 
 {{{
 print(PathFinder.shared.plugins.find("MyPlugin"));
