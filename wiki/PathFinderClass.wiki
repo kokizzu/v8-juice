@@ -34,10 +34,12 @@ Note that because the values in a !PathFinder object are internally native types
 
 =Shared !PathFinder Instances=
 
-When the class is added to an object, the setup routine also creates shared !PathFinder objects, accessible via the shared JS object `PathFinder.shared`. The list of shared objects is:
+When the class is added to an object, the setup routine also creates a couple
+shared !PathFinder objects, accessible via the shared JS object
+`PathFinder.shared`. The list of shared objects is:
 
-  * `PathFinder.shared.plugins` = the same object as `v8::juice::plugin::PluginPath()`.
-  * `PathFinder.shared.include` = Not yet added, but will be used for searching for `include()`ed scripts.
+  * `PathFinder.shared.plugins` = the same object as `v8::juice::plugin::PluginsPath()`.
+  * `PathFinder.shared.include` = the same object as `v8::juice::ScriptsPath()`.
 
 
 For example:
