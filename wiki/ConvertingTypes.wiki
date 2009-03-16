@@ -138,9 +138,9 @@ TODOs:
   * Refactor `FwdToFuncN()` to use a mechanism similar to what the !ClassBinder member bindings do, as this allows us to use `void` return types.
   * Consolidate the `FwdToFuncN()` and !ClassBinder call forwarding API. Right now they are completely separate beasts and have some inconsistencies (e.g. !ClassBinder's code can handle void returns whereas `FwdToFunc` cannot).
 
-=Forwarding to member functions=
+=Forwarding to member functions/variables=
 
-Native classes which are bound using the [CreatingJSClasses ClassBinder class] can bind member functions as well as free functions. See that page for an example, or see [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h] for the API docs.
+Native classes which are bound using the [CreatingJSClasses ClassBinder class] can bind member functions and member variables, as well as free functions. See that page for an example, or see [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h] for the API docs.
 
 =Silly Examples=
 
