@@ -10,25 +10,25 @@ The class can be added to a JS engine by calling `v8::SetupPathFinderClass()`, d
 
 == JS API ==
 
-|| *Functions* || *Notes* ||
-|| `new PathFinder( [path=''], [extensions=''], [delimiter=':'])` || Creates a new !PathFinder with the given search path, extensions, and delimiter. ||
-|| `String pathString()` || Search path as a delimited string. ||
-|| `int setPathString( String )`  || Sets the search path. May be delimited. ||
-|| `Array pathArray()` || Search path as an array. ||
-|| `int setPathArray( Array )`  || Sets search path to the given list of dirs. ||
-|| `String pathSeparator()` || The delimiter used to split/join path lists. ||
-|| `void setPathSeparator( character )`  || Sets path delimiter used to split/join paths.  ||
-|| `Array extensionsArray()` || List of search extensions, as an array. ||
-|| `int setExtensionsArray( Array )`  || Sets list of search extensions.  ||
-|| `String extensionsString()` || List of search extensions as a delimited string. ||
-|| `int setExtensionsString( String )`  || Set list of search extensions as a delimited string. ||
-|| `void addPathString( String )`  || Adds a dir (or delimited list) to the search path. ||
-|| `void addExtensionString( String )`  || Adds an extension (or delimited list) to the extensions search list. ||
-|| `String find( String )`  || Searched for the given file. ||
-|| `void clearCache()` || Clears the internal file lookup cache. ||
-|| `bool isEmpty()` || Returns true only if this object has no path/search information. ||
-|| *Properties* || *Notes* ||
-|| `dirSeparator` (read-only) || The platform-specific character used to separate directory names in a path. This is `\` on Windows and `/` everywhere else. ||
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `PathFinder` || `new PathFinder( [path=''], [extensions=''], [delimiter=':'])` || Creates a new !PathFinder with the given search path, extensions, and delimiter. ||
+|| `String` || `pathString()` || Search path as a delimited string. ||
+|| `int` || `setPathString( String )`  || Sets the search path. May be delimited. ||
+|| `Array` || `pathArray()` || Search path as an array. ||
+|| `int` || `setPathArray( Array )`  || Sets search path to the given list of dirs. ||
+|| `String` || `pathSeparator()` || The delimiter used to split/join path lists. ||
+|| `void` || `setPathSeparator( character )`  || Sets path delimiter used to split/join paths.  ||
+|| `Array` || `extensionsArray()` || List of search extensions, as an array. ||
+|| `int` || `setExtensionsArray( Array )`  || Sets list of search extensions.  ||
+|| `String` || `extensionsString()` || List of search extensions as a delimited string. ||
+|| `int` || `setExtensionsString( String )`  || Set list of search extensions as a delimited string. ||
+|| `void` || `addPathString( String )`  || Adds a dir (or delimited list) to the search path. ||
+|| `void` || `addExtensionString( String )`  || Adds an extension (or delimited list) to the extensions search list. ||
+|| `String` || `find( String )`  || Searched for the given file. ||
+|| `void` || `clearCache()` || Clears the internal file lookup cache. ||
+|| `bool` || `isEmpty()` || Returns true only if this object has no path/search information. ||
+|| *Type* || *Properties* (read-only) || *Notes* ||
+|| `string` || `dirSeparator` (read-only) || The platform-specific character used to separate directory names in a path. This is `\` on Windows and `/` everywhere else. ||
 
 Note that because the values in a !PathFinder object are internally native types, it is not possible to directly change them via JS objects. e.g. `obj.pathArray()[3]='/home'` will have no effect, as the object returned from `pathArray()` is necessarily a copy of the native data. All of the accessors are functions, as opposed to properties, to try to help avoid any confusion on that point.
 
