@@ -116,9 +116,7 @@ which is basically simply a shorthand form of the above (but also uses different
 The `WrappedMemVarSetter<>()` and `WrappedMemVarGetter<>()` templates create functions which set/get the native member using [ConvertingTypes CastFromJS() and CastToJS()]. This means that we can also bind members which are pointers to other wrapped types, and access those transparently via JS. e.g. if the MY type has a member `MY * other`, we can bind that:
 
 {{{
-binder.Set( "str",
-     WrappedMemVarGetter<MY,MY *, &MY::other>,
-     WrappedMemVarSetter<MY,MY *, &MY::other> );
+binder.BindMemVar<MY *, &MY::other>( "other" );
 }}}
 
 Though whether or not such an automatic conversion makes sense for your case is another question entirely (e.g. it might be possible to leak objects or other problems if client code doesn't manage such pointers in a manner which is kosher in your API).
