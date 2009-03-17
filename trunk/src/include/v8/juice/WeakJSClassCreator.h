@@ -496,7 +496,7 @@ namespace juice {
 	   Similar to the two-argument form of NewInstance(), but on
 	   success it assigns obj to the new native object.
 	*/
-	Local<Object> NewInstance( int argc, Handle<Value> argv[], WrappedType * & obj )
+	Handle<Object> NewInstance( int argc, Handle<Value> argv[], WrappedType * & obj )
 	{
 	    Local<Object> ji = JSClassCreator::NewInstance( argc, argv );
 	    if( ! ji.IsEmpty() && ji->IsObject() )
@@ -505,7 +505,12 @@ namespace juice {
 	    }
 	    return ji;
 	}
-
+//         /** Experimental. */
+//         static WeakJSClassCreator & Instance()
+//         {
+//             static WeakJSClassCreator shared_inst;
+//             return shared_inst;
+//         }
 
     private:
 	typedef Detail::WrapperTypeChecker<WrappedType> TypeCheck;
@@ -630,8 +635,8 @@ namespace juice {
 	    }
 	    return wrap_native( argv.This(), obj );
 	}
-
     };
+
     
 }} /* namespaces */
 

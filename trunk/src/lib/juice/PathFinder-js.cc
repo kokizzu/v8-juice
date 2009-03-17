@@ -113,7 +113,7 @@ namespace v8 { namespace juice {
 	{
 	    // Install an instance wrapping the v8::juice::plugin::PluginsPath() shared object:
 	    Handle<Value> pfex( External::New( &::v8::juice::plugin::PluginsPath() ) );
-	    Local<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
+	    Handle<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
 	    shared->Set(String::New("plugins"), pfobj );
 	}
 
@@ -121,7 +121,7 @@ namespace v8 { namespace juice {
 	{
 	    // Includes includes path:
 	    Handle<Value> pfex( External::New( &::v8::juice::ScriptsPath() ) );
-	    Local<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
+	    Handle<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
 	    shared->Set(String::New("include"), pfobj );
 	}
 	return target;
