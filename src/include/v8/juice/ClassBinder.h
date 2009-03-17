@@ -292,8 +292,7 @@ namespace juice {
 	*/
 	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
 	{
-            T * self = //WeakJSClassCreator<T>::GetSelf( argv.This() );
-                convert::CastFromJS<T>( argv.This() );
+            T * self = convert::CastFromJS<T>( argv.This() );
             if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
             return (self->*Func)( argv );
 	}
@@ -454,6 +453,18 @@ namespace juice {
         /** Does nothing. Is virtual to satisfy inheritance rules and please my compiler. */
 	virtual ~ClassBinder() {}
 
+        /** Experimental - don't use. */
+        static ClassBinder & Instance()
+        {
+            static ClassBinder shared_inst;
+            return shared_inst;
+        }
+
+        /**
+           Binds the member specified as a template parameter. Note that
+           the signature is that defined by the InvocationCallbackMember
+           type.
+        */
         template < Handle<Value> (WrappedType::*Func)( Arguments const & ) >
         ClassBinder & BindMemFunc( char const * name )
         {

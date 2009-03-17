@@ -37,10 +37,11 @@ namespace juice {
 
     /**
        JSClassCreator is a tool to simplify the creation of new
-       JS-side classes. It does not currently have any features for
-       automatic conversions between the native and JS object, for
-       purposes of, e.g., forwarding JS funcs to member functions -
-       that'll require a bit of templates magic later on.
+       JS-side classes. It does not have any features for automatic
+       conversions between the native and JS object, for purposes of,
+       e.g., forwarding JS funcs to member functions. See the
+       WeakJSClassCreator and ClassBinder subclasses for those
+       features.
 
        Example usage:
 
@@ -64,7 +65,7 @@ namespace juice {
 	char const * className;
 	Handle<Object> target;
 	Handle<FunctionTemplate> ctorTmpl;
-	Local<ObjectTemplate> proto;
+	Handle<ObjectTemplate> proto;
  	JSClassCreator( JSClassCreator const & ); // not implemented
  	JSClassCreator & operator=( JSClassCreator const & ); // not implemented
 	bool hasTarget;
@@ -88,10 +89,10 @@ namespace juice {
 
 	   \code
 	   target->Set( String::New("ClassName"), myCreator.Seal() );
+           // or:
+           myCreator.Seal();
+           myCreator.AddClassTo( target );
 	   \endcode
-
-	   That will "close off" the class creation process and add the new class
-	   to the target object.
 	*/
 	JSClassCreator( char const * className,
 			v8::InvocationCallback ctor,
@@ -122,12 +123,12 @@ namespace juice {
 	/**
 	   Returns the prototype object.
 	*/
-	Local<ObjectTemplate> Prototype() const;
+	Handle<ObjectTemplate> Prototype() const;
 
 	/**
 	   Returns the target set in the constructor. If no target was
-	   set, the returned handle will be default-constructed
-	   (empty).
+	   set in the ctor, the returned handle will be
+	   default-constructed (empty).
 	*/
 	Handle<Object> Target() const;
 
@@ -143,7 +144,6 @@ namespace juice {
 
 	   Returns the JS constructor function object (the same as
 	   Seal()).
-
 	*/
 	Handle<Function> AddClassTo( Handle<Object> target );
 
@@ -155,6 +155,10 @@ namespace juice {
 
 	   It returns the result of CtorTemplate()->GetFunction(), for
 	   reasons too deep and dark to shed light on at the moment.
+
+           If no target object was set in the ctor, call AddClassTo()
+           (*after* calling Seal()) to add the generated class to the
+           a target object (e.g. your global object).
 	*/
 	Handle<Function> Seal();
 
@@ -165,7 +169,7 @@ namespace juice {
 	   undefined). The returned object is owned by the JS engine,
 	   and it may be Empty() (v8's way of signaling an exception).
 	*/
-	virtual Local<Object> NewInstance( int argc, Handle<Value> argv[] );
+	virtual Handle<Object> NewInstance( int argc, Handle<Value> argv[] );
 
 	/**
 	   Sets a property with the given name and value.

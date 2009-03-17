@@ -57,7 +57,7 @@ namespace v8 { namespace juice {
 	return this->className;
     }
 
-    Local<ObjectTemplate> JSClassCreator::Prototype() const
+    Handle<ObjectTemplate> JSClassCreator::Prototype() const
     {
 	return this->proto;
     }
@@ -71,6 +71,12 @@ namespace v8 { namespace juice {
     {
 	Handle<Function> func( ctorTmpl->GetFunction() );
 	tgt->Set( ::v8::String::New(this->className), func );
+        //if( this->target.IsEmpty() ) this->target = tgt;
+//         if( ! this->hasTarget )
+//         {
+//             this->target = tgt;
+//             this->hasTarget;
+//         }
 	return func;
     }
 
@@ -85,7 +91,7 @@ namespace v8 { namespace juice {
 	else return ctorTmpl->GetFunction();
     }
 
-    Local<Object> JSClassCreator::NewInstance( int argc, Handle<Value> argv[] )
+    Handle<Object> JSClassCreator::NewInstance( int argc, Handle<Value> argv[] )
     {
 	return this->CtorTemplate()->GetFunction()->NewInstance( argc, argv );
     }
