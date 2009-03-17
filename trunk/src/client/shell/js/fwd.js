@@ -13,6 +13,6 @@ m.other = new MyNative();
 //print("Set other to null.");
 m.other.str = "i am the other!";
 //print("Re-assigned other.str.");
-print('m.other.str =',m.other.str);
+print('m.other.str =',m.other.str,m.other.me());
 
 
