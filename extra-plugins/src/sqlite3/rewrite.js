@@ -22,7 +22,6 @@ function tryOne(){
     print('errmsg =',sqlite3_errmsg(my.db));
     print('errmsg =',my.db.errorMessage());
 
-    
     var sql = "create table if not exists t(a,b);";
     var st = new sqlite3.Statement(my.db,sql);
     if( 1 )
@@ -114,8 +113,50 @@ function tryTwo()
 
 }
 
-//tryOne();
-tryTwo();
+function tryThree()
+{
+    var rc = sqlite3_exec( my.db, "pragma SYNCHRONOUS=OFF");
+    print("sqlite3_exec rc =",rc);
+}
+
+function tryFour()
+{
+    var st = new sqlite3.Statement(my.db,"select current_time");
+    var curs = st.getCursor();
+    var rc = curs.step();
+    var val = curs.getString(0);
+    print('rc =',rc,'val =',val);
+    curs.finalize();
+    st.finalize();
+}
+
+function tryExec()
+{
+    function my_exec_cb(cbdata,rows,cols)
+    {
+	if( 1 == ++cbdata.pos )
+	{
+	    print("my_exec_cb()! cbdata =["+cbdata+"]",'rows =',typeof rows, rows.length,', cols =',typeof cols,cols.length);
+	    print( cols.join('\t'));
+	}
+	print( rows.join('\t'));
+	if( 0 && (cbdata.pos > 3) )
+	{
+	    throw new Error("Throwing from my_exec_cb()!");
+	}
+	return SQLITE_OK;
+    }
+    //rc = sqlite3_exec(my.db,"select rowid,* from t order by rowid desc limit 7",my_exec_cb,{pos:0});
+    rc = my.db.execute("select rowid,* from t order by rowid desc limit 7",my_exec_cb,{pos:0});
+    print('exec w/ callback rc =',rc);
+}
+
+
+// tryOne();
+// tryTwo();
+// tryThree();
+// tryFour();
+tryExec();
 
 print("Shuting down...");
 //sqlite3_close( my.db );
