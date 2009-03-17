@@ -20,7 +20,7 @@ package.install.dlls.dest := $(package.install.package_dlls.dest)# override so p
 # Build DLL...
 PLUGIN_DLL_NAME := v8-juice-$(PLUGIN_NAME)
 c-dlls.list := $(PLUGIN_DLL_NAME)
-$(PLUGIN_DLL_NAME).DLL.VERSION := $(V8JUICE_VERSION_DOTTED)
+# $(PLUGIN_DLL_NAME).DLL.VERSION := $(V8JUICE_VERSION_DOTTED)
 $(PLUGIN_DLL_NAME).DLL.OBJECTS := $(PLUGIN_OBJECTS)
 $(PLUGIN_DLL_NAME).DLL.LDADD ?= $(PLUGIN_LDADD)
 include $(toc2.dirs.makefiles)/c-dlls.make
