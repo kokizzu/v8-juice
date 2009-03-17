@@ -8,11 +8,11 @@ toc2_add_config PACKAGE_RELEASE_CODENAME="Approved by Me"
 toc2_add_config PACKAGE_URL="http://code.google.com/p/v8-juice"
 toc2_export PACKAGE_VERSION_HEX="$PACKAGE_VERSION_HEX"
 toc2_export PACKAGE_DESCRIPTION="Add-ons for the Google v8 JavaScript engine"
-toc2_export V8JUICE_VERSION_DOTTED=$(echo $(PACKAGE_VERSION) | perl -pe 's|(\d\d\d\d)(\d\d)(\d\d)|$1.$2.$3|')
+toc2_export V8JUICE_VERSION_DOTTED=$(echo ${PACKAGE_VERSION} | perl -pe 's|(\d\d\d\d)(\d\d)(\d\d)|$1.$2.$3|')
 
 toc2_export v8_juice_CONFIG_PURE_ISO=${pure_iso-0}
 
-if [[ x0 != ${v8_juice_CONFIG_PURE_ISO} ]]; then
+if [[ x0 != x${v8_juice_CONFIG_PURE_ISO} ]]; then
     toc2_test user_is_stephan_beal
     # ^^^ don't ask. Must come before gnu_cpp_tools test.
 fi
@@ -44,13 +44,16 @@ echo "Searching for v8 library:"
 default_libpath="${prefix}/lib:/usr/lib:/usr/local/lib:$HOME/lib"
 v8libpath="${v8home}/lib:${default_libpath}"
 
-if [[ x1 = ${configure_enable_debug-0} ]]; then
-    # Prefer libv8_g over libv8
+if [[ x1 = x${configure_enable_debug-0} ]]; then
+    echo "Debuggering enabled. Preferring libv8_g over libv8."
     liblist="libv8_g.a libv8_g.so libv8.a libv8.so"
 else
+    echo "Debuggering not enabled. Preferring libv8 over libv8_g."
     liblist="libv8.a libv8.so libv8_g.a libv8_g.so"
 fi
 for lib in $liblist; do
+
+        echo "Looking for ${lib}"
     toc2_find_in_path ${lib} ${v8libpath} && break
 done
 v8lib=${TOC2_FIND_RESULT}
