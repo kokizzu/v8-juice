@@ -111,7 +111,7 @@ Or, more succinctly:
 binder.BindMemVar<std::string,&MY::str>( "str" );
 }}}
 
-which is basically simply a shorthand form of the above (but also uses different default access options for the generated function!).
+which is basically a shorthand form of the above (but also uses different default access options for the generated function!).
 
 The `MemVarSetter<>()` and `MemVarGetter<>()` templates create functions which set/get the native member using [ConvertingTypes CastFromJS() and CastToJS()]. This means that we can also bind members which are pointers to other wrapped types, and access those transparently via JS. e.g. if the MY type has a member `MY * other`, we can bind that:
 
@@ -169,7 +169,10 @@ namespace v8 { namespace juice {
 	static WrappedType * Ctor( Arguments const & argv,
 				   std::string & exceptionText)
 	{
-            return = new my_native;
+            return new my_native;
+            // If we couldn't create from the given arguments
+            // we would populate exceptionText with a description.
+            // e.g. "Constructor requires two integer arguments!"
 	}
 
 	static void Dtor( WrappedType * obj )
@@ -190,7 +193,7 @@ API, so that we can use `CastToJS()` and `CastFromJS()` with
 members take or return pointers to `my_native` objects. Since the
 function forwarding mechanism uses `CastToJS()` and `CastFromJS()` for
 all type conversions, we want to be able to hook in to that so that `my_native`
-objects can also be cast:
+objects can also be converted generically:
 
 {{{
 #define WEAK_CLASS_TYPE my_native
@@ -199,9 +202,7 @@ objects can also be cast:
 
 (That must be called from global-scope code!)
 
-That will generate the complete wrapper shown above. It can be included multiple times in the same
-file. Each time it is included `WEAK_CLASS_TYPE` must be defined anew, as the header file
-`#undef`s it on each call to `#include`.
+That will generate a pair of templates for the cast operations, and can be included multiple times in the same file (one per wrapped type). Each time it is included `WEAK_CLASS_TYPE` must be defined anew, as the header file `#undef`s it on each call to `#include`.
 
 If the native type will never be passed as a parameter or returned
 from a function (i.e. it will only be the `this` object) then these
