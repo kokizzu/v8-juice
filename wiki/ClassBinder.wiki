@@ -119,7 +119,7 @@ The `MemVarSetter<>()` and `MemVarGetter<>()` templates create functions which s
 binder.BindMemVar<MY *, &MY::other>( "other" );
 }}}
 
-Though whether or not such an automatic conversion makes sense for your case is another question entirely (e.g. it might be possible to leak objects or other problems if client code doesn't manage such pointers in a manner which is kosher in your API).
+Though whether or not such an automatic conversion makes sense for your case is another question entirely (e.g. it might be possible to leak objects or cause other problems if client code doesn't manage such pointers in a manner which is kosher in your API).
 
 We can of course choose to apply only the getter or the setter if we like, to allow conversions in only one direction.
 
