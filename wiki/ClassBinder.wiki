@@ -101,8 +101,8 @@ Again, the syntax is ugly, but not as ugly as that for binding functions. If we 
 
 {{{
 binder.Set( "str",
-     WrappedMemVarGetter<MY,std::string, &MY::str>,
-     WrappedMemVarSetter<MY,std::string, &MY::str> );
+     MemVarGetter<MY,std::string, &MY::str>,
+     MemVarSetter<MY,std::string, &MY::str> );
 }}}
 
 Or, more succinctly:
@@ -113,7 +113,7 @@ binder.BindMemVar<std::string,&MY::str>( "str" );
 
 which is basically simply a shorthand form of the above (but also uses different default access options for the generated function!).
 
-The `WrappedMemVarSetter<>()` and `WrappedMemVarGetter<>()` templates create functions which set/get the native member using [ConvertingTypes CastFromJS() and CastToJS()]. This means that we can also bind members which are pointers to other wrapped types, and access those transparently via JS. e.g. if the MY type has a member `MY * other`, we can bind that:
+The `MemVarSetter<>()` and `MemVarGetter<>()` templates create functions which set/get the native member using [ConvertingTypes CastFromJS() and CastToJS()]. This means that we can also bind members which are pointers to other wrapped types, and access those transparently via JS. e.g. if the MY type has a member `MY * other`, we can bind that:
 
 {{{
 binder.BindMemVar<MY *, &MY::other>( "other" );
