@@ -388,13 +388,11 @@ namespace juice {
        Example (see also: WeakJSClassCreator)
 
        \code
-       ...
-       // Add the class to JS:
        typedef ClassBinder<MyType> WC;
        WC c( "MyType", objectToAddClassTo );
        c.Set(...)
-       .BindMemFunc<void,&MyType::doSomething>("doSomething")
-       .Seal(); // must be the last call made on this object.
+         .BindMemFunc<void,&MyType::doSomething>("doSomething")
+         .Seal(); // must be the last call made on this object.
        \endcode
 
        That's all there is to it. More functionality is provided via
@@ -453,7 +451,7 @@ namespace juice {
 	{
 	}
 
-	/** Does nothing. */
+        /** Does nothing. Is virtual to satisfy inheritance rules and please my compiler. */
 	virtual ~ClassBinder() {}
 
         template < Handle<Value> (WrappedType::*Func)( Arguments const & ) >
