@@ -1072,6 +1072,15 @@ namespace sq3 {
         */
         int prepare( char const * sql, int byteCount = -1 );
 
+        /**
+           This returns the native statement handle. It MUST NOT
+           be finalized by the caller. It can be used with
+           sqlite3_bind_xxx() and sqlite3_step(), but do not combine
+           sqlite3_step() and the cursor API on the same statement,
+           as the results might be unpredictable.
+        */
+        sqlite3_stmt * handle() const;
+
 #if SQ3_USE_WCHAR
         //statement( database & db, std::wstring const & sql );
         statement( database & db, wchar_t const * sql, int byteCount = -1 );

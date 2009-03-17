@@ -14,6 +14,15 @@
 #endif
 #include <cstring>
 
+/**
+   If DO_CURSOR_LIFETIME_HACK is true then the statement/cursor classes
+   get an extra relationship to try to avoid a cursor stepping on
+   a dead statement. In pure C++ this is not a problem because scoping
+   is our friend, but this hack was added when this code was used as the
+   basis for a JavaScript/sqlite3 binding.
+*/
+#define DO_CURSOR_LIFETIME_HACK 1
+
 namespace sq3 {
 
     //typedef refcount::rcptr<sqlite3,sqlite3_finalizer> sqlite3_rcptr;
@@ -125,6 +134,7 @@ namespace sq3 {
 
     int statement::finalize()
     {
+#if DO_CURSOR_LIFETIME_HACK
         CursorSet curs;
         curs.swap( this->m_curs );
         CursorSet::iterator it = curs.begin();
@@ -140,6 +150,7 @@ namespace sq3 {
             }
             (*it)->m_stmt.take(0);
         }
+#endif
         int rc = SQLITE_ERROR;
         if( this->m_stmt.get() )
         {
@@ -189,6 +200,11 @@ namespace sq3 {
     {
         this->finalize();
     }
+    sqlite3_stmt * statement::handle() const
+    {
+        return this->m_stmt.get();
+    }
+
     int statement::bind( int index )
     {
         return sqlite3_bind_null( this->m_stmt.get(), index);
@@ -259,13 +275,11 @@ namespace sq3 {
     }
 
 
-
-
-
     cursor statement::get_cursor()
     {
         return cursor(*this);
     }
+
     int statement::execute()
     {
         return this->get_cursor().step();
@@ -368,7 +382,9 @@ namespace sq3 {
     cursor::cursor( statement & st ) : m_stmt(&st),m_cn(0)
     {
         //this->m_stmt.take(&st);
+#if DO_CURSOR_LIFETIME_HACK
         st.add_cursor(this);
+#endif
     }
 
     cursor & cursor::operator=( cursor const & cp )
@@ -383,10 +399,12 @@ namespace sq3 {
         if( &rhs == this ) return;
         this->close();
         this->m_stmt = rhs.m_stmt;
+#if DO_CURSOR_LIFETIME_HACK
         if( this->m_stmt.get() )
         {
             this->m_stmt->add_cursor( this );
         }
+#endif
         if( rhs.m_cn )
         {
             this->m_cn = new NameToIndexMap(*rhs.m_cn);
@@ -421,10 +439,12 @@ namespace sq3 {
     }
     void cursor::close()
     {
+#if DO_CURSOR_LIFETIME_HACK
         if( this->m_stmt.get() )
         {
             this->m_stmt->remove_cursor(this);
         }
+#endif
         this->m_stmt.take(0);
         if( this->m_cn )
         {
