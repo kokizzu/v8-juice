@@ -16,12 +16,16 @@ All of the most significant features of sqlite3 are supported except:
   *  Custom authorization functions (also no plans)
   *  The BLOB-related functions are missing. There would seem to be relatively few safe (in terms of type conversion) ways to use this from JS.
   *  The UTF16 functions are missing, as v8 does not directly support UTF16 (only in a roundabout manner).
+  * `sqlite3_create_function()` API currently only works with normal functions (not aggregates), for reasons i don't understand. i'm hoping the rewrite will solve this.
 
 Everything else one would "normally" need from script code is scriptable. The API provides native-side access to the DB handles created from script code, so clients can extend their script-side DBs using functionality not provided by these bindings.
 
 ==The source code==
 
 http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/sqlite3/
+
+The current (20090317) code is in `v8-attempt2.cc`, and the older implementation is in `v8-sqlite3.cc`.
+
 
 =The C-style API=
 
@@ -40,7 +44,7 @@ For the API of the object-oriented interface, see below.
 
 ==Example==
 
-Here's a rather contrived example which i use when testing out the bindings:
+Here's a rather contrived example which i use for testing out the bindings:
 
 {{{
 load_plugin('v8-juice-sqlite3');
@@ -254,16 +258,38 @@ thrown.
 
 ==Destruction of objects (IMPORTANT!)==
 
-The DB class has a `close()` method, and the Statement and Cursor classes each have a `finalize()` method. Each of these ends our use of the associated underlying native resources (e.g. the db handle or prepared statement). It is _critical_ that they be called by the user. Relying on the non-deterministic destruction via JS GC will eventually lead to problems. More info...
+JavaScript, like most languages with built-in garbage collection, does not
+guaranty when objects will be deleted. GC-oriented languages are the natural
+antithesis of native objects which rely on specific destruction semantics and
+ordering. A database wrapper is one such case where GC and the underlying
+objects play particularly poorly together. Because of this, it is essential
+that clients clean up their own database-related objects from their scripts.
+JS may eventually do it, but it may very well destroy things in an order which
+is incompatible with the destruction requirements of the native objects.
 
-`sqlite3_close()` will fail with an error if any statements are opened. Thus statements must be finalized (call `st.finalize()` on it when you're done). A Cursor object directly refers back to a specific statement and _must_ be destroyed (call `curs.close()`) _before_ the associated statement is finalized. If a statement is destroyed before the cursor is, it can cause the cursor to try to use a non-existent resource, causing a crash. If neither the statement nor the cursor are closed by the client then GC might eventually destroy them in the wrong order, leading to a crash at some arbitrary point in your application.
+To destroy objects:
 
-So, to summarize:
+The DB class has a `close()` method, and the Statement and Cursor classes each
+have a `finalize()` method. Each of these ends our use of the associated
+underlying native resources (e.g. the db handle or prepared statement). It is
+_critical_ that they be called by the user. Relying on the non-deterministic
+destruction via JS GC will eventually lead to problems, and potentially a crash.
+
+`sqlite3_close()` will fail with an error if any statements are opened. Thus
+statements must be finalized (call `st.finalize()` on it when you're done). A
+Cursor object directly refers back to a specific statement and _must_ be
+destroyed (call `curs.finalize()`) _before_ the associated statement is
+finalized. If a statement is destroyed before the cursor is, it can cause the
+cursor to try to use a non-existent resource, causing a crash. If neither the
+statement nor the cursor are closed by the client then GC might eventually
+destroy them in the wrong order, leading to a crash at some arbitrary (and
+completely unrelated) point in your application.
+
+*To summarize:*
 
   * Always call `DB.close()` to close a `DB` object.
   * Always call `Statement.finalize()` to destroy a `Statement` object.
-  * Always call `Cursor.finalize()` to close a `Cursor` object.
-
+  * Always call `Cursor.finalize()` to destroy a `Cursor` object.
 
 
 ==sqlite3.DB class==
@@ -287,6 +313,13 @@ The `DB` class manages a single sqlite3 database connection.
 || `int` || `lastInsertID()` || Returns the last row ID assigned via an insertion operation. ||
 || `void` || `setBusyTimeout(int ms)` || Sets the "busy timeout" of the underlying sqlite3 engine. ||
 || `int` || `vacuum()` || Vacuums the database, possibly shrinking its size. ||
+
+
+TODOs:
+
+|| `int` || `executeCallback(String sql, Function callback, Mixed userData)` || As per `sqlite3_execute(....)`. ||
+|| `int` || `createFunction(String name, Function func1, Function step, Function final, Mixed userData)` || As per `sqlite3_create_function(....)`. ||
+
 
 ===Example===
 
