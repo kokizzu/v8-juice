@@ -16,7 +16,7 @@ OBJECTS = $(addsuffix .o,\
 ########################################################################
 # Build DLL...
 c-dlls.list := libv8-juice
-libv8-juice.DLL.VERSION := $(V8JUICE_VERSION_DOTTED)
+#libv8-juice.DLL.VERSION := $(V8JUICE_VERSION_DOTTED)
 libv8-juice.DLL.OBJECTS = $(OBJECTS)
 libv8-juice.DLL.LDADD = $(LDADD_DL)
 #ifeq (1,$(v8juice_CONFIG_ENABLE_PLUGINS))
