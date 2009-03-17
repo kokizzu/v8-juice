@@ -306,9 +306,17 @@ namespace juice {
        the JSClassCreator base class, and there are several static
        member functions for "casting" between the JS/Native worlds
        and for destroying instances of the generated class.
+
+       TODO(?):
+
+       - Consider how we can add support for C++-side subclassing,
+       such that we can convert a (SubType*) to-a (Type*). Adding
+       another template arg here may screw up client-side usage, as
+       all clients would need to know each of the exact templatized
+       types.
     */
     template <typename WrappedT>
-    class WeakJSClassCreator : public JSClassCreator//, public WeakJSClassCreatorOps<WrappedT>
+    class WeakJSClassCreator : public JSClassCreator
     {
     public:
 	/**
@@ -366,6 +374,8 @@ namespace juice {
 			      static_cast<int>(FieldCount) )
 	{
 	}
+        /** Does nothing. Is virtual to satisfy inheritance rules and please my compiler. */
+	virtual ~WeakJSClassCreator(){}
 
 	/**
 	   Returns the bound native for the given handle. The handle
