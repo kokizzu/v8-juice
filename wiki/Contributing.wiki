@@ -6,6 +6,7 @@ Anyone is welcomed to contribute to this project - just get in touch. Coders, do
 Particular areas where help is currently sought are:
 
   * Porting the build tree to scons, for platform portability
+  * Adding plugins, especially bindings for popular 3rd-party toolkits (e.g. libcurl).
 
 ==Contributing code==
 
