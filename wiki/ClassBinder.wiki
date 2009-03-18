@@ -263,7 +263,7 @@ And now what we originally set out to to: bind `my_native` with JS:
 
 Again, the templates syntax is ugly, but it also has no extra runtime memory costs other than that needed by the v8 internals and the conversion from JS to native.
 
-While it isn't demonstrated here, `const` member functions can also be bound. For more information on binding member variables, see the API docs for `v8::juice::WrappedMemVarGetter<>()` and `v8::juice::WrappedMemVarSetter<>()` (in [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h]).
+While it isn't demonstrated here, `const` member functions can also be bound. For more information on binding member variables, see the API docs for `v8::juice::MemVarGetter<>()` and `v8::juice::MemVarSetter<>()` (in [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h]).
 
 ==And finally... script code==
 
