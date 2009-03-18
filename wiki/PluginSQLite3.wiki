@@ -239,10 +239,15 @@ Summary of the classes:
   * `sqlite3.Statement` is a prepared SQL statement (analog to [http://sqlite.org/c3ref/prepare.html sqlite3_prepare_v2()]).
   * `sqlite3.Cursor` is a helper type for  iterating over query results.
 
+Much of the C-style API is also provided by this plugin, and where such functions take
+a database or statement handle, they really want a `DB` resp. `Statement` object. In fact,
+`sqlite3_open(...)` is equivalent to `new sqlite3.DB(...)`, `sqlite3_prepare(db,...)` is equivalent to
+`new sqlite3.Statement(db,...)`, and `sqlite3_close(db)` is the same as `db.close()`.
+
 TODOs:
   * Many convenience routines are missing.
   * Tie in to the non-OO API, so we can use them together. This is partially done but there's still lots to do.
-  * Callback functions (for `sqlite3_exec()` and `sqlite3_create_function()`)  are not yet implemented.
+  * `sqlite3_create_function()` and friends are not yet implemented in the OO interface.
 
 ==Error codes==
 
@@ -296,6 +301,16 @@ completely unrelated) point in your application.
 
 The `DB` class manages a single sqlite3 database connection.
 
+===Example===
+
+{{{
+var db = new sqlite3.DB("my.db");
+db.execute("create table if not exists t(a,b,c)");
+...
+db.close();
+}}}
+
+
 ===Function list===
 
 || *Return type* || *Name/Signature* || *Notes* ||
@@ -305,7 +320,7 @@ The `DB` class manages a single sqlite3 database connection.
 || `void` || `close()` || Closes the DB connection. No member functions should be called after this. ||
 || `string` || `errorMessage()` || Returns the current error text. Remember that sqlite3 uses the literal string "not an error" when there is no error! ||
 || `int` || `execPragma(String pragma)` || Convenience form of `execute("pragma ...")`. Argument must be in the form of an sqlite3 pragma without the leading `pragma` word, e.g. `SYNCHRONOUS=OFF`.||
-|| `int` || `execute(String sql)` || Executes the given SQL and returns the result of `sqlite3_exec()`.||
+|| `int` || `execute(String sql [,Function callback[,mixed callbackData])` || Executes the given SQL and returns the result of `sqlite3_exec()`. The callback will be called for each row and is passed `(callbackData,Array rowData, Array colNames)`||
 || `double` || `executeDouble(String sql)` || Executes the given SQL and returns the result as a double. If compilation of the SQL fails then it throws. ||
 || `int` || `executeInt(String sql)` || As for `executeDouble()`, but returns the value as an integer. ||
 || `int` || `executeInt64(String sql)` || As for `executeDouble()`, but returns the value as a 64-bit integer. ||
@@ -321,14 +336,22 @@ TODOs:
 || `int` || `createFunction(String name, Function func1, Function step, Function final, Mixed userData)` || As per `sqlite3_create_function(....)`. ||
 
 
-===Example===
+===`execute()` callbacks===
+
+The `DB.execute()` and `sqlite3_execute()` functions take an optional callback function argument.
+The callback is called one time for each row of data and should have this signature:
 
 {{{
-var db = new sqlite3.DB("my.db");
-db.execute("create table if not exists t(a,b,c)");
-...
-db.close();
+function callback(Mixed callbackData,Array rowData, Array colNames);
 }}}
+
+The `callbackData` is an arbitrary data object which the user passes as the
+final argument to `execute()`. The `rowData` argument is a single db record.
+The `colNames` array contains the names of the columns from the `rowData`
+array.
+
+If the callback returns any value other than `SQLITE_OK` (which is 0) then execution
+of the SQL stops with an error.
 
 ==sqlite3.Statement class==
 
@@ -395,4 +418,4 @@ The `Cursor` class is used for iterating over a result set. See the brief exampl
 || `int` || `reset()` || Equivalent to calling `reset()` on this object's associated Statement. ||
 || `int` || `step()` || Steps one result row and returns the result of [http://sqlite.org/c3ref/step.html sqlite3_step()]. In general `SQLITE_OK`, `SQLITE_ROW`, or `SQLITE_DONE` may be success values, depending on the SQL code being executed. ||
 
-All cursors which refer to a Statement object all refer to the same underlying statement, so reseting one of them will reset the statement for all related cursors. Also note that when a cursor is finalized, the underlying statement is reset (this has a long history in the underying C++ implementation, and is not easily changed due to the reference counting involved).
+All cursors which refer to a Statement object all refer to the same underlying statement, so reseting one of them will reset the statement for all related cursors. Also note that when a cursor is finalized, the underlying statement is reset (this has a long history in the underlying C++ implementation, and is not easily changed due to the reference counting involved).
