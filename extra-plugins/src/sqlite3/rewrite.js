@@ -147,7 +147,7 @@ function tryExec()
 	return SQLITE_OK;
     }
     //rc = sqlite3_exec(my.db,"select rowid,* from t order by rowid desc limit 7",my_exec_cb,{pos:0});
-    rc = my.db.execute("select rowid,* from t order by rowid desc limit 7",my_exec_cb,{pos:0});
+    var rc = my.db.execute("select rowid,* from t order by rowid desc limit 7",my_exec_cb,{pos:0});
     print('exec w/ callback rc =',rc);
 }
 
