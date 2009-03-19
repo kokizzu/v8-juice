@@ -315,9 +315,11 @@ db.close();
 
 || *Return type* || *Name/Signature* || *Notes* ||
 || `DB` || `new DB(String filename)` || Opens the given db or throws (remember that `:memory:` is a special name for in-memory databases. ||
+|| `DB` || `sqlite3_open(String filename)` || Same as the constructor. ||
 || `int` || `changes()` || Returns the number of rows modified by the most recently completed SQL statement. ||
 || `int` || `clear()` || _BE CAREFUL!!!_ Drops all tables and views in the database! ||
 || `void` || `close()` || Closes the DB connection. No member functions should be called after this. ||
+|| `int` || `sqlite3_close(DB)` || Same as `db.close()`. ||
 || `string` || `errorMessage()` || Returns the current error text. Remember that sqlite3 uses the literal string "not an error" when there is no error! ||
 || `int` || `execPragma(String pragma)` || Convenience form of `execute("pragma ...")`. Argument must be in the form of an sqlite3 pragma without the leading `pragma` word, e.g. `SYNCHRONOUS=OFF`.||
 || `int` || `execute(String sql [,Function callback[,mixed callbackData])` || Executes the given SQL and returns the result of `sqlite3_exec()`. The callback will be called for each row and is passed `(callbackData,Array rowData, Array colNames)`||
@@ -332,7 +334,6 @@ db.close();
 
 TODOs:
 
-|| `int` || `executeCallback(String sql, Function callback, Mixed userData)` || As per `sqlite3_execute(....)`. ||
 || `int` || `createFunction(String name, Function func1, Function step, Function final, Mixed userData)` || As per `sqlite3_create_function(....)`. ||
 
 
@@ -345,13 +346,36 @@ The callback is called one time for each row of data and should have this signat
 function callback(Mixed callbackData,Array rowData, Array colNames);
 }}}
 
-The `callbackData` is an arbitrary data object which the user passes as the
-final argument to `execute()`. The `rowData` argument is a single db record.
-The `colNames` array contains the names of the columns from the `rowData`
-array.
+The `callbackData` is an arbitrary data object which the user passes
+as the final argument to `execute()`. It can be used to accumulate
+results, or whatever else the caller might want to collect before the
+call to `execute()` returns. The `rowData` argument is a single db
+record.  The `colNames` array contains the names of the columns from
+the `rowData` array.
 
 If the callback returns any value other than `SQLITE_OK` (which is 0) then execution
 of the SQL stops with an error.
+
+Here's a simple example which simply prints out all results via the
+callback. Notice how it uses the callback data object to know whether
+or not it should print out the header line and to hold a separator
+character.
+
+{{{
+function my_exec_cb(cbdata,rows,cols)
+{
+    if( 1 == ++cbdata.pos )
+    {
+        print("my_exec_cb()! cbdata =["+cbdata+"]",'rows =',typeof rows, rows.length,', cols =',typeof cols,cols.length);
+        print( cols.join(cbdata.sep));
+    }
+    print( rows.join(cbdata.sep));
+    return SQLITE_OK;
+}
+var udata = {pos:0,sep:'\t'};
+var rc = my.db.execute("select rowid,* from t order by rowid desc limit 7",my_exec_cb,udata);
+print(udata.pos,"row(s) processed.");
+}}}
 
 ==sqlite3.Statement class==
 
@@ -361,14 +385,16 @@ The `Statement` class represents a single SQL prepared statement. A prepared sta
 
 || *Return type* || *Name/Signature* || *Notes* ||
 || `Statement` || `new Statement(DB [,string sql])` || Creates a new prepared statement for the given db. If no sql is given `prepare()` must be called before the object is used. If sql is given and it cannot be compiled then the ctor throws. ||
+|| `Statement` || `sqlite3_prepare(DB,string sql)` || Same as `new Statement(db,sql)` ||
 || `int` || `bindDouble( int ndx, double val )` || Binds a value as a double to the given index (1-based!) in the query. ||
 || `int` || `bindInt(int ndx, int val)` || Binds a value as an int to the given index (1-based!) in the query. ||
 || `int` || `bindInt64(int ndx, int val)` || Binds a value as a 64-bit integer to the given index (1-based!) in the query. ||
 || `int` || `bindNull(int ndx)` || Binds NULL to the given index (1-based!) in the query. ||
 || `int` || `bindText(int ndx, string text [,length=text.length])` || Binds a value as a string to the given index (1-based!) in the query. If the 3rd argument is specified, only that many bytes (at most) are used. ||
-|| `int` || `clearBindings()` || Nulls all bound values. ||
+|| `int` || `clearBindings()` || Removes all bound values. ||
 || `int` || `columnCount()` || Returns the number of columns in the statement. ||
-|| `void` || `finalize()` || Destroys the statement. This must be called to ensure that the underlying statement is destroyed. Failing to do so may lead to failure in later DB operations, or even a crash when the app exits (and the statement tries to clean up). ||
+|| `void` || `finalize()` || Destroys the statement. This must be called to ensure that the underlying statement is destroyed. Failing to do so may lead to failure in later DB operations, or even a crash later on in the app (when the statement tries to clean up out of context). ||
+|| `int` || `sqlite3_finalize(Statement)` || Same as `statement.finalize()` ||
 || `Cursor` || `getCursor()` || Returns a new Cursor object for traversing a query's results. ||
 || `bool` || `isPrepared()` || Returns true if the last `prepare()` succeeded. ||
 || `int` || `prepare(string sql)` || Prepares the given SQL for execution. Unlike the constructor, if compilation of the SQL fails then it returns a non-zero error code (as specified by `sqlite3_prepare()`). It is okay to re-use a Statement object by calling `prepare()` with new SQL code. ||
@@ -395,12 +421,17 @@ curs.finalize(); // IMPORTANT: not doing this may lead to a "locked" DB or even 
 st.finalize(); // Again, IMPORTANT.
 }}}
 
-The various "bind" functions can be used to attach values to query string placeholders (e.g. `"insert into t values(?)"`).
-
+The various "bind" functions can be used to attach values to query string placeholders, for example:
+{{{
+var st = new Statement(db,"insert into t values(?)");
+st.bindString(1,"Hi, world");
+...
+st.finalize();
+}}}
 
 ==sqlite3.Cursor class==
 
-The `Cursor` class is used for iterating over a result set. See the brief example above.
+The `Cursor` class is used for iterating over a result set. See the Statement example above.
 
 ===Function list===
 
