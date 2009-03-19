@@ -95,12 +95,16 @@ a context handle which is passed around to all client-side functions which use
 the API (as in !SpiderMonkey, and that approach goes a long way towards eliminating
 some of the lifetime issues mentioned above).
 
+Having said that: v8's approach will apparently make it possible to write SWIG wrappers for v8. In !SpiderMonkey this is not feasible, largely because SWIG apparently cannot account for the JSContext argument which is required to be passed to all client functions. (At least that's my relatively uninformed analysis, after looking into implementing SWIG bindings for !SpiderMonkey a couple years ago.)
+
 ==WTFM==
 
 *Write The Fucking Manual!*
 
-Another hindrance is the relative lack of v8 documentation. Most functions and classes aren't documented or have only a single line with no real information. This means a great deal of experimentation in order to find out if something will or won't work in v8 (and another amount of guesswork as to whether it's actually _legal_ to do it that way in v8).
+Another hindrance is the relative lack of v8 documentation. Most functions and classes aren't documented or have only a single line with no real information (e.g. what _exactly_ does "Enters the context" mean?). This means a great deal of experimentation in order to find out if something will or won't work in v8 (and another amount of guesswork as to whether it's actually _legal_ to do it that way in v8).
 
 Any library which is to enjoy widespread use _must_ be well documented. It's a simple fact.
+
+The members of the mailing lists have been extraordinarily helpful on these points, and it is only because of them that i've been able to accomplish anything beyond "hello, world!" in v8.
 
 As i enjoy writing, and i tend to write "insane" API docs (to quote one user), i did contact the v8 team about contributing API documentation. However, the process of getting involved in the project is just too much effort for my tastes. Why can't i just upload a patch, without having to install (and learn) a custom set of tools? Maybe one day Google will pay me to document v8 (dream on!), but until then using v8 will require a lot more experimentation and guesswork than it really should.
