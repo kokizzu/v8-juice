@@ -1,4 +1,4 @@
-
+package.subdirs :=
 default: all
 include toc2.make
 
@@ -16,4 +16,5 @@ all: $(v8-juice-shell.BIN)
 
 package.install.bins := $(v8-juice-shell.BIN)
 #package.install.man1 = v8-juice-shell.1
-
+subdirs: subdir-js
+all: subdirs
