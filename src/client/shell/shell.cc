@@ -143,7 +143,8 @@ int my_fwd( V8CxH & cx )
 {
     //typedef WeakJSClassCreator<my_native> WT;
     typedef ClassBinder<my_native> WT;
-    WT w( cx->Global() );
+    //WT & w = WT::Instance();
+    WT w;
 
     //BindMemFunc( w, "func1", &my_native::func1 );
     typedef my_native MY;
@@ -161,6 +162,7 @@ int my_fwd( V8CxH & cx )
         .BindMemVar<std::string, &MY::str>( "str" )
         .BindMemVar<my_native *, &MY::other>("other")
         .Seal();
+    w.AddClassTo( cx->Global() );
     return 0;
 }
 
@@ -281,84 +283,100 @@ int my_class_test( V8CxH & cx )
 
 int main(int argc, char* argv[]) {
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
-
     {
-	v8::juice::cleanup::CleanupSentry cleaner;
-	v8::HandleScope handle_scope;
-	// Create a template for the global object.
-	v8::Handle<v8::ObjectTemplate> global = v8::ObjectTemplate::New();
-	// Bind the global 'print' function to the C++ Print callback.
-	global->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
-	// Bind the global 'load' function to the C++ Load callback.
-	global->Set(v8::String::New("load"), v8::FunctionTemplate::New(Load));
-	// Bind the 'quit' function
-	global->Set(v8::String::New("quit"), v8::FunctionTemplate::New(Quit));
-	// Bind the 'version' function
-	global->Set(v8::String::New("version"), v8::FunctionTemplate::New(Version));
+        v8::HandleScope handle_scope;
+        v8::juice::cleanup::CleanupSentry cleaner;
+        // Create a template for the global object.
+        v8::Handle<v8::ObjectTemplate> global = v8::ObjectTemplate::New();
+        // Bind the global 'print' function to the C++ Print callback.
+        global->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
+        // Bind the global 'load' function to the C++ Load callback.
+        global->Set(v8::String::New("load"), v8::FunctionTemplate::New(Load));
+        // Bind the 'quit' function
+        global->Set(v8::String::New("quit"), v8::FunctionTemplate::New(Quit));
+        // Bind the 'version' function
+        global->Set(v8::String::New("version"), v8::FunctionTemplate::New(Version));
 
-	global->Set(v8::String::New("include"), v8::FunctionTemplate::New(v8::juice::IncludeScript) );
-	global->Set(v8::String::New("load_plugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));
+        global->Set(v8::String::New("include"), v8::FunctionTemplate::New(v8::juice::IncludeScript) );
+        global->Set(v8::String::New("load_plugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));
 
-	// Create a new execution environment containing the built-in
-	// functions
-	v8::Handle<v8::Context> context = v8::Context::New(NULL, global);
-	// Enter the newly created execution environment.
-	v8::Context::Scope context_scope(context);
+        // Create a new execution environment containing the built-in
+        // functions
+        v8::Handle<v8::Context> context = v8::Context::New(NULL, global);
+        // Enter the newly created execution environment.
+        v8::Context::Scope context_scope(context);
 
-	if(1)
-	{
-	    //v8::Handle<v8::Value> iv = v8::juice::sq3::SetupAddon( context->Global() );
-	    v8::Handle<v8::Value> iv;
-	    //iv = v8::juice::sq3::SetupAddon( context->Global() );
-	    //iv = v8::juice::nc::SetupAddon( context->Global(), false );
-	    iv = v8::juice::SetupPathFinderClass( context->Global() );
-	    //iv = v8::juice::convert::SetupAddon( context->Global() );
-	    //COUT << "SetupAddon() == " << v8::convert::CastFromJS<std::string>( iv ) << '\n';
-	}
-	if(1)
-	{
-	    //my_test( context );
-	    //my_class_test( context );
-	    my_fwd(context);
-	    //my_bind_test( context );
-	}
-	bool run_shell = (argc == 1);
-	for (int i = 1; i < argc; i++) {
-	    const char* str = argv[i];
-	    if (strcmp(str, "--shell") == 0) {
-		run_shell = true;
-	    } else if (strcmp(str, "-f") == 0) {
-		// Ignore any -f flags for compatibility with the other stand-
-		// alone JavaScript engines.
-		continue;
-	    } else if (strncmp(str, "--", 2) == 0) {
-		printf("Warning: unknown flag %s.\nTry --help for options\n", str);
-	    } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
-		// Execute argument given to -e option directly
-		v8::HandleScope handle_scope;
-		v8::Handle<v8::String> file_name = v8::String::New("unnamed");
-		v8::Handle<v8::String> source = v8::String::New(argv[i + 1]);
-		if (!ExecuteString(source, file_name, false, true))
-		{
-		    return 1;
-		}
-		i++;
-	    } else {
-		// Use all other arguments as names of files to load and run.
-		v8::HandleScope handle_scope;
-		v8::Handle<v8::String> file_name = v8::String::New(str);
-		v8::Handle<v8::String> source = ReadFile(str);
-		if (source.IsEmpty()) {
-		    printf("Error reading '%s'\n", str);
-		    return 1;
-		}
-		if (!ExecuteString(source, file_name, true, true))
-		    return 1;
-	    }
-	}
-	if (run_shell) RunShell(context);
-	return 0;
+        if(1)
+        {
+            //v8::Handle<v8::Value> iv = v8::juice::sq3::SetupAddon( context->Global() );
+            v8::Handle<v8::Value> iv;
+            //iv = v8::juice::sq3::SetupAddon( context->Global() );
+            //iv = v8::juice::nc::SetupAddon( context->Global(), false );
+            iv = v8::juice::SetupPathFinderClass( context->Global() );
+            //iv = v8::juice::convert::SetupAddon( context->Global() );
+            //COUT << "SetupAddon() == " << v8::convert::CastFromJS<std::string>( iv ) << '\n';
+        }
+        if(1)
+        {
+            //my_test( context );
+            //my_class_test( context );
+            my_fwd(context);
+            //my_bind_test( context );
+        }
+        bool run_shell = (argc == 1);
+        for (int i = 1; i < argc; i++) {
+            const char* str = argv[i];
+            if (strcmp(str, "--shell") == 0) {
+                run_shell = true;
+            } else if (strcmp(str, "-f") == 0) {
+                // Ignore any -f flags for compatibility with the other stand-
+                // alone JavaScript engines.
+                continue;
+            } else if (strncmp(str, "--", 2) == 0) {
+                printf("Warning: unknown flag %s.\nTry --help for options\n", str);
+            } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
+                // Execute argument given to -e option directly
+                v8::HandleScope handle_scope;
+                v8::Handle<v8::String> file_name = v8::String::New("unnamed");
+                v8::Handle<v8::String> source = v8::String::New(argv[i + 1]);
+                if (!ExecuteString(source, file_name, false, true))
+                {
+                    return 1;
+                }
+                i++;
+            } else {
+                // Use all other arguments as names of files to load and run.
+                v8::HandleScope handle_scope;
+                v8::Handle<v8::String> file_name = v8::String::New(str);
+                v8::Handle<v8::String> source = ReadFile(str);
+                if (source.IsEmpty()) {
+                    printf("Error reading '%s'\n", str);
+                    return 1;
+                }
+                if (!ExecuteString(source, file_name, true, true))
+                    return 1;
+            }
+        }
+        if (run_shell) RunShell(context);
     }
+    if(0)
+    {
+        /**
+           Kludge mentioned here:
+
+           http://groups.google.com/group/v8-users/browse_thread/thread/a5503120233b48cc/8ea95d5ca4e8b758
+
+           to try to force GC so weak pointer callbacks get called before we exit.
+
+           Doesn't seem to work, though.
+        */
+        v8::HandleScope kscope;
+        v8::Handle<v8::ObjectTemplate> kglobal = v8::ObjectTemplate::New();
+        v8::Handle<v8::Context> kcontext( v8::Context::New(NULL, kglobal) );
+        v8::Context::Scope kcontext_scope(kcontext);
+    }
+
+    return 0;
 }
 
 // Extracts a C string from a V8 Utf8Value.
