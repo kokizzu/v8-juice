@@ -1,3 +1,5 @@
+#warning "This is an older implementation. See v8-attempt2.cc for the current code."
+
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
