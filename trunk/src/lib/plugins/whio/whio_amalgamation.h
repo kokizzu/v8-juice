@@ -1,4 +1,4 @@
-/* auto-generated on Sun Mar  8 07:54:04 CET 2009. Do not edit! */
+/* auto-generated on Thu Mar 19 22:23:03 CET 2009. Do not edit! */
 #define WHEFS_AMALGAMATION_BUILD 1
 #if ! defined __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS 1
@@ -471,7 +471,7 @@ char * whprintf_str( char const * fmt, ... );
    License: Public Domain
 
    whio encapsulates an i/o device API. It originally developed as
-   parts of two another library, but the parts were found to be generic
+   parts of two other libraries, but the parts were found to be generic
    enough (and complementary enough) to fork out into a single library.
 
    The API provides interfaces for working with random-access devices
@@ -527,11 +527,14 @@ char buf[bufSize]; // input buffer
 whio_size_t n = 0;
 while( 0 != (n = dev->api->read( dev, buf, bufSize ) ) )
 {
-    printf("Read %u bytes\n", n );
+    printf("Read %"WHIO_SIZE_T_PFMT" bytes\n", n );
 }
 dev->api->finalize(dev);
 @endcode
 
+Note the use of WHIO_SIZE_T_PFMT instead of "%%u", in the printf call,
+so that the code will work correctly with varying sizes of
+whio_size_t.
 */
 
 #ifdef __cplusplus
@@ -734,7 +737,7 @@ typedef struct whio_dev_api whio_dev_api;
 
 /**
    Implementation details for whio_dev instances. Each instance may
-   (and in practice always does does) store instance-specific data
+   (and in practice always does) store instance-specific data
    here. These data are for use only by the functions related to this
    implementation and must be cleaned up via dev->api->finalize(dev).
 */
@@ -789,7 +792,7 @@ struct whio_dev_client
     /**
        If this function is not 0 then whio_dev implementations
        MUST call this function, passing the data member to it,
-       in their cleanup routines. If it is 0 then they may
+       in their cleanup routines. If it is 0 then they must
        ignore the data member.
     */
     void (*dtor)( void * );
@@ -825,8 +828,8 @@ extern const whio_dev_client whio_dev_client_init;
    primary reason for this is because all instances of a certain class
    of whio_devices, in practice, share a single set of implementation
    functions. By referencing the functions this way we save
-   (sizeof(whio_dev_api) - sizeof(whefs_api*)) bytes on each instance
-   of whio_dev, and it its place we have a single shared (and static)
+   (sizeof(whio_dev_api) - sizeof(whio_dev_api*)) bytes on each instance
+   of whio_dev, and in its place we have a single shared (and static)
    instance of the implementation's API object.
 
    Thread safety: it is never legal to use any given whio_dev instance
@@ -836,7 +839,8 @@ extern const whio_dev_client whio_dev_client_init;
    or write to go somewhere other than desired. It is in theory not
    problematic for multiple threads to share one whio_dev instance as
    long as access to the device is strictly serialized via a
-   marshaller.
+   marshaller and device positioning operations are written to take
+   that into account.
 */
 typedef struct whio_dev
 {
@@ -942,12 +946,12 @@ void whio_dev_free( whio_dev * dev );
 int whio_dev_ioctl( whio_dev * dev, int operation, ... );
 
 /**
-   Returns the size of the given device, or whio_rc.SizeTError if
-   !dev or if the device returns that code to signify that it is not
-   seekable. The size is calculated by seek()ing to the
-   end of the device and using that offset. Thus the device must of
-   course support seeking. The original position before the function
-   returons.
+   Returns the size of the given device, or whio_rc.SizeTError if !dev
+   or if the device returns that code to signify that it is not
+   seekable. The size is calculated by seek()ing to the end of the
+   device and using that offset. Thus the device must of course
+   support seeking. The device is positioned to its pre-call position
+   before the function returns.
 */
 whio_size_t whio_dev_size( whio_dev * dev );
 
@@ -1192,9 +1196,9 @@ size_t whio_dev_writef( whio_dev * dev, const char *fmt, ... );
    This enum holds masks for general categories of whio_dev ioctl
    operations.  By convention, the top byte (of 4 bytes) of ioctl
    operation values is reserved for these masks. ioctl values should
-   not use the type byte and should instead mask their value against
-   one these (this assists in documentation, by making it clear which
-   category an ioctl command belongs to).
+   not use the top byte and should instead mask their value against
+   one of these (this assists in documentation, by making it clear
+   which category an ioctl command belongs to).
 */
 enum whio_dev_ioctl_categories {
 
@@ -1567,10 +1571,9 @@ extern "C" {
 
 /**
    Creates a whio_dev object which will use the underlying FILE
-   handle. On success, ownership of f is passed to the returned
-   object and the returned object must eventually be finalized with
-   dev->api->finalize(dev). Doing so will close f and free the returned
-   object.
+   handle. On success, ownership of f is defined by the takeOwnership
+   argument (see below) and the returned object must eventually be finalized with
+   dev->api->finalize(dev).
 
    For purposes of the whio_dev interface, any parts which have
    implementation-specified behaviour will behave as they do
@@ -1581,7 +1584,9 @@ extern "C" {
    The takeOwnership argument determines the ownerhsip of f: if the
    function succeeds and takeOwnership is true then f's ownership is
    transfered to the returned object. In all other cases ownership is
-   not changed.
+   not changed. If the device owns f then closing the device
+   will also close f. If the device does not own f then f must
+   outlive the returned device.
 
    Peculiarities of this whio_dev implementation:
 
@@ -1666,9 +1671,10 @@ whio_dev * whio_dev_for_filename( char const * fname, char const * mode );
    will write as much as it can fit in existing memory, then return a
    short write result.
 
-   It not enough memory can be allocated then 0 is returned. The
-   caller owns the returned object and must eventually destroy it by
-   calling dev->api->finalize(dev).
+   It not enough memory can be allocated for the intitial buffer then
+   this function returns 0. On success, the caller owns the returned
+   object and must eventually destroy it by calling
+   dev->api->finalize(dev).
 
    The returned object supports all of the whio_dev interface, with
    the caveat that write() calls will not be allowed to expand out of
@@ -1722,14 +1728,17 @@ whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor );
 
 /**
    Creates a new read/write whio_dev wrapper for an existing memory
-   range.  For read-only access, use whio_dev_for_memmap_ro() instead.
+   range. For read-only access, use whio_dev_for_memmap_ro() instead.
 
    The arguments:
 
    - mem = the read/write memory the device will wrap. Ownership is
    not changed.  May not be 0. If mem's address changes during the
    lifetime of the returned object (e.g. via a realloc), results are
-   undefined an almost certainly ruinous.
+   undefined an almost certainly ruinous. If you want this device to
+   free the memory when it is destroyed, set dev->client.data to the
+   mem parameter and set dev->client.dtor to an appropriate destructor
+   function (free() would suffice for memory allocated via alloc()).
 
    - size = the size of the mem buffer. It may not be 0. It is the
    caller's responsibility to ensure that the buffer is at least that
@@ -1750,7 +1759,8 @@ whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor );
    whio_rc.SizeTError on a numeric over/underflow. Writing past EOF
    range will of course not be allowed.
 
-   - write() on a read-only device returns 0, as opposed to whio_rc.SizeTError.
+   - write() on a read-only memory buffer returns 0, as opposed to
+   whio_rc.SizeTError.
 
    - Supports the same ioctl() arguments as described for
    whio_dev_for_membuf().
@@ -1762,8 +1772,7 @@ whio_dev * whio_dev_for_memmap_rw( void * mem, whio_size_t size );
 
 /**
    This is equivalent to whio_dev_for_memmap_rw() except that it
-   creates a read-only device and ownership of mem is not changed by
-   calling this function.
+   creates a read-only device.
 
    @see whio_dev_for_memmap_rw()
    @see whio_dev_for_membuf()
@@ -1800,12 +1809,12 @@ whio_dev * whio_dev_for_memmap_ro( const void * mem, whio_size_t size );
 
    Subdevices can be used to partition a larger underlying device into
    smaller pieces. By writing to/reading from the subdevices, one can
-   assure that each logical block remains separate and that any
+   be assured that each logical block remains separate and that any
    operation in one block will not affect any other subdevices which
-   have their own blocks (barring any bugs in this code). Results are
-   of course unpredictable if multiple devices map overlapping ranges
-   in the parent device (then again, maybe that's what you want, e.g. as
-   a communication channel).
+   have their own blocks (barring any bugs in this code or overlapping
+   byte rangees). Results are of course unpredictable if multiple
+   devices map overlapping ranges in the parent device (then again,
+   maybe that's what you want, e.g. as a communication channel).
 
    Most operations are proxied directly through the parent device,
    with some offsets added to accomodate for the bounds defined, so
@@ -1909,9 +1918,9 @@ int whio_dev_subdev_rebound( whio_dev * dev, whio_size_t lowerBound, whio_size_t
 
 
 /**
-   A type used to represent sequential block IDs for the whio_blockdev API.
-   It is not hard-coded because for my intended uses it will changed to
-   other types depending on compilation options.
+   A type used to represent sequential block IDs for the whio_blockdev
+   API.  It is not hard-coded because for my intended uses it will be
+   changed to other types depending on compilation options.
 
    FIXME: make this type macro-configurable, so it can play nice with
    whefs's configurable sizes. It'll work as-is for <=32 bit whefs.
@@ -1930,7 +1939,7 @@ typedef uint32_t whio_blockdev_id;
    is initialized.
 
    whio_blockdev objects are initialized via whio_blockdev_setup()
-   and clean up (depending on how they were created) using
+   and cleaned up (depending on how they were created) using
    whio_blockdev_clean() or whio_blockdev_finalize().
 
    Though this type's internals are publically viewable,
@@ -2068,8 +2077,8 @@ bool whio_blockdev_cleanup( whio_blockdev * bdev );
    Destroys bdev and any internal memory it owns. ONLY pass this
    object created using whio_blockdev_alloc() or malloc(). DO NOT pass
    this an object which was created on the stack, as that will lead to
-   a segfault. For stack-allocated objects using
-   whio_blockdev_cleanup() instead.
+   a segfault. For stack-allocated objects use whio_blockdev_cleanup()
+   instead.
 
    @see whio_blockdev_cleanup()
    @see whio_blockdev_alloc()
