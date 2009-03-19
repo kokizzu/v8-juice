@@ -26,6 +26,10 @@ not.
 
 All of that said, i'm probably one of the world's biggest fans of Google's technology offerings, and i couldn't resist the chance to experiment with their JavaScript engine.
 
+==Excellent Licensing Terms==
+
+One strong advantage v8 has over older, more mature JS engines, like !SpiderMonkey and !QtScript, is its license. With its BSD license it can be included into commercial projects without license contamination. It also allows me, the extension author, to license my v8-using code however i want to. !SpiderMonkey, which is MPL (basically GPL), and !QtScript, which is QPL/GPL/Commercial, cannot provide this level of freedom. (Ironic, isn't it, seeing as the GPL's primary purpose is to protect the freedom of its users?)
+
 =Criticisms=
 
 In my experience, these are the significant problems and caveats associated
