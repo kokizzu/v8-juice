@@ -40,7 +40,8 @@ First off, we need to add a plugin-loading function to our global JS object:
 #include <v8/juice/plugin.h>
 ...
 // when initializing the JS global object, add this function:
-  gl->Set(String::New("loadPlugin"), v8::juice::plugin::LoadPlugin );
+  gl->Set(String::New("loadPlugin"),
+          FunctionTemplate::New(v8::juice::plugin::LoadPlugin)->GetFunction() );
 }}}
 
 That will create the loader function (name it whatever you like) in the specified object (it need not be the global object).
