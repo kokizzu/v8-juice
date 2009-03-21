@@ -37,6 +37,14 @@ When this plugin is registered it will create an object called `whio` inside the
 into which it is added (normally the global object). That `whio` object holds the rest of the
 classes and functions for this plugin.
 
+The native whio API has huge amounts of API documentation which might be interesting
+to users of this API:
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whio_amalgamation.h whio_amalgamation.h]
+
+But all of the "less technical" info one needs for using it in JS is documented below. For the _real_
+guts (e.g. "what are the behavioural differences for FILE- and memory-based i/o devices?") see
+the API documentation
+
 =JS usage=
 
 {{{
@@ -55,6 +63,41 @@ See below for the complete class and function list.
   * Make the vals from whio_rc.XXX available via whio.rc.XXX. whio_rc.SizeTError needs special handling due to (potentially) different sizes in the underlying numeric types.
   * Either overload read/write() to take an Array of integers or add readBytes()/writeBytes(Array) to allow the safe reading/writing of non-ASCII data.
   * Maybe create a !ByteArray class, which is just an in-memory IODevice. An implementation exists but it's real value is in doubt, so it's not published yet.
+  * Added `writeBytes(Array-of-int)` and `Array readBytes(int)` so that we can safely pass around non-ascii data.
+
+=Error reporting=
+
+Many functions in this API return a numeric code to indicate the
+result, with 0 being success and non-zero being some device-dependent
+error value (this convention is derived from common C I/O
+interfaces). Where integer error codes are used, they have the
+following symbolic equivalents:
+
+|| *Symbolic name*, as a member of `whio.rc` || *Description* ||
+|| `OK` || The generic success value. Always 0. ||
+|| `ArgError` || Signals some form of error in argument handling (wrong type, missing arguments, etc.) ||
+|| `IOError` || Signals a real I/O error. ||
+|| `AllocError` || Signals an out-of-memory error. ||
+|| `InternalError` || Signals an error internal to libwhio. ||
+|| `RangeError` || Signals that some argument is out of range or would cause an overflow/underflow. ||
+|| `AccessError` || Signals that access was denied for the operation, e.g. trying to open a read-only file in write mode. ||
+|| `ConsistencyError` || A data consistency error. Not used by the core library, but might be used by certain i/o device implementations. ||
+|| `NYIError` || User has called a function which is "Not Yet Implemented." ||
+|| `UnsupportedError` || Signals that this device type does not support the requested operation. ||
+|| `TypeError` || Signals that an argument is of an incorrect type. e.g. passing a non-subdevice to `IODevice.rebound()`. ||
+|| `SizeTError` || Always equal to -1. ||
+
+All of them have unspecified values which are unique within that
+list. The only entries with predefined values are `OK`, which is
+always 0, and `SizeTError`, which is always equal to -1. Interestingly
+enough, its _exact_ native value of -1 may depends on the
+compile-time size of the native `whio_size_t` type.
+
+Errors which happen outside the scope of the underlying i/o library,
+but within the realm of JS-specific usage, are reported by throwing
+exceptions. For example, when passing invalid arguments to a
+constructor, an exception is the only way to report the error.
+
 
 =JS API for the whio classes=
 
@@ -80,6 +123,8 @@ The API for this class includes any routines which are common amongst the `InStr
 || *Return type* || *Name/Signature* || *Notes* ||
 || `InStream` || `new InStream(string file)` || Opens the given file in read mode. ||
 || `InStream` || `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
+|| `int` || `gzipTo(Outstream[,int level])` || Consumes all input from this object and compresses it to the given output stream using gzip compression. Returns `whio.rc.OK` on success. ||
+|| `int` || `gunzipTo(Outstream)` || Consumes all input from this object and decompresses it to the given output stream using gzip decompression. Returns `whio.rc.OK` on success. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `IODevice` || `ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
 || `string` || `fileName` || Only for objects which are associated with a file. ||
@@ -224,6 +269,65 @@ Creates an i/o device which uses RAM as storage, growing as necessary. It works 
 
 There is a caveat, however: the memory used for the buffer is not reported to the v8 engine, which means that it can grow to larger than any limit which has been imposed on v8. Adding this awareness to v8 would actually require a significant performance overhead to all write operations, due to the generic nature of the underlying i/o device API (the JS wrapper doesn't actually know, after construction, that it's an in-memory device, and we'd have to query it on each write or truncate operation in order to figure out if it is). The memory associated with an in-memory device can be freed by calling the `truncate()` member (which might or might not actually free any memory, depending on the magnitude of the change in size, but this implementation explicitly frees the memory when `truncate(0)` is called).
 
-While it may not be immediately obvious, this is one easy way to buffer large amounts of text for later output, and "should" be more efficient than using string concatenation to build up very large strings. (See the big ugly warning at the top of this page regarding writing binary data this way!)
+While it may not be immediately obvious, this is one easy way to
+buffer large amounts of text for later output, and should be much more
+efficient than using string concatenation to build up very large
+strings. (See the big ugly warning at the top of this page regarding
+writing binary data this way!)
 
-If you want to ensure sequential, write-only access to a buffer until you are ready to send it, simply wrap up the IODevice in an !OutStream using `new OutStream(myDevice)`.
+If you want to ensure sequential, write-only access to a buffer until
+you are ready to send it, simply wrap up the IODevice in an !OutStream
+using `new OutStream(myDevice)`.
+
+==Using gzip with streams==
+
+The `InStream` class has minimal support for gzip compression and
+decompression. It does not support incremental de/compression, but
+does support compressing a whole input stream at once.  While the JS
+API does not allow us to safely pass binary around, this support
+happens at a lower level, transfering bytes directly between the two
+native-level streams.
+
+Here's an example:
+
+{{{
+function tryGzip()
+{
+    var fname = "test.js";
+    var outname = fname + ".gz";
+    var ist = new whio.InStream(fname);
+    var ost = new whio.OutStream(outname);
+    var rc = ist.gzipTo(ost);
+    print("gzip rc =",rc,'outfile =', outname);
+    ist.close();
+    ost.close();
+    if( whio.rc.OK != rc ) throw new Error("Gzip failed with code "+rc);
+    ist = new whio.InStream(outname);
+    outname = outname + '.check';
+    ost = new whio.OutStream(outname);
+    rc = ist.gunzipTo(ost);
+    print("gunzip rc =",rc,'outfile =', outname);
+    ist.close();
+    ost.close();
+    if( whio.rc.OK != rc ) throw new Error("Gunzip failed with code "+rc);
+}
+tryGzip();
+}}}
+
+That might output:
+
+{{{
+gzip rc = 0 outfile = test.js.gz
+gunzip rc = 0 outfile = test.js.gz.check
+}}}
+
+And the list of files it used or created:
+
+{{{
+stephan@jareth:~/cvs/v8-juice/trunk/src/lib/plugins/whio$ l test.js*
+-rw-r--r-- 1 stephan stephan 5922 2009-03-21 14:16 test.js
+-rw-r--r-- 1 stephan stephan 1860 2009-03-21 14:19 test.js.gz
+-rw-r--r-- 1 stephan stephan 5922 2009-03-21 14:19 test.js.gz.check
+stephan@jareth:~/cvs/v8-juice/trunk/src/lib/plugins/whio$ cmp test.js test.js.gz.check; echo $?
+0
+}}}
