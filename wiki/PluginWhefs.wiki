@@ -29,7 +29,7 @@ That library is provided with this plugin, and need not be installed separately.
 This plugins provides the following features:
 
   * Classes `whefs.WhEfs` ecapsulates access to a virtual/embedded filesystem, as described in detail on the whefs home page.
-  * whefs works in conjunction with the `whio.IODevice` API in two ways. First, it can use any back-end storage supported by `IODevice`. Secondly, the "pseudofiles" in the embedded filesystem are accessed using the `IODevice` interface.
+  * whefs works in conjunction with the `whio.IODevice` API in two ways. First, it can use any back-end storage supported by `IODevice`. Secondly, the "pseudofiles" in the embedded filesystem are accessed using the `IODevice` interface. This property inherently makes it capable of hosting embedded filesystems within embedded filesystems (not that there's any good reason to do so).
 
 ==Source code==
 
@@ -42,6 +42,8 @@ _Much_ more information about [http://fossil.wanderinghorse.net/repos/whefs/ whe
 can be found on [http://fossil.wanderinghorse.net/repos/whefs/ its home page].
 
 =Important Caveats=
+
+(Never been tested on Windows. Might work. Might not. Same for Mac.)
 
 The [http://fossil.wanderinghorse.net/repos/whefs whefs home page] goes into great detail
 about the cans and cannots of whefs. _Please_ browse that site to get an understanding
@@ -60,8 +62,9 @@ See this web page for more information:
 
 http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/ConcurrencyInWHEFS
 
-That limitation will rule out its usage in several otherwise very interesting
-contexts (e.g. as a safe data store where server-side JS can keep its data).
+That limitation rules out whefs' usage in several otherwise very
+interesting contexts (e.g. as a data store for server-side JS,
+possibly storing client-generated data).
 
 Lastly, you can get more out of whefs by making use of the
 whefs-specific tools which come with the whefs source tree:
@@ -102,7 +105,7 @@ fi.close(); // close the file
 fs.close(); // close the whefs container
 }}}
 
-The majority of the functionality is provided by the [PluginWhio IODevice class]. The so-called _pseudofiles_ (files inside a whefs container (also known as a _VFS_ or _embedded filesystem_)) use the exact same i/o interface as `whio.IODevice`, and inherit all usage conventions from that interface.
+The majority of the functionality is provided by the [PluginWhio IODevice class]. The so-called _pseudofiles_ (files inside a whefs container (also known as a _VFS_ or _embedded filesystem_)) use the exact same i/o interface as `whio.IODevice`, and inherit all usage conventions from that interface. The most significant of these is that the `close()` member must be called when the client is done with the object, to ensure that all handles are closed and memory is released. Closing a device handle after the VFS instance has been closed, or allowing the object's destruction to depend on the garbage collector, both lead to undefined results.
 
 See below for the complete class and function list.
 
@@ -147,9 +150,9 @@ whefs home page. All other features are inherited from the `IODevice` class.
 
 
 || *Return type* || *Name/Signature* || *Notes* ||
-|| `WhEfs` || `new Whefs(IODevice)` || Tries to read the given device as a whefs filesystem. Throws on error. If the device is read-only, no write operations can succeed on the VFS. ||
-|| `WhEfs` || `new Whefs(String filename,bool writeMode)` || Tries to read the given file as a whefs filesystem. Throws on error. If `writeMode` is false, access to the VFS will be read-only. ||
-|| `void` || `close()` || Closes the VFS. All pseudofiles/devices opened from this object must have been closed by the time is called. ||
+|| `WhEfs` || `new WhEfs(String filename,bool writeMode)` || Tries to read the given file as a whefs filesystem. Throws on error. If `writeMode` is false, access to the VFS will be read-only. Prefer this constructor over the next form...||
+|| `WhEfs` || `new WhEfs(IODevice)` || Tries to read the given device as a whefs filesystem. Throws on error. If the device is read-only, no write operations can succeed on the VFS. The device _must not_ be manipulated by any means from outside the !WhEfs instance. Doing so likely corrupt it or cause it to fail with a consistency error. The device must also out-live the VFS, and must not be closed before the VFS is closed. ||
+|| `void` || `close()` || Closes the VFS. All pseudofiles/devices opened from this object must have been closed by the time this is called. ||
 || `int` || `dumpToFile(string filename)` || Dumps the VFS's binary image to the given file. Results are undefined if it is told to overwrite itself. ||
 || `Array` || `ls(string pattern)` || Returns a list (or null) of all pseudofiles matching the given glob-like pattern. Most common glob patterns are accepted, but only one pattern per call. e.g. `print(fs.ls('*.js'))`. ||
 || `IODevice` || `openDevice(string filename, bool writeMode)` || Opens up a pseudofile within the VFS and returns it as a `whio.IODevice`. If `writeMode` is true then the file is created if it does not exist. Throws on error. The returned IODevice must `close()`ed before the VFS is closed. ||
@@ -166,14 +169,15 @@ TODOs:
 ==whefs static functions==
 
 || *Return type* || *Name/Signature* || *Notes* ||
-|| `WhEfs` || `whefs.mkfs(string filename [,Object options])` || Creates a new filesystem (destroying any existing file with the same name). Covered in more detail later. ||
+|| `WhEfs` || `whefs.mkfs(string filename [,Object options])` || Creates a new filesystem (destroying any existing file with the same name). This is covered in more detail below. ||
 
-==mkfs in more detail==
+===mkfs in more detail===
 
 The `whefs.mkfs()` function works exactly like the
 [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs tool],
-creating a virtual filesystem. The second parameter to the function is an Object
-which may have these optional properties:
+creating a so-called "container file" for a virtual filesystem. The
+second parameter to the function is an Object which may have these
+optional properties:
 
   * `inodeCount`
   * `blockCount`
@@ -182,9 +186,15 @@ which may have these optional properties:
 
 Each is described on the [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs page].
 
+If the object is null then some arbitrarily chosen defaults are used,
+and they are almost certainly not suitable for your particular case
+(see `whefs_amalgamation.h` for the full details).
+
+
 As a special service to our dear users, `mkfs()` supports the
 pseudofilename `":memory:"`, which means to build the VFS in memory. When
 the returned `WhEfs` object is closed (or garbage collected), the
-filesystem will be lost. The in-memory can be copied to disk using `dumpToFile()`.
+filesystem will be lost. The in-memory FS can be copied to disk using
+`dumpToFile()`.
 
 TODO: add a way for JS clients to know the size of the VFS.
