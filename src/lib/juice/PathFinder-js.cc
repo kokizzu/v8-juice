@@ -2,7 +2,7 @@
 //    License: Public Domain
 
 #include <iostream>
-#include <vector>
+#include <set>
 
 #include <v8/juice/PathFinder.h>
 #include <v8.h>
@@ -31,6 +31,18 @@ namespace v8 { namespace juice {
     template <>
     struct WeakJSClassCreatorOps<PathFinder>
     {
+        typedef std::set<PathFinder*> PFSet;
+        /**
+           All PathFinders which should be deleted by
+           this type (that depends on how the ctor is called)
+           are added here. Only dtors called for these objects
+           will trigger a delete.
+        */
+        static PFSet & pfset()
+        {
+            static PFSet pf;
+            return pf;
+        }
 	enum { ExtraInternalFieldCount = 0 };
 	typedef PathFinder WrappedType;
 	static char const * ClassName() { return "PathFinder"; }
@@ -40,39 +52,46 @@ namespace v8 { namespace juice {
 	    const int argc = argv.Length();
 	    if( (MagicExternalArgc == argc) && argv[0]->IsExternal() )
 	    { // assume arg is an externally-owned PathFinder instance
-		External * ex = External::Cast( *argv[0] );
-		if( ex )
+		Local<External> ex( External::Cast( *argv[0] ) );
+                WrappedType * xp = bind::GetBoundNative<PathFinder>( ex->Value() );
+		if( xp )
 		{
-		    //CERR << "Creating from external instance...\n";
-		    WrappedType * xp = static_cast<WrappedType*>(ex->Value());
-		    if( ! xp ) return 0;
+		    //CERR << ClassName() << "() ctor creating from external instance @"<<xp<<"\n";
 		    return xp;
 		}
 		else
 		{
-		    exceptionText = "First argument to ctor failed External::Cast()";
+		    exceptionText = "First argument to ctor failed type check!";
 		    return 0;
 		}
 	    }
 	    std::string a0 = (argc>0) ? JSToStdString(argv[0]) : "";
 	    std::string a1 = (argc>1) ? JSToStdString(argv[1]) : "";
 	    std::string a2 = (argc>2) ? JSToStdString(argv[2]) : ":";
-	    //CERR << "PathFinder(["<<a0<<"], ["<<a1<<"], ["<<a2<<"])\n";
+	    //CERR << ClassName()<< "(["<<a0<<"], ["<<a1<<"], ["<<a2<<"])\n";
 	    WrappedType * pf = new WrappedType( a0, a1, a2 );
 	    if( pf )
 	    {
+                pfset().insert( pf );
 		cleanup::AddToCleanup(pf, cleanup_callback );
 	    }
+            //CERR << ClassName() << "() ctor created " << pf << '\n';
 	    return pf;
 	}
 
 	static void Dtor( WrappedType * obj )
 	{
-	    //CERR << "Dtor() passing on @"<<obj<<'\n';
 	    if( obj )
 	    {
+                bind::UnbindNative( obj, obj );
 		cleanup::RemoveFromCleanup(obj);
-		delete obj;
+                PFSet::iterator it = pfset().find(obj);
+                if( it != pfset().end() )
+                {
+                    //CERR << ClassName() << " dtor deleting on @"<<obj<<'\n';
+                    pfset().erase(it);
+                    delete obj;
+                }
 	    }
 	}
     private:
@@ -112,7 +131,9 @@ namespace v8 { namespace juice {
 	pw.CtorTemplate()->GetFunction()->Set(JSTR("shared"),shared);
 	{
 	    // Install an instance wrapping the v8::juice::plugin::PluginsPath() shared object:
-	    Handle<Value> pfex( External::New( &::v8::juice::plugin::PluginsPath() ) );
+            PathFinder * pf = &::v8::juice::plugin::PluginsPath();
+	    Handle<Value> pfex( External::New( pf ) );
+            bind::BindNative( pf, pf );
 	    Handle<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
 	    shared->Set(String::New("plugins"), pfobj );
 	}
@@ -120,7 +141,9 @@ namespace v8 { namespace juice {
 	if(1)
 	{
 	    // Includes includes path:
-	    Handle<Value> pfex( External::New( &::v8::juice::ScriptsPath() ) );
+            PathFinder * pf = &::v8::juice::ScriptsPath();
+	    Handle<Value> pfex( External::New( pf ) );
+            bind::BindNative( pf, pf );
 	    Handle<Object> pfobj = pw.NewInstance( MagicExternalArgc, &pfex );
 	    shared->Set(String::New("include"), pfobj );
 	}
