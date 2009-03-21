@@ -67,11 +67,23 @@ See below for the complete class and function list.
 
 =Error reporting=
 
-Many functions in this API return a numeric code to indicate the
-result, with 0 being success and non-zero being some device-dependent
-error value (this convention is derived from common C I/O
-interfaces). Where integer error codes are used, they have the
-following symbolic equivalents:
+The i/o classes are based on an abstract C API. That API uses numeric
+error codes or null values to indicate errors, and this library
+normally passed on errors from the C API directly back to the
+caller. The value zero is normally the success value and non-zero is
+some device-dependent error value (this convention is derived from
+common C I/O interfaces).  Errors which happen at the JS level, as
+opposed to the C level, are reported via exceptions. All of the
+constructors will throw if they cannot open their underlying device or
+stream.
+
+For example, a call to `read(20)` which can only read 13 bytes will
+tell us so by returning the number 13, but calling `read()` with no
+arugments would trigger an exception because there is no sensible
+default value to pass on to the C API.
+
+Where integer error codes are used, they have the following symbolic
+equivalents:
 
 || *Symbolic name*, as a member of `whio.rc` || *Description* ||
 || `OK` || The generic success value. Always 0. ||
@@ -228,19 +240,6 @@ And a new property:
 || `IODevice` || `ioDevice` || This points to the subdevice's pointed-to device. ||
 
 
-==Error reporting==
-
-The i/o classes are based on an abstract C API. That API uses numeric
-error codes or null values to indicate errors, and this library
-normally passed on errors from the C API directly back to the
-caller. Errors which happen at the JS level, as opposed to the C
-level, are reported via exceptions. All of the constructors will throw
-if they cannot open their underlying device or stream.
-
-For example, a call to `read(20)` which can only read 13 bytes will
-tell us so by returning the number 13, but calling `read()` with no
-arugments would trigger an exception because there is no sensible
-default value to pass on to the C API.
 
 =Tips and tricks=
 
