@@ -9,6 +9,10 @@ are at the top. Dates written extra large are release dates. This contains only 
 http://code.google.com/p/v8-juice/source/browse/
 
 ----
+*2009 March 21*
+  * Started adding `ToSource()` API, to convert native types to JS source code. Has some notable limitations but basically works.
+  * Added gzip/gunzip support to [PluginWhio input streams].
+
 ==2009 March 18==
   * Released new tarball
 
