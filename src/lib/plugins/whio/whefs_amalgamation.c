@@ -1,4 +1,4 @@
-/* auto-generated on Sat Mar 21 16:54:33 CET 2009. Do not edit! */
+/* auto-generated on Sat Mar 21 20:21:43 CET 2009. Do not edit! */
 #if !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200112L /* needed for ftello() and friends */
 #endif
@@ -2813,6 +2813,12 @@ whio_stream * whio_stream_for_dev( whio_dev * dev, bool takeOwnership )
 } /* extern "C" */
 #endif
 /* begin file whio_stream_FILE.c */
+
+#if !defined(_POSIX_C_SOURCE)
+/* required for for fileno(), ftello(), maybe others */
+#  define _POSIX_C_SOURCE 200112L
+#endif
+
 /*
   whio_stream wrapper implementation for FILE handles.
 */
@@ -7216,6 +7222,12 @@ whefs_string * whefs_ls( whefs_fs * fs, char const * pattern, whefs_id_type * co
 	{
 	    continue;
 	}
+        if(1)
+        {// make sure it's marked as used, or skip it
+            uint32_t flagcheck = 0;
+            whefs_inode_read_flags( fs, id, &flagcheck );
+            if( ! (flagcheck & WHEFS_FLAG_Used) ) continue;
+        }
 	str = whefs_string_alloc();
 	if( ! str ) return head;
 	if( ! head ) head = str;

@@ -38,13 +38,23 @@ namespace v8 { namespace juice { namespace whio {
 
     Persistent<Function> WHEFS::js_ctor;
 
+    /**
+       JS Usage:
+
+       - WhEfs( IODevice dev ), where dev is an existing whefs filesystem.
+
+       - WhEfs( string fn, bool writeMode ) opens a pre-existing whefs
+       filesystem by filename.
+
+       All forms throw on error.
+    */
     WHEFSOps::WrappedType * WHEFSOps::Ctor( Arguments const & argv,
                                             std::string & exceptionText)
     {
         const int argc = argv.Length();
         whefs_fs * fs = 0;
         if( (1 == argc) && argv[0]->IsExternal() )
-        {
+        { // Internal use: passing a whio_dev instance from a factory function
             // we hope it is a whio_dev passed by a "friendly" factory function.
             // fixme: make this a safe operation if someone passes in a different
             // (void *).
@@ -57,21 +67,31 @@ namespace v8 { namespace juice { namespace whio {
             CERR << ClassName()<<" ctor passing on @"<<fs<<'\n';
             return fs;
         }
-        if( (argc != 1) )
-        {
-            exceptionText = "Constructor requires: (IODevice src)";
-            return 0;
+        Handle<Value> a0 = argv[0];
+        int rc = 0;
+        if( a0->IsString() )
+        { // ctor(String filename, bool writeMode)
+            std::string fn( JSToStdString(a0) );
+            bool rw = (argc>1) ? argv[1]->BooleanValue() : false;
+            rc = whefs_openfs( fn.c_str(), &fs, rw );
+            if( whefs_rc.OK == rc )
+            {
+                argv.This()->Set(JSTR("fileName"),CastToJS(fn));
+            }
         }
-        IODevice::type * dev = CastFromJS< IODevice >( argv[0] );
-        if( ! dev )
-        {
-            exceptionText = "First argument to the constructor must be an IODevice!";
-            return 0;
+        else
+        { // ctor(IODevice existingWhefsFS)
+            IODevice::type * dev = CastFromJS< IODevice >( a0 );
+            if( ! dev )
+            {
+                exceptionText = "First argument to the constructor must be an IODevice!";
+                return 0;
+            }
+            rc = whefs_openfs_dev( dev, &fs, false );
+            // fixme: the vfs should optionally take over ownership of dev, but we
+            // need to record that ownership so that we can clean up
+            // properly.
         }
-        int rc = whefs_openfs_dev( dev, &fs, false );
-        // fixme: the vfs should take over ownership of dev, but we
-        // need to record that ownership so that we can clean up
-        // properly.
         if( whefs_rc.OK != rc )
         {
             std::ostringstream os;
@@ -82,6 +102,11 @@ namespace v8 { namespace juice { namespace whio {
         if( fs )
         {
             ::v8::juice::cleanup::AddToCleanup(fs, cleanup_callback );
+        }
+        else if( exceptionText.empty() )
+        {
+            exceptionText = "Constructor requires: (IODevice src) or (String file, bool writeMode)";
+            return 0;
         }
         CERR << ClassName()<<" ctor passing on @"<<fs<<'\n';
         return fs;
@@ -138,9 +163,22 @@ namespace v8 { namespace juice { namespace whio {
             dev->api->finalize(dev);
             return jdev;
         }
+        argv.This()->Set(JSTR("fileName"),CastToJS(fname));
 	return jdev;
     }
 
+    static Handle<Value> whefs_unlink(const Arguments& argv)
+    {
+        ARGS(1==argc);
+        EFSTHIS;
+        if( ! argv[0]->IsString() )
+        {
+            TOSS("First argument must be a pseudofile name (string).");
+        }
+        std::string fname( JSToStdString(argv[0]) );
+        int rc = whefs_unlink_filename( fs, fname.c_str() );
+        return CastToJS(rc);
+    }
     static Handle<Value> whefs_mkfs(const Arguments& argv)
     {
         ARGS((argc == 1) || 2==argc);
@@ -177,9 +215,38 @@ namespace v8 { namespace juice { namespace whio {
             whefs_fs_finalize( fs );
             return jfs;
         }
+        argv.This()->Set(JSTR("fileName"),CastToJS(fname));
         return jfs;
     }
 
+    static Handle<Value> whefs_dump_to_file(const Arguments& argv)
+    {
+        ARGS((argc == 1));
+        EFSTHIS;
+        std::string fname( JSToStdString( argv[0] ) );
+        int rc = whefs_fs_dump_to_filename( fs, fname.c_str() );
+        return CastToJS(rc);
+    }
+
+    static Handle<Value> whefs_ls(const Arguments& argv)
+    {
+        ARGS((argc == 1));
+        EFSTHIS;
+        std::string pat( JSToStdString(argv[0]) );
+        whefs_id_type count = 0;
+        whefs_string * ls = whefs_ls( fs, pat.c_str(), &count );
+        if( ! ls ) return Null();
+        whefs_string * head = ls;
+        Handle<Array> ar( Array::New(count) );
+        int pos = 0;
+        for( ; ls; ++pos )
+        {
+            ar->Set( Integer::New(pos), CastToJS( static_cast<char const *>(ls->string) ) );
+            ls = ls->next;
+        }
+        whefs_string_finalize( head, true );
+        return ar;
+    }
 
 #undef EFSH
 #undef EFSHT
@@ -204,6 +271,7 @@ namespace v8 { namespace juice { namespace whio {
             SET("ArgError",whefs_rc.ArgError);
             SET("IOError",whefs_rc.IOError);
             SET("AllocError",whefs_rc.AllocError);
+            SET("BadMagicError",whefs_rc.BadMagicError);
             SET("InternalError",whefs_rc.InternalError);
             SET("RangeError",whefs_rc.RangeError);
             SET("AccessError",whefs_rc.AccessError);
@@ -221,6 +289,9 @@ namespace v8 { namespace juice { namespace whio {
             binder
                 .Set("close", whefs_close)
                 .Set("openDevice", whefs_open_dev)
+                .Set("unlink", whefs_unlink)
+                .Set("dumpToFile", whefs_dump_to_file)
+                .Set("ls", whefs_ls)
                 ;
             Handle<Function> ctor = binder.Seal();
             //ctor->Set(JSTR("mkfs"), FunctionTemplate::New(whefs_mkfs)->GetFunction() );

@@ -1,4 +1,4 @@
-/* auto-generated on Sat Mar 21 16:54:32 CET 2009. Do not edit! */
+/* auto-generated on Sat Mar 21 20:14:30 CET 2009. Do not edit! */
 #define WHEFS_AMALGAMATION_BUILD 1
 #if ! defined __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS 1
