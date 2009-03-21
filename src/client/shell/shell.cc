@@ -50,6 +50,7 @@
 #include <v8/juice/PathFinder.h>
 #include <v8/juice/cleanup.h>
 #include <v8/juice/WeakJSClassCreator.h>
+#include <v8/juice/ToSource.h>
 
 namespace bind = ::v8::juice::bind;
 
@@ -166,6 +167,42 @@ int my_fwd( V8CxH & cx )
     return 0;
 }
 
+int my_tosource( V8CxH & cx )
+{
+    using namespace v8;
+    using namespace v8::juice;
+    using namespace v8::juice::convert;
+
+    CERR << ToSource( 43 )
+         << '\n' << ToSource( "He's one of us, isn't he?" )
+         << '\n' << ToSource( "He said, \"hi!\"" )
+         << '\n' << ToSource( "He said, \"she's not home!\"" )
+         << '\n';
+
+    typedef std::list<std::string> SL;
+    SL li;
+    li.push_back( "He's one of us, isn't he?" );
+    li.push_back( "He said, \"hi!\"" );
+    li.push_back( "He said, \"she's not home!\"" );
+    CERR <<  ToSource(li) << '\n';
+    std::list<SL> lili;
+    lili.push_back(li);
+    lili.push_back(li);
+    lili.push_back(li);
+    CERR << ToSource(lili) << '\n';
+
+    CERR << ToSource( Local<String>( String::New("hi, world") ) ) << '\n';
+    CERR << ToSource( Integer::New(17) ) << '\n';
+    CERR << ToSource( Null() )  << '\n';
+    CERR << ToSource( Undefined() )  << '\n';
+    CERR << ToSource( Boolean::New(true) )  << '\n';
+    CERR << ToSource( Boolean::New(false) )  << '\n';
+    Local<Object> gl = v8::Context::GetCurrent()->Global();
+    CERR << ToSource( gl )  << '\n';
+    CERR << ToSource( gl->Get(String::New("print")) )  << '\n';
+    CERR << ToSource( CastToJS( li ) ) << '\n';
+    return 0;
+}
 
 int my_test( V8CxH & cx )
 {
@@ -299,6 +336,7 @@ int main(int argc, char* argv[]) {
 
         global->Set(v8::String::New("include"), v8::FunctionTemplate::New(v8::juice::IncludeScript) );
         global->Set(v8::String::New("load_plugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));
+        global->Set(v8::String::New("toSource"), v8::FunctionTemplate::New(v8::juice::convert::ToSource));
 
         // Create a new execution environment containing the built-in
         // functions
@@ -321,6 +359,7 @@ int main(int argc, char* argv[]) {
             //my_test( context );
             //my_class_test( context );
             my_fwd(context);
+            //my_tosource(context);
             //my_bind_test( context );
         }
         bool run_shell = (argc == 1);
