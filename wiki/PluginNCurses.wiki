@@ -1,6 +1,8 @@
 #summary JS bindings for ncurses
 #labels Phase-UserDocs,Topic-Plugins
 
+*ACHTUNG:* this plugin was broken as a side effect of recent v8-juice API changes, and is awaiting refactoring.
+
 ==The ncurses bindings==
 
 The ncurses bindings wrap up a great deal of the ncurses API for use in JavaScript, with currently (3 March 2009) over 120 bound functions.
