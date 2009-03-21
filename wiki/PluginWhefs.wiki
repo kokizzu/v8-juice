@@ -182,7 +182,9 @@ which may have these optional properties:
 
 Each is described on the [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs page].
 
-As a special service to caring users, `mkfs()` supports the
+As a special service to our dear users, `mkfs()` supports the
 pseudofilename `":memory:"`, which means to build the VFS in memory. When
 the returned `WhEfs` object is closed (or garbage collected), the
 filesystem will be lost. The in-memory can be copied to disk using `dumpToFile()`.
+
+TODO: add a way for JS clients to know the size of the VFS.
