@@ -60,7 +60,27 @@ function tryMemory()
     };
     print("Creating in-memory vfs...");
     var fs = whefs.mkfs(":memory:");
-    print("Created in-memory vfs.");
+    print("Created in-memory vfs. Size =",fs.size());
+
+    var istr = new whio.InStream("/etc/hosts");
+    var fz = fs.openDevice("/etc/hosts.gz",true);
+    print('fz =',fz.fileName);
+    var ostr = new whio.OutStream(fz);
+    var rc = istr.gzipTo(ostr);
+    print('gzip rc =',rc);
+    istr.close();
+    ostr.close();
+    fz.close();
+
+    fz = fs.openDevice("/etc/hosts.gz",false);
+    istr = new whio.InStream(fz);
+    ostr = new whio.OutStream('/dev/stdout',false);
+    istr.gunzipTo(ostr);
+    istr.close();
+    ostr.close();
+    fz.close();
+
+    fs.dumpToFile("memory.whefs");
     print(fs);
     fs.close();
 }
