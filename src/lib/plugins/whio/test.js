@@ -2,9 +2,10 @@ load_plugin('v8-juice-whio');
 
 function showErrCodes()
 {
+    print("whio.rc result codes:");
     for( var k in whio.rc )
     {
-        print("whio.rc."+k,'==',whio.rc[k]);
+        print("\twhio.rc."+k,'==',whio.rc[whio.rc[k]],'==',whio.rc[k]);
     }
 }
 function tryOne() {
@@ -251,6 +252,7 @@ function tryGzip()
     if( whio.rc.OK != rc ) throw new Error("Gunzip failed with code "+rc);
 }
 
+
 showErrCodes();
 tryOne();
 tryOnlyOut();
@@ -259,7 +261,8 @@ trySubdev();
 tryBadStream();
 tryTypeInfo();
 tryAbstract();
-//tryByteArray();
+tryByteArray();
 tryGzip();
+
 print(":-D");
 

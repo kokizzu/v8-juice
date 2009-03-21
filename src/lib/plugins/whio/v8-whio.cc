@@ -17,14 +17,11 @@
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
 
-#include <v8.h>
-#include <v8/juice/juice.h>
-#include <v8/juice/juice-config.h>
-#include <v8/juice/convert.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/plugin.h>
 
 #include "v8-whio.h"
+#include <v8/juice/ClassBinder.h>
 
 
 namespace v8 { namespace juice { namespace whio {
@@ -118,7 +115,7 @@ namespace v8 { namespace juice { namespace whio {
     */
     //static const void * bind_cx() { return 0;}
 
-
+    Persistent<Function> IODevice::js_ctor;
 
     static Handle<Value> abstract_ctor(const Arguments& argv)
     {
@@ -174,12 +171,8 @@ namespace v8 { namespace juice { namespace whio {
        - (":memory:" [, int initialSize])   = in-memory buffer
        - (IODevice, int lower, int upper)   = subdevice
      */
-    whio_dev * dev_construct(
-// 			     Local<Object> self,
-// 				    int argc,
-// 				    Handle<Value> argv[],
-				    Arguments const & argv,
-				    std::string & exception )
+    whio_dev * dev_construct( Arguments const & argv,
+                              std::string & exception )
     {
 	const int argc = argv.Length();
 	whio_dev * dev = 0;
@@ -189,6 +182,19 @@ namespace v8 { namespace juice { namespace whio {
 	}
 	HandleScope scope;
 	//char const * dontknow = "Don't know how to handle the given constructor arguments!";
+        if( (1 == argc) && argv[0]->IsExternal() )
+        {
+            // we hope it is a whio_dev passed by a "friendly" factory function.
+            // fixme: make this a safe operation if someone passes in a different
+            // (void *).
+            Local< External > ex( External::Cast(*argv[0]) );
+            dev = static_cast<whio_dev*>( ex->Value() );
+            if( ! dev )
+            {
+                exception = "Internal ctor got incorrect arguments!";
+            }
+            return dev;
+        }
 	Local<Object> self = argv.This();
 	if( argv[0]->IsString() )
 	{ //ctor(":memory:")
@@ -197,7 +203,7 @@ namespace v8 { namespace juice { namespace whio {
 	    if( ":memory:" == fname )
 	    { // (":memory:" [,int size])
 		whio_size_t sz = (argc > 1) ? CastFromJS<whio_size_t>(argv[1]) : 0;
-		dev = whio_dev_for_membuf( sz, 1.33 );
+		dev = whio_dev_for_membuf( sz, 1.5 );
 		if( ! dev )
 		{
 		    std::ostringstream msg;
@@ -216,7 +222,7 @@ namespace v8 { namespace juice { namespace whio {
 	    else if( 2 == argc )
 	    { // (string filename, bool writeMode)
 		bool writeMode = JSToBool(argv[1]);
-		char const * mode = (writeMode) ? "w+b" : "rb";
+		char const * mode = (writeMode) ? "r+b" : "rb";
 		dev = whio_dev_for_filename( fname.c_str(), mode );
 		if( dev )
 		{
@@ -628,6 +634,9 @@ namespace v8 { namespace juice { namespace whio {
 
     static Handle<Value> stream_gzip(const Arguments& argv)
     {
+#if ! WHIO_ENABLE_ZLIB
+        TOSS("zlib support was not build in to this library!");
+#else
 	ARGS((1==argc)||(2==argc));
 	DEVTHIS(StreamBase);
         whio_stream * dest = CastFromJS<StreamBase>( argv[0] );
@@ -639,10 +648,14 @@ namespace v8 { namespace juice { namespace whio {
         int lv = (argc>1) ? CastFromJS<int>(argv[1]) : Z_DEFAULT_COMPRESSION;
         int rc = whio_stream_gzip( dev, dest, lv );
         return CastToJS( rc );
+#endif
     }
 
     static Handle<Value> stream_gunzip(const Arguments& argv)
     {
+#if ! WHIO_ENABLE_ZLIB
+        TOSS("zlib support was not build in to this library!");
+#else
 	ARGS((1==argc)||(2==argc));
 	DEVTHIS(StreamBase);
         whio_stream * dest = CastFromJS<StreamBase>( argv[0] );
@@ -653,6 +666,7 @@ namespace v8 { namespace juice { namespace whio {
         }
         int rc = whio_stream_gunzip( dev, dest );
         return CastToJS( rc );
+#endif
     }
 
 
@@ -683,11 +697,12 @@ namespace v8 { namespace juice { namespace whio {
     }
 
 
+#undef EFSH
+#undef EFSHT
+#undef EFSTHIS
 #undef DEVHT
 #undef DEVHV
 #undef DEVH
-#undef DEVHN
-#undef DEVHNT
 #undef DEVTHIS
 
     Handle<Value> SetupWhioClasses(const Handle<Object> target )
@@ -696,23 +711,26 @@ namespace v8 { namespace juice { namespace whio {
 	Handle<Object> whio = Object::New();
 	target->Set(JSTR("whio"),whio);
 
-	Handle<Object> whiorc = Object::New();
-	whio->Set(JSTR("rc"),whiorc);
+        {
+            Handle<Object> whiorc = Object::New();
+            whio->Set(JSTR("rc"),whiorc);
 
-#define SET(K,V) whiorc->Set(JSTR(K), Integer::New(V), v8::ReadOnly )
-        SET("OK", whio_rc.OK );
-        SET("ArgError",whio_rc.ArgError);
-        SET("IOError",whio_rc.IOError);
-        SET("AllocError",whio_rc.AllocError);
-        SET("InternalError",whio_rc.InternalError);
-        SET("RangeError",whio_rc.RangeError);
-        SET("AccessError",whio_rc.AccessError);
-        SET("ConsistencyError",whio_rc.ConsistencyError);
-        SET("NYIError",whio_rc.NYIError);
-        SET("UnsupportedError",whio_rc.UnsupportedError);
-        SET("TypeError",whio_rc.TypeError);
-        SET("SizeTError",-1);
+#define SET(K,V) whiorc->Set(JSTR(K), Integer::New(V), v8::ReadOnly ); \
+            whiorc->Set(Integer::New(V), JSTR(K), v8::ReadOnly )
+            SET("OK", whio_rc.OK );
+            SET("ArgError",whio_rc.ArgError);
+            SET("IOError",whio_rc.IOError);
+            SET("AllocError",whio_rc.AllocError);
+            SET("InternalError",whio_rc.InternalError);
+            SET("RangeError",whio_rc.RangeError);
+            SET("AccessError",whio_rc.AccessError);
+            SET("ConsistencyError",whio_rc.ConsistencyError);
+            SET("NYIError",whio_rc.NYIError);
+            SET("UnsupportedError",whio_rc.UnsupportedError);
+            SET("TypeError",whio_rc.TypeError);
+            SET("SizeTError",-1);
 #undef SET
+        }
 
 	////////////////////////////////////////////////////////////
 	// IOBase class:
@@ -753,8 +771,11 @@ namespace v8 { namespace juice { namespace whio {
 		.Set(strings::rewind,dev_rewind)
 		.Set(strings::isGood,dev_isgood)
 		.Seal();
-	}
-
+            if( IODevice::js_ctor.IsEmpty() )
+            {
+                IODevice::js_ctor = Persistent<Function>::New( bindIOD.CtorTemplate()->GetFunction() );
+            }
+        }
 	////////////////////////////////////////////////////////////
 	// ByteArray class:
 	{
@@ -799,6 +820,10 @@ namespace v8 { namespace juice { namespace whio {
  		.Set(strings::toString, devT_tostring<strings::OutStream> )
 		.Seal();
 	}
+
+
+
+
 	return whio;
     }
 
