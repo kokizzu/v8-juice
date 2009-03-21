@@ -235,6 +235,7 @@ For example, let's compress a copy of `/etc/hosts` into a VFS:
 
 var istr = new whio.InStream("/etc/hosts");
 var fz = fs.openDevice("/etc/hosts.gz",true);
+fz.truncate(0); // in case it already had content.
 var ostr = new whio.OutStream(fz);
 istr.gzipTo(ostr);
 print('gzip rc =',rc);
