@@ -188,7 +188,7 @@ namespace convert {
     {
         std::string operator()( Array * const v ) const
         {
-#if 1
+#if 0
             typedef NativeToSource< Object > PT;
             return PT().ArrayAsObject( v );
 #else
@@ -204,6 +204,28 @@ namespace convert {
             os << ']';
 	    return os.str();
 #endif
+        }
+        template <typename HandleT>
+        std::string operator()( HandleT const & h ) const
+        {
+            return h.IsEmpty()
+                ? "undefined"
+                : this->operator()( Array::Cast(h) );
+        }
+    };
+
+    template <>
+    struct NativeToSource< ::v8::Function >
+    {
+        std::string operator()( Function * const v ) const
+        {
+            if( ! v ) return "null";
+            std::string fname = CastFromJS<std::string>( v->GetName() );
+            if( fname.empty() )
+            {
+                return CastFromJS<std::string>( v->ToString() );
+            }
+            return fname;
         }
         template <typename HandleT>
         std::string operator()( HandleT const & h ) const
@@ -231,7 +253,7 @@ namespace convert {
             else if( h->IsBoolean() ) return ToSource( h->BooleanValue() );
             else if( h->IsInt32() ) return ToSource( CastFromJS<int32_t>(h) );
             else if( h->IsNumber() ) return ToSource( CastFromJS<double>(h) );
-            else if( h->IsFunction() ) return CastFromJS<std::string>(h);
+            else if( h->IsFunction() ) return ToSource( Function::Cast(*h) );
             else if( h->IsArray() ) return ToSource( Array::Cast(*h) );
             else if( h->IsObject() ) return ToSource( Object::Cast(*h) );
             return "'NativeToSource< Handle<T> > got an unhandled type!'";
@@ -349,10 +371,17 @@ namespace convert {
 
        BUGS:
 
-       - Everything is to-sourced by VALUE, not REFERENCE. We don't have a standard,
-       generic way to embed references references in JS (do we?).
+       - Everything is to-sourced by VALUE, not REFERENCE. We don't
+       have a standard, generic way to embed references references in
+       JS (do we?).
+
        - Circular object references will lead to infinite recursion.
-       - Source created for native Functions won't be eval()'able.
+
+       - Source created for Functions is: named functions evaluate to
+       their name. Unnamed functions are assumed to be JS source and
+       are toString()'d. This is about as close a comprimise as i can
+       find.
+
        - For Arrays, only their numeric fields are traversed.
     */
     Handle<Value> ToSource( ::v8::Arguments const & argv );
