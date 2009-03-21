@@ -20,7 +20,7 @@ which is (not coincidentally) based off of the same C library as the i/o plugin 
 
 
 ==About==
-whefs gets its name from the i/o library it is based on:
+whefs gets its name from the library it is based on:
 
 http://fossil.wanderinghorse.net/repos/whefs/
 
@@ -28,7 +28,7 @@ That library is provided with this plugin, and need not be installed separately.
 
 This plugins provides the following features:
 
-  * Classes `whefs.WhEfs` ecapsulates access to a virtual/embedded filesystem, as described in detail on the whefs home page.
+  * Class `whefs.WhEfs` ecapsulates access to a virtual/embedded filesystem, as described in detail on the whefs home page.
   * whefs works in conjunction with the `whio.IODevice` API in two ways. First, it can use any back-end storage supported by `IODevice`. Secondly, the "pseudofiles" in the embedded filesystem are accessed using the `IODevice` interface. This property inherently makes it capable of hosting embedded filesystems within embedded filesystems (not that there's any good reason to do so).
 
 ==Source code==
@@ -37,6 +37,8 @@ This plugin's source code is currently part of the v8-juice core source tree,
 and can be found here:
 
 http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio
+
+See the file `v8-whefs.cc` for the particulars.
 
 _Much_ more information about [http://fossil.wanderinghorse.net/repos/whefs/ whefs]
 can be found on [http://fossil.wanderinghorse.net/repos/whefs/ its home page].
@@ -105,7 +107,16 @@ fi.close(); // close the file
 fs.close(); // close the whefs container
 }}}
 
-The majority of the functionality is provided by the [PluginWhio IODevice class]. The so-called _pseudofiles_ (files inside a whefs container (also known as a _VFS_ or _embedded filesystem_)) use the exact same i/o interface as `whio.IODevice`, and inherit all usage conventions from that interface. The most significant of these is that the `close()` member must be called when the client is done with the object, to ensure that all handles are closed and memory is released. Closing a device handle after the VFS instance has been closed, or allowing the object's destruction to depend on the garbage collector, both lead to undefined results.
+The majority of the functionality is provided by the [PluginWhio
+IODevice class]. The so-called _pseudofiles_ (files inside a whefs
+container (also known as a _VFS_ or _embedded filesystem_)) use the
+exact same i/o interface as `whio.IODevice`, and inherit all usage
+conventions from that interface. The most significant of these is that
+the `close()` member must be called when the client is done with the
+object, to ensure that all handles are closed and memory is
+released. Closing a device handle after the VFS instance has been
+closed, or allowing the object's destruction to depend on the garbage
+collector, both lead to undefined results.
 
 See below for the complete class and function list.
 
@@ -137,8 +148,10 @@ always 0, and `SizeTError`, which is always equal to -1. Interestingly
 enough, its _exact_ native value of -1 may depends on the
 compile-time size of the native `whio_size_t` type.
 
-While `whio` and `whefs` do share many of the same error code names, there is no guaranty
-that the values will be the same for the same error code. e.g. `whio.rc.AccessError` might be (and probably is) different than `whefs.rc.AccessError`.
+While `whio` and `whefs` do share many of the same error code names,
+there is no guaranty that the values will be the same for the same
+error code names. e.g. `whio.rc.AccessError` might be (and actually
+is) different than `whefs.rc.AccessError`.
 
 =JS API for whefs=
 
@@ -156,6 +169,7 @@ whefs home page. All other features are inherited from the `IODevice` class.
 || `int` || `dumpToFile(string filename)` || Dumps the VFS's binary image to the given file. Results are undefined if it is told to overwrite itself. ||
 || `Array` || `ls(string pattern)` || Returns a list (or null) of all pseudofiles matching the given glob-like pattern. Most common glob patterns are accepted, but only one pattern per call. e.g. `print(fs.ls('*.js'))`. ||
 || `IODevice` || `openDevice(string filename, bool writeMode)` || Opens up a pseudofile within the VFS and returns it as a `whio.IODevice`. If `writeMode` is true then the file is created if it does not exist. Throws on error. The returned IODevice must `close()`ed before the VFS is closed. ||
+|| `int` || `size()` || Returns the size of the underlying pseudofilesystem. ||
 || `int` || `unlink(string filename)` || Unlinks (deletes) the given pseudofile name. It will fail if the given file is currently opened. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `string` || `fileName` || Only for `WhEfs` objects created via a filename argument. Changing it has no effect on the object. ||
@@ -166,7 +180,7 @@ TODOs:
   * `ls()` should be able to take more than one pattern. It should also accept a callback function to check for a match. We unfortunately have no C++ client-side access to the JS RegExp, so we can't easily support that.
   * Think about how we might integrate [PathFinderClass PathFinder] with whefs, such that !PathFinder would be able to search through a VFS.
 
-==whefs static functions==
+==whefs shared/static functions==
 
 || *Return type* || *Name/Signature* || *Notes* ||
 || `WhEfs` || `whefs.mkfs(string filename [,Object options])` || Creates a new filesystem (destroying any existing file with the same name). This is covered in more detail below. ||
@@ -177,19 +191,21 @@ The `whefs.mkfs()` function works exactly like the
 [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs tool],
 creating a so-called "container file" for a virtual filesystem. The
 second parameter to the function is an Object which may have these
-optional properties:
+optional properties, along with sensible (or required) ranges for their values:
 
-  * `inodeCount`
-  * `blockCount`
-  * `blockSize`
-  * `filenameLength`
+  * `inodeCount` = the number of inodes. Must be at least two. More than 1000-2000 is probably not suitable for the current whefs engine.
+  * `blockCount` = the number of data blocks. Must be at least inodeCount, but may be greater (up to 64k).
+  * `blockSize` = the size of each data block. 4k-32k is normally good.
+  * `filenameLength` = maximum length of filenames. Default is 64.
 
 Each is described on the [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs page].
 
-If the object is null then some arbitrarily chosen defaults are used,
-and they are almost certainly not suitable for your particular case
-(see `whefs_amalgamation.h` for the full details).
-
+If the object is null or any given parameter is missing then some
+arbitrarily chosen defaults are used, and they are almost certainly
+not suitable for your particular case (see `whefs_amalgamation.h`,
+`whefs_mkfs()` for the full details). Each parameter certain valid ranges
+(again, see the API docs) and `mkfs()` will fail if those ranges are
+not met.
 
 As a special service to our dear users, `mkfs()` supports the
 pseudofilename `":memory:"`, which means to build the VFS in memory. When
@@ -197,4 +213,42 @@ the returned `WhEfs` object is closed (or garbage collected), the
 filesystem will be lost. The in-memory FS can be copied to disk using
 `dumpToFile()`.
 
-TODO: add a way for JS clients to know the size of the VFS.
+=Some things to keep in mind=
+
+  * Never access the same whefs filesystem from two processes at the same time. That doesn't currently work - they will collide and cause corruption.
+  * whefs doesn't support true directories. Pseudofiles can be named `/path/to/file.txt`, but they're all currently stored in one big directory. This makes searching by name (e.g. using `ls()` or `openDevice()`) relatively slow.
+  * The original whefs source tree comes with [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools several tools for manipulating whefs filesystems].
+  * There are _lots_ more docs available via the whefs source code and [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools the whefs home page].
+  * whefs' engine is not scalable (in terms of performance) to large data stores. Keep them small (a few hundred inodes or so) or suffer from the underlying linear algorithms.
+  * whefs is fairly minimalistic - do not expect all the features of a normal filesystem.
+
+=Tips and Tricks=
+
+==GZipping/Unzipping VFS Content==
+
+You can use the `whio.InStream` methods `gzipTo()` and `ungzipTo()` to (de)compress an arbitrary stream from/to the VFS.
+
+For example, let's compress a copy of `/etc/hosts` into a VFS:
+
+{{{
+// Assume fs is an opened WhEfs object
+
+var istr = new whio.InStream("/etc/hosts");
+var fz = fs.openDevice("/etc/hosts.gz",true);
+var ostr = new whio.OutStream(fz);
+istr.gzipTo(ostr);
+print('gzip rc =',rc);
+istr.close();
+ostr.close();
+fz.close();
+
+// To decompress it:
+
+fz = fs.openDevice("/etc/hosts.gz",false);
+istr = new whio.InStream(fz);
+ostr = new whio.OutStream('/dev/stdout',false);
+istr.gunzipTo(ostr);
+istr.close();
+ostr.close();
+fz.close();
+}}}
