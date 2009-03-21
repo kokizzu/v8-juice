@@ -602,10 +602,20 @@ namespace juice {
 	 */
 	static Handle<Value> ctor_proxy( const Arguments & argv )
 	{
+#if 1
+            /**
+               Why have this limitation? If we don't, v8 pukes when
+               the ctor is called, with
+               "v8::Object::SetInternalField() Writing internal field
+               out of bounds".
+            */
 	    if (!argv.IsConstructCall()) 
 	    {
-		return ThrowException(String::New("Cannot call this constructor as function!"));
+                std::ostringstream os;
+                os << "The "<< ClassOpsType::ClassName() << " constructor cannot be called as function!";
+		return ThrowException(String::New(os.str().c_str()));
 	    }
+#endif
 	    std::string err;
 	    WrappedType * obj = 0;
 	    try
