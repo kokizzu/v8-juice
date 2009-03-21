@@ -6,6 +6,10 @@ Some of the implementation details for the whio plugin which might
 be useful in some cross-plugin contexts.
 ************************************************************************/
 
+#include <v8.h>
+#include <v8/juice/juice.h>
+#include <v8/juice/juice-config.h>
+#include <v8/juice/convert.h>
 #include <v8/juice/cleanup.h>
 //#include <v8/juice/JSClassCreator.h>
 #include <v8/juice/WeakJSClassCreator.h>
@@ -37,6 +41,7 @@ namespace v8 { namespace juice { namespace whio {
     struct IODevice : IOBase
     {
 	typedef whio_dev type;
+        static Persistent<Function> js_ctor;
     };
     /** INCOMPLETE.
         JS wrapper class for a byte array. */
@@ -110,6 +115,8 @@ namespace v8 { namespace juice { namespace whio {
 	    Dtor( static_cast<WrappedType*>(obj) );
 	}
     };
+
+
 
 
 } // namespace whio
