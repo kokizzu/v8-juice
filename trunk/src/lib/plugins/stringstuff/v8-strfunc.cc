@@ -34,7 +34,7 @@ namespace str {
 	
     std::string quote_js_string( std::string const & s )
     {
-	if( 0 == s.find('\'') ) return "'"+s+"'";
+      if( std::string::npos == s.find('\'') ) return "'"+s+"'";
 	else if( std::string::npos == s.find("\"") ) return "\""+s+"\"";
 	else
 	{
