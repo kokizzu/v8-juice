@@ -17,6 +17,15 @@ be useful in some cross-plugin contexts.
 
 namespace v8 { namespace juice { namespace whio {
 
+    struct WhefsStrings
+    {
+        static const char * openDevice;
+        static const char * unlink;
+        static const char * dumpToFile;
+        static const char * ls;
+        static const char * mkfs;
+    };
+
     /**
        Adds to target object:
 

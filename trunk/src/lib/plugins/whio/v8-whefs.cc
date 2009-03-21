@@ -28,6 +28,13 @@
 
 namespace v8 { namespace juice { namespace whio {
 
+    const char * WhefsStrings::openDevice = "openDevice";
+    const char * WhefsStrings::unlink = "unlink";
+    const char * WhefsStrings::dumpToFile = "dumpToFile";
+    const char * WhefsStrings::ls = "ls";
+    const char * WhefsStrings::mkfs = "mkfs";
+
+
     //namespace juice = ::v8::juice;
     using namespace ::v8::juice::convert;
 
@@ -54,12 +61,9 @@ namespace v8 { namespace juice { namespace whio {
         const int argc = argv.Length();
         whefs_fs * fs = 0;
         if( (1 == argc) && argv[0]->IsExternal() )
-        { // Internal use: passing a whio_dev instance from a factory function
-            // we hope it is a whio_dev passed by a "friendly" factory function.
-            // fixme: make this a safe operation if someone passes in a different
-            // (void *).
+        { // Internal use: passing a whio_dev instance from a factory function.
             Local< External > ex( External::Cast(*argv[0]) );
-            fs = static_cast<whefs_fs*>( ex->Value() );
+            fs = bind::GetBoundNative<whefs_fs>( ex->Value() );
             if( ! fs )
             {
                 exceptionText = "Internal ctor got incorrect arguments!";
@@ -76,7 +80,7 @@ namespace v8 { namespace juice { namespace whio {
             rc = whefs_openfs( fn.c_str(), &fs, rw );
             if( whefs_rc.OK == rc )
             {
-                argv.This()->Set(JSTR("fileName"),CastToJS(fn));
+                argv.This()->Set(JSTR(WhioStrings::fileName),CastToJS(fn));
             }
         }
         else
@@ -165,7 +169,9 @@ namespace v8 { namespace juice { namespace whio {
             dev->api->finalize(dev);
             return jdev;
         }
-        argv.This()->Set(JSTR("fileName"),CastToJS(fname));
+        jdev->Set(JSTR(WhioStrings::fileName),CastToJS(fname));
+        jdev->Set(JSTR(WhioStrings::canWrite), Boolean::New(rw), v8::ReadOnly );
+        jdev->Set(JSTR(WhioStrings::canRead), Boolean::New(true), v8::ReadOnly );
 	return jdev;
     }
 
@@ -181,11 +187,23 @@ namespace v8 { namespace juice { namespace whio {
         int rc = whefs_unlink_filename( fs, fname.c_str() );
         return CastToJS(rc);
     }
+
+    /**
+       JS usage:
+
+       var fs = whefs.mkfs( "/path/to/file", {options} );
+
+       Where options should have these properties:
+
+       blockSize, inodeCount, blockCount, filenameLength
+
+       each corresponds to a whefs_fs_options entry.
+    */
     static Handle<Value> whefs_mkfs(const Arguments& argv)
     {
         ARGS((argc == 1) || 2==argc);
         std::string fname( JSToStdString( argv[0] ) );
-        whefs_fs_options op = WHEFS_FS_OPTIONS_DEFAULT;
+        whefs_fs_options op = whefs_fs_options_default;
         if( (argc > 1) && argv[1]->IsObject() )
         {
             Handle<Object> jop( Object::Cast(*argv[1]) );
@@ -209,15 +227,19 @@ namespace v8 { namespace juice { namespace whio {
             TOSS(os.str().c_str());
         }
 
+        bind::BindNative( fs, fs );
         Local<External> a0( External::New(fs) );
         Handle<Value> av[] = { a0 };
         Handle<Object> jfs = WHEFS::js_ctor->NewInstance( 1, av );
         if( jfs.IsEmpty() || !jfs->IsObject() )
         {
+            bind::UnbindNative( fs, fs );
             whefs_fs_finalize( fs );
             return jfs;
         }
-        argv.This()->Set(JSTR("fileName"),CastToJS(fname));
+        jfs->Set(JSTR(WhioStrings::canWrite), Boolean::New(true), v8::ReadOnly );
+        jfs->Set(JSTR(WhioStrings::canRead), Boolean::New(true), v8::ReadOnly );
+        jfs->Set(JSTR(WhioStrings::fileName),CastToJS(fname));
         return jfs;
     }
 
@@ -248,6 +270,12 @@ namespace v8 { namespace juice { namespace whio {
         }
         whefs_string_finalize( head, true );
         return ar;
+    }
+    static Handle<Value> whefs_size(const Arguments& argv)
+    {
+        ARGS((argc == 0));
+        EFSTHIS;
+        return CastToJS( whefs_fs_calculate_size( whefs_fs_options_get(fs) ) );
     }
 
 #undef EFSH
@@ -289,15 +317,17 @@ namespace v8 { namespace juice { namespace whio {
 	{
 	    ClassBinder<WHEFS> binder( whefs );
             binder
-                .Set("close", whefs_close)
-                .Set("openDevice", whefs_open_dev)
-                .Set("unlink", whefs_unlink)
-                .Set("dumpToFile", whefs_dump_to_file)
-                .Set("ls", whefs_ls)
+                .Set(WhioStrings::close, whefs_close)
+                .Set(WhefsStrings::openDevice, whefs_open_dev)
+                .Set(WhefsStrings::unlink, whefs_unlink)
+                .Set(WhefsStrings::dumpToFile, whefs_dump_to_file)
+                .Set(WhefsStrings::ls, whefs_ls)
+                .Set(WhioStrings::size, whefs_size)
                 ;
             Handle<Function> ctor = binder.Seal();
-            //ctor->Set(JSTR("mkfs"), FunctionTemplate::New(whefs_mkfs)->GetFunction() );
-            whefs->Set(JSTR("mkfs"), FunctionTemplate::New(whefs_mkfs)->GetFunction() );
+            Handle<Function> fmkfs( FunctionTemplate::New(whefs_mkfs)->GetFunction() );
+            //ctor->Set(JSTR("mkfs"), fmkfs );
+            whefs->Set(JSTR(WhefsStrings::mkfs), fmkfs );
             if( WHEFS::js_ctor.IsEmpty() )
             {
                 WHEFS::js_ctor = Persistent<Function>::New( ctor );
@@ -305,7 +335,6 @@ namespace v8 { namespace juice { namespace whio {
 	}
 	return whefs;
     }
-
 
 #undef JSTR
 #undef TOSS

@@ -33,82 +33,36 @@ namespace v8 { namespace juice { namespace whio {
 #define TOSS(X) return ::v8::ThrowException(JSTR(X)) /*juice::ThrowException(X)*/
 #define WHIO_RTFM "RTFM: " v8_juice_HOME_PAGE "/wiki/PluginWhio"
 
-    /**
-       Static/shared strings, some of which are used as template
-       parameters (where we can't use string literals but can,
-       curiously enough, use references to pointers to shared
-       strings)...
-    */
-    struct strings
-    {
-	// Class names:
-	static char const * IOBase;
-	static char const * IODevice;
-	static char const * StreamBase;
-	static char const * InStream;
-	static char const * OutStream;
-	static char const * ByteArray;
-
-	// IOBase:
-	static char const * SEEK_CUR_;
-	static char const * SEEK_END_;
-	static char const * SEEK_SET_;//need suffix b/c SEEK_SET is a #define'd numeric constant
-	static char const * canRead;
-	static char const * canWrite;
-	static char const * close;
-	static char const * fileName;
-	static char const * flush;
-	static char const * isGood;
-	static char const * read;
-	static char const * toString;
-	static char const * write;
-
-	// IODevice:
-	static char const * eof;
-	static char const * ioDevice;
-	static char const * rebound;
-	static char const * rewind;
-	static char const * seek;
-	static char const * size;
-	static char const * tell;
-	static char const * truncate;
-        static char const * clearError;
-        static char const * error;
-
-        // InStream:
-        static char const * gzip;
-        static char const * gunzip;
-    };
-    char const * strings::IOBase = "IOBase";
-    char const * strings::IODevice = "IODevice";
-    char const * strings::InStream = "InStream";
-    char const * strings::OutStream = "OutStream";
-    char const * strings::ByteArray = "ByteArray";
-    char const * strings::SEEK_CUR_ = "SEEK_CUR";
-    char const * strings::SEEK_END_ = "SEEK_END";
-    char const * strings::SEEK_SET_ = "SEEK_SET";
-    char const * strings::StreamBase = "StreamBase";
-    char const * strings::canRead = "canRead";
-    char const * strings::canWrite = "canWrite";
-    char const * strings::clearError = "clearError";
-    char const * strings::close = "close";
-    char const * strings::eof = "eof";
-    char const * strings::error = "error";
-    char const * strings::fileName = "fileName";
-    char const * strings::flush = "flush";
-    char const * strings::gzip = "gzipTo";
-    char const * strings::gunzip = "gunzipTo";
-    char const * strings::ioDevice = "ioDevice";
-    char const * strings::isGood = "isGood";
-    char const * strings::read = "read";
-    char const * strings::rebound = "rebound";
-    char const * strings::rewind = "rewind";
-    char const * strings::seek = "seek";
-    char const * strings::size = "size";
-    char const * strings::tell = "tell";
-    char const * strings::toString = "toString";
-    char const * strings::truncate = "truncate";
-    char const * strings::write = "write";
+    char const * WhioStrings::IOBase = "IOBase";
+    char const * WhioStrings::IODevice = "IODevice";
+    char const * WhioStrings::InStream = "InStream";
+    char const * WhioStrings::OutStream = "OutStream";
+    char const * WhioStrings::ByteArray = "ByteArray";
+    char const * WhioStrings::SEEK_CUR_ = "SEEK_CUR";
+    char const * WhioStrings::SEEK_END_ = "SEEK_END";
+    char const * WhioStrings::SEEK_SET_ = "SEEK_SET";
+    char const * WhioStrings::StreamBase = "StreamBase";
+    char const * WhioStrings::canRead = "canRead";
+    char const * WhioStrings::canWrite = "canWrite";
+    char const * WhioStrings::clearError = "clearError";
+    char const * WhioStrings::close = "close";
+    char const * WhioStrings::eof = "eof";
+    char const * WhioStrings::error = "error";
+    char const * WhioStrings::fileName = "fileName";
+    char const * WhioStrings::flush = "flush";
+    char const * WhioStrings::gzip = "gzipTo";
+    char const * WhioStrings::gunzip = "gunzipTo";
+    char const * WhioStrings::ioDevice = "ioDevice";
+    char const * WhioStrings::isGood = "isGood";
+    char const * WhioStrings::read = "read";
+    char const * WhioStrings::rebound = "rebound";
+    char const * WhioStrings::rewind = "rewind";
+    char const * WhioStrings::seek = "seek";
+    char const * WhioStrings::size = "size";
+    char const * WhioStrings::tell = "tell";
+    char const * WhioStrings::toString = "toString";
+    char const * WhioStrings::truncate = "truncate";
+    char const * WhioStrings::write = "write";
 
     /**
        Internal binding context for BindNative() and friends.
@@ -211,9 +165,9 @@ namespace v8 { namespace juice { namespace whio {
 		}
 		else
 		{
-		    self->Set(JSTR(strings::fileName), argv[0], v8::ReadOnly );
-		    self->Set(JSTR(strings::canWrite), Boolean::New(true) );
-		    self->Set(JSTR(strings::canRead), Boolean::New(true) );
+		    self->Set(JSTR(WhioStrings::fileName), argv[0], v8::ReadOnly );
+		    self->Set(JSTR(WhioStrings::canWrite), Boolean::New(true) );
+		    self->Set(JSTR(WhioStrings::canRead), Boolean::New(true) );
 		}
 		return dev;
 	    }
@@ -224,9 +178,9 @@ namespace v8 { namespace juice { namespace whio {
 		dev = whio_dev_for_filename( fname.c_str(), mode );
 		if( dev )
 		{
-		    self->Set(JSTR(strings::fileName), argv[0], v8::ReadOnly );
-		    self->Set(JSTR(strings::canWrite), Boolean::New(writeMode) );
-		    self->Set(JSTR(strings::canRead), Boolean::New(true) );
+		    self->Set(JSTR(WhioStrings::fileName), argv[0], v8::ReadOnly );
+		    self->Set(JSTR(WhioStrings::canWrite), Boolean::New(writeMode) );
+		    self->Set(JSTR(WhioStrings::canRead), Boolean::New(true) );
 		}
 		return dev;
 	    }
@@ -249,11 +203,11 @@ namespace v8 { namespace juice { namespace whio {
 		}
 		else
 		{
-		    self->Set(JSTR(strings::rebound),
+		    self->Set(JSTR(WhioStrings::rebound),
 			      FunctionTemplate::New(dev_rebound)->GetFunction());
-		    self->Set(JSTR(strings::ioDevice), par, v8::ReadOnly);
-		    self->Set(JSTR(strings::canWrite), par->Get(JSTR(strings::canWrite)), v8::ReadOnly );
-		    self->Set(JSTR(strings::canRead), par->Get(JSTR(strings::canRead)), v8::ReadOnly );
+		    self->Set(JSTR(WhioStrings::ioDevice), par, v8::ReadOnly);
+		    self->Set(JSTR(WhioStrings::canWrite), par->Get(JSTR(WhioStrings::canWrite)), v8::ReadOnly );
+		    self->Set(JSTR(WhioStrings::canRead), par->Get(JSTR(WhioStrings::canRead)), v8::ReadOnly );
 		}
 		return dev;
 	    }
@@ -281,8 +235,8 @@ namespace v8 { namespace juice { namespace whio {
 	}
 	else
 	{
-	    self->Set(JSTR(strings::canWrite), Boolean::New(true) );
-	    self->Set(JSTR(strings::canRead), Boolean::New(true) );
+	    self->Set(JSTR(WhioStrings::canWrite), Boolean::New(true) );
+	    self->Set(JSTR(WhioStrings::canRead), Boolean::New(true) );
 	}
 	return dev;
     }
@@ -306,7 +260,7 @@ namespace v8 { namespace juice { namespace whio {
        - (string filename [,bool truncate=true])
 
        Both types:
-       - (IODevice)
+       - (IODevice), acts as a stream proxy for the given device.
 
        omModes:
 
@@ -351,9 +305,9 @@ namespace v8 { namespace juice { namespace whio {
 		exception = msg.str();
 		return 0;
 	    }
-	    self->Set(JSTR(strings::fileName), argv[0], v8::ReadOnly );
-	    self->Set(JSTR(strings::canWrite), Boolean::New(writeMode), v8::ReadOnly );
-	    self->Set(JSTR(strings::canRead), Boolean::New(writeMode ? false : true) );
+	    self->Set(JSTR(WhioStrings::fileName), argv[0], v8::ReadOnly );
+	    self->Set(JSTR(WhioStrings::canWrite), Boolean::New(writeMode), v8::ReadOnly );
+	    self->Set(JSTR(WhioStrings::canRead), Boolean::New(writeMode ? false : true) );
 	    //CERR << "whio_stream_for_filename( "<<fname <<", "<<mode<<" ) == dev@"<<dev<<"\n";
 	    return dev;
 	}
@@ -361,16 +315,16 @@ namespace v8 { namespace juice { namespace whio {
 	if( iod )
 	{ // ctor(IODevice)
 	    Local<Object> par( Object::Cast(*argv[0]) );
-	    if( writeMode )
+	    if( writeMode && par->Has(JSTR(WhioStrings::canWrite)) )
 	    { // try a basic sanity check...
-		Local<Value> parRW( par->Get(JSTR(strings::canWrite)) );
-		if( writeMode && !parRW->BooleanValue() )
-		{
-		    std::ostringstream msg;
-		    msg << "Cannot create output stream for device because it says it is read-only!";
-		    exception = msg.str();
-		    return 0;
-		}
+                Local<Value> parRW( par->Get(JSTR(WhioStrings::canWrite)) );
+                if( writeMode && !parRW->BooleanValue() )
+                {
+                    std::ostringstream msg;
+                    msg << "Cannot create output stream for device because it says it is read-only!";
+                    exception = msg.str();
+                    return 0;
+                }
 	    }
 	    dev = whio_stream_for_dev( iod, false );
 	    if( ! dev )
@@ -381,16 +335,16 @@ namespace v8 { namespace juice { namespace whio {
 	    }
 	    else
 	    {
-		self->Set(JSTR(strings::ioDevice), par, v8::ReadOnly );
+		self->Set(JSTR(WhioStrings::ioDevice), par, v8::ReadOnly );
 		if( writeMode )
 		{
-		    self->Set(JSTR(strings::canWrite), par->Get(JSTR(strings::canWrite)), v8::ReadOnly );
-		    self->Set(JSTR(strings::canRead), Boolean::New(false) );
+		    self->Set(JSTR(WhioStrings::canWrite), par->Get(JSTR(WhioStrings::canWrite)), v8::ReadOnly );
+		    self->Set(JSTR(WhioStrings::canRead), Boolean::New(false) );
 		}
 		else
 		{
-		    self->Set(JSTR(strings::canWrite), Boolean::New(false), v8::ReadOnly );
-		    self->Set(JSTR(strings::canRead), Boolean::New(true) );
+		    self->Set(JSTR(WhioStrings::canWrite), Boolean::New(false), v8::ReadOnly );
+		    self->Set(JSTR(WhioStrings::canRead), Boolean::New(true) );
 		}
 	    }
 	    return dev;
@@ -680,15 +634,15 @@ namespace v8 { namespace juice { namespace whio {
 	Local<Object> self = argv.This();
 	os << "[object "<<N;
 
-	Local<String> key(JSTR(strings::fileName));
+	Local<String> key(JSTR(WhioStrings::fileName));
 	if( self->Has(key) )
 	{
-	    os << ' ' << strings::fileName<<":'"<<JSToStdString(self->Get(key))<<"',";
+	    os << ' ' << WhioStrings::fileName<<":'"<<JSToStdString(self->Get(key))<<"',";
 	}
-	key = JSTR(strings::canWrite);
-	os << ' ' << strings::canWrite <<':'<< (JSToStdString(self->Get(key))) << ',';
-	key = JSTR(strings::canRead);
-	os << ' ' << strings::canRead << ':'<< (JSToStdString(self->Get(key)));
+	key = JSTR(WhioStrings::canWrite);
+	os << ' ' << WhioStrings::canWrite <<':'<< (JSToStdString(self->Get(key))) << ',';
+	key = JSTR(WhioStrings::canRead);
+	os << ' ' << WhioStrings::canRead << ':'<< (JSToStdString(self->Get(key)));
 
 	os <<"]";
 	return CastToJS( os.str() );
@@ -732,19 +686,19 @@ namespace v8 { namespace juice { namespace whio {
 
 	////////////////////////////////////////////////////////////
 	// IOBase class:
-	v8::juice::JSClassCreator bindAbs( strings::IOBase, whio, abstract_ctor );
+	v8::juice::JSClassCreator bindAbs( WhioStrings::IOBase, whio, abstract_ctor );
 	Local<Function> func_noop = FunctionTemplate::New(abstract_reimplement)->GetFunction();
 	{
 	    bindAbs
-		.Set(strings::read, func_noop )
-		.Set(strings::write ,func_noop)
-		.Set(strings::isGood,func_noop)
-		.Set(strings::close,func_noop)
-		.Set(strings::flush,func_noop)
-		.Set(strings::toString, devT_tostring<strings::IOBase> )
-		.Set(strings::SEEK_SET_,Integer::New(SEEK_SET) )
-		.Set(strings::SEEK_END_, Integer::New(SEEK_END))
-		.Set(strings::SEEK_CUR_,Integer::New(SEEK_CUR) )
+		.Set(WhioStrings::read, func_noop )
+		.Set(WhioStrings::write ,func_noop)
+		.Set(WhioStrings::isGood,func_noop)
+		.Set(WhioStrings::close,func_noop)
+		.Set(WhioStrings::flush,func_noop)
+		.Set(WhioStrings::toString, devT_tostring<WhioStrings::IOBase> )
+		.Set(WhioStrings::SEEK_SET_,Integer::New(SEEK_SET) )
+		.Set(WhioStrings::SEEK_END_, Integer::New(SEEK_END))
+		.Set(WhioStrings::SEEK_CUR_,Integer::New(SEEK_CUR) )
 		.Seal();
 	}
 
@@ -754,20 +708,20 @@ namespace v8 { namespace juice { namespace whio {
 	{
 	    bindIOD
 		.Inherit( bindAbs )
- 		.Set(strings::write, dev_write )
- 		.Set(strings::read, dev_read )
- 		.Set(strings::toString, devT_tostring<strings::IODevice> )
- 		.Set(strings::flush, dev_flush )
- 		.Set(strings::close, dev_close )
-		.Set(strings::error,dev_error)
-		.Set(strings::clearError,dev_clear_error)
-		.Set(strings::eof,dev_eof)
-		.Set(strings::tell,dev_tell)
-		.Set(strings::seek,dev_seek)
-		.Set(strings::truncate,dev_truncate)
-		.Set(strings::size,dev_size)
-		.Set(strings::rewind,dev_rewind)
-		.Set(strings::isGood,dev_isgood)
+ 		.Set(WhioStrings::write, dev_write )
+ 		.Set(WhioStrings::read, dev_read )
+ 		.Set(WhioStrings::toString, devT_tostring<WhioStrings::IODevice> )
+ 		.Set(WhioStrings::flush, dev_flush )
+ 		.Set(WhioStrings::close, dev_close )
+		.Set(WhioStrings::error,dev_error)
+		.Set(WhioStrings::clearError,dev_clear_error)
+		.Set(WhioStrings::eof,dev_eof)
+		.Set(WhioStrings::tell,dev_tell)
+		.Set(WhioStrings::seek,dev_seek)
+		.Set(WhioStrings::truncate,dev_truncate)
+		.Set(WhioStrings::size,dev_size)
+		.Set(WhioStrings::rewind,dev_rewind)
+		.Set(WhioStrings::isGood,dev_isgood)
 		.Seal();
             if( IODevice::js_ctor.IsEmpty() )
             {
@@ -776,11 +730,12 @@ namespace v8 { namespace juice { namespace whio {
         }
 	////////////////////////////////////////////////////////////
 	// ByteArray class:
-	{
+	if(0)
+        {
 	    WeakJSClassCreator<ByteArray>
 		bindBA( whio );
             bindBA.Inherit( bindIOD )
- 		.Set(strings::toString, devT_tostring<strings::ByteArray> )
+ 		.Set(WhioStrings::toString, devT_tostring<WhioStrings::ByteArray> )
 		.Seal();
 	}
 
@@ -790,10 +745,10 @@ namespace v8 { namespace juice { namespace whio {
 	{
 	    bindSB
 		.Inherit( bindAbs )
- 		.Set(strings::close, stream_close )
- 		.Set(strings::flush, stream_flush )
- 		.Set(strings::isGood,stream_isgood)
- 		.Set(strings::toString, devT_tostring<strings::StreamBase> )
+ 		.Set(WhioStrings::close, stream_close )
+ 		.Set(WhioStrings::flush, stream_flush )
+ 		.Set(WhioStrings::isGood,stream_isgood)
+ 		.Set(WhioStrings::toString, devT_tostring<WhioStrings::StreamBase> )
 		.Seal();
         }
 
@@ -802,10 +757,10 @@ namespace v8 { namespace juice { namespace whio {
 	{
 	    WeakJSClassCreator<InStream> bindIS( whio );
 	    bindIS.Inherit( bindSB )
- 		.Set(strings::read, stream_read )
- 		.Set(strings::gzip, stream_gzip )
- 		.Set(strings::gunzip, stream_gunzip )
- 		.Set(strings::toString, devT_tostring<strings::InStream> )
+ 		.Set(WhioStrings::read, stream_read )
+ 		.Set(WhioStrings::gzip, stream_gzip )
+ 		.Set(WhioStrings::gunzip, stream_gunzip )
+ 		.Set(WhioStrings::toString, devT_tostring<WhioStrings::InStream> )
 		.Seal();
         }
 
@@ -814,8 +769,8 @@ namespace v8 { namespace juice { namespace whio {
 	{
 	    WeakJSClassCreator<OutStream> bindOS( whio );
             bindOS.Inherit( bindSB )
- 		.Set(strings::write, stream_write )
- 		.Set(strings::toString, devT_tostring<strings::OutStream> )
+ 		.Set(WhioStrings::write, stream_write )
+ 		.Set(WhioStrings::toString, devT_tostring<WhioStrings::OutStream> )
 		.Seal();
 	}
 

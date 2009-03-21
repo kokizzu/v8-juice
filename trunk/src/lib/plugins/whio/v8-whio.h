@@ -18,6 +18,53 @@ be useful in some cross-plugin contexts.
 namespace v8 { namespace juice { namespace whio {
 
     /**
+       Static/shared strings, some of which are used as template
+       parameters (where we can't use string literals but can,
+       curiously enough, use references to pointers to shared
+       strings)...
+    */
+    struct WhioStrings
+    {
+	// Class names:
+	static char const * IOBase;
+	static char const * IODevice;
+	static char const * StreamBase;
+	static char const * InStream;
+	static char const * OutStream;
+	static char const * ByteArray;
+
+	// IOBase:
+	static char const * SEEK_CUR_;
+	static char const * SEEK_END_;
+	static char const * SEEK_SET_;//need suffix b/c SEEK_SET is a #define'd numeric constant
+	static char const * canRead;
+	static char const * canWrite;
+	static char const * close;
+	static char const * fileName;
+	static char const * flush;
+	static char const * isGood;
+	static char const * read;
+	static char const * toString;
+	static char const * write;
+
+	// IODevice:
+	static char const * eof;
+	static char const * ioDevice;
+	static char const * rebound;
+	static char const * rewind;
+	static char const * seek;
+	static char const * size;
+	static char const * tell;
+	static char const * truncate;
+        static char const * clearError;
+        static char const * error;
+
+        // InStream:
+        static char const * gzip;
+        static char const * gunzip;
+    };
+
+    /**
        Adds to target object:
 
        - whio (generic holder object)
@@ -33,6 +80,14 @@ namespace v8 { namespace juice { namespace whio {
     */
     Handle<Value> SetupWhioClasses(const Handle<Object> target );
 
+    /**
+       Notes about the marker classes (IOBase, IODevice, etc.):
+
+       These types are never instantiated. They are only marker
+       types. Their 'type' typedef is the important bit, and one or
+       two might have a static accessor for a JS constructor.
+    */
+
     /** Abstract base class of all stream/device classes. */
     struct IOBase
     {
@@ -41,14 +96,17 @@ namespace v8 { namespace juice { namespace whio {
     struct IODevice : IOBase
     {
 	typedef whio_dev type;
+
         /**
            This object is not valid until SetupWhioClasses()
            has been called.
         */
         static Persistent<Function> js_ctor;
     };
-    /** INCOMPLETE.
-        JS wrapper class for a byte array. */
+    /**
+       INCOMPLETE.
+        JS wrapper class for a byte array.
+    */
     struct ByteArray : IODevice
     {
     };

@@ -261,7 +261,7 @@ trySubdev();
 tryBadStream();
 tryTypeInfo();
 tryAbstract();
-tryByteArray();
+//tryByteArray();
 tryGzip();
 
 print(":-D");
