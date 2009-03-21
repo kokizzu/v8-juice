@@ -1,5 +1,12 @@
 load_plugin('v8-juice-whio');
 
+function showErrCodes()
+{
+    for( var k in whio.rc )
+    {
+        print("whio.rc."+k,'==',whio.rc[k]);
+    }
+}
 function tryOne() {
     var fname = "iodev.out";
     var dev = //whio.IODevice.forFile("/etc/passwd", false );
@@ -222,13 +229,37 @@ function tryByteArray()
     print(ba);
     ba.close();
 }
-//tryOne();
-//tryOnlyOut();
+
+function tryGzip()
+{
+    var fname = "test.js";
+    var outname = fname + ".gz";
+    var ist = new whio.InStream(fname);
+    var ost = new whio.OutStream(outname);
+    var rc = ist.gzipTo(ost);
+    print("gzip rc =",rc,'outfile =', outname);
+    ist.close();
+    ost.close();
+    if( whio.rc.OK != rc ) throw new Error("Gzip failed with code "+rc);
+    ist = new whio.InStream(outname);
+    outname = outname + '.check';
+    ost = new whio.OutStream(outname);
+    rc = ist.gunzipTo(ost);
+    print("gunzip rc =",rc,'outfile =', outname);
+    ist.close();
+    ost.close();
+    if( whio.rc.OK != rc ) throw new Error("Gunzip failed with code "+rc);
+}
+
+showErrCodes();
+tryOne();
+tryOnlyOut();
 tryMemory();
 trySubdev();
 tryBadStream();
 tryTypeInfo();
 tryAbstract();
-tryByteArray();
+//tryByteArray();
+tryGzip();
 print(":-D");
 

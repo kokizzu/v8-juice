@@ -78,6 +78,9 @@ namespace v8 { namespace juice { namespace whio {
         static char const * clearError;
         static char const * error;
 
+        // InStream:
+        static char const * gzip;
+        static char const * gunzip;
     };
     char const * strings::IOBase = "IOBase";
     char const * strings::IODevice = "IODevice";
@@ -96,6 +99,8 @@ namespace v8 { namespace juice { namespace whio {
     char const * strings::error = "error";
     char const * strings::fileName = "fileName";
     char const * strings::flush = "flush";
+    char const * strings::gzip = "gzipTo";
+    char const * strings::gunzip = "gunzipTo";
     char const * strings::ioDevice = "ioDevice";
     char const * strings::isGood = "isGood";
     char const * strings::read = "read";
@@ -617,6 +622,40 @@ namespace v8 { namespace juice { namespace whio {
 	return BoolToJS( dev->api->isgood(dev) );
     }
 
+#ifndef Z_DEFAULT_COMPRESSION
+#define Z_DEFAULT_COMPRESSION (-1)
+#endif
+
+    static Handle<Value> stream_gzip(const Arguments& argv)
+    {
+	ARGS((1==argc)||(2==argc));
+	DEVTHIS(StreamBase);
+        whio_stream * dest = CastFromJS<StreamBase>( argv[0] );
+        // FIXME: check for writability on dest and readability on this.
+        if( ! dest )
+        {
+            TOSS("First argument must be an output stream!");
+        }
+        int lv = (argc>1) ? CastFromJS<int>(argv[1]) : Z_DEFAULT_COMPRESSION;
+        int rc = whio_stream_gzip( dev, dest, lv );
+        return CastToJS( rc );
+    }
+
+    static Handle<Value> stream_gunzip(const Arguments& argv)
+    {
+	ARGS((1==argc)||(2==argc));
+	DEVTHIS(StreamBase);
+        whio_stream * dest = CastFromJS<StreamBase>( argv[0] );
+        // FIXME: check for writability on dest and readability on this.
+        if( ! dest )
+        {
+            TOSS("First argument must be an output stream!");
+        }
+        int rc = whio_stream_gunzip( dev, dest );
+        return CastToJS( rc );
+    }
+
+
     /**
        toString() impl for IOBase family of types. N must
        be the class's name.
@@ -656,6 +695,24 @@ namespace v8 { namespace juice { namespace whio {
 	HandleScope v8scope;
 	Handle<Object> whio = Object::New();
 	target->Set(JSTR("whio"),whio);
+
+	Handle<Object> whiorc = Object::New();
+	whio->Set(JSTR("rc"),whiorc);
+
+#define SET(K,V) whiorc->Set(JSTR(K), Integer::New(V), v8::ReadOnly )
+        SET("OK", whio_rc.OK );
+        SET("ArgError",whio_rc.ArgError);
+        SET("IOError",whio_rc.IOError);
+        SET("AllocError",whio_rc.AllocError);
+        SET("InternalError",whio_rc.InternalError);
+        SET("RangeError",whio_rc.RangeError);
+        SET("AccessError",whio_rc.AccessError);
+        SET("ConsistencyError",whio_rc.ConsistencyError);
+        SET("NYIError",whio_rc.NYIError);
+        SET("UnsupportedError",whio_rc.UnsupportedError);
+        SET("TypeError",whio_rc.TypeError);
+        SET("SizeTError",-1);
+#undef SET
 
 	////////////////////////////////////////////////////////////
 	// IOBase class:
@@ -726,7 +783,9 @@ namespace v8 { namespace juice { namespace whio {
 	{
 	    WeakJSClassCreator<InStream> bindIS( whio );
 	    bindIS.Inherit( bindSB )
- 		.Set(strings::read, FunctionTemplate::New( stream_read )->GetFunction() )
+ 		.Set(strings::read, stream_read )
+ 		.Set(strings::gzip, stream_gzip )
+ 		.Set(strings::gunzip, stream_gunzip )
  		.Set(strings::toString, devT_tostring<strings::InStream> )
 		.Seal();
         }
