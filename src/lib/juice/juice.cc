@@ -8,6 +8,7 @@
 #include <v8/juice/Phoenix.h>
 #include "whprintf.h"
 #include <v8/juice/convert.h>
+#include <v8/juice/ToSource.h>
 
 // #ifndef CERR
 // #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
@@ -137,5 +138,58 @@ namespace v8 { namespace juice {
 	va_end(vargs);
 	return ::v8::ThrowException(String::New(os.str().c_str(),static_cast<int>(os.str().size())));
     }
+
+
+    /**
+       Internal. Not part of the public API. Okay, i admit it - i
+       was lazy and stole this from the s11n source tree.
+
+       ins = edited in place
+       to_esc = characters to escape.
+       esc = the escape sequence
+    */
+    static size_t StringEscape( std::string & ins, const std::string & to_esc, const std::string & esc )
+    {
+	std::string::size_type pos;
+	pos = ins.find_first_of( to_esc );
+	size_t reps = 0;
+	while( pos != std::string::npos )
+	{
+	    ins.insert( pos, esc );
+	    ++reps;
+	    pos = ins.find_first_of( to_esc, pos + esc.size() + 1 );
+	}
+	return reps;
+    }
+
+    std::string StringJSEscape( const std::string & inp )
+    {
+        std::string out(inp);
+        StringEscape( out, "\'", "\\" );
+        return out;
+    }
+	
+    std::string StringJSQuote( std::string const & s )
+    {
+      if( std::string::npos == s.find('\'') ) return "'"+s+"'";
+      else if( std::string::npos == s.find("\"") ) return "\""+s+"\"";
+      else
+      {
+          std::string x = s;
+          StringEscape( x, "\'", "\\" );// "Quote it all, let God sort it out!"
+          return "'"+x+"'";
+      }
+    }
+
+    namespace convert
+    {
+        Handle<Value> ToSource( ::v8::Arguments const & argv )
+        {
+            if( 1 != argv.Length() )
+                return v8::ThrowException(String::New("toSource requires exactly 1 argument"));
+            return convert::CastToJS( convert::ToSource( argv[0] ) );
+        }
+    }
+
 
 }}
