@@ -23,11 +23,8 @@
 #include <v8/juice/convert.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/plugin.h>
-#include <v8/juice/cleanup.h>
-#include <v8/juice/JSClassCreator.h>
-#include <v8/juice/WeakJSClassCreator.h>
 
-#include "whio_amalgamation.h" // this is the i/o lib we're uses as a basis.
+#include "v8-whio.h"
 
 
 namespace v8 { namespace juice { namespace whio {
@@ -116,86 +113,6 @@ namespace v8 { namespace juice { namespace whio {
     */
     //static const void * bind_cx() { return 0;}
 
-    // whio_dev ctor
-    whio_dev * dev_construct( Arguments const &,
-			      std::string & exception );
-
-    // whio_stream ctor
-    template <int mode /* 0=out, 1=in, -1=no-op*/>
-    whio_stream * stream_construct( Arguments const &,
-				    std::string & exception );
-    // whio_dev ctor for ByteArray
-    whio_dev * ba_construct( Arguments const &,
-			     std::string & exception );
-
-
-    /** A internal helper type. */
-    struct IOBase
-    {
-    };
-    /** A internal helper type. */
-    struct IODevice : IOBase
-    {
-	typedef whio_dev type;
-    };
-    /** A internal helper type. */
-    struct ByteArray : IODevice
-    {
-    };
-    /** A internal helper type. */
-    struct StreamBase : IOBase
-    {
-	typedef whio_stream type;
-    };
-    /** A internal helper type. */
-    struct InStream : StreamBase
-    {
-    };
-    /** A internal helper type. */
-    struct OutStream : StreamBase
-    {
-    };
-    /**
-       Used with WeakJSClassCreator for whio_dev and whio_stream.
-
-       DevT must be one of: IODevice, StreamBase, InStream, or
-       OutStream.
-     */
-    template <typename DevT,
-	      typename DevT::type * (*ctor)( Arguments const &, std::string & ) >
-    struct DevClassOps
-    {
-	enum { ExtraInternalFieldCount = 0 };
-	typedef typename DevT::type WrappedType;
-	static WrappedType * Ctor( Arguments const & argv,
-			    std::string & exceptionText)
-	{
-	    WrappedType * d = ctor( argv, exceptionText );
-	    //CERR << "Ctor() got @"<<d<<'\n';
-	    if( d )
-	    {
-		::v8::juice::cleanup::AddToCleanup(d, cleanup_callback );
-	    }
-	    return d;
-	}
-
-	static void Dtor( WrappedType * obj )
-	{
-	    //CERR << "Dtor() passing on @"<<obj<<'\n';
-	    if( obj )
-	    {
-		::v8::juice::cleanup::RemoveFromCleanup(obj);
-		obj->api->finalize(obj);
-	    }
-	}
-    private:
-	/** Callback for use with juice::cleanup::AddToCleanup(). */
-	static void cleanup_callback( void * obj )
-	{
-	    Dtor( static_cast<WrappedType*>(obj) );
-	}
-
-    };
 
 
     static Handle<Value> abstract_ctor(const Arguments& argv)
@@ -209,73 +126,11 @@ namespace v8 { namespace juice { namespace whio {
     }
 
 
-} // namespace whio
-
-    /** Specialization needed by WeakJSClassCreator. */
-    template <>
-    struct WeakJSClassCreatorOps<whio::StreamBase> :
-	whio::DevClassOps<whio::StreamBase, &whio::stream_construct<-1> >
-    {
-	static char const * ClassName() { return "StreamBase"; }
-    };
-
-    /** Specialization needed by WeakJSClassCreator. */
-    template <>
-    struct WeakJSClassCreatorOps<whio::OutStream> :
-	whio::DevClassOps<whio::OutStream, &whio::stream_construct<0> >
-    {
-	static char const * ClassName() { return "OutStream"; }
-    };
-
-    /** Specialization needed by WeakJSClassCreator. */
-    template <>
-    struct WeakJSClassCreatorOps<whio::InStream> :
-	whio::DevClassOps<whio::InStream, &whio::stream_construct<1> >
-    {
-	static char const * ClassName() { return "InStream"; }
-    };
-
-    /** Specialization needed by WeakJSClassCreator. */
-    template <>
-    struct WeakJSClassCreatorOps<whio::IODevice> :
-	whio::DevClassOps<whio::IODevice, &whio::dev_construct >
-    {
-	static char const * ClassName() { return "IODevice"; }
-    };
-
-    /** Specialization needed by WeakJSClassCreator. */
-    template <>
-    struct WeakJSClassCreatorOps<whio::ByteArray> :
-	whio::DevClassOps<whio::ByteArray, &whio::ba_construct >
-    {
-	static char const * ClassName() { return "ByteArray"; }
-    };
-
-} } //namespaces
-
-namespace WHIO = ::v8::juice::whio;
-
-#define WEAK_CLASS_TYPE WHIO::IODevice
-#include <v8/juice/WeakJSClassCreator-CastOps.h>
-
-#define WEAK_CLASS_TYPE WHIO::StreamBase
-#include <v8/juice/WeakJSClassCreator-CastOps.h>
-
-// 	template <>
-// 	struct JSToNative<WHIO::IODevice> : WhioJSToNative<WHIO::IODevice> {};
-// //     template <>
-// //     struct JSToNative<WHIO::InStream> : WhioJSToNative<WHIO::InStream> {};
-// //     template <>
-// //     struct JSToNative<WHIO::OutStream> : WhioJSToNative<WHIO::OutStream> {};
-// 	template <>
-// 	struct JSToNative<WHIO::StreamBase> : WhioJSToNative<WHIO::StreamBase> {};
-
-namespace v8 { namespace juice { namespace whio {
-	
 // Helper macros for args and type checking:
 #define ARGS(COND) const int argc = argv.Length(); if( !(COND) ) TOSS("argument assertion failed: " # COND)
-#define DEVH(T,H) WeakJSClassCreator<T>::WrappedType * dev = WeakJSClassCreator<T>::GetSelf( H )
-#define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer not found (maybe already destroyed?)!")
+#define DEVH(T,H) T::type * dev = CastFromJS< T >( H )
+    //#define DEVH(T,H) WeakJSClassCreator<T>::WrappedType * dev = WeakJSClassCreator<T>::GetSelf( H )
+#define DEVHT(T,H) DEVH(T,H); if( ! dev ) TOSS("Native device pointer not found (maybe already closed?)!")
 #define DEVHV(T,H) DEVH(T,H); if( ! dev ) return
 #define DEVTHIS(T) DEVHT(T,argv.This())
 
@@ -762,6 +617,10 @@ namespace v8 { namespace juice { namespace whio {
 	return BoolToJS( dev->api->isgood(dev) );
     }
 
+    /**
+       toString() impl for IOBase family of types. N must
+       be the class's name.
+    */
     template <char const *&N>
     static Handle<Value> devT_tostring(const Arguments& argv)
     {
@@ -792,16 +651,6 @@ namespace v8 { namespace juice { namespace whio {
 #undef DEVHNT
 #undef DEVTHIS
 
-    /**
-       Adds to target object:
-
-       - whio (generic holder object)
-       - whio.IOBase
-       - whio.IODevice inherits IOBase
-       - whio.StreamBase
-       - whio.InStream inherits StreamBase
-       - whio.OutStream inherits StreamBase
-    */
     Handle<Value> SetupWhioClasses(const Handle<Object> target )
     {
 	HandleScope v8scope;
