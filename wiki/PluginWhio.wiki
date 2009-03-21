@@ -335,8 +335,8 @@ stephan@jareth:~/cvs/v8-juice/trunk/src/lib/plugins/whio$ cmp test.js test.js.gz
 
 Many i/o algorithms only need sequential access to a stream, and thus
 accept `InStream` or `OutStream` arguments. If you have an `IODevice`
-you can easily wrap a stream around it by using `new
-InStream(myDevice)` or `new OutStream(myDevice)`, as appropriate. When
+you can easily wrap a stream around it by using {{{new InStream(myDevice)}}}
+or {{{new OutStream(myDevice)}}}, as appropriate. When
 finished, the stream can be closed, leaving the device intact. Note
 that all read/write operations performed on such a stream will use the
 device's current cursor position for their read/write. Thus, if the
