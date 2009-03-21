@@ -1,8 +1,9 @@
 #ifndef CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED
 #define CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED
-#include <v8.h>
-#include "juice-config.h"
 
+#include <v8.h>
+#include <string>
+#include "juice-config.h"
 /** @mainpage v8-juice
 
 v8-juice is a C++ library providing extended functionality based on
@@ -77,6 +78,25 @@ namespace juice {
        or an exception on error.
     */
     Handle<Value> IncludeScript( Arguments const & argv );
+
+    /**
+       Escapes all single-quote characters in the given string by inserting
+       backslashes before them. Returns the escaped string, which may be
+       the same as the original.
+    */
+    std::string StringJSEscape( std::string const & inp );
+    /**
+       Works like StringJSEscape(), but also adds outer quotes
+       to the string. The type of quotes it adds is determined
+       like so:
+
+       - If s contains no single quotes, it gets quoted in single quotes. Else...
+       - If s contains no double quotes, it gets quoted in double quotes. Else...
+       - All single quotes get escaped and the string is quoted in single quotes.
+
+       Returns the modified string.
+    */
+    std::string StringJSQuote( std::string const & s );
 }} // namespace
 
 #endif // CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED
