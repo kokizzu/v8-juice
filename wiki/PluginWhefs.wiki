@@ -137,12 +137,13 @@ whefs home page. All other features are inherited from the `IODevice` class.
 
 
 || *Return type* || *Name/Signature* || *Notes* ||
-|| `WhEfs` || `new Whefs(IODevice)` || Tries to read the given device as a whefs filesystem. Throws on error. ||
-|| `void` || `close()` || Closes the VFS. All devices opened from this object must have been closed by the time is called. ||
-|| `IODevice` || `openDevice(string filename, bool writeMode)` || Opens up a pseudofile within the VFS. If `writeMode` is true then the file is created if it does not exist. Throws on error. The returned IODevice must `close()`ed before the VFS is closed. ||
+|| `WhEfs` || `new Whefs(IODevice)` || Tries to read the given device as a whefs filesystem. Throws on error. If the device is read-only, no write operations can succeed on the VFS. ||
+|| `WhEfs` || `new Whefs(String filename,bool writeMode)` || Tries to read the given file as a whefs filesystem. Throws on error. If `writeMode` is false, access to the VFS will be read-only. ||
+|| `void` || `close()` || Closes the VFS. All pseudofiles/devices opened from this object must have been closed by the time is called. ||
+|| `IODevice` || `openDevice(string filename, bool writeMode)` || Opens up a pseudofile within the VFS and returns it as a `whio.IODevice`. If `writeMode` is true then the file is created if it does not exist. Throws on error. The returned IODevice must `close()`ed before the VFS is closed. ||
 || `int` || `dumpToFile(string filename)` || Dumps the VFS's binary image to the given file. Results are undefined if it is told to overwrite itself. ||
 || `int` || `unlink(string filename)` || Unlinks (deletes) the given pseudofile name. It will fail if the given file is currently opened. ||
-|| `Array` || `ls(string pattern)` || Returns a list (or null) of all pseudofiles matching the given glob-like pattern. Most common glob patterns are accepted. ||
+|| `Array` || `ls(string pattern)` || Returns a list (or null) of all pseudofiles matching the given glob-like pattern. Most common glob patterns are accepted, but only one patter per call. e.g. `print(fs.ls('*.js'))`. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `string` || `fileName` || Only for `WhEfs` objects created via a filename argument. Changing it has no effect on the object. ||
 
@@ -150,6 +151,7 @@ whefs home page. All other features are inherited from the `IODevice` class.
 TODOs:
 
   * `ls()` should be able to take more than one pattern. It should also accept a callback function to use to check for a match.
+  * Think about how we might integrate [PathFinderClass PathFinder] with whefs, such that !PathFinder would be able to search through a VFS.
 
 ==whefs static functions==
 
