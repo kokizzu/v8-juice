@@ -11,7 +11,7 @@ closer to the version you're working with (follow that link, and there are optio
 
 =The whefs embedded filesystem plugin=
 
-The whefs plugin is actually an extension of the [PluginsWhio whio plugin], and is loaded
+The whefs plugin is actually an extension of the [PluginWhio whio plugin], and is loaded
 with it. It builds off of the i/o device API to act as a wrapper for the
 [http://fossil.wanderinghorse.net/repos/whefs/ whefs embedded filesystem library],
 which is (not coincidentally) based off of the same C library as the i/o plugin is.
