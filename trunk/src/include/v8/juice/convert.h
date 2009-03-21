@@ -485,10 +485,24 @@ namespace convert {
     template <typename NT>
     typename JSToNative<NT>::ResultType CastFromJS( ValueHandle const & h )
     {
-
 	typedef JSToNative<NT> F;
 	return F()( h );
     }
+
+    template <typename NT, typename VT>
+    typename JSToNative<NT>::ResultType CastFromJS( Handle< VT > const & h )
+    {
+	typedef JSToNative<NT> F;
+	return F()( h );
+    }
+
+//     template <typename NT>
+//     typename JSToNative<NT>::ResultType CastFromJS( ::v8::Local< ::v8::Value > const & h )
+//     {
+// 	typedef JSToNative<NT> F;
+// 	return F()( h );
+//     }
+
 
     /** Convenience instance of JSToNative. */
     static const JSToNative<int16_t> JSToInt16 = JSToNative<int16_t>();
