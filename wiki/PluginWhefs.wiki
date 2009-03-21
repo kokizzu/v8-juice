@@ -89,6 +89,8 @@ But all of the "less technical" info one needs for using it in JS is documented 
 
 =JS usage=
 
+A brief example:
+
 {{{
 load_plugin('v8-juice-whio');
 var fname = "test.whefs";
