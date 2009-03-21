@@ -1,7 +1,7 @@
 #summary Embedded filesystem library for JS
 #labels Phase-UserDocs,Topic-Plugins,Topic-JS-API
 
-*Achtung #1:# This is very beta. Seems to work for me. YMMV.
+*Achtung #1:* This is very beta. Seems to work for me. YMMV.
 
 *Achtung #2:* these docs are for the current version in the subversion
 source tree (i document here as changes are made). If you are using an "older" version,
@@ -84,15 +84,15 @@ guts see the API documentation
 
 {{{
 load_plugin('v8-juice-whio');
-
 var fname = "test.whefs";
 var fs = new whefs.WhEfs(fname,true);
 var fi = fs.openDevice("first.file",true);
 fi.write("Hi, world!\n");
 fi.close();
 fs.close();
-fs.close();
 }}}
+
+The majority of the functionality is provided by the [PluginWhio IODevice class].
 
 See below for the complete class and function list.
 
@@ -124,13 +124,16 @@ always 0, and `SizeTError`, which is always equal to -1. Interestingly
 enough, its _exact_ native value of -1 may depends on the
 compile-time size of the native `whio_size_t` type.
 
+While `whio` and `whefs` do share many of the same error code names, there is no guaranty
+that the values will be the same for the same error code. e.g. `whio.rc.AccessError` might be (and probably is) different than `whefs.rc.AccessError`.
+
 =JS API for whefs=
 
 ==!WhEfs Class==
 
 This class is is the only one provided by this plugin. It encapsulates
 access to a virtual/embedded filesystem, as described in detail on the
-whefs home page.
+whefs home page. All other features are inherited from the `IODevice` class.
 
 
 || *Return type* || *Name/Signature* || *Notes* ||
