@@ -135,7 +135,7 @@ The API for this class includes any routines which are common amongst the `InStr
 || *Return type* || *Name/Signature* || *Notes* ||
 || `InStream` || `new InStream(string file)` || Opens the given file in read mode. ||
 || `InStream` || `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
-|| `int` || `gzipTo(Outstream[,int level])` || Consumes all input from this object and compresses it to the given output stream using gzip compression. Returns `whio.rc.OK` on success. ||
+|| `int` || `gzipTo(Outstream[,int level])` || Consumes all input from this object and compresses it to the given output stream using gzip compression. Returns `whio.rc.OK` on success. The optional `level` argument specifies the compression level (0 for no compression to 9 for best compression).  ||
 || `int` || `gunzipTo(Outstream)` || Consumes all input from this object and decompresses it to the given output stream using gzip decompression. Returns `whio.rc.OK` on success. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `IODevice` || `ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
@@ -330,3 +330,18 @@ stephan@jareth:~/cvs/v8-juice/trunk/src/lib/plugins/whio$ l test.js*
 stephan@jareth:~/cvs/v8-juice/trunk/src/lib/plugins/whio$ cmp test.js test.js.gz.check; echo $?
 0
 }}}
+
+==Use streams as device proxies==
+
+Many i/o algorithms only need sequential access to a stream, and thus
+accept `InStream` or `OutStream` arguments. If you have an `IODevice`
+you can easily wrap a stream around it by using `new
+InStream(myDevice)` or `new OutStream(myDevice)`, as appropriate. When
+finished, the stream can be closed, leaving the device intact. Note
+that all read/write operations performed on such a stream will use the
+device's current cursor position for their read/write. Thus, if the
+device is manipulated while streams are using it, the effects may be
+unpredictable (unless planned very carefully). Also be aware that an
+output stream might not actually write its data until it is flushed or
+closed, so do not rely on the contents of a wrapped i/o device to be
+accurate until the stream proxy has been closed or explicitly flushed.
