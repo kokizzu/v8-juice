@@ -41,6 +41,10 @@ namespace v8 { namespace juice { namespace whio {
     struct IODevice : IOBase
     {
 	typedef whio_dev type;
+        /**
+           This object is not valid until SetupWhioClasses()
+           has been called.
+        */
         static Persistent<Function> js_ctor;
     };
     /** INCOMPLETE.

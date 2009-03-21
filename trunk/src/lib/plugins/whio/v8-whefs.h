@@ -43,7 +43,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	enum { ExtraInternalFieldCount = 0 };
 	typedef WHEFS::type WrappedType;
-        static char const * ClassName() { return "WHEFS"; }
+        static char const * ClassName() { return "WhEfs"; }
 	static WrappedType * Ctor( Arguments const & argv,
                                    std::string & exceptionText);
 	static void Dtor( WrappedType * obj );

@@ -1,0 +1,177 @@
+#summary Embedded filesystem library for JS
+#labels Phase-UserDocs,Topic-Plugins,Topic-JS-API
+
+*Achtung #1:# This is very beta. Seems to work for me. YMMV.
+
+*Achtung #2:* these docs are for the current version in the subversion
+source tree (i document here as changes are made). If you are using an "older" version,
+i recommend [http://code.google.com/p/v8-juice/source/browse/wiki/PluginWhefs.wiki searching through the subversion repo] for a version of this page which is
+closer to the version you're working with (follow that link, and there are options to browse all versions).
+
+
+=The whefs I/O plugin=
+
+The whefs plugin is actually an extension of the [PluginsWhio whio plugin], and is loaded
+with it. It builds off of the i/o device API to act as a wrapper for the
+[http://fossil.wanderinghorse.net/repos/whefs/ whefs embedded filesystem library],
+which is (not coincidentally) based off of the same C library as the i/o plugin is.
+
+<wiki:toc max_depth="3" />
+
+
+==About==
+whefs gets its name from the i/o library it is based on:
+
+http://fossil.wanderinghorse.net/repos/whefs/
+
+That library is provided with this plugin, and need not be installed separately.
+
+This plugins provides the following features:
+
+  * Classes `whefs.WhEfs` ecapsulates access to a virtual/embedded filesystem, as described in detail on the whefs home page.
+  * whefs works in conjunction with the `whio.IODevice` API in two ways. First, it can use any back-end storage supported by `IODevice`. Secondly, the "pseudofiles" in the embedded filesystem are accessed using the `IODevice` interface.
+
+=Important Caveats=
+
+The [http://fossil.wanderinghorse.net/repos/whefs whefs home page] goes into great detail
+about the cans and cannots of whefs. _Please_ browse that site to get an understanding
+of what whefs can and cannot do.
+
+Here's a very brief summary:
+
+Firstly, the whefs library is intended for small use cases, not large
+amounts of storage. Keep that in mind.
+
+Secondly, whefs currently as NO SUPPORT WHATSOEVER for any type of
+concurrency, and multiple processes or threads accessing the same
+underlying whefs container _will_ cause corruption at some point.
+
+See this web page for more information:
+
+http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/ConcurrencyInWHEFS
+
+That limitation will rule out its usage in several otherwise very interesting
+contexts (e.g. as a safe data store where server-side JS can keep its data).
+
+Lastly, you can get more out of whefs by making use of the
+whefs-specific tools which come with the whefs source tree:
+
+http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools
+
+For example, they allow one to easily create VFS containers and
+import/export files into/out of them.
+
+=C++ usage=
+
+When using the plugins API, you don't need to do anything C++-side to
+use this addon - simply load it as described on [Plugins the plugins page].
+
+This plugin is actually a part of the whio plugin, and is loaded when that
+plugin is loaded.
+
+When loaded, this plugin will create an object called `whefs` inside the target object
+into which it is added (normally the global object). That `whefs` object holds the rest of the
+classes and functions for this plugin.
+
+The native whio API has huge amounts of API documentation which might be interesting
+to users of this API:
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whefs_amalgamation.h whefs_amalgamation.h]
+
+But all of the "less technical" info one needs for using it in JS is documented below. For the _real_
+guts see the API documentation
+
+=JS usage=
+
+{{{
+load_plugin('v8-juice-whio');
+
+var fname = "test.whefs";
+var fs = new whefs.WhEfs(fname,true);
+var fi = fs.openDevice("first.file",true);
+fi.write("Hi, world!\n");
+fi.close();
+fs.close();
+fs.close();
+}}}
+
+See below for the complete class and function list.
+
+=Error reporting=
+
+See the [PluginWhio whio plugin] for details on how errors are
+reported. In addition to that information, the list of integer
+error codes used by whefs is:
+
+|| *Symbolic name*, as a member of `whefs.rc` || *Description* ||
+|| `OK` || The generic success value. Always 0. ||
+|| `ArgError` || Signals some form of error in argument handling (wrong type, missing arguments, etc.) ||
+|| `IOError` || Signals a real I/O error. ||
+|| `AllocError` || Signals an out-of-memory error. ||
+|| `InternalError` || Signals an error internal to libwhefs. ||
+|| `RangeError` || Signals that some argument is out of range or would cause an overflow/underflow. ||
+|| `AccessError` || Signals that access was denied for the operation, e.g. trying to open a read-only file in write mode. ||
+|| `BadMagicError` || This may be triggered when attempting to open a VFS file which is not formatted as a VFS. ||
+|| `ConsistencyError` || A data consistency error in the VFS. The FS should not be used any more if this error occurs. ||
+|| `NYIError` || User has called a function which is "Not Yet Implemented." ||
+|| `UnsupportedError` || Signals that this device type does not support the requested operation. ||
+|| `FSFull` || Signifies that the VFS seems to be full (out of inodes or blocks). ||
+|| `TypeError` || Signals that an argument is of an incorrect type. ||
+|| `SizeTError` || Used by a few i/o operations which fail miserably. Always equal to -1. ||
+
+All of them have unspecified values which are unique within that
+list. The only entries with predefined values are `OK`, which is
+always 0, and `SizeTError`, which is always equal to -1. Interestingly
+enough, its _exact_ native value of -1 may depends on the
+compile-time size of the native `whio_size_t` type.
+
+=JS API for whefs=
+
+==!WhEfs Class==
+
+This class is is the only one provided by this plugin. It encapsulates
+access to a virtual/embedded filesystem, as described in detail on the
+whefs home page.
+
+
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `WhEfs` || `new Whefs(IODevice)` || Tries to read the given device as a whefs filesystem. Throws on error. ||
+|| `void` || `close()` || Closes the VFS. All devices opened from this object must have been closed by the time is called. ||
+|| `IODevice` || `openDevice(string filename, bool writeMode)` || Opens up a pseudofile within the VFS. If `writeMode` is true then the file is created if it does not exist. Throws on error. The returned IODevice must `close()`ed before the VFS is closed. ||
+|| `int` || `dumpToFile(string filename)` || Dumps the VFS's binary image to the given file. Results are undefined if it is told to overwrite itself. ||
+|| `int` || `unlink(string filename)` || Unlinks (deletes) the given pseudofile name. It will fail if the given file is currently opened. ||
+|| `Array` || `ls(string pattern)` || Returns a list (or null) of all pseudofiles matching the given glob-like pattern. Most common glob patterns are accepted. ||
+|| *Type* || *Properties* (read-only) || *Notes* ||
+|| `string` || `fileName` || Only for `WhEfs` objects created via a filename argument. Changing it has no effect on the object. ||
+
+
+TODOs:
+
+  * `ls()` should be able to take more than one pattern. It should also accept a callback function to use to check for a match.
+
+==whefs static functions==
+
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `WhEfs` || `whefs.mkfs(string filename [,Object options])` || Creates a new filesystem (destroying any existing file with the same name). Covered in more detail later. ||
+
+==mkfs in more detail==
+
+The `whefs.mkfs()` function works exactly like the
+[http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs tool],
+creating a virtual filesystem. The second parameter to the function is an Object
+which may have these optional properties:
+
+  * `inodeCount`
+  * `blockCount`
+  * `blockSize`
+  * `filenameLength`
+
+Each is described on the whefs-mkfs page.
+
+As a special service to caring users, `mkfs()` supports the
+pseudofilename `":memory:"`, which means to build the VFS in memory. When
+the returned `WhEfs` object is closed (or garbage collected), the
+filesystem will be lost.
+
+TODO: add `whio_dev_copy()` (or similar) to the JS API so that it is
+possible to copy the VFS from memory to disk. Copying it via JS will
+not work because it contains binary data.
