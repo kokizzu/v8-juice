@@ -155,11 +155,13 @@ namespace v8 { namespace juice { namespace whio {
             os << "openDevice("<<fname<<", "<<rw<<") failed for unknown reasons!";
             TOSS(os.str().c_str());
         }
+        bind::BindNative( dev, dev );
         Local<External> a0( External::New(dev) );
         Handle<Value> av[] = { a0 };
         Handle<Object> jdev = IODevice::js_ctor->NewInstance( 1, av );
         if( jdev.IsEmpty() || !jdev->IsObject() )
         {
+            bind::UnbindNative( dev, dev );
             dev->api->finalize(dev);
             return jdev;
         }

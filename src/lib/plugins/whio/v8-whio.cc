@@ -149,6 +149,7 @@ namespace v8 { namespace juice { namespace whio {
 	return CastToJS( whio_dev_subdev_rebound( dev, low, high ) );
     }
 
+
     /**
        Constructor for the native half of IODevice objects.
        
@@ -181,14 +182,11 @@ namespace v8 { namespace juice { namespace whio {
 	    exception = "Not enough arguments for the constructor!";
 	}
 	HandleScope scope;
-	//char const * dontknow = "Don't know how to handle the given constructor arguments!";
         if( (1 == argc) && argv[0]->IsExternal() )
         {
             // we hope it is a whio_dev passed by a "friendly" factory function.
-            // fixme: make this a safe operation if someone passes in a different
-            // (void *).
             Local< External > ex( External::Cast(*argv[0]) );
-            dev = static_cast<whio_dev*>( ex->Value() );
+            dev = bind::GetBoundNative<whio_dev>( ex->Value() );
             if( ! dev )
             {
                 exception = "Internal ctor got incorrect arguments!";

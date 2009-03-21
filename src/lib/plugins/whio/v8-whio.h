@@ -77,6 +77,7 @@ namespace v8 { namespace juice { namespace whio {
     // whio_dev ctor for ByteArray. Can't be static for templates reasons.
     whio_dev * ba_construct( Arguments const &,
 			     std::string & exception );
+
     
     /**
        A WeakJSClassCreatorOps base type used with WeakJSClassCreator
@@ -105,11 +106,12 @@ namespace v8 { namespace juice { namespace whio {
 
 	static void Dtor( WrappedType * obj )
 	{
-	    //CERR << "Dtor() passing on @"<<obj<<'\n';
 	    if( obj )
 	    {
+                bind::UnbindNative<WrappedType>( obj, obj );
 		::v8::juice::cleanup::RemoveFromCleanup(obj);
-		obj->api->finalize(obj);
+                //CERR << "dtor passing on @"<<obj<<'\n';
+                obj->api->finalize(obj);
 	    }
 	}
     private:
