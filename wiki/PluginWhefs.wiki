@@ -106,8 +106,7 @@ fi.close(); // close the file
 fs.close(); // close the whefs container
 }}}
 
-The majority of the functionality is provided by the [PluginWhio
-IODevice class]. The so-called _pseudofiles_ (files inside a whefs
+The majority of the functionality is provided by the [PluginWhio IODevice class]. The so-called _pseudofiles_ (files inside a whefs
 container (also known as a _VFS_ or _embedded filesystem_)) use the
 exact same i/o interface as `whio.IODevice`, and inherit all usage
 conventions from that interface. The most significant of these is that
