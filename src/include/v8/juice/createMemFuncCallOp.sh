@@ -106,7 +106,9 @@ struct ${callBaseWeak} : ${callBase}
     static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)(${aTParam}), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("${callBaseWeak}::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -115,7 +117,9 @@ struct ${callBaseWeak} : ${callBase}
     static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)(${aTParam}) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("${callBaseWeak}::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -124,7 +128,9 @@ struct ${callBaseWeak} : ${callBase}
     static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)(${aTParam}), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("${callBaseWeak}::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -133,7 +139,9 @@ struct ${callBaseWeak} : ${callBase}
     static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)(${aTParam}) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("${callBaseWeak}::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }

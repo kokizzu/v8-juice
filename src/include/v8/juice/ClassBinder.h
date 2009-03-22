@@ -20,6 +20,7 @@ namespace juice {
     {
 	using namespace v8;
 	using namespace v8::juice;
+	using namespace v8::juice::convert;
 
         /**
            Useless base instantiation - See the 0-specialization for details.
@@ -95,7 +96,9 @@ namespace juice {
 	    static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)(), Arguments const & argv )
 	    {
 		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-		typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+		//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+                typedef typename Wrapper::WrappedType WT;
+                WT * obj = CastFromJS<WT>( argv.This() );
 		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
 		return Call( obj, func, argv );
 	    }
@@ -104,7 +107,9 @@ namespace juice {
 	    static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)() const, Arguments const & argv )
 	    {
 		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-		typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+		//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+                typedef typename Wrapper::WrappedType WT;
+                WT * obj = CastFromJS<WT>( argv.This() );
 		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
 		return Call( obj, func, argv );
 	    }
@@ -113,7 +118,9 @@ namespace juice {
 	    static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)(), Arguments const & argv )
 	    {
 		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-		typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+		//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+                typedef typename Wrapper::WrappedType WT;
+                WT * obj = CastFromJS<WT>( argv.This() );
 		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
 		return Call( obj, func, argv );
 	    }
@@ -122,7 +129,9 @@ namespace juice {
 	    static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)() const, Arguments const & argv )
 	    {
 		typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-		typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+		//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+                typedef typename Wrapper::WrappedType WT;
+                WT * obj = CastFromJS<WT>( argv.This() );
 		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
 		return Call( obj, func, argv );
 	    }

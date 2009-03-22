@@ -1,5 +1,3 @@
-// GENERATED CODE! Edit at your own risk!
-#if !defined(DOXYGEN)
 /**
 A helper class for forwarding JS arguments to member functions
 taking 1 arguments.
@@ -54,7 +52,9 @@ struct WeakMemFuncCaller<1> : MemFuncCaller<1>
     static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<1>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -63,7 +63,9 @@ struct WeakMemFuncCaller<1> : MemFuncCaller<1>
     static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<1>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -72,7 +74,9 @@ struct WeakMemFuncCaller<1> : MemFuncCaller<1>
     static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<1>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -81,7 +85,9 @@ struct WeakMemFuncCaller<1> : MemFuncCaller<1>
     static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<1>::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
@@ -141,7 +147,9 @@ struct WeakMemFuncCaller<2> : MemFuncCaller<2>
     static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0, A1), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<2>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -150,7 +158,9 @@ struct WeakMemFuncCaller<2> : MemFuncCaller<2>
     static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0, A1) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<2>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -159,7 +169,9 @@ struct WeakMemFuncCaller<2> : MemFuncCaller<2>
     static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0, A1), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<2>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -168,7 +180,9 @@ struct WeakMemFuncCaller<2> : MemFuncCaller<2>
     static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0, A1) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<2>::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
@@ -228,7 +242,9 @@ struct WeakMemFuncCaller<3> : MemFuncCaller<3>
     static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0, A1, A2), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<3>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -237,7 +253,9 @@ struct WeakMemFuncCaller<3> : MemFuncCaller<3>
     static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0, A1, A2) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<3>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -246,7 +264,9 @@ struct WeakMemFuncCaller<3> : MemFuncCaller<3>
     static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0, A1, A2), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<3>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -255,7 +275,9 @@ struct WeakMemFuncCaller<3> : MemFuncCaller<3>
     static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0, A1, A2) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<3>::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
@@ -315,7 +337,9 @@ struct WeakMemFuncCaller<4> : MemFuncCaller<4>
     static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0, A1, A2, A3), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<4>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -324,7 +348,9 @@ struct WeakMemFuncCaller<4> : MemFuncCaller<4>
     static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0, A1, A2, A3) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<4>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -333,7 +359,9 @@ struct WeakMemFuncCaller<4> : MemFuncCaller<4>
     static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0, A1, A2, A3), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<4>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -342,7 +370,9 @@ struct WeakMemFuncCaller<4> : MemFuncCaller<4>
     static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0, A1, A2, A3) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<4>::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
@@ -402,7 +432,9 @@ struct WeakMemFuncCaller<5> : MemFuncCaller<5>
     static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<5>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -411,7 +443,9 @@ struct WeakMemFuncCaller<5> : MemFuncCaller<5>
     static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<5>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -420,7 +454,9 @@ struct WeakMemFuncCaller<5> : MemFuncCaller<5>
     static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0, A1, A2, A3, A4), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<5>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -429,7 +465,9 @@ struct WeakMemFuncCaller<5> : MemFuncCaller<5>
     static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0, A1, A2, A3, A4) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<5>::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
@@ -489,7 +527,9 @@ struct WeakMemFuncCaller<6> : MemFuncCaller<6>
     static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<6>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -498,7 +538,9 @@ struct WeakMemFuncCaller<6> : MemFuncCaller<6>
     static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<6>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -507,7 +549,9 @@ struct WeakMemFuncCaller<6> : MemFuncCaller<6>
     static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<6>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -516,7 +560,9 @@ struct WeakMemFuncCaller<6> : MemFuncCaller<6>
     static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<6>::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
@@ -576,7 +622,9 @@ struct WeakMemFuncCaller<7> : MemFuncCaller<7>
     static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<7>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -585,7 +633,9 @@ struct WeakMemFuncCaller<7> : MemFuncCaller<7>
     static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<7>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -594,7 +644,9 @@ struct WeakMemFuncCaller<7> : MemFuncCaller<7>
     static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<7>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -603,7 +655,9 @@ struct WeakMemFuncCaller<7> : MemFuncCaller<7>
     static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<7>::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
@@ -663,7 +717,9 @@ struct WeakMemFuncCaller<8> : MemFuncCaller<8>
     static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<8>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -672,7 +728,9 @@ struct WeakMemFuncCaller<8> : MemFuncCaller<8>
     static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<8>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -681,7 +739,9 @@ struct WeakMemFuncCaller<8> : MemFuncCaller<8>
     static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<8>::Call() could not find native 'this' object!"));
 	return Call( obj, func, argv );
     }
@@ -690,10 +750,11 @@ struct WeakMemFuncCaller<8> : MemFuncCaller<8>
     static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
     {
 	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
-	typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<8>::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
 
 };
-#endif // if !defined(DOXYGEN)
