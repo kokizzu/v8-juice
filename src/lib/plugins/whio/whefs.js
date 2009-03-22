@@ -18,7 +18,7 @@ function tryOne() {
     //new whefs.WhEfs(fname,true);
         new whefs.WhEfs(store);
 
-    var fi = fs.openDevice("first.file",true);
+    var fi = fs.openPseudofile("first.file",true);
     fi.write("Hi, world!\n");
     fi.close();
     fs.close();
@@ -36,14 +36,14 @@ function tryOne() {
     fs  = whefs.mkfs(fname,fsopts);
     print('fs =',fs);
     var pfname = 'second.file';
-    fi = fs.openDevice(pfname,true);
+    fi = fs.openPseudofile(pfname,true);
     fi.write("Hi, world!\n");
     fi.close();
     print("File list:",fs.ls('*'));
     var rc = fs.unlink(pfname);
     print("unlink rc =",rc);
     print("File list:",fs.ls('*'));
-    fi = fs.openDevice(pfname,true);
+    fi = fs.openPseudofile(pfname,true);
     fi.write("Hi again, world!\n");
     fi.close();
     print("File list:",fs.ls(''));
@@ -63,7 +63,8 @@ function tryMemory()
     print("Created in-memory vfs. Size =",fs.size());
 
     var istr = new whio.InStream("/etc/hosts");
-    var fz = fs.openDevice("/etc/hosts.gz",true);
+    var fz = fs.openPseudofile("/etc/hosts.gz",true);
+    fz.truncate(0); // make sure we don't mix old data with it
     print('fz =',fz.fileName);
     var ostr = new whio.OutStream(fz);
     var rc = istr.gzipTo(ostr);
@@ -72,12 +73,14 @@ function tryMemory()
     ostr.close();
     fz.close();
 
-    fz = fs.openDevice("/etc/hosts.gz",false);
+    fz = fs.openPseudofile("/etc/hosts.gz",false);
     istr = new whio.InStream(fz);
     ostr = new whio.OutStream('/dev/stdout',false);
+    print(">>-----------------------------------------<<");
     istr.gunzipTo(ostr);
     istr.close();
     ostr.close();
+    print(">>-----------------------------------------<<");
     fz.close();
 
     fs.dumpToFile("memory.whefs");
