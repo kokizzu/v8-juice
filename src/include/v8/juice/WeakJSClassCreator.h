@@ -475,7 +475,7 @@ namespace juice {
         {
             return ( h.IsEmpty() || ! h->IsObject() )
 		? false
-		: DestroyObject( Local<Object>(Object::Cast(*h)) );
+		: DestroyObject( Handle<Object>(Object::Cast(*h)) );
         }
 
 	/**
@@ -551,13 +551,6 @@ namespace juice {
 	    if( jobj->InternalFieldCount() != (FieldCount) ) return; // and warn on this, too!
 	    Local<Value> lv( jobj->GetInternalField(NativeFieldIndex) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return; // and this!
-	    /**
-	       We have to ensure that we have no dangling External in JS space. This
-	       is so that functions like IODevice.close() can act safely with the
-	       knowledge that member funcs called after that won't get a dangling
-	       pointer. Without this, some code will crash in that case.
-	    */
-	    jobj->SetInternalField(NativeFieldIndex,Null());
 	    pv.Dispose();
 	    pv.Clear();
 	    TypeCheckIter it = typeCheck().find( nobj );
@@ -566,8 +559,15 @@ namespace juice {
 		return;
 	    }
             WrappedType * victim = (*it).second.first;
-            typeCheck().erase(it);
 	    the_cleaner( victim );
+            typeCheck().erase(it);
+	    /**
+	       We have to ensure that we have no dangling External in JS space. This
+	       is so that functions like IODevice.close() can act safely with the
+	       knowledge that member funcs called after that won't get a dangling
+	       pointer. Without this, some code will crash in that case.
+	    */
+	    jobj->SetInternalField(NativeFieldIndex,Null());
 	}
 
 	/**
