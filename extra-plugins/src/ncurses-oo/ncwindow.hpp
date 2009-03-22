@@ -96,13 +96,12 @@ namespace ncutil {
     notifying clients, but that can be solved with a functor and a
     signal/slots mechanism.
     */
-    class  NCWindow : private NCMode,
-                      public NCKeyConsumer
+    class  NCWindow : public NCKeyConsumer
     {
     private:
-        static void    initialize();
+        NCMode m_sentry;
+        static void    initialize(){} // ancient - not needed with NCMode
         static int     ripoff_init(WINDOW *, int);
-        //NCMode m_sentry;
         unsigned long m_clientflags;
         std::string m_name;
 
@@ -258,10 +257,10 @@ namespace ncutil {
         int            tabsize() const { initialize(); return TABSIZE; }
         // Size of a tab on terminal, *not* window
 
-        static int     NumberOfColors();
-        // Number of available colors
+//         static int     NumberOfColors();
+//         // Number of available colors
 
-        int            colors() const { return NumberOfColors(); }
+//         int            colors() const { return NumberOfColors(); }
         // Number of available colors
 
         // -------------------------------------------------------------------------
@@ -460,7 +459,7 @@ namespace ncutil {
         chtype         getbkgd() const { return ::getbkgd(m_cwin); }
         // Get current background setting.
 
-        int            bkgd(const chtype ch) { return ::wbkgd(m_cwin, ch); }
+        int            bkgd(chtype ch) { return ::wbkgd(m_cwin, ch); }
         // Set the background property and apply it to the window.
 
         void           bkgdset(chtype ch) { ::wbkgdset(m_cwin, ch); }

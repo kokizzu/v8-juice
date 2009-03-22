@@ -90,10 +90,12 @@ namespace nc {
     const char * strings::fClose = "close";
     const char * strings::fEndwin = "endwin";
     const char * strings::fGetch = "getch";
+    const char * strings::fName = "name";
+    const char * strings::fNameSet = "setName";
 
     Persistent<Function> JWindow::js_ctor;
 
-    typedef ::v8::juice::ClassBinder<JWindow> WeakWindow;
+    typedef ::v8::juice::ClassBinder<JWindow> WindowBinder;
 
 #define JSTR(X) ::v8::String::New(X)
 #define TOSS(X) return ::v8::ThrowException(JSTR(X))
@@ -108,13 +110,6 @@ namespace nc {
 #define JWIN_THIS JWindow * jwin = CastFromJS<JWindow>( argv.This() ); \
         if( ! jwin ) return ThrowException(String::New("This object is not (or is no longer) a JWindow!"));
 
-
-    /**
-       kludge to work around an uncertain type size:
-       chtype is defined in ncurses.h, but we're going
-       to shadow it for CastTo/FromJS() purposes.
-    */
-    typedef uint32_t chtype;
 
 #if 0
     /**
@@ -182,7 +177,7 @@ namespace nc {
     {
         ARGC; ASSERTARGS((0==argc));
         JWIN_THIS;
-        WeakWindow::DestroyObject(argv.This());
+        WindowBinder::DestroyObject(argv.This());
         return Undefined();
     }
 
@@ -210,15 +205,96 @@ namespace nc {
 
         typedef Handle<Value> HV;
         {
-            WeakWindow & wr = WeakWindow::Instance();
+            WindowBinder & wr = WindowBinder::Instance();
             wr
+                // Nullary:
+                .BindMemFunc<std::string, &JWindow::name>( strings::fName )
+                .BindMemFunc<int, &JWindow::lines>("lines")
+                .BindMemFunc<int, &JWindow::cols>("cols")
+                .BindMemFunc<int, &JWindow::tabsize>("tabsize")
+                .BindMemFunc<int, &JWindow::height>("height")
+                .BindMemFunc<int, &JWindow::width>("width")
+                .BindMemFunc<int, &JWindow::begy>("begy")
+                .BindMemFunc<int, &JWindow::begx>("begx")
+                .BindMemFunc<int, &JWindow::maxx>("maxx")
+                .BindMemFunc<int, &JWindow::maxy>("maxy")
+                .BindMemFunc<chtype, &JWindow::inch>("inch")
+                .BindMemFunc<int, &JWindow::insertln>("insertln")
+                .BindMemFunc<chtype, &JWindow::getbkgd>("getbkgd")
+                .BindMemFunc<int, &JWindow::erase>("erase")
+                .BindMemFunc<int, &JWindow::clear>("clear")
+                .BindMemFunc<int, &JWindow::clrtobot>("clrtobot")
+                .BindMemFunc<int, &JWindow::delch>("delch")
+                .BindMemFunc<int, &JWindow::deleteln>("deleteln")
+                .BindMemFunc<int, &JWindow::touchwin>("touchwin")
+                .BindMemFunc<int, &JWindow::untouchwin>("untouchwin")
+                .BindMemFunc<bool, &JWindow::is_wintouched>("is_wintouched")
+                .BindMemFunc<int, &JWindow::redrawwin>("redrawwin")
+                .BindMemFunc<int, &JWindow::doupdate>("doupdate")
+                .BindMemFunc<void, &JWindow::syncdown>("syncdown")
+                .BindMemFunc<void, &JWindow::syncup>("syncup")
+                .BindMemFunc<void, &JWindow::cursyncup>("cursyncup")
+                .BindMemFunc<int, &JWindow::standout>("standout")
+                .BindMemFunc<int, &JWindow::standend>("standend")
+                .BindMemFunc<int, &JWindow::refresh>("refresh")
+                .BindMemFunc<int, &JWindow::noutrefresh>("noutrefresh")
+                .BindMemFunc<bool, &JWindow::has_mouse>("hasmouse")
+
+                // Unary:
+                .BindMemFunc<void, std::string, &JWindow::name>( strings::fNameSet )
+                .BindMemFunc< int, chtype, &JWindow::insch >( "insch" )
+                .BindMemFunc< int, int, &JWindow::insdelln >( "insdelln" )
+                .BindMemFunc< int, std::string, &JWindow::insstr >( "insstr" )
+                .BindMemFunc< int, chtype, &JWindow::attron >( "attron" )
+                .BindMemFunc< int, chtype, &JWindow::attroff >( "attroff" )
+                .BindMemFunc< int, chtype, &JWindow::attrset >( "attrset" )
+                .BindMemFunc< int, short, &JWindow::color_set >( "color_set" )
+                .BindMemFunc< int, chtype, &JWindow::bkgd >( "bkgd" )
+                .BindMemFunc< int, bool, &JWindow::clearok >( "clearok" )
+                .BindMemFunc< int, int, &JWindow::scroll >( "scroll" )
+                .BindMemFunc< int, bool, &JWindow::scrollok >( "scrollok" )
+                .BindMemFunc< int, bool, &JWindow::idlok >( "idlok" )
+                .BindMemFunc< void, bool, &JWindow::idcok >( "idcok" )
+                .BindMemFunc< int, bool, &JWindow::leaveok >( "leaveok" )
+                .BindMemFunc< void, bool, &JWindow::immedok >( "immedok" )
+                .BindMemFunc< int, bool, &JWindow::keypad >( "keypad" )
+                .BindMemFunc< int, chtype, &JWindow::addch >( "addch" )
+                .BindMemFunc< int, chtype, &JWindow::echochar >( "echochar" )
+                .BindMemFunc< int, std::string, &JWindow::addstr >( "addstr" )
+                .BindMemFunc< bool, int, &JWindow::is_linetouched >( "is_linetouched" )
+
+                // Binary:
+                .BindMemFunc< int, int, int, &JWindow::mvwin >("mvwin")
+                .BindMemFunc< int, int, int, &JWindow::move >("move")
+                .BindMemFunc< int, int, int, &JWindow::getch >("getch")
+                .BindMemFunc< int, std::string, int, &JWindow::addstrn >("addstrn")
+                .BindMemFunc< chtype, int, int, &JWindow::mvinch >("mvinch")
+                .BindMemFunc< int, std::string, int, &JWindow::insstrn >("insstrn")
+                .BindMemFunc< int, int, int, &JWindow::mvdelch >("mvdelch")
+                .BindMemFunc< int, int, int, &JWindow::setscrreg >("setscrreg")
+                .BindMemFunc< int, int, int, &JWindow::touchln >("touchln")
+                .BindMemFunc< int, int, int, &JWindow::redrawln >("redrawln")
+
+                // Ternary:
+                .BindMemFunc< int, int,int,std::string, &JWindow::mvinsstr>( "mvinsstr" )
+                .BindMemFunc< int, int,int,chtype, &JWindow::mvaddch>( "mvaddch" )
+                .BindMemFunc< int, int, int, std::string, &JWindow::mvaddstr>( "mvaddstr" )
+                .BindMemFunc< int, int,int,chtype, &JWindow::mvinsch>( "mvinsch" )
+
+                // 4-ary:
+                .BindMemFunc< int, int, int, std::string,int, &JWindow::mvaddstrn>( "mvaddstrn" )
+                .BindMemFunc< int, int,int,std::string,int, &JWindow::mvinsstrn>( "mvinsstrn" )
+                .BindMemFunc< int, int,int,int,int, &JWindow::mvcur>( "mvcur" )
+
+                // reminder: Set() returns a JSClassCreator, not a ClassBinder<>:
                 .Set(strings::fClose,ncwin_close)
-                .Set(strings::fGetch,ncwin_getch);
-            wr.Seal();
+                .Set(strings::fGetch,ncwin_getch)
+                ;
+            Handle<Function> ctor = wr.Seal();
             wr.AddClassTo(ncobj);
             if( JWindow::js_ctor.IsEmpty() )
             {
-                JWindow::js_ctor = Persistent<Function>::New( wr.CtorTemplate()->GetFunction() );
+                JWindow::js_ctor = Persistent<Function>::New( ctor ); //wr.CtorTemplate()->GetFunction() );
             }
         }
         return ncobj;
