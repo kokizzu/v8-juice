@@ -94,6 +94,7 @@ namespace nc {
 
     typedef ::v8::juice::ClassBinder<JWindow> WindowBinder;
     typedef ::v8::juice::ClassBinder<JPanel> PanelBinder;
+    typedef ::v8::juice::ClassBinder<JPad> PadBinder;
 
 #define JSTR(X) ::v8::String::New(X)
 #define TOSS(X) return ::v8::ThrowException(JSTR(X))
@@ -103,10 +104,14 @@ namespace nc {
 #define ARGC int argc = argv.Length()
 #define ASSERTARGS(COND) if(!(COND)) return ThrowException(String::New("Arguments assertion failed: " # COND))
 
-#define JWIN_ARG(N,HND) JWindow * N = CastFromJS<JWindow>( HND );    \
-    if( ! N ) return ThrowException(String::New("Argument is not a JWindow handle!"));
-#define JWIN_THIS JWindow * jwin = CastFromJS<JWindow>( argv.This() ); \
-        if( ! jwin ) return ThrowException(String::New("This object is not (or is no longer) a JWindow!"));
+
+#define JWIN_ARG(N,HND) JWindow * N = CastFromJS<JWindow>( HND );
+#define JWIN_ARGT(N,HND) JWIN_ARG(N,HND); \
+        if( ! N ) return ThrowException(String::New("Argument is not a JWindow handle!"));
+#define JXX_THIS(T,N) T * N = CastFromJS<T>( argv.This() );           \
+        if( ! N ) return ThrowException(String::New("This object is not (or is no longer) a " # T "!"));
+#define JWIN_THIS JXX_THIS(JWindow,jwin)
+#define JPAD_THIS JXX_THIS(JPad,jpad)
 
     typedef std::list<std::streambuf *> StreamBufferList;
     typedef std::multimap<JWindow *,std::streambuf *> StreamBufferMap;
@@ -217,10 +222,36 @@ namespace nc {
         m.erase(oldb, et);
     }
 
+    JWindow::~JWindow()
+    {
+        JWindow_remove_stream_redirects(this);
+        if( this->ncwin && NCWindow::is_alive(this->ncwin) )
+        {
+            //CERR << "~JWindow @"<<this<<" destroying NCWindow (or subclass) @"<<this->ncwin<<'\n';
+            delete this->ncwin;
+        }
+        else
+        {
+            //CERR << "SKIPPING destruction of JWindow (or subclass) @"<<this<<'\n';
+        }
+    }
+
+    JPanel::~JPanel()
+    {
+        this->ncpnl = 0; // points to this->ncwin, which parent class will free
+    }
+
+    JPad::~JPad()
+    {
+        if( NCWindow::is_alive(this->ncpad) )
+        {
+            delete this->ncpad;
+        }
+    }
+
     void window_dtor( JWindow * w )
     {
         //CERR << "Destroying wrapped NCWindow  object @"<<obj<<'\n';
-        JWindow_remove_stream_redirects(w);
 #if 0
         NCWindow * n = 0;
         for( NCWindow * p = w->ncwin->child(); p; p = n )
@@ -231,12 +262,21 @@ namespace nc {
                 continue;
             }
             JWindow * b = bind::GetBoundNative<JWindow>( p );
-            //CERR << "Cleaning up child window @"<<p<<'/'<<b<<'\n';
-            if( b ) JWindow_remove_stream_redirects(b);
-            //WindowBinder::DestroyObject( CastToJS(b) );
+            CERR << "Cleaning up child window @"<<p<<'/'<<b<<'\n';
+            //if( b ) JWindow_remove_stream_redirects(b);
+            WindowBinder::DestroyObject( CastToJS(b) );
         }
 #endif
         delete w;
+    }
+    void panel_dtor( JPanel * w )
+    {
+        //CERR << "Destroying wrapped NCPanel object @"<<w<<'\n';
+        window_dtor(w);
+    }
+    void pad_dtor( JPad * w )
+    {
+        window_dtor(w);
     }
 
     JPanel * panel_ctor( Arguments const & argv, std::string & exceptionText )
@@ -285,17 +325,57 @@ namespace nc {
         return jp;
     }
 
-    void panel_dtor( JPanel * w )
+
+    JPad * pad_ctor( Arguments const & argv, std::string & exceptionText )
     {
-        //CERR << "Destroying wrapped NCPanel object @"<<w<<'\n';
-        window_dtor(w);
+        ARGC;
+        if(! ((argc>2) && (argc<6)))
+        {
+            exceptionText = "Constructor expects (NCWindow,int lines, int cols [, int gridVert=1, int gridHoriz=1])";
+            return 0;
+        }
+        
+        JWIN_ARG(par,argv[0]);
+        if( ! par )
+        {
+            exceptionText = "First argument to constructor must be an NCWindow!";
+            return 0;
+        }
+        NCPad * pad = 0;
+        int l = JSToInt32(argv[1]);
+        int c = JSToInt32(argv[2]);
+        int gv = (argc>3) ? JSToInt32(argv[3]) : 0;
+        int gh = (argc>4) ? JSToInt32(argv[4]) : 0;
+        JPad * jp = 0;
+        try
+        {
+            pad = new NCFramedPad(*par->ncwin,l,c,gv,gh);
+            jp = new JPad(pad);
+            return jp;
+        }
+        catch(std::exception const & ex)
+        {
+            exceptionText = ex.what();
+            return 0;
+        }
+        exceptionText = "Unhandled ctor arguments!";
+        return 0;
     }
 
+
+
+    /**
+       close() impl for JWindow and subclasses. BinderType must be
+       the WeakJSClassBinder<T>, where T is one of: JWindow, JPanel,
+       JPad.
+    */
+    template <typename BinderType>
     JS_WRAPPER(ncwin_close)
     {
         ARGC; ASSERTARGS((0==argc));
         JWIN_THIS;
-        WindowBinder::DestroyObject(argv.This());
+        //CERR << "NC*.close() @"<<jwin<<'\n';
+        BinderType::DestroyObject(argv.This());
         return Undefined();
     }
 
@@ -344,6 +424,11 @@ namespace nc {
         ARGC; ASSERTARGS((0==argc));
         JWIN_THIS;
         return CastToJS( jwin->ncwin->getch() );
+    }
+
+    JS_WRAPPER(nc_getch)
+    {
+        return CastToJS( ::wgetch( ::stdscr ) );
     }
 
     JS_WRAPPER(nc_color_pair)
@@ -396,6 +481,61 @@ namespace nc {
 	return CastToJS( stdscr ? stdscr->_maxy+1 : (int)0 );
     }
 
+    JS_WRAPPER(nc_beep)
+    {
+        return CastToJS( ::beep() );
+    }
+    JS_WRAPPER(nc_flash)
+    {
+        return CastToJS( ::flash() );
+    }
+    JS_WRAPPER(nc_curs_set)
+    {
+        ARGC; ASSERTARGS((1==argc));
+        return CastToJS( ::curs_set( JSToInt32(argv[0]) ) );
+    }
+    JS_WRAPPER(nc_napms)
+    {
+        ARGC; ASSERTARGS((1==argc));
+        return CastToJS( ::napms( JSToInt32(argv[0]) ) );
+    }
+
+    JS_WRAPPER(ncpad_refresh)
+    {
+        ARGC; ASSERTARGS((0==argc) || (6==argc));
+        JPAD_THIS;
+        if( 0 == argc )
+        {
+            return CastToJS( jpad->refresh() );
+        }
+        int apos = 0;
+        int i1 = JSToInt32(argv[apos++]);
+        int i2 = JSToInt32(argv[apos++]);
+        int i3 = JSToInt32(argv[apos++]);
+        int i4 = JSToInt32(argv[apos++]);
+        int i5 = JSToInt32(argv[apos++]);
+        int i6 = JSToInt32(argv[apos++]);
+        return CastToJS( jpad->refreshPad(i1,i2,i3,i4,i5,i6) );
+    }
+
+    JS_WRAPPER(ncpad_noutrefresh)
+    {
+        ARGC; ASSERTARGS((0==argc) || (6==argc));
+        JPAD_THIS;
+        if( 0 == argc )
+        {
+            return CastToJS( jpad->noutrefresh() );
+        }
+        int apos = 0;
+        int i1 = JSToInt32(argv[apos++]);
+        int i2 = JSToInt32(argv[apos++]);
+        int i3 = JSToInt32(argv[apos++]);
+        int i4 = JSToInt32(argv[apos++]);
+        int i5 = JSToInt32(argv[apos++]);
+        int i6 = JSToInt32(argv[apos++]);
+        return CastToJS( jpad->noutrefreshPad(i1,i2,i3,i4,i5,i6) );
+    }
+
 
     static Handle<Value> SetupNCurses( Handle<Object> gl )
     {
@@ -413,6 +553,11 @@ namespace nc {
         SETF("charVal",nc_itoa);
         SETF("screenHeight",nc_screen_height);
         SETF("screenWidth",nc_screen_width);
+        SETF("beep",nc_beep);
+        SETF("flash",nc_flash);
+        SETF("getch",nc_getch);
+        SETF("curs_set",nc_curs_set);
+        SETF("napms",nc_napms);
 #undef SETF
 
 #define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
@@ -506,8 +651,57 @@ namespace nc {
 	SET_MAC(REPORT_MOUSE_POSITION);
 	SET_MAC(ALL_MOUSE_EVENTS);
 #endif // NCURSES_MOUSE_VERSION
-
 #undef SET_MAC
+
+        {
+            NCMode sentry;
+            // The ACS_xxx defines don't actually work until curses has been started.
+#define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
+            SET_MAC(ACS_ULCORNER);
+            SET_MAC(ACS_LLCORNER);
+            SET_MAC(ACS_URCORNER);
+            SET_MAC(ACS_LRCORNER);
+            SET_MAC(ACS_LTEE);
+            SET_MAC(ACS_RTEE);
+            SET_MAC(ACS_BTEE);
+            SET_MAC(ACS_TTEE);
+            SET_MAC(ACS_HLINE);
+            SET_MAC(ACS_VLINE);
+            SET_MAC(ACS_PLUS);
+            SET_MAC(ACS_S1);
+            SET_MAC(ACS_S9);
+            SET_MAC(ACS_DIAMOND);
+            SET_MAC(ACS_CKBOARD);
+            SET_MAC(ACS_DEGREE);
+            SET_MAC(ACS_PLMINUS);
+            SET_MAC(ACS_BULLET);
+            SET_MAC(ACS_LARROW);
+            SET_MAC(ACS_RARROW);
+            SET_MAC(ACS_DARROW);
+            SET_MAC(ACS_UARROW);
+            SET_MAC(ACS_BOARD);
+            SET_MAC(ACS_LANTERN);
+            SET_MAC(ACS_BLOCK);
+            SET_MAC(ACS_S3);
+            SET_MAC(ACS_S7);
+            SET_MAC(ACS_LEQUAL);
+            SET_MAC(ACS_GEQUAL);
+            SET_MAC(ACS_PI);
+            SET_MAC(ACS_NEQUAL);
+            SET_MAC(ACS_STERLING);
+            SET_MAC(ACS_BSSB);
+            SET_MAC(ACS_SSBB);
+            SET_MAC(ACS_BBSS);
+            SET_MAC(ACS_SBBS);
+            SET_MAC(ACS_SBSS);
+            SET_MAC(ACS_SSSB);
+            SET_MAC(ACS_SSBS);
+            SET_MAC(ACS_BSSS);
+            SET_MAC(ACS_BSBS);
+            SET_MAC(ACS_SBSB);
+            SET_MAC(ACS_SSSS);
+#undef SET_MAC
+        }
 
         WindowBinder & bindW = WindowBinder::Instance();
         { // NCWindow class:
@@ -595,7 +789,7 @@ namespace nc {
                 .Set("captureCout", nc_capture_cout)
                 .Set("captureCerr", nc_capture_cerr)
                 .Set("captureReset", nc_capture_end)
-                .Set("close",ncwin_close)
+                .Set("close",ncwin_close<WindowBinder> )
                 .Set("getch",ncwin_getch)
                 ;
             Handle<Function> ctor = bindW.Seal();
@@ -606,7 +800,9 @@ namespace nc {
             }
         }
 
-        {
+
+        /////////////////////////////////////////////////////////////////////////
+        { // NCPanel class
             PanelBinder & bindP( PanelBinder::Instance() );
             bindP.Inherit( bindW );
             bindP
@@ -616,9 +812,50 @@ namespace nc {
                 .BindMemFunc<void, &JPanel::bottom >( "bottom" )
                 .BindMemFunc<int, int, int, &JPanel::mvwin >( "mvwin" )
                 .BindMemFunc<bool, &JPanel::hidden >( "hidden" )
+                .Set("close",ncwin_close<PanelBinder> )
                 ;
             bindP.Seal();
             bindP.AddClassTo(ncobj);
+        }
+
+        /////////////////////////////////////////////////////////////////////////
+        { // NCPad class
+            PadBinder & bindD( PadBinder::Instance() );
+            bindD.Inherit( bindW );
+            bindD
+                .BindMemFunc< int, int, &JPad::requestOp >( "requestOp" )
+                // FIXME: Use an InvokationCallback for the [nout]refresh() impl, so we can gracefully handle the overloaded forms
+                .BindMemFunc< int, int, int, int, int, int, int, &JPad::refreshPad >( "refreshPad" )
+                .BindMemFunc< int, int, int, int, int, int, int, &JPad::noutrefreshPad >( "noutrefreshPad" )
+                .BindMemFunc< int, &JPad::lineCount >( "lineCount" )
+                .BindMemFunc< int, &JPad::columnCount >( "columnCount" )
+                .BindMemFunc<bool, int ,&JPad::consumeKey>( "consumeKey" )
+                .BindMemFunc<void, int, int ,&JPad::mapKeyToReq>( "mapKeyToReq" )
+                .BindMemFunc<int,chtype,&JPad::echochar>( "echochar" )
+                .BindMemFunc<int,int,&JPad::reqForKey>( "reqForKey" )
+                .BindMemFunc<void,&JPad::inputLoop>( "inputLoop" )
+                .Set("refresh", ncpad_refresh)
+                .Set("noutrefresh", ncpad_noutrefresh)
+                .Set("close",ncwin_close<PadBinder> )
+                ;
+            Handle<Function> ctor = bindD.Seal();
+#define SET(K) ctor->Set(JSTR(#K), Integer::New(NCPad::K))
+            SET(PadReqFirstRequest);
+            SET(PadReqRefresh);
+            SET(PadReqUp);
+            SET(PadReqDown);
+            SET(PadReqLeft);
+            SET(PadReqRight);
+            SET(PadReqExit);
+            SET(PadReqPageUp);
+            SET(PadReqPageDown);
+            SET(PadReqScrollToTop);
+            SET(PadReqScrollToBottom);
+            SET(PadReqIgnored);
+            SET(PadReqUnknown);
+            SET(PadReqLastRequest);
+#undef SET
+            bindD.AddClassTo(ncobj);
         }
 
         return ncobj;

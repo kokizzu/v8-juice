@@ -65,6 +65,7 @@ namespace ncutil {
 		  viewWin((NCWindow*)0),
 		  viewSub((NCWindow*)0),
 		  m_lines(lines),
+                  m_cols(cols),
 		  h_gridsize(0), v_gridsize(0),
 		  min_row(0), min_col(0)
 	{
@@ -337,7 +338,7 @@ namespace ncutil {
 		viewWin = &view;
 		min_row = min_col = 0;
 		if (h_grid <=0 || v_grid <= 0)
-			err_handler("Illegal Gridsize");
+			throw NCException("Illegal Gridsize");
 		else {
 			h_gridsize = h_grid;
 			v_gridsize = v_grid;
@@ -347,7 +348,7 @@ namespace ncutil {
 	void NCPad::setSubWindow(NCWindow& sub) throw(NCException)
 	{
 		if ((NCWindow*)0 == viewWin)
-			err_handler("NCPad::setSubWindow(): this pad has no viewport");
+			throw NCException("NCPad::setSubWindow(): this pad has no viewport");
 		if (!viewWin->isDescendant(sub))
 			throw NCException("NCPad::setSubWindow(): !viewWin->isDescendant(sub)");
 		viewSub = &sub;
@@ -402,6 +403,10 @@ namespace ncutil {
 	int NCPad::lineCount() const
 	{
 		return this->m_lines;
+	}
+	int NCPad::columnCount() const
+	{
+		return this->m_cols;
 	}
 
 

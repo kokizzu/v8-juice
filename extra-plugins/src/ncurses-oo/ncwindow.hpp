@@ -63,6 +63,7 @@ by stephan@s11n.net, starting 1 March 2005:
 #include <stdio.h>
 
 #include <map>
+#include <set>
 #include <string>
 
 #include "ncexception.hpp"
@@ -117,6 +118,10 @@ namespace ncutil {
 
 
         void init();
+
+        typedef std::set<NCWindow const *> LifetimeCheck;
+        static LifetimeCheck & lifecheck();
+
     protected:
         virtual void err_handler(const char *) const throw(NCException);
         // Signal an error with the given message text.
@@ -160,6 +165,13 @@ namespace ncutil {
         // is two lines and two columns smaller and begins at (1,1).
         // We may automatically request the box around it.
 
+
+        /**
+           Returns true if the given pointer is a non-destructed NCWindow object.
+           This is used to assist in a JavaScript wrapper, where indeterminate
+           destruction order can cause problems.
+        */
+        static bool is_alive( NCWindow const * );
 
         /**
            Reimplemented from NCKeyConsumer interface. Default
@@ -731,6 +743,11 @@ namespace ncutil {
         int lineCount() const;
 
         /**
+           Returns the number of pad columns passed to the ctor.
+        */
+        int columnCount() const;
+
+        /**
            Reimplemented to do:
 
 
@@ -785,7 +802,7 @@ namespace ncutil {
 
 
 
-        int echochar(const chtype ch) { return ::pechochar(this->ncwindow(), ch); }
+        int echochar(chtype ch) { return ::pechochar(this->ncwindow(), ch); }
         // Put the attributed character onto the pad and immediately do a
         // prefresh().
 
@@ -966,6 +983,7 @@ namespace ncutil {
         NCWindow* viewSub;       // the "viewport" subwindow
 
         int m_lines; // number of scroll lines
+        int m_cols; // number of scroll cols
         int h_gridsize, v_gridsize; // cols/rows to jump for left/right/up/down requests
         key_req_map m_keys; // key-to-request map
 
@@ -1050,7 +1068,7 @@ namespace ncutil {
            0 means win.width()-2.
 
 
-           v/h_grid == the number of screen  which one
+           v/h_grid == the number of screen lines which one
            PadReqUp/Down/Left/Right will scroll.
 
 
@@ -1101,7 +1119,7 @@ namespace ncutil {
         virtual void setSubWindow(NCWindow& sub) throw(NCException);
 
         /**
-           Reimplemented to draws this object's scrollbars.
+           Reimplemented to draw this object's scrollbars.
         */
         virtual void OnOperation(int pad_req);
 

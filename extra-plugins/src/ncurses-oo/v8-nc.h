@@ -86,10 +86,7 @@ namespace nc {
         {}
         explicit JWindow() : ncwin(0),canDestruct(false)
         {}
-        virtual ~JWindow()
-        {
-            if( this->ncwin ) delete this->ncwin;
-        }
+        virtual ~JWindow();
         static Persistent<Function> js_ctor;
 
         std::string name() const { return ncwin->name(); }
@@ -176,11 +173,7 @@ namespace nc {
         {
             this->canDestruct = true;
         }
-        virtual ~JPanel()
-        {
-            this->ncpnl = 0;
-            // parent dtor will delete this->ncwin
-        }
+        virtual ~JPanel();
         void hide() { this->ncpnl->hide(); }
         void show() { this->ncpnl->show(); }
         void top() { this->ncpnl->top(); }
@@ -192,6 +185,34 @@ namespace nc {
     class JPad : public JWindow
     {
     public:
+        NCPad * ncpad;
+        explicit JPad( NCPad * p) : JWindow(p,true), ncpad(p)
+        {
+        }
+        virtual ~JPad();
+
+        int requestOp( int v ) { return this->ncpad->requestOp(v); }
+
+        int refreshPad(int pminrow, int pmincol,
+                       int sminrow, int smincol,
+                       int smaxrow, int smaxcol)
+        {
+            return this->ncpad->refresh( pminrow, pmincol, sminrow, smincol, smaxrow, smaxcol );
+        }
+        int noutrefreshPad(int pminrow, int pmincol,
+                           int sminrow, int smincol,
+                           int smaxrow, int smaxcol)
+        {
+            return this->ncpad->noutrefresh( pminrow, pmincol, sminrow, smincol, smaxrow, smaxcol );
+        }
+        int lineCount() const { return this->ncpad->lineCount(); }
+        int columnCount() const { return this->ncpad->columnCount(); }
+
+        bool consumeKey( int k ) { return this->ncpad->consumeKey(k,true); }
+        void mapKeyToReq( int key, int padreq ) { return this->ncpad->mapKeyToReq(key,padreq); }
+        int echochar(chtype v) { return this->ncpad->echochar(v); }
+        int reqForKey(int key) const { return this->ncpad->reqForKey(key); }
+        void inputLoop() { return this->ncpad->inputLoop(); }
     };
 
     enum { library_version = 0x20090322 };
@@ -224,7 +245,7 @@ namespace nc {
 
         static void Dtor( WrappedType * obj )
         {
-            CERR << "Cleaning up "<<ClassName()<<" object @"<<obj<<'\n';
+            //CERR << "Cleaning up "<<ClassName()<<" object @"<<obj<<'\n';
             //NCWindow * nw = obj->ncwin;
             cleanup::RemoveFromCleanup( obj );
             dtor_proxy( obj );
@@ -251,6 +272,8 @@ namespace nc {
     void window_dtor( JWindow * w );
     JPanel * panel_ctor( Arguments const & argv, std::string & exceptionText );
     void panel_dtor( JPanel * w );
+    JPad * pad_ctor( Arguments const & argv, std::string & exceptionText );
+    void pad_dtor( JPad * w );
 
 } /* namespaces */
 
@@ -274,6 +297,16 @@ namespace nc {
     {
     };
 
+    template <>
+    struct WeakJSClassCreatorOps< nc::JPad >
+        : nc::BaseWeakOps< nc::JPad,
+                           nc::strings::classPad,
+                           nc::pad_ctor,
+                           nc::pad_dtor
+                           >
+    {
+    };
+
 //     template <>
 //     struct WeakJSClassCreatorOps< JPanel >;
 //     template <>
@@ -289,6 +322,7 @@ namespace v8 { namespace juice { namespace convert {
 
     using ::v8::juice::nc::JWindow;
     using ::v8::juice::nc::JPanel;
+    using ::v8::juice::nc::JPad;
     /**
        Kludge to allow JPanel/JPad to act as JWindow for
        the purpose of the 'this' argument in inherited
@@ -299,13 +333,14 @@ namespace v8 { namespace juice { namespace convert {
     {
 	typedef ::v8::juice::WeakJSClassCreator< JWindow > WT;
 	typedef ::v8::juice::WeakJSClassCreator< JPanel > PT;
+	typedef ::v8::juice::WeakJSClassCreator< JPad > DT;
 	Handle<Value> operator()( WT::WrappedType * p ) const
 	{
 	    ::v8::Handle< ::v8::Object > jo( WT::GetJSObject(p) );
 	    if( jo.IsEmpty() )
             {
                 jo = PT::GetJSObject( p );
-                //CERR << "NativeToJS<JWindow> @"<<p<<" trying JPanel...\n";
+                if( jo.IsEmpty() ) jo = DT::GetJSObject( p );
             }
 	    return jo;
 	}
@@ -319,11 +354,13 @@ namespace v8 { namespace juice { namespace convert {
     {
 	typedef ::v8::juice::WeakJSClassCreator< JWindow >  WT;
 	typedef ::v8::juice::WeakJSClassCreator< JPanel > PT;
+	typedef ::v8::juice::WeakJSClassCreator< JPad > DT;
 	typedef WT::WrappedType * ResultType;
 	ResultType operator()( Handle<Value> const & h ) const
 	{
 	    ResultType r = WT::GetNative(h);
             if( ! r ) r = PT::GetNative(h);
+            if( ! r ) r = DT::GetNative(h);
             //CERR << "JSToNative<JWindow>(handle) =="<<r<<'\n';
             return r;
 	}
@@ -370,6 +407,9 @@ namespace v8 { namespace juice { namespace convert {
 } } }
 
 #define WEAK_CLASS_TYPE v8::juice::nc::JPanel
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
+
+#define WEAK_CLASS_TYPE v8::juice::nc::JPad
 #include <v8/juice/WeakJSClassCreator-CastOps.h>
 
 #endif /* CODE_GOOGLE_COM_P_V8JUICE_PLUGIN_NCURSES_H_INCLUDED */
