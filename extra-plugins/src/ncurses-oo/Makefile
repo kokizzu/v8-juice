@@ -13,7 +13,6 @@ PLUGIN_OBJECTS := $(addsuffix .o, \
 	ncpalette \
 	nckey \
 	ncmode \
-	ncstream \
 	ncpad \
 	ncpanel \
 	ncutil \
