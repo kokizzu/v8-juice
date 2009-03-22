@@ -135,15 +135,7 @@ namespace ncutil {
            This is a no-op if w is 0 or is the same as this
            object's current WINDOW.
         */
-        void ncwindow( WINDOW * w ) {
-            if( (!w) || (this->m_cwin == w) ) return;
-            if( this->m_ownswin && this->m_cwin )
-            {
-                ::delwin(m_cwin);
-            }
-            this->m_ownswin = true;
-            this->m_cwin = w;
-        }
+        void ncwindow( WINDOW * w );
 
     public:
         NCWindow(WINDOW* &window) throw(NCException);  // useful only for stdscr

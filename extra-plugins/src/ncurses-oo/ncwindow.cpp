@@ -204,6 +204,17 @@ namespace ncutil {
 		this->meta(1);
 	}
 
+    void NCWindow::ncwindow( WINDOW * w )
+    {
+        if( (!w) || (this->m_cwin == w) ) return;
+        if( this->m_ownswin && this->m_cwin )
+        {
+            ::delwin(m_cwin);
+        }
+        this->m_ownswin = true;
+        this->m_cwin = w;
+    }
+
 	unsigned long NCWindow::clientFlags() const
 	{
 		return this->m_clientflags;
@@ -323,90 +334,97 @@ namespace ncutil {
 
   	extern "C" int _nc_ripoffline(int,int (*init)(WINDOW*,int));
 
-	NCWindow::NCWindow(WINDOW *win, int cols) throw(NCException) {
-		m_cwin = win;
-		if( (m_cwin->_maxx+1)!=cols) throw NCException("m_cwin->_maxx+1 != cols");
-		m_ownswin = FALSE;
-		subwins = par = sib = 0;
-		this->init();
-	}
+    NCWindow::NCWindow(WINDOW *win, int cols) throw(NCException)
+    {
+        m_cwin = win;
+        if( (m_cwin->_maxx+1)!=cols) throw NCException("m_cwin->_maxx+1 != cols");
+        m_ownswin = FALSE;
+        subwins = par = sib = 0;
+        this->init();
+    }
 
-	int NCWindow::ripoff_init(WINDOW *m_cwin, int cols)
-	{
-		int res = ERR;
+    int NCWindow::ripoff_init(WINDOW *m_cwin, int cols)
+    {
+        int res = ERR;
 
-		RIPOFFINIT init = *prip++;
-		if (init) {
-			NCWindow* W = new NCWindow(m_cwin,cols);
-			res = init(*W);
-		}
-		return res;
-	}
+        RIPOFFINIT init = *prip++;
+        if (init) {
+            NCWindow* W = new NCWindow(m_cwin,cols);
+            res = init(*W);
+        }
+        return res;
+    }
 
-	int NCWindow::ripoffline(int ripoff_lines,
-				 int (*init)(NCWindow& win)) {
-		int code = ::ripoffline(ripoff_lines,ripoff_init);
-		if (code==OK && init && ripoff_lines) {
-			R_INIT[r_init_idx++] = init;
-		}
-		return code;
-	}
+    int NCWindow::ripoffline(int ripoff_lines,
+                             int (*init)(NCWindow& win))
+    {
+        int code = ::ripoffline(ripoff_lines,ripoff_init);
+        if (code==OK && init && ripoff_lines) {
+            R_INIT[r_init_idx++] = init;
+        }
+        return code;
+    }
 
-	bool
-	NCWindow::isDescendant(NCWindow& win) {
-		for (NCWindow* p = subwins; p != NULL; p = p->sib) {
-			if (p==&win)
-				return TRUE;
-			else {
-				if (p->isDescendant(win))
-					return TRUE;
-			}
-		}
-		return FALSE;
-	}
+    bool
+    NCWindow::isDescendant(NCWindow& win)
+    {
+        for (NCWindow* p = subwins; p != NULL; p = p->sib) {
+            if (p==&win)
+                return TRUE;
+            else {
+                if (p->isDescendant(win))
+                    return TRUE;
+            }
+        }
+        return FALSE;
+    }
 
-	void
-	NCWindow::kill_subwindows()
-	{
-		for (NCWindow* p = subwins; p != 0; p = p->sib) {
-			p->kill_subwindows();
-			if (p->m_ownswin) {
-				if (p->m_cwin != 0)
-					::delwin(p->m_cwin);
-				p->m_ownswin = FALSE;
-			}
-			p->m_cwin = 0; // cause a run-time error if anyone attempts to use...
-		}
-	}
+    void
+    NCWindow::kill_subwindows()
+    {
+        for (NCWindow* p = subwins; p != 0; p = p->sib) {
+            p->kill_subwindows();
+            if (p->m_ownswin) {
+                if (p->m_cwin != 0)
+                    ::delwin(p->m_cwin);
+                p->m_ownswin = FALSE;
+            }
+            p->m_cwin = 0; // cause a run-time error if anyone attempts to use...
+        }
+    }
 
 
-	NCWindow::~NCWindow()
-	{
-		this->clear();
-		kill_subwindows();
-		if (par != 0) {  // Snip us from the parent's list of subwindows.
-			NCWindow * win = par->subwins;
-			NCWindow * trail = 0;
-			for (;;) {
-				if (win == 0)
-					break;
-				else if (win == this) {
-					if (trail != 0)
-						trail->sib = win->sib;
-					else
-						par->subwins = win->sib;
-					break;
-				} else {
-					trail = win;
-					win = win->sib;
-				}
-			}
-		}
-
-		if (m_ownswin && (0 != m_cwin))
-			::delwin(m_cwin);
-
-	}
+    NCWindow::~NCWindow()
+    {
+        this->clear();
+        kill_subwindows();
+        if (par != 0)
+        {  // Snip us from the parent's list of subwindows.
+            NCWindow * win = par->subwins;
+            NCWindow * trail = 0;
+            for (;;)
+            {
+                if (win == 0)
+                {
+                    break;
+                }
+                else if (win == this)
+                {
+                    if (trail != 0)
+                        trail->sib = win->sib;
+                    else
+                        par->subwins = win->sib;
+                    break;
+                } else
+                {
+                    trail = win;
+                    win = win->sib;
+                }
+            }
+        }
+        if (m_ownswin && (0 != m_cwin))
+            ::delwin(m_cwin);
+    }
 
 } // namespace ncutil
 

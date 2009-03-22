@@ -79,11 +79,25 @@ namespace nc {
     {
     public:
         NCWindow * ncwin;
-        JWindow()
+        bool canDestruct;
+        explicit JWindow( NCWindow * w, bool destroyable )
+            : ncwin(w),
+              canDestruct(destroyable)
+        {}
+        explicit JWindow() : ncwin(0),canDestruct(false)
         {}
         virtual ~JWindow()
         {
+#if 1
+        /**
+           GC may try to clean up child windows, and we don't want that.
+           They are owned by their parents, which may not like it if the
+           children disappear.
+        */
+            if( this->ncwin && this->canDestruct ) delete this->ncwin;
+#else
             if( this->ncwin ) delete this->ncwin;
+#endif
         }
         static Persistent<Function> js_ctor;
 
@@ -163,17 +177,27 @@ namespace nc {
         int mvcur(int v1,int v2,int v3,int v4) { return ncwin->mvcur(v1,v2,v3,v4); }
     };
 
-    class JPanel : public JWidgetBase
+    class JPanel : public JWindow
     {
-        NCPanel * ncwin;
-        JPanel()
-        {}
+    public:
+        NCPanel * ncpnl;
+        explicit JPanel( NCPanel * p ) : JWindow(p,true), ncpnl(p)
+        {
+            this->canDestruct = true;
+        }
         virtual ~JPanel()
         {}
+        void hide() { this->ncpnl->hide(); }
+        void show() { this->ncpnl->show(); }
+        void top() { this->ncpnl->top(); }
+        void bottom() { this->ncpnl->bottom(); }
+        int mvwin(int y, int x) { return this->ncpnl->mvwin(y,x); }
+        bool hidden() { return this->ncpnl->hidden(); }
     };
 
-    class JPad : public JWidgetBase // JWindow?
+    class JPad : public JWindow
     {
+    public:
     };
 
     enum { library_version = 0x20090322 };
@@ -198,12 +222,14 @@ namespace nc {
             if( x )
             {
                 cleanup::AddToCleanup( x, cleanup_callback );
+                CERR << "Constructed "<<ClassName()<<" object @"<<x<<'\n';
             }
             return x;
         }
 
         static void Dtor( WrappedType * obj )
         {
+            CERR << "Cleaning up "<<ClassName()<<" object @"<<obj<<'\n';
             cleanup::RemoveFromCleanup( obj );
             dtor_proxy( obj );
         }
@@ -232,6 +258,8 @@ namespace nc {
 
     JWindow * window_ctor( Arguments const & argv, std::string & exceptionText );
     void window_dtor( JWindow * w );
+    JPanel * panel_ctor( Arguments const & argv, std::string & exceptionText );
+    void panel_dtor( JPanel * w );
 
 } /* namespaces */
 
@@ -245,6 +273,16 @@ namespace nc {
     {
     };
 
+    template <>
+    struct WeakJSClassCreatorOps< nc::JPanel >
+        : nc::BaseWeakOps< nc::JPanel,
+                           nc::strings::classPanel,
+                           nc::panel_ctor,
+                           nc::panel_dtor
+                           >
+    {
+    };
+
 //     template <>
 //     struct WeakJSClassCreatorOps< JPanel >;
 //     template <>
@@ -252,7 +290,95 @@ namespace nc {
 
 }} /* namespaces */
 
-#define WEAK_CLASS_TYPE v8::juice::nc::JWindow
+//#define WEAK_CLASS_TYPE v8::juice::nc::JWindow
+//#include <v8/juice/WeakJSClassCreator-CastOps.h>
+
+
+namespace v8 { namespace juice { namespace convert {
+
+    using ::v8::juice::nc::JWindow;
+    using ::v8::juice::nc::JPanel;
+    /**
+       Kludge to allow JPanel/JPad to act as JWindow for
+       the purpose of the 'this' argument in inherited
+       bound member functions.
+    */
+    template <>
+    struct NativeToJS< JWindow >
+    {
+	typedef ::v8::juice::WeakJSClassCreator< JWindow > WT;
+	typedef ::v8::juice::WeakJSClassCreator< JPanel > PT;
+	Handle<Value> operator()( WT::WrappedType * p ) const
+	{
+	    ::v8::Handle< ::v8::Object > jo( WT::GetJSObject(p) );
+	    if( jo.IsEmpty() )
+            {
+                jo = PT::GetJSObject( p );
+                //CERR << "NativeToJS<JWindow> @"<<p<<" trying JPanel...\n";
+            }
+	    return jo;
+	}
+    };
+
+    /**
+       See NativeToJS< JWindow > for full details.
+     */
+    template <>
+    struct JSToNative< JWindow >
+    {
+	typedef ::v8::juice::WeakJSClassCreator< JWindow >  WT;
+	typedef ::v8::juice::WeakJSClassCreator< JPanel > PT;
+	typedef WT::WrappedType * ResultType;
+	ResultType operator()( Handle<Value> const & h ) const
+	{
+	    ResultType r = WT::GetNative(h);
+            if( ! r ) r = PT::GetNative(h);
+            //CERR << "JSToNative<JWindow>(handle) =="<<r<<'\n';
+            return r;
+	}
+    };
+
+
+#if 0
+    template <>
+    struct NativeToJS< JPanel >
+    {
+	typedef ::v8::juice::WeakJSClassCreator< JWindow > WT;
+	typedef ::v8::juice::WeakJSClassCreator< JPanel > PT;
+	Handle<Value> operator()( PT::WrappedType * p ) const
+	{
+	    ::v8::Handle< ::v8::Object > jo( PT::GetJSObject(p) );
+	    if( jo.IsEmpty() )
+            {
+                CERR << "NativeToJS<JPanel> @"<<p<<" trying JWindow...\n";
+                jo = WT::GetJSObject( p );
+                if( jo.IsEmpty() ) return Null();
+            }
+	    return jo;
+	}
+    };
+
+    /**
+       See NativeToJS< JPanel > for full details.
+     */
+    template <>
+    struct JSToNative< JPanel >
+    {
+	typedef ::v8::juice::WeakJSClassCreator< JWindow >  WT;
+	typedef ::v8::juice::WeakJSClassCreator< JPanel > PT;
+	typedef PT::WrappedType * ResultType;
+	ResultType operator()( Handle<Value> const & h ) const
+	{
+	    ResultType r = PT::GetNative(h);
+            if( ! r ) r = dynamic_cast<JPanel*>(PT::GetNative(h));
+            CERR << "JSToNative<JPanel>(handle) =="<<r<<'\n';
+            return r;
+	}
+    };
+#endif
+} } }
+
+#define WEAK_CLASS_TYPE v8::juice::nc::JPanel
 #include <v8/juice/WeakJSClassCreator-CastOps.h>
 
 #endif /* CODE_GOOGLE_COM_P_V8JUICE_PLUGIN_NCURSES_H_INCLUDED */

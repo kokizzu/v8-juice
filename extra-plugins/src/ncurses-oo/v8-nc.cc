@@ -56,6 +56,7 @@
 #endif
 
 #include <v8.h>
+#include <v8/juice/juice.h>
 #include <v8/juice/convert.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/plugin.h>
@@ -96,11 +97,12 @@ namespace nc {
     Persistent<Function> JWindow::js_ctor;
 
     typedef ::v8::juice::ClassBinder<JWindow> WindowBinder;
+    typedef ::v8::juice::ClassBinder<JPanel> PanelBinder;
 
 #define JSTR(X) ::v8::String::New(X)
 #define TOSS(X) return ::v8::ThrowException(JSTR(X))
 #define TOSSV(X) return ::v8::ThrowException(X)
-#define PLUGIN_RTFM "RTFM: " v8_juice_HOME_PAGE "/wiki/PluginSqlite3"
+#define PLUGIN_RTFM "RTFM: " v8_juice_HOME_PAGE "/wiki/PluginNCurses"
 #define JS_WRAPPER(FN) static ::v8::Handle< ::v8::Value > FN( const ::v8::Arguments & argv )
 #define ARGC int argc = argv.Length()
 #define ASSERTARGS(COND) if(!(COND)) return ThrowException(String::New("Arguments assertion failed: " # COND))
@@ -141,35 +143,140 @@ namespace nc {
     JWindow * window_ctor( Arguments const & argv, std::string & exceptionText )
     {
         ARGC;
-        if( ! ( (0==argc) || (4==argc) || (5==argc) ) )
+        if( ! ( (1==argc) || (2==argc) || (0==argc) || (4==argc) || (5==argc) ) )
         {
             exceptionText = "Incorrect ctor arguments!";
             return 0;
         }
         JWindow * jw = 0;
         if( 0 == argc )
-        {
-            jw = new JWindow;
+        { // default ctor - a wrapper for stdscr
+            jw = new JWindow; // will call initwin() if needed
             jw->ncwin = new ncutil::NCWindow(::stdscr);
+            jw->canDestruct = true;
             return jw;
         }
-
-        CERR << "NYI!\n";
+        else if( (1 == argc) || (2 == argc) )
+        { // ctor(NCWindow parent [, bool box = yes])
+            JWindow * par = CastFromJS<JWindow>( argv[0] );
+            if( ! par )
+            {
+                exceptionText = "First argument is not an NCWindow!";
+                return 0;
+            }
+            bool box = (argc>1) ? argv[1]->BooleanValue() : true;
+            NCWindow * w = 0;
+            try
+            {
+                w = new NCWindow(*(par->ncwin),box);
+            }
+            catch(std::exception const & ex)
+            {
+                //CERR << "NCWindow ctor threw: "<<ex.what()<<'\n';
+                exceptionText = ex.what();
+                return 0;
+            }
+            jw = new JWindow(w,false);
+            return jw;
+        }
+        else if( (4 == argc) || (5 == argc) )
+        { // ctor(lines,cols,begy,begx)
+            // ctor(NCWindow parent, lines,cols,begy,begx)
+            int apos = 0;
+            JWindow * par = 0;
+            if( argc==5 )
+            {
+                par = CastFromJS<JWindow>( argv[apos++] );
+                if( ! par )
+                {
+                    exceptionText = "Invalid arguments! " PLUGIN_RTFM;
+                    return 0;
+                }
+            }
+            jw = new JWindow; // will call initwin() if needed
+            int l = JSToInt32(argv[apos++]);
+            int c = JSToInt32(argv[apos++]);
+            int y = JSToInt32(argv[apos++]);
+            int x = JSToInt32(argv[apos++]);
+            NCWindow * w = 0;
+            try
+            {
+                w = par
+                    ? new NCWindow(*(par->ncwin),l,c,y,x)
+                    : new NCWindow(l,c,y,x);
+            }
+            catch(std::exception const & ex)
+            {
+                //CERR << "NCWindow ctor threw: "<<ex.what()<<'\n';
+                exceptionText = ex.what();
+                delete jw;
+                return 0;
+            }
+            jw->ncwin = w;
+            jw->canDestruct = (par ? false : true);
+            return jw;
+        }
+        else
+        {
+            exceptionText = std::string("Invalid arguments! ")+ PLUGIN_RTFM;
+        }
         return jw;
     }
+
     void window_dtor( JWindow * w )
     {
-        /**
-           GC may try to clean up child windows, and we don't want that.
-           They are owned by their parents, which may not like it if the
-           children disappear.
-        */
-        if( w->ncwin && w->ncwin->parent() )
+        //CERR << "Destroying wrapped NCWindow  object @"<<obj<<'\n';
+        delete w;
+    }
+
+    JPanel * panel_ctor( Arguments const & argv, std::string & exceptionText )
+    {
+        ARGC;
+        if( ! ( (0==argc) || (argc>1 && argc<5) ) )
         {
-            CERR << "Warning: not deleting parented item @"<<w<<'\n';
-            return;
+            exceptionText = "Incorrect ctor arguments!";
+            return 0;
         }
-        //CERR << "Destroying wrapped "<<ClassName()<<" object @"<<obj<<'\n';
+        JPanel * jp = 0;
+        if( 0 == argc )
+        { // ctor()
+            try
+            {
+                NCPanel * p = new NCPanel;
+                jp = new JPanel(p);
+                //CERR << "Created panel wrapper @"<<jp<<'\n';
+                return jp;
+            }
+            catch(std::exception const & ex)
+            {
+                exceptionText = ex.what();
+                return 0;
+            }
+        }
+        else if( (argc>1) && (argc<5) )
+        { // ctor(lines,cols[,y,x])
+            int l = JSToInt32(argv[0]);
+            int c = JSToInt32(argv[1]);
+            int y = (argc>2) ? JSToInt32(argv[2]) : 0;
+            int x = (argc>3) ? JSToInt32(argv[3]) : 0;
+            try
+            {
+                NCPanel * p = new NCPanel(l,c,y,x);
+                jp = new JPanel(p);
+                return jp;
+            }
+            catch(std::exception const & ex)
+            {
+                exceptionText = ex.what();
+                return 0;
+            }
+        }
+        exceptionText = "Unhandled constructor arguments!";
+        return jp;
+    }
+    void panel_dtor( JPanel * w )
+    {
+        //CERR << "Destroying wrapped NCPanel object @"<<w<<'\n';
         delete w;
     }
 
@@ -195,19 +302,159 @@ namespace nc {
         return CastToJS( jwin->ncwin->getch() );
     }
 
+    JS_WRAPPER(nc_color_pair)
+    {
+	ARGC; ASSERTARGS((2==argc));
+        std::string fg = JSToStdString(argv[0]);
+        std::string bg = JSToStdString(argv[1]);
+        return CastToJS<uint32_t>( ncutil::color_pair( fg, bg ) );
+    }
+
+    JS_WRAPPER(nc_color_pairnum)
+    {
+	ARGC; ASSERTARGS((2==argc));
+        std::string fg = JSToStdString(argv[0]);
+        std::string bg = JSToStdString(argv[1]);
+        return CastToJS<uint16_t>( ncutil::color_pairnum_for_names( fg, bg ) );
+    }
+
+    JS_WRAPPER(nc_KEY_F)
+    {
+	ARGC; ASSERTARGS((1==argc));
+	return Int32ToJS( KEY_F( JSToInt32( argv[0] ) ) );
+    }
+
+    JS_WRAPPER(nc_atoi)
+    {
+	ARGC; ASSERTARGS((1==argc));
+        std::string a( JSToStdString(argv[0]) );
+        if( a.empty() ) return Undefined();
+	return Int32ToJS( a[0] );
+    }
+
+    JS_WRAPPER(nc_itoa)
+    {
+	ARGC; ASSERTARGS((1==argc));
+        int a( JSToInt32(argv[0]) );
+        if( (a < 0) || (a>127) ) return Undefined();
+        char const ch[2] = { (char)a, 0 };
+	return CastToJS( (char const *) ch );
+    }
+
     static Handle<Value> SetupNCurses( Handle<Object> gl )
     {
-        CERR << "Initializing ncurses-oo wrapper plugin...\n";
+        //CERR << "Initializing ncurses-oo wrapper plugin...\n";
 
         Handle<Object> ncobj( Object::New() );
         gl->Set(JSTR("ncurses"), ncobj);
-        ncobj->Set(JSTR(strings::fEndwin), FunctionTemplate::New(nc_endwin)->GetFunction());
 
-        typedef Handle<Value> HV;
-        {
-            WindowBinder & wr = WindowBinder::Instance();
-            wr
-                // Nullary:
+#define SETF(N,V) ncobj->Set(JSTR(N), FunctionTemplate::New(V)->GetFunction() )
+        SETF(strings::fEndwin, nc_endwin );
+        SETF("color_pair",nc_color_pair);
+        SETF("color_pairnum",nc_color_pairnum);
+        SETF("KEY_F",nc_KEY_F);
+        SETF("intVal",nc_atoi);
+        SETF("charVal",nc_itoa);
+#undef SETF
+
+#define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
+	//FIXME: add KEY_F(n) as a JS function
+
+	SET_MAC(OK);
+	SET_MAC(ERR);
+
+	SET_MAC(KEY_F0);
+
+	// Page/Movement keys:
+	SET_MAC(KEY_DOWN);
+	SET_MAC(KEY_DOWN);
+	SET_MAC(KEY_UP);
+	SET_MAC(KEY_UP);
+	SET_MAC(KEY_LEFT);
+	SET_MAC(KEY_LEFT);
+	SET_MAC(KEY_RIGHT);
+	SET_MAC(KEY_RIGHT);
+	SET_MAC(KEY_HOME);
+	SET_MAC(KEY_HOME);
+	SET_MAC(KEY_BACKSPACE);
+	SET_MAC(KEY_BACKSPACE);
+	SET_MAC(KEY_END);
+	SET_MAC(KEY_END);
+	SET_MAC(KEY_DC);
+	SET_MAC(KEY_DC);
+	SET_MAC(KEY_IC);
+	SET_MAC(KEY_IC);
+	SET_MAC(KEY_NPAGE);
+	SET_MAC(KEY_NPAGE);
+	SET_MAC(KEY_PPAGE);
+	SET_MAC(KEY_PPAGE);
+
+	// color/state attributes:
+	SET_MAC(A_BOLD);
+	SET_MAC(A_BLINK);
+	SET_MAC(A_DIM);
+	SET_MAC(A_STANDOUT);
+	SET_MAC(A_UNDERLINE);
+	SET_MAC(A_REVERSE);
+	SET_MAC(A_NORMAL);
+	SET_MAC(A_COLOR);
+	SET_MAC(A_CHARTEXT);
+	SET_MAC(A_ATTRIBUTES);
+	SET_MAC(A_ALTCHARSET);
+	SET_MAC(A_INVIS);
+	SET_MAC(A_PROTECT);
+	SET_MAC(A_HORIZONTAL);
+	SET_MAC(A_LEFT);
+	SET_MAC(A_LOW);
+	SET_MAC(A_RIGHT);
+	SET_MAC(A_TOP);
+	SET_MAC(A_VERTICAL);
+
+	// Misc weird entries:
+	SET_MAC(KEY_MOUSE);
+	SET_MAC(KEY_RESIZE);
+	SET_MAC(KEY_EVENT);
+	SET_MAC(KEY_MAX);
+
+	SET_MAC(NCURSES_MOUSE_VERSION);
+	ncobj->Set(String::New("CTRL_KEY"), Integer::New(0x1f), ::v8::ReadOnly);
+
+#if NCURSES_MOUSE_VERSION
+#define SET_BTN(B) ncobj->Set(String::New(# B), Integer::New(B), ::v8::ReadOnly)
+	SET_BTN(BUTTON1_RELEASED);
+	SET_BTN(BUTTON1_PRESSED);
+	SET_BTN(BUTTON1_CLICKED);
+	SET_BTN(BUTTON1_DOUBLE_CLICKED);
+	SET_BTN(BUTTON1_TRIPLE_CLICKED);
+	SET_BTN(BUTTON2_RELEASED);
+	SET_BTN(BUTTON2_PRESSED);
+	SET_BTN(BUTTON2_CLICKED);
+	SET_BTN(BUTTON2_DOUBLE_CLICKED);
+	SET_BTN(BUTTON2_TRIPLE_CLICKED);
+	SET_BTN(BUTTON3_RELEASED);
+	SET_BTN(BUTTON3_PRESSED);
+	SET_BTN(BUTTON3_CLICKED);
+	SET_BTN(BUTTON3_DOUBLE_CLICKED);
+	SET_BTN(BUTTON3_TRIPLE_CLICKED);
+	SET_BTN(BUTTON4_RELEASED);
+	SET_BTN(BUTTON4_PRESSED);
+	SET_BTN(BUTTON4_CLICKED);
+	SET_BTN(BUTTON4_DOUBLE_CLICKED);
+	SET_BTN(BUTTON4_TRIPLE_CLICKED);
+#undef SET_BTN
+	SET_MAC(BUTTON_CTRL);
+	SET_MAC(BUTTON_SHIFT);
+	SET_MAC(BUTTON_ALT);
+	SET_MAC(REPORT_MOUSE_POSITION);
+	SET_MAC(ALL_MOUSE_EVENTS);
+#endif // NCURSES_MOUSE_VERSION
+
+#undef SET_MAC
+
+        WindowBinder & bindW = WindowBinder::Instance();
+        { // NCWindow class:
+            bindW
+                // Nullary funcs:
                 .BindMemFunc<std::string, &JWindow::name>( strings::fName )
                 .BindMemFunc<int, &JWindow::lines>("lines")
                 .BindMemFunc<int, &JWindow::cols>("cols")
@@ -240,7 +487,7 @@ namespace nc {
                 .BindMemFunc<int, &JWindow::noutrefresh>("noutrefresh")
                 .BindMemFunc<bool, &JWindow::has_mouse>("hasmouse")
 
-                // Unary:
+                // Unary funcs:
                 .BindMemFunc<void, std::string, &JWindow::name>( strings::fNameSet )
                 .BindMemFunc< int, chtype, &JWindow::insch >( "insch" )
                 .BindMemFunc< int, int, &JWindow::insdelln >( "insdelln" )
@@ -263,7 +510,7 @@ namespace nc {
                 .BindMemFunc< int, std::string, &JWindow::addstr >( "addstr" )
                 .BindMemFunc< bool, int, &JWindow::is_linetouched >( "is_linetouched" )
 
-                // Binary:
+                // Binary funcs:
                 .BindMemFunc< int, int, int, &JWindow::mvwin >("mvwin")
                 .BindMemFunc< int, int, int, &JWindow::move >("move")
                 .BindMemFunc< int, int, int, &JWindow::getch >("getch")
@@ -275,13 +522,13 @@ namespace nc {
                 .BindMemFunc< int, int, int, &JWindow::touchln >("touchln")
                 .BindMemFunc< int, int, int, &JWindow::redrawln >("redrawln")
 
-                // Ternary:
+                // Ternary funcs:
                 .BindMemFunc< int, int,int,std::string, &JWindow::mvinsstr>( "mvinsstr" )
                 .BindMemFunc< int, int,int,chtype, &JWindow::mvaddch>( "mvaddch" )
                 .BindMemFunc< int, int, int, std::string, &JWindow::mvaddstr>( "mvaddstr" )
                 .BindMemFunc< int, int,int,chtype, &JWindow::mvinsch>( "mvinsch" )
 
-                // 4-ary:
+                // 4-ary funcs:
                 .BindMemFunc< int, int, int, std::string,int, &JWindow::mvaddstrn>( "mvaddstrn" )
                 .BindMemFunc< int, int,int,std::string,int, &JWindow::mvinsstrn>( "mvinsstrn" )
                 .BindMemFunc< int, int,int,int,int, &JWindow::mvcur>( "mvcur" )
@@ -290,13 +537,29 @@ namespace nc {
                 .Set(strings::fClose,ncwin_close)
                 .Set(strings::fGetch,ncwin_getch)
                 ;
-            Handle<Function> ctor = wr.Seal();
-            wr.AddClassTo(ncobj);
+            Handle<Function> ctor = bindW.Seal();
+            bindW.AddClassTo(ncobj);
             if( JWindow::js_ctor.IsEmpty() )
             {
-                JWindow::js_ctor = Persistent<Function>::New( ctor ); //wr.CtorTemplate()->GetFunction() );
+                JWindow::js_ctor = Persistent<Function>::New( ctor ); //bindW.CtorTemplate()->GetFunction() );
             }
         }
+
+        {
+            PanelBinder & bindP( PanelBinder::Instance() );
+            bindP.Inherit( bindW );
+            bindP
+                .BindMemFunc<void, &JPanel::hide >( "hide" )
+                .BindMemFunc<void, &JPanel::show >( "show" )
+                .BindMemFunc<void, &JPanel::top >( "top" )
+                .BindMemFunc<void, &JPanel::bottom >( "bottom" )
+                .BindMemFunc<int, int, int, &JPanel::mvwin >( "mvwin" )
+                .BindMemFunc<bool, &JPanel::hidden >( "hidden" )
+                ;
+            bindP.Seal();
+            bindP.AddClassTo(ncobj);
+        }
+
         return ncobj;
     }        
 
