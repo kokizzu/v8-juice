@@ -754,6 +754,14 @@ JS_WRAPPER(sq3_changes)
     return db->changes();
 }
 
+JS_WRAPPER(sq3_sleep)
+{
+    ARGC; ASSERTARGS(1==argc);
+    int ms = CastFromJS<int>( argv[0] );
+    return CastToJS( ::sqlite3_sleep( ms ) );
+}
+
+
 JS_WRAPPER(sq3_exec)
 {
     SETUP_DBFWD((argc>0));
@@ -1069,6 +1077,7 @@ static Handle<Value> SetupSQ3( Handle<Object> gl )
     ADDFUNC(escape_sql);
     ADDFUNC(quote_field);
     ADDFUNC(quote_sql);
+    ADDFUNC(sleep);
 #undef ADDFUNC
 
 #define SET_MAC(N) gl->Set(String::New(# N), Integer::New(N), ::v8::ReadOnly)
