@@ -37,6 +37,7 @@
 #include <string>
 #include <stdexcept>
 #include <map>
+#include <sstream>
 namespace v8 {
 namespace juice {
 
@@ -482,7 +483,7 @@ namespace juice {
 	   returns obj's JS object, otherwise it returns a
 	   default-constructed (empty) handle.
 	*/
-	static Handle<Object> GetJSObject( WrappedType * obj )
+	static Handle<Object> GetJSObject( void const * obj )
 	{
 	    TypeCheckIter it = typeCheck().find(obj);
 	    if( typeCheck().end() == it ) return Handle<Object>();
@@ -559,23 +560,14 @@ namespace juice {
 	    jobj->SetInternalField(NativeFieldIndex,Null());
 	    pv.Dispose();
 	    pv.Clear();
-#if 0
-	    // Not safe (can crash) b/c this might get called after v8 context is gone:
-	    WrappedType * native = GetNative(pv);
-	    if( ! native ) return; // we need a way to warn if this happens!
-	    //the_cleaner( static_cast<WrappedType*>( nobj ) );
-	    the_cleaner( native );//static_cast<WrappedType*>( nobj ) );
-#endif
-#if 0 // this works okay but i hate casts
-	    the_cleaner( static_cast<WrappedType*>( nobj ) );
-#else
 	    TypeCheckIter it = typeCheck().find( nobj );
 	    if( typeCheck().end() == it ) // serious error
 	    {
 		return;
 	    }
-	    the_cleaner( (*it).second.first );
-#endif
+            WrappedType * victim = (*it).second.first;
+            typeCheck().erase(it);
+	    the_cleaner( victim );
 	}
 
 	/**
