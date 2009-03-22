@@ -1,4 +1,4 @@
-/* auto-generated on Sat Mar 21 20:21:43 CET 2009. Do not edit! */
+/* auto-generated on Sun Mar 22 01:47:48 CET 2009. Do not edit! */
 #if !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200112L /* needed for ftello() and friends */
 #endif
@@ -5573,6 +5573,7 @@ int whefs_fs_lock( whefs_fs * fs, bool writeLock, off_t start, int whence, off_t
 {
 #if WHIO_FS_USE_FCNTL
     if( ! fs ) return whefs_rc.ArgError;
+    //WHEFS_DBG_FYI("whefs_fs_lock(%p [fileno=%d],%d,%ld,%d,%ld)",fs,fs->fileno,writeLock,start,whence,len);
     if( fs->fileno < 1 ) return whefs_rc.UnsupportedError;
     else
     {
@@ -5581,7 +5582,9 @@ int whefs_fs_lock( whefs_fs * fs, bool writeLock, off_t start, int whence, off_t
 	lock.l_start = start;
 	lock.l_whence = whence;
 	lock.l_len = len;
-	return( fcntl( fs->fileno, F_SETLKW, &lock));
+	int rc = fcntl( fs->fileno, F_SETLKW, &lock);
+        //WHEFS_DBG_FYI("whefs_fs_lock(%p,%d,%ld,%d,%ld)=%d",fs,writeLock,start,whence,len,rc);
+        return rc;
     }
 #else
     return whefs_rc.UnsupportedError;
@@ -5804,6 +5807,7 @@ void whefs_fs_finalize( whefs_fs * fs )
     whio_blockdev_cleanup ( &fs->fences.b );
     if( fs->dev )
     {
+        whefs_fs_unlock( fs, 0, SEEK_SET, 0 );
 	fs->dev->api->flush( fs->dev );
 	if( fs->ownsDev ) fs->dev->api->finalize( fs->dev );
 	fs->dev = 0;
@@ -6169,7 +6173,7 @@ static void whefs_fs_check_fileno( whefs_fs * fs )
 	whio_dev_ioctl( fs->dev, whio_dev_ioctl_GENERAL_name, &fname );
 	if( whio_rc.OK == whio_dev_ioctl( fs->dev, whio_dev_ioctl_FILE_fd, &fs->fileno ) )
 	{
-	    //WHEFS_DBG("Backing store appears to be a FILE (named [%s]) with descriptor #%d.", fname, fs->fileno );
+	    //WHEFS_DBG_FYI("Backing store appears to be a FILE (named [%s]) with descriptor #%d.", fname, fs->fileno );
 	    //posix_fadvise( fs->fileno, 0L, 0L, POSIX_FADV_RANDOM );
 	}
 	else
@@ -6198,6 +6202,18 @@ static whio_dev * whefs_open_FILE( char const * filename, whefs_fs * fs, bool wr
     { /* didn't exist (we assume), so try to create it */
 	//WHEFS_DBG("Opening [%s] with 'r+' failed. Trying 'w+'...", filename );
 	fs->dev = whio_dev_for_filename( filename, "w+b" );
+    }
+    if( ! fs->dev ) return 0;
+    whefs_fs_check_fileno( fs );
+    int lk = whefs_fs_lock( fs, writeMode, 0, SEEK_SET, 0 );
+    if( (whefs_rc.OK == lk) || (whefs_rc.UnsupportedError == lk) )
+    {
+        // okay
+    }
+    else
+    {
+        fs->dev->api->finalize( fs->dev );
+        fs->dev = 0;
     }
     return fs->dev;
 }
@@ -6503,7 +6519,6 @@ static int whefs_mkfs_stage2( whefs_fs * fs )
 
     size_t szcheck = whefs_fs_calculate_size(&fs->options);
     //WHEFS_DBG("szcheck = %u", szcheck );
-    whefs_fs_check_fileno( fs );
 
     int rc = fs->dev->api->truncate( fs->dev, szcheck );
     if( whio_rc.OK != rc )
@@ -6648,7 +6663,6 @@ int whefs_mkfs_dev( whio_dev * dev, whefs_fs_options const * opt, whefs_fs ** tg
 static int whefs_openfs_stage2( whefs_fs * fs )
 {
     if( ! fs ) return whefs_rc.ArgError;
-    whefs_fs_check_fileno( fs );
 
     fs->offsets[WHEFS_OFF_CORE_MAGIC] = 0;
     fs->offsets[WHEFS_OFF_SIZE] = (whefs_fs_magic_bytes_len * whio_dev_sizeof_uint32);
@@ -6762,6 +6776,7 @@ int whefs_openfs_dev( whio_dev * dev, whefs_fs ** tgt, bool takeDev )
     fs->flags = WHEFS_FLAG_ReadWrite; /* we're guessing!!! */
     fs->dev = dev;
     fs->ownsDev = takeDev;
+    whefs_fs_check_fileno( fs );
     int rc = whefs_openfs_stage2( fs );
     if( whefs_rc.OK == rc )
     {
