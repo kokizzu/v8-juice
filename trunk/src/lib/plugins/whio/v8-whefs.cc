@@ -33,6 +33,7 @@ namespace v8 { namespace juice { namespace whio {
     const char * WhefsStrings::dumpToFile = "dumpToFile";
     const char * WhefsStrings::ls = "ls";
     const char * WhefsStrings::mkfs = "mkfs";
+    const char * WhefsStrings::vfsFormat = "fsFormatVersion";
 
 
     //namespace juice = ::v8::juice;
@@ -312,6 +313,8 @@ namespace v8 { namespace juice { namespace whio {
 #undef SET
         }
 
+        //whefs_setup_debug(stderr);
+
 	////////////////////////////////////////////////////////////
 	// WHEFS class:
 	{
@@ -328,6 +331,8 @@ namespace v8 { namespace juice { namespace whio {
             Handle<Function> fmkfs( FunctionTemplate::New(whefs_mkfs)->GetFunction() );
             //ctor->Set(JSTR("mkfs"), fmkfs );
             whefs->Set(JSTR(WhefsStrings::mkfs), fmkfs );
+            whefs->Set(JSTR(WhefsStrings::vfsFormat), JSTR(whefs_data_format_version_string()));
+            whefs->Set(JSTR(WhioStrings::homePage),JSTR(whefs_home_page_url()));
             if( WHEFS::js_ctor.IsEmpty() )
             {
                 WHEFS::js_ctor = Persistent<Function>::New( ctor );

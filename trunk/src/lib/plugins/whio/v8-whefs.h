@@ -24,6 +24,7 @@ namespace v8 { namespace juice { namespace whio {
         static const char * dumpToFile;
         static const char * ls;
         static const char * mkfs;
+        static const char * vfsFormat;
     };
 
     /**

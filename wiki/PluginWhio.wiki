@@ -113,6 +113,15 @@ constructor, an exception is the only way to report the error.
 
 =JS API for the whio classes=
 
+==The whio Object==
+
+The whio object contains all classes and other symbols in this API. The non-class symbols
+include the error codes listed above and:
+
+|| *Type* || *Properties* (read-only) || *Notes* ||
+|| `string` || `homePage` || The home page URL of whio. ||
+
+
 ==IOBase Class==
 
 This class is abstract - it cannot be instantiated directly. However, it does specify several functions of the i/o interface used by its subclasses, and it can be used with `instanceof` to ensure that a given object has the most basic i/o operations.

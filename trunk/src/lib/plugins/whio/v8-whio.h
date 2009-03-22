@@ -62,6 +62,9 @@ namespace v8 { namespace juice { namespace whio {
         // InStream:
         static char const * gzip;
         static char const * gunzip;
+
+        // General purpose:
+        static char const * homePage;
     };
 
     /**

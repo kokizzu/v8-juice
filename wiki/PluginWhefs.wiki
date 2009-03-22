@@ -183,6 +183,9 @@ TODOs:
 
 || *Return type* || *Name/Signature* || *Notes* ||
 || `WhEfs` || `whefs.mkfs(string filename [,Object options])` || Creates a new filesystem (destroying any existing file with the same name). This is covered in more detail below. ||
+|| *Type* || *Properties* (read-only) || *Notes* ||
+|| `string` || `fsFormatVersion` || Version string describing the supported whefs file format (which depends on several compile-time options of whefs). Any given binary version of whefs is configured with certain parameters which determine core parameters its file format, and different configurations are not compatible. ||
+|| `string` || `homePage` || The home page URL of whefs. ||
 
 ===mkfs in more detail===
 

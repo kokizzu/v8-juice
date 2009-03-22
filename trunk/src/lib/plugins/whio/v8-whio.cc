@@ -52,6 +52,7 @@ namespace v8 { namespace juice { namespace whio {
     char const * WhioStrings::flush = "flush";
     char const * WhioStrings::gzip = "gzipTo";
     char const * WhioStrings::gunzip = "gunzipTo";
+    char const * WhioStrings::homePage = "homePage";
     char const * WhioStrings::ioDevice = "ioDevice";
     char const * WhioStrings::isGood = "isGood";
     char const * WhioStrings::read = "read";
@@ -683,6 +684,8 @@ namespace v8 { namespace juice { namespace whio {
             SET("SizeTError",-1);
 #undef SET
         }
+
+        whio->Set(JSTR(WhioStrings::homePage),JSTR("http://fossil.wanderinghorse.net/repos/whio/"));
 
 	////////////////////////////////////////////////////////////
 	// IOBase class:
