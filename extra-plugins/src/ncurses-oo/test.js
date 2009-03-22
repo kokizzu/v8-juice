@@ -48,7 +48,7 @@ function tryChild()
 tryChild();
 var rc = w.getch();
 w.close();
-ncurses.endwin(); // kludge until i get window destruction working properly
+//ncurses.endwin(); // kludge until i get window destruction working properly
 logger.close();
 print("window name =",name,", getch =",rc);
 if(0) {

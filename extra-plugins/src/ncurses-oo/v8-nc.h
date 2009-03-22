@@ -88,16 +88,7 @@ namespace nc {
         {}
         virtual ~JWindow()
         {
-#if 1
-        /**
-           GC may try to clean up child windows, and we don't want that.
-           They are owned by their parents, which may not like it if the
-           children disappear.
-        */
-            if( this->ncwin && this->canDestruct ) delete this->ncwin;
-#else
             if( this->ncwin ) delete this->ncwin;
-#endif
         }
         static Persistent<Function> js_ctor;
 
@@ -180,13 +171,16 @@ namespace nc {
     class JPanel : public JWindow
     {
     public:
-        NCPanel * ncpnl;
+        NCPanel * ncpnl; // must be the same as this->ncwin
         explicit JPanel( NCPanel * p ) : JWindow(p,true), ncpnl(p)
         {
             this->canDestruct = true;
         }
         virtual ~JPanel()
-        {}
+        {
+            this->ncpnl = 0;
+            // parent dtor will delete this->ncwin
+        }
         void hide() { this->ncpnl->hide(); }
         void show() { this->ncpnl->show(); }
         void top() { this->ncpnl->top(); }
@@ -221,8 +215,9 @@ namespace nc {
             WrappedType * x = ctor_proxy(argv,exceptionText);
             if( x )
             {
+                //bind::BindNative<JWindow>( x->ncwin, x ); // to assist in window_dtor()
                 cleanup::AddToCleanup( x, cleanup_callback );
-                CERR << "Constructed "<<ClassName()<<" object @"<<x<<'\n';
+                //CERR << "Constructed "<<ClassName()<<" object @"<<x<<'\n';
             }
             return x;
         }
@@ -230,8 +225,10 @@ namespace nc {
         static void Dtor( WrappedType * obj )
         {
             CERR << "Cleaning up "<<ClassName()<<" object @"<<obj<<'\n';
+            //NCWindow * nw = obj->ncwin;
             cleanup::RemoveFromCleanup( obj );
             dtor_proxy( obj );
+            //bind::UnbindNative<JWindow>( nw, obj ); // must come after dtor_proxy()
         }
     private:
         static void cleanup_callback( void * obj )
@@ -248,12 +245,6 @@ namespace nc {
         static const char * classPanel;
         static const char * classPad;
 
-        // Function names:
-        static const char * fClose;
-        static const char * fEndwin;
-        static const char * fGetch;
-        static const char * fName;
-        static const char * fNameSet;
     };
 
     JWindow * window_ctor( Arguments const & argv, std::string & exceptionText );

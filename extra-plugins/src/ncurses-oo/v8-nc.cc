@@ -47,6 +47,7 @@
 
 #include <vector>
 #include <map>
+#include <list>
 #include <sstream>
 
 
@@ -64,7 +65,7 @@
 #include <v8/juice/ClassBinder.h>
 #include "ncmode.hpp"
 #include "ncpalette.hpp"
-#include "ncstream.hpp"
+#include "ncutil.hpp"
 #include "v8-nc.h"
 /**
    Convenience macro for marking wrapper functions.
@@ -88,11 +89,6 @@ namespace nc {
     const char * strings::classPanel = "NCPanel";
     const char * strings::classPad = "NCPad";
 
-    const char * strings::fClose = "close";
-    const char * strings::fEndwin = "endwin";
-    const char * strings::fGetch = "getch";
-    const char * strings::fName = "name";
-    const char * strings::fNameSet = "setName";
 
     Persistent<Function> JWindow::js_ctor;
 
@@ -112,33 +108,14 @@ namespace nc {
 #define JWIN_THIS JWindow * jwin = CastFromJS<JWindow>( argv.This() ); \
         if( ! jwin ) return ThrowException(String::New("This object is not (or is no longer) a JWindow!"));
 
+    typedef std::list<std::streambuf *> StreamBufferList;
+    typedef std::multimap<JWindow *,std::streambuf *> StreamBufferMap;
+    StreamBufferMap & nc_sbuf_map()
+    {
+        static StreamBufferMap bob;
+        return bob;
+    }
 
-#if 0
-    /**
-       A shared place to store WINDOW-to-T mappings.
-    */
-    template <typename T>
-    static std::map<WINDOW *,T> & window_map()
-    {
-	static std::map<WINDOW *,T> bob;
-	return bob;
-    }
-   
-    /**
-       A shared place to store WINDOW-to-T multi-mappings.
-    */
-    template <typename T>
-    static std::multimap<WINDOW *,T> & window_multimap()
-    {
-	static std::multimap<WINDOW *,T> bob;
-	return bob;
-    }
-    typedef std::multimap<WINDOW *,::std::streambuf *> WindowStreamMap;
-    static WindowStreamMap & captured_streams()
-    {
-	return window_multimap< ::std::streambuf *>();
-    }
-#endif
 
     JWindow * window_ctor( Arguments const & argv, std::string & exceptionText )
     {
@@ -223,9 +200,42 @@ namespace nc {
         return jw;
     }
 
+    void JWindow_remove_stream_redirects( JWindow * win )
+    {
+        //CERR << "Looking for redirected streams.\n";
+        StreamBufferMap & m = nc_sbuf_map();
+        StreamBufferMap::iterator it = m.lower_bound(win);
+        if( m.end() == it ) return;
+        StreamBufferMap::iterator oldb = it;
+        StreamBufferMap::iterator et = m.upper_bound(win);
+        for( ; et != it; ++it )
+        {
+            delete( (*it).second );
+            //popup_dialog( "Aaarrggl","Blub!" );
+            //CERR << "Unhooking redirected stream.\n";
+        }
+        m.erase(oldb, et);
+    }
+
     void window_dtor( JWindow * w )
     {
         //CERR << "Destroying wrapped NCWindow  object @"<<obj<<'\n';
+        JWindow_remove_stream_redirects(w);
+#if 0
+        NCWindow * n = 0;
+        for( NCWindow * p = w->ncwin->child(); p; p = n )
+        {
+            n = p->sibling();
+            if( w->ncwin == p )
+            {
+                continue;
+            }
+            JWindow * b = bind::GetBoundNative<JWindow>( p );
+            //CERR << "Cleaning up child window @"<<p<<'/'<<b<<'\n';
+            if( b ) JWindow_remove_stream_redirects(b);
+            //WindowBinder::DestroyObject( CastToJS(b) );
+        }
+#endif
         delete w;
     }
 
@@ -274,10 +284,11 @@ namespace nc {
         exceptionText = "Unhandled constructor arguments!";
         return jp;
     }
+
     void panel_dtor( JPanel * w )
     {
         //CERR << "Destroying wrapped NCPanel object @"<<w<<'\n';
-        delete w;
+        window_dtor(w);
     }
 
     JS_WRAPPER(ncwin_close)
@@ -287,6 +298,39 @@ namespace nc {
         WindowBinder::DestroyObject(argv.This());
         return Undefined();
     }
+
+    Handle<Value> nc_capture_ostream( std::ostream & os,
+                                      Arguments const & argv )
+    {
+        ARGC; ASSERTARGS(((argc==0) || (argc==1)));
+        JWIN_THIS;
+        uint32_t cattr = (argc>0) ? JSToUInt32(argv[0]) : 0;
+        // The objects we create here are cleaned up via window_dtor()
+        ncutil::NCStreamBuffer * sb = new ncutil::NCStreamBuffer( *jwin->ncwin, os, cattr );
+        nc_sbuf_map().insert( std::make_pair(jwin, sb) );
+        return Undefined();
+    }
+
+    JS_WRAPPER(nc_capture_cout)
+    {
+        return nc_capture_ostream( std::cout, argv );
+    }
+    JS_WRAPPER(nc_capture_cerr)
+    {
+        return nc_capture_ostream( std::cerr, argv );
+    }
+
+    JS_WRAPPER(nc_capture_end)
+    {
+        JWIN_THIS;
+        JWindow_remove_stream_redirects( jwin );
+        return Undefined();
+    }
+
+//     JS_WRAPPER(nc_capture_end)
+//     {
+//         return xxx;
+//     }
 
     JS_WRAPPER(nc_endwin)
     {
@@ -321,7 +365,9 @@ namespace nc {
     JS_WRAPPER(nc_KEY_F)
     {
 	ARGC; ASSERTARGS((1==argc));
-	return Int32ToJS( KEY_F( JSToInt32( argv[0] ) ) );
+        int k = JSToInt32( argv[0] );
+        if( (k < 0) || (k>64) ) return Undefined(); // the value 64 comes from ncurses.h docs
+	return Int32ToJS( KEY_F( k ) );
     }
 
     JS_WRAPPER(nc_atoi)
@@ -341,6 +387,16 @@ namespace nc {
 	return CastToJS( (char const *) ch );
     }
 
+    JS_WRAPPER(nc_screen_width)
+    {
+	return CastToJS( stdscr ? stdscr->_maxx+1 : (int)0);
+    }
+    JS_WRAPPER(nc_screen_height)
+    {
+	return CastToJS( stdscr ? stdscr->_maxy+1 : (int)0 );
+    }
+
+
     static Handle<Value> SetupNCurses( Handle<Object> gl )
     {
         //CERR << "Initializing ncurses-oo wrapper plugin...\n";
@@ -349,12 +405,14 @@ namespace nc {
         gl->Set(JSTR("ncurses"), ncobj);
 
 #define SETF(N,V) ncobj->Set(JSTR(N), FunctionTemplate::New(V)->GetFunction() )
-        SETF(strings::fEndwin, nc_endwin );
+        SETF("endwin", nc_endwin );
         SETF("color_pair",nc_color_pair);
         SETF("color_pairnum",nc_color_pairnum);
         SETF("KEY_F",nc_KEY_F);
         SETF("intVal",nc_atoi);
         SETF("charVal",nc_itoa);
+        SETF("screenHeight",nc_screen_height);
+        SETF("screenWidth",nc_screen_width);
 #undef SETF
 
 #define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
@@ -455,7 +513,7 @@ namespace nc {
         { // NCWindow class:
             bindW
                 // Nullary funcs:
-                .BindMemFunc<std::string, &JWindow::name>( strings::fName )
+                .BindMemFunc<std::string, &JWindow::name>( "name" )
                 .BindMemFunc<int, &JWindow::lines>("lines")
                 .BindMemFunc<int, &JWindow::cols>("cols")
                 .BindMemFunc<int, &JWindow::tabsize>("tabsize")
@@ -488,7 +546,7 @@ namespace nc {
                 .BindMemFunc<bool, &JWindow::has_mouse>("hasmouse")
 
                 // Unary funcs:
-                .BindMemFunc<void, std::string, &JWindow::name>( strings::fNameSet )
+                .BindMemFunc<void, std::string, &JWindow::name>( "setName" )
                 .BindMemFunc< int, chtype, &JWindow::insch >( "insch" )
                 .BindMemFunc< int, int, &JWindow::insdelln >( "insdelln" )
                 .BindMemFunc< int, std::string, &JWindow::insstr >( "insstr" )
@@ -534,8 +592,11 @@ namespace nc {
                 .BindMemFunc< int, int,int,int,int, &JWindow::mvcur>( "mvcur" )
 
                 // reminder: Set() returns a JSClassCreator, not a ClassBinder<>:
-                .Set(strings::fClose,ncwin_close)
-                .Set(strings::fGetch,ncwin_getch)
+                .Set("captureCout", nc_capture_cout)
+                .Set("captureCerr", nc_capture_cerr)
+                .Set("captureReset", nc_capture_end)
+                .Set("close",ncwin_close)
+                .Set("getch",ncwin_getch)
                 ;
             Handle<Function> ctor = bindW.Seal();
             bindW.AddClassTo(ncobj);
