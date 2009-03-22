@@ -100,7 +100,7 @@ A brief example:
 load_plugin('v8-juice-whio');
 var fname = "test.whefs";
 var fs = new whefs.WhEfs(fname,true); // open up an existing whefs container
-var fi = fs.openDevice("first.file",true); // open (or create) a file
+var fi = fs.openPseudofile("first.file",true); // open (or create) a file
 fi.truncate(0);
 fi.write("Hi, world!\n");
 fi.close(); // close the file
@@ -168,7 +168,7 @@ whefs home page. All other features are inherited from the `IODevice` class.
 || `void` || `close()` || Closes the VFS. All pseudofiles/devices opened from this object must have been closed by the time this is called. ||
 || `int` || `dumpToFile(string filename)` || Dumps the VFS's binary image to the given file. Results are undefined if it is told to overwrite itself. ||
 || `Array` || `ls(string pattern)` || Returns a list (or null) of all pseudofiles matching the given glob-like pattern. Most common glob patterns are accepted, but only one pattern per call. e.g. `print(fs.ls('*.js'))`. ||
-|| `IODevice` || `openDevice(string filename, bool writeMode)` || Opens up a pseudofile within the VFS and returns it as a `whio.IODevice`. If `writeMode` is true then the file is created if it does not exist. Throws on error. The returned IODevice must `close()`ed before the VFS is closed. ||
+|| `IODevice` || `openPseudofile(string filename, bool writeMode)` || Opens up a pseudofile within the VFS and returns it as a `whio.IODevice`. If `writeMode` is true then the file is created if it does not exist. Throws on error. The returned IODevice must `close()`ed before the VFS is closed. ||
 || `int` || `size()` || Returns the size of the underlying pseudofilesystem. ||
 || `int` || `unlink(string filename)` || Unlinks (deletes) the given pseudofile name. It will fail if the given file is currently opened. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
@@ -216,7 +216,7 @@ filesystem will be lost. The in-memory FS can be copied to disk using
 =Some things to keep in mind=
 
   * Never access the same whefs filesystem from two processes at the same time. That doesn't currently work - they will collide and cause corruption.
-  * whefs doesn't support true directories. Pseudofiles can be named `/path/to/file.txt`, but they're all currently stored in one big directory. This makes searching by name (e.g. using `ls()` or `openDevice()`) relatively slow.
+  * whefs doesn't support true directories. Pseudofiles can be named `/path/to/file.txt`, but they're all currently stored in one big directory. This makes searching by name (e.g. using `ls()` or `openPseudofile()`) relatively slow.
   * The original whefs source tree comes with [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools several tools for manipulating whefs filesystems].
   * There are _lots_ more docs available via the whefs source code and [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools the whefs home page].
   * whefs' engine is not scalable (in terms of performance) to large data stores. Keep them small (a few hundred inodes or so) or suffer from the underlying linear algorithms.
@@ -234,7 +234,7 @@ For example, let's compress a copy of `/etc/hosts` into a VFS:
 // Assume fs is an opened WhEfs object
 
 var istr = new whio.InStream("/etc/hosts");
-var fz = fs.openDevice("/etc/hosts.gz",true);
+var fz = fs.openPseudofile("/etc/hosts.gz",true);
 fz.truncate(0); // in case it already had content.
 var ostr = new whio.OutStream(fz);
 istr.gzipTo(ostr);
@@ -245,11 +245,24 @@ fz.close();
 
 // To decompress it:
 
-fz = fs.openDevice("/etc/hosts.gz",false);
+fz = fs.openPseudofile("/etc/hosts.gz",false);
 istr = new whio.InStream(fz);
 ostr = new whio.OutStream('/dev/stdout',false);
 istr.gunzipTo(ostr);
 istr.close();
 ostr.close();
 fz.close();
+}}}
+
+And on my system the VFS file looks like:
+
+{{{
+stephan@jareth:~/cvs/v8-juice/trunk/src/lib/plugins/whio$ whefs-ls -b -v memory.whefs 
+whefs-ls [No VFS opened]: Verbose mode activated.
+whefs-ls [memory.whefs]: Opening VFS [memory.whefs]
+List of used blocks per file:
+
+[/etc/hosts.gz]:	1 = 1 block(s), 211 of 8192 bytes used
+
+Totals: 211 byte(s) in 1 blocks
 }}}

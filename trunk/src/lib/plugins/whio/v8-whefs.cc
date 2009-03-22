@@ -28,7 +28,7 @@
 
 namespace v8 { namespace juice { namespace whio {
 
-    const char * WhefsStrings::openDevice = "openDevice";
+    const char * WhefsStrings::openDevice = "openPseudofile";
     const char * WhefsStrings::unlink = "unlink";
     const char * WhefsStrings::dumpToFile = "dumpToFile";
     const char * WhefsStrings::ls = "ls";
@@ -151,12 +151,12 @@ namespace v8 { namespace juice { namespace whio {
         EFSTHIS;
         std::string fname( JSToStdString(argv[0]) );
         bool rw = argv[1]->BooleanValue();
-	//CERR << "WHEFS.openDevice("<<fname<<", "<<rw<<") == " << fs << '\n';
+	//CERR << WhefsStrings::openDevice << "("<<fname<<", "<<rw<<") == " << fs << '\n';
         whio_dev * dev = whefs_dev_open( fs, fname.c_str(), rw );
         if( ! dev )
         {
             std::ostringstream os;
-            os << "openDevice("<<fname<<", "<<rw<<") failed for unknown reasons!";
+            os << WhefsStrings::openDevice<<"("<<fname<<", "<<rw<<") failed for unknown reasons!";
             TOSS(os.str().c_str());
         }
         bind::BindNative( dev, dev );
