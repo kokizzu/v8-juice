@@ -240,7 +240,7 @@ namespace v8 { namespace juice {
 
     For the full JS-side API docs see:
 
-    http://code.google.com/p/v8-juice/wiki/ClassPathFinder
+    http://code.google.com/p/v8-juice/wiki/PathFinderClass
     */
     v8::Handle< ::v8::Value > SetupPathFinderClass(const ::v8::Handle< ::v8::Object > target );
 
