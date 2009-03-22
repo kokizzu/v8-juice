@@ -56,17 +56,16 @@ Here's a very brief summary:
 Firstly, the whefs library is intended for small use cases, not large
 amounts of storage. Keep that in mind.
 
-Secondly, whefs currently as NO SUPPORT WHATSOEVER for any type of
-concurrency, and multiple processes or threads accessing the same
-underlying whefs container _will_ cause corruption at some point.
-
-See this web page for more information:
+Secondly, whefs currently as only the most utterly basic support for multi-process
+concurrency, and no support whatsoever for multi-thread concurrency (which _will_
+cause corruption). See this page page for more information:
 
 http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/ConcurrencyInWHEFS
 
-That limitation rules out whefs' usage in several otherwise very
-interesting contexts (e.g. as a data store for server-side JS,
-possibly storing client-generated data).
+The concurrency limitations rule out certain otherwise very
+interesting possible uses of whefs (e.g. as read/write a data store
+for server-side JS, possibly storing client-generated data from
+multiple clients).
 
 Lastly, you can get more out of whefs by making use of the
 whefs-specific tools which come with the whefs source tree:
@@ -215,12 +214,14 @@ filesystem will be lost. The in-memory FS can be copied to disk using
 
 =Some things to keep in mind=
 
-  * Never access the same whefs filesystem from two processes at the same time. That doesn't currently work - they will collide and cause corruption.
-  * whefs doesn't support true directories. Pseudofiles can be named `/path/to/file.txt`, but they're all currently stored in one big directory. This makes searching by name (e.g. using `ls()` or `openPseudofile()`) relatively slow.
+  * See the Caveats section, above, for important notes, especially about concurrency.
+  * A VFS container cannot be resized dynamically. To resize it, the data must be exported, the container re-created, and the data re-imported.
   * The original whefs source tree comes with [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools several tools for manipulating whefs filesystems].
-  * There are _lots_ more docs available via the whefs source code and [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools the whefs home page].
-  * whefs' engine is not scalable (in terms of performance) to large data stores. Keep them small (a few hundred inodes or so) or suffer from the underlying linear algorithms.
-  * whefs is fairly minimalistic - do not expect all the features of a normal filesystem.
+  * There are _lots_ more docs available via the whefs source code (API docs) and [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools the whefs home page].
+  * whefs doesn't support true directories. Pseudofiles can be named `/path/to/file.txt`, but they're all currently stored in one big directory. This makes searching by name (e.g. using `ls()` or `openPseudofile()`) relatively slow.
+  * whefs' engine is not scalable (in terms of performance) to large data stores. Keep them small (a few hundred inodes or so) or suffer dearly from the underlying linear algorithms.
+  * whefs is fairly minimalistic - do not expect all the features of a normal filesystem. It does what i need it to do.
+  * If you're running in a server environment, sharing a whefs filesystem across client processes (not threads!), be sure to keep the VFS open for only as long as needed, to avoid locking other clients out of it.
 
 =Tips and Tricks=
 
