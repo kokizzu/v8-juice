@@ -1,7 +1,7 @@
 #summary Embedded filesystem library for JS
 #labels Phase-UserDocs,Topic-Plugins,Topic-JS-API
 
-*Achtung #1:* This is very beta. Seems to work for me. YMMV.
+*Achtung #1:* This is very beta. Seems to work for me. YMMV. As far as i'm aware, this is the world's first !JavaScriptable embedded filesystem, so you _just know_ it's gotta have a few bugs.
 
 *Achtung #2:* these docs are for the current version in the subversion
 source tree (i document here as changes are made). If you are using an "older" version,
