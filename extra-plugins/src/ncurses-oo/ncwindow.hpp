@@ -56,6 +56,8 @@ by stephan@s11n.net, starting 1 March 2005:
 - Lots of docs added. Standard curses funcs are not documented here:
   see 'man ncurses' for more than you want to know.
 
+- Added NCWindow::is_alive() to help support scripting bindings with
+indeterminate destruction timing (e.g.  a JavaScript wrapper).
 ************************************************************************/
 
 

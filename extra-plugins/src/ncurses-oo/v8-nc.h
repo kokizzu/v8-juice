@@ -131,6 +131,7 @@ namespace nc {
         int attrset(chtype v) { return ncwin->attrset(v); }
         int color_set(short v) { return ncwin->color_set(v); }
         int bkgd(chtype v) { return ncwin->bkgd(v); }
+        void bkgdset(chtype v) { ncwin->bkgdset(v); }
         int clearok(bool v) { return ncwin->clearok(v); }
         int scroll(int v) { return ncwin->scroll(v); }
         int scrollok(bool v) { return ncwin->scrollok(v); }
@@ -163,6 +164,8 @@ namespace nc {
         int mvaddstrn(int v1, int v2, std::string v3,int v4) { return ncwin->addstr(v1,v2,v3.c_str(),v4); }
         int mvinsstrn(int v1,int v2,std::string v3,int v4) { return ncwin->insstr(v1,v2,v3.c_str(),v4); }
         int mvcur(int v1,int v2,int v3,int v4) { return ncwin->mvcur(v1,v2,v3,v4); }
+
+        Handle<Value> getstring( Arguments const & );
     };
 
     class JPanel : public JWindow
@@ -193,13 +196,13 @@ namespace nc {
 
         int requestOp( int v ) { return this->ncpad->requestOp(v); }
 
-        int refreshPad(int pminrow, int pmincol,
+        int prefresh(int pminrow, int pmincol,
                        int sminrow, int smincol,
                        int smaxrow, int smaxcol)
         {
             return this->ncpad->refresh( pminrow, pmincol, sminrow, smincol, smaxrow, smaxcol );
         }
-        int noutrefreshPad(int pminrow, int pmincol,
+        int pnoutrefresh(int pminrow, int pmincol,
                            int sminrow, int smincol,
                            int smaxrow, int smaxcol)
         {

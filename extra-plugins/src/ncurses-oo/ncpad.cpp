@@ -66,7 +66,7 @@ namespace ncutil {
 		  viewSub((NCWindow*)0),
 		  m_lines(lines),
                   m_cols(cols),
-		  h_gridsize(0), v_gridsize(0),
+		  h_gridsize(1), v_gridsize(1),
 		  min_row(0), min_col(0)
 	{
 		this->ncwindow( ::newpad(lines,cols) );

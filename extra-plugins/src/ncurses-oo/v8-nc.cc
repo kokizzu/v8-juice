@@ -63,6 +63,7 @@
 #include <v8/juice/plugin.h>
 #include <v8/juice/cleanup.h>
 #include <v8/juice/ClassBinder.h>
+#include "ncwindow.hpp"
 #include "ncmode.hpp"
 #include "ncpalette.hpp"
 #include "ncutil.hpp"
@@ -125,11 +126,6 @@ namespace nc {
     JWindow * window_ctor( Arguments const & argv, std::string & exceptionText )
     {
         ARGC;
-        if( ! ( (1==argc) || (2==argc) || (0==argc) || (4==argc) || (5==argc) ) )
-        {
-            exceptionText = "Incorrect ctor arguments!";
-            return 0;
-        }
         JWindow * jw = 0;
         if( 0 == argc )
         { // default ctor - a wrapper for stdscr
@@ -200,7 +196,7 @@ namespace nc {
         }
         else
         {
-            exceptionText = std::string("Invalid arguments! ")+ PLUGIN_RTFM;
+            exceptionText = "Invalid arguments! " PLUGIN_RTFM;
         }
         return jw;
     }
@@ -236,14 +232,59 @@ namespace nc {
         }
     }
 
+    /**
+       JS usage:
+
+       - string func( int y, int x [, int maxlen] )
+       - string func( [int maxlen] )
+    */
+    Handle<Value> JWindow::getstring( Arguments const & argv )
+    {
+        ARGC;
+        typedef std::vector<char> VT;
+        
+        int y = -1;
+        int x = -1;
+        unsigned int len = 0;
+        int apos = 0;
+        if( (argc>1) && argv[apos]->IsInt32() )
+        { // (int y, int x ...)
+            y = JSToInt32(argv[apos++]);
+            x = JSToInt32(argv[apos++]);
+        }
+        if( (argc > apos) && argv[apos]->IsInt32() )
+        { // (... int len)
+            len = JSToUInt32(argv[apos++]);
+        }
+
+        if( len < 1 ) len = 128; // arbitrarily chosen
+        else if( len > 1024 ) len = 1024; // also arbitrary
+        VT buf( len+1, 0);
+        int rc = 0;
+        if( (y<0) || (x<0) )
+        {
+            rc = this->ncwin->getstr( &buf[0], static_cast<int>(len) );
+        }
+        else
+        {
+            rc = this->ncwin->getstr( y, x, &buf[0], static_cast<int>(len) );
+        }
+        if( ERR == rc )
+        {
+            TOSS("native getstr() failed!");
+        }
+        return String::New( &buf[0] );
+    }
+
+
     JPanel::~JPanel()
     {
-        this->ncpnl = 0; // points to this->ncwin, which parent class will free
+        this->ncpnl = 0; // points to this->ncwin, which the parent class will free
     }
 
     JPad::~JPad()
     {
-        if( NCWindow::is_alive(this->ncpad) )
+        if( this->ncpad && NCWindow::is_alive(this->ncpad) )
         {
             delete this->ncpad;
         }
@@ -344,8 +385,10 @@ namespace nc {
         NCPad * pad = 0;
         int l = JSToInt32(argv[1]);
         int c = JSToInt32(argv[2]);
-        int gv = (argc>3) ? JSToInt32(argv[3]) : 0;
-        int gh = (argc>4) ? JSToInt32(argv[4]) : 0;
+        int gv = (argc>3) ? JSToInt32(argv[3]) : 1;
+        int gh = (argc>4) ? JSToInt32(argv[4]) : 1;
+        if( gv < 1 ) gv = 1;
+        if( gh < 1 ) gh = 1;
         JPad * jp = 0;
         try
         {
@@ -455,6 +498,26 @@ namespace nc {
 	return Int32ToJS( KEY_F( k ) );
     }
 
+    /**
+       JS Usage: ncurses.KEY_CTRL(int | char), returns (asciiValue & 0x1f).
+    */
+    JS_WRAPPER(nc_KEY_CTRL)
+    {
+	ARGC; ASSERTARGS((1==argc));
+        int k;
+        if( argv[0]->IsString() )
+        {
+            std::string s( JSToStdString(argv[0]) );
+            k = s.empty() ? -1 : s[0];
+        }
+        else
+        {
+            k = JSToInt32( argv[0] );
+        }
+        if( (k < 0) || (k>127) ) return Undefined(); // the value 64 comes from ncurses.h docs
+	return Int32ToJS( 0x1f & k );
+    }
+
     JS_WRAPPER(nc_atoi)
     {
 	ARGC; ASSERTARGS((1==argc));
@@ -515,7 +578,7 @@ namespace nc {
         int i4 = JSToInt32(argv[apos++]);
         int i5 = JSToInt32(argv[apos++]);
         int i6 = JSToInt32(argv[apos++]);
-        return CastToJS( jpad->refreshPad(i1,i2,i3,i4,i5,i6) );
+        return CastToJS( jpad->prefresh(i1,i2,i3,i4,i5,i6) );
     }
 
     JS_WRAPPER(ncpad_noutrefresh)
@@ -533,7 +596,24 @@ namespace nc {
         int i4 = JSToInt32(argv[apos++]);
         int i5 = JSToInt32(argv[apos++]);
         int i6 = JSToInt32(argv[apos++]);
-        return CastToJS( jpad->noutrefreshPad(i1,i2,i3,i4,i5,i6) );
+        return CastToJS( jpad->pnoutrefresh(i1,i2,i3,i4,i5,i6) );
+    }
+
+    JS_WRAPPER(nc_echo)
+    {
+        ARGC;
+        if( (0 == argc) || argv[0]->BooleanValue() )
+        {
+            return CastToJS( ::echo() );
+        }
+        else
+        {
+            return CastToJS( ::noecho() );
+        }
+    }
+    JS_WRAPPER(nc_noecho)
+    {
+        return CastToJS( ::noecho() );
     }
 
 
@@ -549,6 +629,7 @@ namespace nc {
         SETF("color_pair",nc_color_pair);
         SETF("color_pairnum",nc_color_pairnum);
         SETF("KEY_F",nc_KEY_F);
+        SETF("KEY_CTRL",nc_KEY_CTRL);
         SETF("intVal",nc_atoi);
         SETF("charVal",nc_itoa);
         SETF("screenHeight",nc_screen_height);
@@ -558,6 +639,8 @@ namespace nc {
         SETF("getch",nc_getch);
         SETF("curs_set",nc_curs_set);
         SETF("napms",nc_napms);
+        SETF("echo",nc_echo);
+        SETF("noecho",nc_noecho);
 #undef SETF
 
 #define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
@@ -620,7 +703,7 @@ namespace nc {
 	SET_MAC(KEY_MAX);
 
 	SET_MAC(NCURSES_MOUSE_VERSION);
-	ncobj->Set(String::New("CTRL_KEY"), Integer::New(0x1f), ::v8::ReadOnly);
+	//ncobj->Set(String::New("CTRL_KEY"), Integer::New(0x1f), ::v8::ReadOnly);
 
 #if NCURSES_MOUSE_VERSION
 #define SET_BTN(B) ncobj->Set(String::New(# B), Integer::New(B), ::v8::ReadOnly)
@@ -749,6 +832,7 @@ namespace nc {
                 .BindMemFunc< int, chtype, &JWindow::attrset >( "attrset" )
                 .BindMemFunc< int, short, &JWindow::color_set >( "color_set" )
                 .BindMemFunc< int, chtype, &JWindow::bkgd >( "bkgd" )
+                .BindMemFunc< void, chtype, &JWindow::bkgdset >( "bkgdset" )
                 .BindMemFunc< int, bool, &JWindow::clearok >( "clearok" )
                 .BindMemFunc< int, int, &JWindow::scroll >( "scroll" )
                 .BindMemFunc< int, bool, &JWindow::scrollok >( "scrollok" )
@@ -765,7 +849,7 @@ namespace nc {
                 // Binary funcs:
                 .BindMemFunc< int, int, int, &JWindow::mvwin >("mvwin")
                 .BindMemFunc< int, int, int, &JWindow::move >("move")
-                .BindMemFunc< int, int, int, &JWindow::getch >("getch")
+                .BindMemFunc< int, int, int, &JWindow::getch >("mvgetch")
                 .BindMemFunc< int, std::string, int, &JWindow::addstrn >("addstrn")
                 .BindMemFunc< chtype, int, int, &JWindow::mvinch >("mvinch")
                 .BindMemFunc< int, std::string, int, &JWindow::insstrn >("insstrn")
@@ -784,6 +868,9 @@ namespace nc {
                 .BindMemFunc< int, int, int, std::string,int, &JWindow::mvaddstrn>( "mvaddstrn" )
                 .BindMemFunc< int, int,int,std::string,int, &JWindow::mvinsstrn>( "mvinsstrn" )
                 .BindMemFunc< int, int,int,int,int, &JWindow::mvcur>( "mvcur" )
+
+                // N-aray funcs:
+                .BindMemFunc< &JWindow::getstring > ("getstr" )
 
                 // reminder: Set() returns a JSClassCreator, not a ClassBinder<>:
                 .Set("captureCout", nc_capture_cout)
@@ -824,9 +911,8 @@ namespace nc {
             bindD.Inherit( bindW );
             bindD
                 .BindMemFunc< int, int, &JPad::requestOp >( "requestOp" )
-                // FIXME: Use an InvokationCallback for the [nout]refresh() impl, so we can gracefully handle the overloaded forms
-                .BindMemFunc< int, int, int, int, int, int, int, &JPad::refreshPad >( "refreshPad" )
-                .BindMemFunc< int, int, int, int, int, int, int, &JPad::noutrefreshPad >( "noutrefreshPad" )
+                .BindMemFunc< int, int, int, int, int, int, int, &JPad::prefresh >( "prefresh" )
+                .BindMemFunc< int, int, int, int, int, int, int, &JPad::pnoutrefresh >( "pnoutrefresh" )
                 .BindMemFunc< int, &JPad::lineCount >( "lineCount" )
                 .BindMemFunc< int, &JPad::columnCount >( "columnCount" )
                 .BindMemFunc<bool, int ,&JPad::consumeKey>( "consumeKey" )

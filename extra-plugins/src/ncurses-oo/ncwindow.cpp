@@ -204,7 +204,7 @@ namespace ncutil {
     void
     NCWindow::err_handler(const char *msg) const throw(NCException)
     {
-        throw(NCException(msg));
+        throw NCException(msg);
     }
 
     void NCWindow::init()
@@ -323,7 +323,7 @@ namespace ncutil {
     {
         m_cwin = :: derwin(win.m_cwin,win.height()-2,win.width()-2,1,1);
         if (m_cwin == 0) {
-            err_handler("NCWindow(NCWindow&,bool) Cannot construct subwindow");
+            err_handler("NCWindow(NCWindow&,bool) Cannot construct subwindow!");
         }
 
         par = &win;
