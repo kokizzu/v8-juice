@@ -444,11 +444,15 @@ namespace ncutil {
 
 #if NCURSES_MOUSE_VERSION
 extern "C" int _nc_has_mouse(void);
-
+#endif
 bool
 ncutil::NCWindow::has_mouse() const
 {
+#ifdef NCURSES_MOUSE_VERSION
     return ((::has_key(KEY_MOUSE) || ::_nc_has_mouse())
-            ? TRUE : FALSE);
-}
+            ? true : false);
+#else
+    return false;
 #endif
+}
+

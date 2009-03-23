@@ -64,27 +64,26 @@ namespace nc {
 
     using namespace ::ncutil;
 
-    class JWidgetBase
+    class JWidgetBase : private NCMode
     {
     public:
         JWidgetBase()
         {}
         virtual ~JWidgetBase() {}
-
     };
 
 
-    class JWindow : private NCMode,
-                    public JWidgetBase
+    class JWindow : public JWidgetBase
     {
     public:
         NCWindow * ncwin;
-        bool canDestruct;
-        explicit JWindow( NCWindow * w, bool destroyable )
-            : ncwin(w),
-              canDestruct(destroyable)
+        explicit JWindow( NCWindow * w )
+            : JWidgetBase(),
+              ncwin(w)
         {}
-        explicit JWindow() : ncwin(0),canDestruct(false)
+        explicit JWindow() :
+            JWidgetBase(),
+            ncwin(0)
         {}
         virtual ~JWindow();
         static Persistent<Function> js_ctor;
@@ -144,6 +143,8 @@ namespace nc {
         int echochar(chtype v) { return ncwin->echochar(v); }
         int addstr(std::string v) { return ncwin->addstr(v.c_str()); }
         bool is_linetouched(int v) { return ncwin->is_linetouched(v); }
+        int nodelay( bool v ) { return ncwin->nodelay(v); }
+        void timeout( int v ) { ncwin->timeout(v); }
 
         int mvwin(int v1,int v2) { return ncwin->mvwin(v1,v2); }
         int move(int v1,int v2) { return ncwin->move(v1,v2); }
@@ -166,16 +167,16 @@ namespace nc {
         int mvcur(int v1,int v2,int v3,int v4) { return ncwin->mvcur(v1,v2,v3,v4); }
 
         Handle<Value> getstring( Arguments const & );
+        Handle<Value> box( Arguments const & );
+        Handle<Value> border( Arguments const & );
     };
 
     class JPanel : public JWindow
     {
     public:
         NCPanel * ncpnl; // must be the same as this->ncwin
-        explicit JPanel( NCPanel * p ) : JWindow(p,true), ncpnl(p)
-        {
-            this->canDestruct = true;
-        }
+        explicit JPanel( NCPanel * p ) : JWindow(p), ncpnl(p)
+        {}
         virtual ~JPanel();
         void hide() { this->ncpnl->hide(); }
         void show() { this->ncpnl->show(); }
@@ -189,7 +190,7 @@ namespace nc {
     {
     public:
         NCPad * ncpad;
-        explicit JPad( NCPad * p) : JWindow(p,true), ncpad(p)
+        explicit JPad( NCPad * p) : JWindow(p), ncpad(p)
         {
         }
         virtual ~JPad();

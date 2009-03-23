@@ -316,6 +316,9 @@ namespace ncutil {
         // -------------------------------------------------------------------------
         // input
         // -------------------------------------------------------------------------
+        void timeout(int delay) { ::wtimeout( this->m_cwin, delay); }
+        int nodelay(bool b) { return ::nodelay( this->m_cwin, b); }
+
         int            getch() { return ::wgetch(m_cwin); }
         // Get a keystroke from the window.
 
@@ -661,13 +664,11 @@ namespace ncutil {
         // dmaxrow,dmaxcol with the rectangle in this window beginning at
         // sminrow,smincol.
 
-#ifdef NCURSES_MOUSE_VERSION
         // -------------------------------------------------------------------------
         // Mouse related
         // -------------------------------------------------------------------------
         bool has_mouse() const;
         // Return TRUE if terminal supports a mouse, FALSE otherwise
-#endif
 
         // -------------------------------------------------------------------------
         // traversal support

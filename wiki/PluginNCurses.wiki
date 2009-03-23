@@ -72,7 +72,7 @@ a few non-class functions:
 || `int` || `color_pair(string fg, string bg)` || Takes foreground/background color names (can insensitive) and return the equivalent curses color attributes. Color names are: black, red, green, yellow, blue, magenta, cyan, white. They can normally be OR'd together with `ncurses.A_BOLD` to get a brighter foreground color. ||
 || `int` || `color_pairnum(string fg, string bg)` || Like `color_pair()`, but returns a curses _color pair_ number, which is only very rarely useful or needed. ||
 || `int` || `KEY_F(int)` || Equivalent to the `KEY_F()` native macro. ||
-|| `int` || `KEY_CTRL(int | char)` || Returns the ASCII value of the given integer or character, bitwise anded with 0x1f, or undefined if the value is not in the inclusive range 0-127. ||
+|| `int` || `KEY_CTRL(int | char)` || Returns the ASCII value of the given integer or character (length-1 string), bitwise anded with 0x1f, or undefined if the value is not in the inclusive integer or ASCII range 0-127. ||
 || `int` || `intVal( string )` || Returns the ascii integer value of the first character in the given string ||
 || `int` || `charVal(int)` || If the given int is in the inclusive range of 0-127, it returns the ASCII character (as a string), otherwise it returns undefined. ||
 || `int` || `screenHeight()` || Height of the terminal, in text rows. Not valid until in curses mode. ||
@@ -85,6 +85,11 @@ a few non-class functions:
 || `int` || `endwin()` || Never call unless absolutely necessary - forcibly exits curses screen mode without cleaning up resources. ||
 || `int` || `echo([bool = true])` || If passed true, tells curses to echo all keypresses, otherwise keypresses are not echoed. This is off by default but should be turned on when using `NCWindow.getstr()` (or similar). ||
 || `int` || `noecho()` || Equivalent to `echo(false)`. ||
+|| `int` || `cbreak([bool = true])` || ||
+|| `int` || `nocbreak()` || Equivalent to `cbreak(false)`. ||
+|| `int` || `raw([bool = true])` || ||
+|| `int` || `noraw()` || Equivalent to `raw(false)`. ||
+|| `int` || `halfdelay(int tenths)` || ||
 
 =NCWindow Class=
 
@@ -148,6 +153,9 @@ Here we go...
 || `int` || `insch(int)` || ||
 || `int` || `insdelln(int)` || ||
 || `int` || `insstr(string)` || ||
+|| `int` || `insstrn( string, int )` || ||
+|| `int` || `mvinsstr( int,int,string )` || ||
+|| `int` || `mvinsstrn( int,int,string,int )` || ||
 || `int` || `attron(int)` || ||
 || `int` || `attroff(int)` || ||
 || `int` || `attrset(int)` || ||
@@ -172,30 +180,32 @@ Here we go...
 || `int` || `getch( int, int )` || ||
 || `int` || `addstrn( string, int )` || ||
 || `int` || `mvinch( int, int )` || ||
-|| `int` || `insstrn( string, int )` || ||
 || `int` || `mvdelch( int, int )` || ||
 || `int` || `setscrreg( int, int )` || ||
 || `int` || `touchln( int, int )` || ||
 || `int` || `redrawln( int, int )` || ||
-|| `int` || `mvinsstr( int,int,string )` || ||
 || `int` || `mvaddch( int,int,int )` || ||
 || `int` || `mvaddstr( int, int, string )` || ||
 || `int` || `mvinsch( int,int,int )` || ||
 || `int` || `mvaddstrn( int, int, string,int )` || ||
 || `int` || `mvaddstrn( int, int, string,int )` || ||
-|| `int` || `mvinsstrn( int,int,string,int )` || ||
 || `int` || `mvcur( int,int,int,int )` || Low-level cursor movement. ||
 || `void` || `captureCout([int attributes])` || Redirects the `std::cout` object to this window until the window is closed or `captureReset()` is called. If the attributes argument is set, the output from that stream is colored using those attributes. ||
 || `void` || `captureCerr()` || Same as `captureCout()`, but applies to the native `std::cerr` object. ||
 || `void` || `captureReset()` || Undoes stream capturing enabled with `captureCout()` and `captureCerr()`, revering `cout` and/or `cerr` to their previous states. ||
 || `int` || `getch()` || Waits for a keypress and returns its key code. ||
 || `string` || `getstr([int maxlen])`, `getstr(int y, int x [, int maxlen])` || Reads up to maxlen (or some arbitrarily chosen limit) characters from the window. ||
-
+|| `int` || `nodelay(bool)` || Analog to curses `nodelay()` ||
+|| `void` || `timeout(int)` || Analog to curses `wtimeout()`. ||
+|| `int` || `box([int vchar=0, int hchar=0])` || Draws a box around the window. ||
+|| `int` || `border([eight optional arguments])` || Analog to curses `wborder()`. ||
 
 TODOs:
-  * organize these by category.
-  * Implement the input-related functions (they require special handling due to (`char *`) usage).
+  * Organize the member list by category.
+  * Implement `overlay()`, `overwrite()`, and `copywin()` (needed for some PAD operations).
   * Implement `ripoffline()`.
+  * Maybe provide a standardized API for dispatching `getch()` key codes via callbacks.
+
 
 =NCPanel Class=
 
@@ -293,7 +303,7 @@ General tips include:
   * NCPad is weird. Just plain weird. It takes lots of study to get it to do what you want it to.
   * The `NCWindow.captureCout()` and `captureCerr()` methods should always be matched with `captureReset()`, or else "good luck!"
 
-==Sending debugging output to another console==
+==Send debugging output to another console==
 
 Any output to the console from non-curses methods (e.g. `print()`) may
 hose the screen state. If you want to send debugging output to a separate
@@ -305,7 +315,9 @@ code, you can then do:
 ~> v8-juice-shell myScript.js 2>/dev/pts/4 # adjust that value, of course!
 }}}
 
-and the output which is intended for `std::cerr` will then go to that console.
+and the output which is intended for `std::cerr` will then go to that console. Do not
+redirect stdout to another console, or curses will try to write to that
+console (but won't work properly)!
 
 Alternately, you can use `NCWindow.captureCerr()`, but that will only
 work if all client debugging code uses the `std::cerr` object for

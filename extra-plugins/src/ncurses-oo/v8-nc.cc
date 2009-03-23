@@ -131,7 +131,6 @@ namespace nc {
         { // default ctor - a wrapper for stdscr
             jw = new JWindow; // will call initwin() if needed
             jw->ncwin = new ncutil::NCWindow(::stdscr);
-            jw->canDestruct = true;
             return jw;
         }
         else if( (1 == argc) || (2 == argc) )
@@ -154,7 +153,7 @@ namespace nc {
                 exceptionText = ex.what();
                 return 0;
             }
-            jw = new JWindow(w,false);
+            jw = new JWindow(w);
             return jw;
         }
         else if( (4 == argc) || (5 == argc) )
@@ -191,7 +190,6 @@ namespace nc {
                 return 0;
             }
             jw->ncwin = w;
-            jw->canDestruct = (par ? false : true);
             return jw;
         }
         else
@@ -274,6 +272,28 @@ namespace nc {
             TOSS("native getstr() failed!");
         }
         return String::New( &buf[0] );
+    }
+
+    Handle<Value> JWindow::box( Arguments const & argv )
+    {
+        ARGC;
+        chtype vert = (argc>0) ? JSToInt32(argv[0]) : 0;
+        chtype hor = (argc>1) ? JSToInt32(argv[1]) : 0;
+        return CastToJS( this->ncwin->box(vert,hor) );
+    }
+    Handle<Value> JWindow::border( Arguments const & argv )
+    {
+        ARGC;
+#define NEXT(N) chtype a ## N = (argc>N) ? JSToInt32(argv[N]) : 0
+        NEXT(0);
+        NEXT(1);
+        NEXT(2);
+        NEXT(3);
+        NEXT(4);
+        NEXT(5);
+        NEXT(6);
+        NEXT(7);
+        return CastToJS( this->ncwin->border(a0,a1,a2,a3,a4,a5,a6,a7) );
     }
 
 
@@ -616,6 +636,44 @@ namespace nc {
         return CastToJS( ::noecho() );
     }
 
+    JS_WRAPPER(nc_raw)
+    {
+        ARGC;
+        if( (0 == argc) || argv[0]->BooleanValue() )
+        {
+            return CastToJS( ::raw() );
+        }
+        else
+        {
+            return CastToJS( ::noraw() );
+        }
+    }
+    JS_WRAPPER(nc_noraw)
+    {
+        return CastToJS( ::noraw() );
+    }
+    JS_WRAPPER(nc_cbreak)
+    {
+        ARGC;
+        if( (0 == argc) || argv[0]->BooleanValue() )
+        {
+            return CastToJS( ::cbreak() );
+        }
+        else
+        {
+            return CastToJS( ::nocbreak() );
+        }
+    }
+    JS_WRAPPER(nc_nocbreak)
+    {
+        return CastToJS( ::nocbreak() );
+    }
+
+    JS_WRAPPER(nc_halfdelay)
+    {
+        ARGC; ASSERTARGS((argc==1));
+        return CastToJS( ::halfdelay( JSToInt32(argv[0]) ) );
+    }
 
     static Handle<Value> SetupNCurses( Handle<Object> gl )
     {
@@ -641,6 +699,11 @@ namespace nc {
         SETF("napms",nc_napms);
         SETF("echo",nc_echo);
         SETF("noecho",nc_noecho);
+        SETF("raw",nc_raw);
+        SETF("no",nc_noraw);
+        SETF("cbreak",nc_cbreak);
+        SETF("nocbreak",nc_nocbreak);
+        SETF("halfdelay",nc_halfdelay);
 #undef SETF
 
 #define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
@@ -845,7 +908,8 @@ namespace nc {
                 .BindMemFunc< int, chtype, &JWindow::echochar >( "echochar" )
                 .BindMemFunc< int, std::string, &JWindow::addstr >( "addstr" )
                 .BindMemFunc< bool, int, &JWindow::is_linetouched >( "is_linetouched" )
-
+                .BindMemFunc< void, int, &JWindow::timeout > ("timeout")
+                .BindMemFunc< int, bool, &JWindow::nodelay > ("nodelay")
                 // Binary funcs:
                 .BindMemFunc< int, int, int, &JWindow::mvwin >("mvwin")
                 .BindMemFunc< int, int, int, &JWindow::move >("move")
@@ -870,7 +934,9 @@ namespace nc {
                 .BindMemFunc< int, int,int,int,int, &JWindow::mvcur>( "mvcur" )
 
                 // N-aray funcs:
-                .BindMemFunc< &JWindow::getstring > ("getstr" )
+                .BindMemFunc< &JWindow::getstring >("getstr" )
+                .BindMemFunc< &JWindow::box >("box")
+                .BindMemFunc< &JWindow::border >("border")
 
                 // reminder: Set() returns a JSClassCreator, not a ClassBinder<>:
                 .Set("captureCout", nc_capture_cout)
