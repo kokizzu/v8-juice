@@ -293,6 +293,7 @@ namespace nc {
         NEXT(5);
         NEXT(6);
         NEXT(7);
+#undef NEXT
         return CastToJS( this->ncwin->border(a0,a1,a2,a3,a4,a5,a6,a7) );
     }
 

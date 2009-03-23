@@ -34,23 +34,53 @@ http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/ncurses-oo
 
 ==History==
 
-This plugin is derived from an old ncurses C++ wrapper which i forked out of the ncurses 5.4
-source tree in March of 2005. At one point is was also the basis for !JavaScript/ncurses binding
-for !SpiderMonkey.
+Curses has been around since the 80's and is the _de facto_ library
+for implementing text-base user interfaces, and presumably gets its
+name from the fact that one spends half his time cursing while using
+it. _Ncurses_ is the _de facto_ open source implementation of curses
+(curses is actually a standard), and is available on almost every
+platform out there.
 
-The first version of this plugin modelled the C-style API. It got broken in some major refactoring
-of v8-juice, and rather than fix it i decided an OO wrapper would be more useful, and revived
-the ancient code.
+This plugin is derived from an old ncurses C++ wrapper which i forked
+out of the ncurses 5.4 source tree in March of 2005. At one point is
+was also the basis for !JavaScript/ncurses binding for !SpiderMonkey.
 
+The first version of this plugin modelled the C-style API. It got
+broken in some major refactoring of v8-juice, and rather than fix it i
+decided an OO wrapper would be more useful, and revived the ancient
+code.
+
+For new and old curses programmers alike,
+[http://www.c-for-dummies.com/ncurses/ Dan Gookin's Programmer's Guide to nCurses]
+is an excellent resource on how to work with the library. Printed in
+2007, it is the only curses book i'm aware of which was penned in the
+21st century.
 
 =API Overview=
 
 This plugin installs the following items:
 
-  * The `ncurses` object holds all classes, "global" functions, and symbolic constants.
+  * The `ncurses` object holds all classes, "global" functions, and shared symbolic constants (e.g. the curses macros like `A_BOLD`).
   * The `NCWindow` approximates an ncurses `WINDOW` handle.
   * The `NCPanel` approximates an ncurses `PANEL` handle.
   * The `NCPad` somewhat approximates an ncurses `PAD` handle.
+
+==Naming Conventions==
+
+Curses was developed back in a time when it was cool to use the shortest, most ambiguous
+or cryptic (depending on the day of the weak) names possible. For example, `refresh()`
+by itself could mean anything, and `scrl()` and `scroll()` are both scrolling related,
+but one was to look up the difference in the docs every time they're used.
+
+In order to make this API easier to use... for the vast majority of
+the cases we've kept the cryptic names! Why? Because it makes it
+simpler to go look up their meanings in the curses man pages. If we
+renamed them, curses gurus would be confused by the new names and
+curses newbies wouldn't be able to find the man pages. The function
+which don't keep the native names normally derive their names from the
+underlying C++ wrapper (which was originally developed by someone else). An
+example which comes to mind is `NCWindow.scroll()`, which behaves like
+`wscrl()`, and not like `scroll()`.
 
 ==Error Reporting==
 
@@ -72,7 +102,7 @@ a few non-class functions:
 || `int` || `color_pair(string fg, string bg)` || Takes foreground/background color names (can insensitive) and return the equivalent curses color attributes. Color names are: black, red, green, yellow, blue, magenta, cyan, white. They can normally be OR'd together with `ncurses.A_BOLD` to get a brighter foreground color. ||
 || `int` || `color_pairnum(string fg, string bg)` || Like `color_pair()`, but returns a curses _color pair_ number, which is only very rarely useful or needed. ||
 || `int` || `KEY_F(int)` || Equivalent to the `KEY_F()` native macro. ||
-|| `int` || `KEY_CTRL(int | char)` || Returns the ASCII value of the given integer or character (length-1 string), bitwise anded with 0x1f, or undefined if the value is not in the inclusive integer or ASCII range 0-127. ||
+|| `int` || `KEY_CTRL(int | char)` || Returns the ASCII value of the given integer or character (length-1 string), bitwise ORed with 0x1f, or undefined if the value is not in the inclusive integer or ASCII range 0-127. ||
 || `int` || `intVal( string )` || Returns the ascii integer value of the first character in the given string ||
 || `int` || `charVal(int)` || If the given int is in the inclusive range of 0-127, it returns the ASCII character (as a string), otherwise it returns undefined. ||
 || `int` || `screenHeight()` || Height of the terminal, in text rows. Not valid until in curses mode. ||
@@ -82,7 +112,7 @@ a few non-class functions:
 || `int` || `getch()` || Similar, but not identical, to `NCWindow.getch()`. In theory they are indentical, but in practice the latter has no refresh side-effects, whereas the former sometimes does. ||
 || `int` || `curs_set(int)` || Sets the cursor to invisible, half-visible, or fully visible, depending on whether the argument is 0, 1, or 2, respectively ||
 || `int` || `napms(int )` || Sleeps for the given number of milliseconds. ||
-|| `int` || `endwin()` || Never call unless absolutely necessary - forcibly exits curses screen mode without cleaning up resources. ||
+|| `int` || `endwin()` || Never call unless absolutely necessary - forcibly exits curses screen mode without cleaning up resources. If all windows are closed properly, curses will be shut down automatically when the last window goes away. ||
 || `int` || `echo([bool = true])` || If passed true, tells curses to echo all keypresses, otherwise keypresses are not echoed. This is off by default but should be turned on when using `NCWindow.getstr()` (or similar). ||
 || `int` || `noecho()` || Equivalent to `echo(false)`. ||
 || `int` || `cbreak([bool = true])` || ||
@@ -99,13 +129,13 @@ windows.
 
 ==Member Function List==
 
-Of this functions are not documented here. They mostly map 1-to-1 with
+Most of the functions are not documented here. They mostly map 1-to-1 with
 ncurses functions of the same (or very similar) names, and are
 described in great detail in the ncurses man pages. That also explains
 why their names are so cryptic and do not follow common !JavaScript
 naming conventions. The exceptions to the documentation rule are
 functions which are unique to this API or, for reasons of argument
-passing conventions, function differently than in the C API.
+passing conventions, work differently than in the C API.
 
 Some functions which are overloaded in the native C++ API instead
 have several variants with slightly different names (all conforming
