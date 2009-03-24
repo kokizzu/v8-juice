@@ -248,7 +248,7 @@ And a new property:
 
 || `IODevice` || `ioDevice` || This points to the subdevice's pointed-to device. ||
 
-=Embedded Filesystem Access=
+=Embedded/Virtual Filesystems via whio=
 
 This plugin comes with an optional component, [PluginWhefs whefs], which provides a virtual/embedded filesystem for !JavaScript applications. The default build process includes whefs, but it can be disabled for platforms where it won't compile (it is untested on anything other than Unix/Posix platforms). whefs is described [PluginWhefs on its own page].
 
