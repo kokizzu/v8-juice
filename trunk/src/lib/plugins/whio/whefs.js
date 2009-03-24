@@ -89,7 +89,7 @@ function tryMemory()
 
     var fn = "memory.whefs";
     fs.dumpToFile(fn);
-    print(fs,'was dump to file',fn);
+    print(fs,'was dumped to file',fn);
     fs.close();
 }
 
