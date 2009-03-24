@@ -37,6 +37,7 @@
 #include <string>
 #include <stdexcept>
 #include <map>
+#include <vector>
 #include <sstream>
 namespace v8 {
 namespace juice {
@@ -47,21 +48,36 @@ namespace juice {
 	/**
 	   An internal helper type for only use by WeakJSClassCreator.
 
-	   Actual must be WeakJSClassCreator::WrappedType.
+	   WrappedT must be WeakJSClassCreator::WrappedType.
 	*/
-	template <typename Actual>
-	struct WrapperTypeChecker
+	template <typename WrappedT>
+	struct WrapperMapper
 	{
-	    typedef Actual WrappedType;
-	    typedef std::pair<WrappedType *,Persistent<Object> > ObjBindT;
+	    typedef WrappedT WrappedType;
+	    
+            typedef std::pair<WrappedType *,Persistent<Object> > ObjBindT;
 	    typedef std::map<void const *,ObjBindT > OneOfUsT;
 	    static OneOfUsT & Map()
 	    {
 		static OneOfUsT bob;
 		return bob;
 	    }
-	};
-
+            
+            static WrappedType * GetNative( void const * key )
+            {
+                typename OneOfUsT::iterator it = Map().find(key);
+                return (Map().end() == it)
+                      ? 0
+                      : (*it).second.first;
+            }
+            
+            static Handle<Object> GetJSObject( void const * key )
+	    {
+                typename OneOfUsT::iterator it = Map().find(key);
+                if( Map().end() == it ) return Handle<Object>();
+                else return (*it).second.second;
+	    }
+        };
     }
 #endif // DOXYGEN
     /**
@@ -111,8 +127,8 @@ namespace juice {
 
 	   If the client is using any "supplemental" garbage collection
 	   (e.g. the v8::juice::cleanup API) then they should
-	   register the object in this function, and use Dtor()
-	   as the registered destruction callback.
+	   register the object in this function and deregister
+           it in Dtor().
 	*/
 	static WrappedType * Ctor( Arguments const &  /*argv*/,
 				   std::string & /*exceptionText*/);
@@ -141,7 +157,7 @@ namespace juice {
 	   a legal JS function name.
 
 	   Design note: this is a static function instead of a static
-	   string because this requires much less code from
+	   string member because this requires much less code from
 	   implementors (whereas a string string requires out-of-class
 	   initialization).
 	*/
@@ -339,6 +355,35 @@ namespace juice {
 	/** The number of internal fields. */
 	FieldCount = NativeFieldIndex + 1
 	};
+        
+        typedef WrappedType * (*SubclassGetNative)( void const * );
+        typedef std::vector<SubclassGetNative> SubclassGetNatives;
+        /** Internal helper to do subtype lookups for GetSelf(). */
+        static SubclassGetNatives & subclassGettersN()
+        {
+            static SubclassGetNatives bob;
+            return bob;
+        }
+        /** Internal helper to do subtype lookups for GetSelf(). */
+        template <typename SubT>
+        static WrappedType * GetInheritedNative( void const * key )
+        {
+            return Detail::WrapperMapper<SubT>::GetNative( key );
+        }
+        typedef Handle<Object> (*SubclassGetJSObject)( void const * );
+        typedef std::vector<SubclassGetJSObject> SubclassGetJSObjects;
+        /** Internal helper to do subtype lookups for GetJSObject(). */
+        static SubclassGetJSObjects & subclassGettersJ()
+        {
+            static SubclassGetJSObjects bob;
+            return bob;
+        }
+        /** Internal helper to do subtype lookups for GetJSObject(). */
+        template <typename SubT>
+        static Handle<Object> GetInheritedJSObject( void const * key )
+        {
+            return Detail::WrapperMapper<SubT>::GetJSObject( key );
+        }
     public:
 
 	/**
@@ -377,6 +422,64 @@ namespace juice {
 	}
         /** Does nothing. Is virtual to satisfy inheritance rules and please my compiler. */
 	virtual ~WeakJSClassCreator(){}
+        
+        /**
+           Registers SubT as a subtype of WrappedType, but ONLY for
+           purposes of GetSelf() and GetJSObject() lookups. When
+           GetSelf() or GetJSObject() is called, if they can find no
+           native object in the WrappedType pool they will check each
+           type registered subtype here, in the order they were
+           registered.
+
+           Why? Because this allows us to properly get at the 'this'
+           pointer from inherited member functions in wrapped classes,
+           and do to do transparently using CastFromJS<WrappedType>().
+         */
+        template <typename SubT>
+        static void RegisterSelfSubclass()
+        {              
+            subclassGettersN().push_back( GetInheritedNative<SubT> );
+            subclassGettersJ().push_back( GetInheritedJSObject<SubT> );
+        }
+        
+
+        /**
+           Similar to the inherited non-template member of the same
+           name but also calls
+           WeakJSClassCreator<ParentT>::RegisterSelfSubclass<WrappedType>().
+
+           ParentT must meat these requirements:
+
+           - It must be a virtual base type of WrappedType.
+
+           - It must also be wrapped using WeakJSClassCreator.
+
+           - The WeakJSClassCreatorOps specializations for ParentT and
+           WrappedType must have the same values for
+           ExtraInternalFieldCount. This is a bug without a current
+           workaround, and this function throws a native exception if
+           that is not the case.
+
+           If those are met, then calls to GetSelf(), GetJSObject(),
+           and GetNative() using type WeakJSClassCreator<ParentT>
+           might actually return an object of WrappedType instead.
+
+           See RegisterSelfSubclass() for more information.
+        */
+        template <typename ParentT>
+        WeakJSClassCreator & Inherit( WeakJSClassCreator<ParentT> & parent )
+        {
+            typedef WeakJSClassCreator<ParentT> ParT;
+            typedef WeakJSClassCreatorOps<ParentT> ParOpsT;
+            if( static_cast<int>(ParOpsT::ExtraInternalFieldCount)
+                != static_cast<int>(ClassOpsType::ExtraInternalFieldCount) )
+            {
+                throw std::runtime_error("WeakJSClassCreatorOps<ParentT>::ExtraInternalFieldCount != WeakJSClassCreatorOps<WrappedT>::ExtraInternalFieldCount");
+            }
+            JSClassCreator::Inherit( parent );
+            ParT::template RegisterSelfSubclass< WrappedType >();
+            return *this;
+        }
 
 	/**
 	   Returns the bound native for the given handle. The handle
@@ -388,21 +491,35 @@ namespace juice {
 	   Results are technically undefined if the given handle has
 	   not created by this class, but this function makes every
 	   effort to ensure that it doesn't do anything too stupid.
+
+           If checkSubtypes is true (the default) and no WrappedType
+           object can be found for h, then WeakJSClassCreator<X> is
+           checked, where X is a subtype of WrappedType registered via
+           RegisterSelfSubclass().  All such registered types are
+           checked (in the order they are registered) until a match is
+           found, and 0 is returned if no match is found.
 	*/
-	static WrappedType * GetSelf( Handle<Object> h )
+	static WrappedType * GetSelf( Handle<Object> h, bool checkSubtypes = true )
 	{
 	    if( h.IsEmpty() || (h->InternalFieldCount() != (FieldCount)) ) return 0;
+            /// ^^^^ reminder: that FieldCount check won't work with inheritance if subtypes have different counts :(
+            /// we might have to start reserving slot 0 for ourselves, as opposed to the last slot. Hmmm. Ugly.
 	    Local<Value> lv( h->GetInternalField(NativeFieldIndex) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
 	    Local<External> ex( External::Cast(*lv) );
-	    TypeCheckIter it = typeCheck().find( ex->Value() );
-	    return ( typeCheck().end() == it )
-		? 0
-		: (*it).second.first;
+            WrappedType * obj = TypeCheck::GetNative( ex->Value() );
+            if( obj || !checkSubtypes ) return obj;
+            typename SubclassGetNatives::iterator it = subclassGettersN().begin();
+            typename SubclassGetNatives::iterator et = subclassGettersN().end();
+            for( ; (!obj) && (et != it); ++it )
+            {
+                obj = (*it)( ex->Value() );
+            }
+            return obj;
 	}
 
-#if 1
-	/** Reimplemented to DO NOTHING, as the number is defined
+	/**
+            Reimplemented to throw a native exception, as the number is defined
 	    by the WeakJSClassCreatorOps specialization. When changing
 	    it here, we lose the ability to know where the object
 	    is in the list (since we store it at the end).
@@ -412,9 +529,9 @@ namespace juice {
 	    //JSClassCreator::SetInternalFieldCount(n+1);
 	    // gcc 4.3.2 won't allow this syntax: :-?
  	    //this->JSClassCreator::SetInteralFieldCount( n + 1 );
-	    return *this;
+            throw ::std::runtime_error("SetInternalFieldCount() is not legal for WeakJSClassCreators because the field count is set via a WeakJSClassCreatorOps<> specialization.");
+	    return *this; // avoid warning from some compilers, even though we throw
  	}
-#endif
 
 	/**
 	   Like GetSelf(), but takes a Handle to a value. This can be
@@ -423,14 +540,18 @@ namespace juice {
 	   certain WrappedType member function is a different
 	   WrappedType object).
 
-	   This can be used in place of GetSelf(), but it does more
+	   This routine is more generic than GetSelf() and can always
+	   be used in place of GetSelf(), but it does slightly more
 	   work than GetSelf() has to.
+
+           See GetSelf() for the explanation of the checkSubtypes
+           argument.
 	*/
-        static WrappedType * GetNative( Handle<Value> h )
+        static WrappedType * GetNative( Handle<Value> h, bool checkSubtypes = true )
         {
             if( h.IsEmpty() || ! h->IsObject() ) return 0;
             Local<Object> obj( Object::Cast(*h) );
-	    return GetSelf( obj );
+	    return GetSelf( obj, checkSubtypes );
         }
 
 	/**
@@ -455,12 +576,17 @@ namespace juice {
 
 	   Returns true if it passes a native object to the
 	   destructor, else false.
+
+           ACHTUNG: this function verifies that jo is-a WrappedType
+           object by calling GetSelf(jo,false). This routine must, so
+           that it can call the proper destructor, ensure that jo is
+           exactly WrappedType, as opposed to a derived type.
 	*/
 	static bool DestroyObject( Handle<Object> jo )
 	{
-	    WrappedType * t = GetSelf(jo); // sanity check
+	    WrappedType * t = GetSelf(jo,false); // sanity check
 	    if( ! t ) return false;
-	    Persistent<Object> p = Persistent<Object>::New( jo ); // is this correct? Seems to work.
+	    Persistent<Object> p( Persistent<Object>::New( jo ) );
 	    weak_callback( p, t );
 	    return true;
 	}
@@ -482,12 +608,21 @@ namespace juice {
 	   If obj was created via these bindings then this function
 	   returns obj's JS object, otherwise it returns a
 	   default-constructed (empty) handle.
+
+           See GetSelf() for an explanation of the checkSubclasses
+           parameter.
 	*/
-	static Handle<Object> GetJSObject( void const * obj )
+	static Handle<Object> GetJSObject( void const * obj, bool checkSubclasses = true )
 	{
-	    TypeCheckIter it = typeCheck().find(obj);
-	    if( typeCheck().end() == it ) return Handle<Object>();
-	    else return (*it).second.second;
+            Handle<Object> jo = TypeCheck::GetJSObject(obj);
+            if( !checkSubclasses || !jo.IsEmpty() ) return jo;
+            typename SubclassGetJSObjects::iterator it = subclassGettersJ().begin();
+            typename SubclassGetJSObjects::iterator et = subclassGettersJ().end();
+            for( ; (et != it) && jo.IsEmpty(); ++it )
+            {
+                jo = (*it)( obj );
+            }
+            return jo;
 	}
 
         // Without this, gcc isn't seeing the two-arg overload!
@@ -514,7 +649,7 @@ namespace juice {
 //         }
 
     private:
-	typedef Detail::WrapperTypeChecker<WrappedType> TypeCheck;
+	typedef Detail::WrapperMapper<WrappedType> TypeCheck;
 	typedef typename TypeCheck::ObjBindT ObjBindT;
 	typedef typename TypeCheck::OneOfUsT OneOfUsT;
 	typedef typename OneOfUsT::iterator TypeCheckIter;
@@ -643,3 +778,4 @@ namespace juice {
 }} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_WEAKCLASSGENERATOR_H_INCLUDED */
+
