@@ -247,11 +247,11 @@ Here we go...
 || `int` || `overlay(NCWindow)` || See `man overlay`. ||
 || `int` || `overwrite(NCWindow)` || See `man overwrite`. ||
 || `int` || `copywin(NCWindow,int,int,int,int,int,int,bool)` || See `man copywin`. ||
+
 TODOs:
   * Organize the member list by category.
-  * Implement `overlay()`, `overwrite()`, and `copywin()` (needed for some PAD operations).
-  * Implement `ripoffline()` (just because it's interesting).
-  * Maybe provide a standardized API for dispatching `getch()` key codes via callbacks.
+  * Implement `ripoffline()`
+  * Maybe provide a standardized API for dispatching `getch()` key codes via JS callbacks.
 
 
 =NCPanel Class=
