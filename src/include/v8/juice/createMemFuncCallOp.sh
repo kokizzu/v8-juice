@@ -250,7 +250,7 @@ template < typename RV, ${aTDecl}, RV ${funcSig} CONSTNESS >
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::${callop}< CONSTNESS WrappedType, RV, ${aTParam}, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 EOF

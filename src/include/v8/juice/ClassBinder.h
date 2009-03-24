@@ -11,7 +11,7 @@
 #include <v8.h>
 #include <v8/juice/convert.h>
 #include <v8/juice/WeakJSClassCreator.h>
-
+#include <stdexcept>
 namespace v8 {
 namespace juice {
 
@@ -219,30 +219,30 @@ namespace juice {
 	   must be an existing MemFuncCallOpN type, where N is an
 	   integer value.
 	*/
-	template <typename CallOpType,typename RT>
+	template <typename CallOpType>
 	struct MemFuncCallOp
 	{
- 	    typedef typename CallOpType::Type Type;
-	    typedef WeakJSClassCreator<Type> Wrapper;
+            /**
+               Tries to forward argv on via
+               CallOpType::CallOnWeakSelf().  If that function throws
+               or propagates a native exception, this routine will
+               catch it and convert it into a JS exception.
+            */
 	    static Handle<Value> Call( Arguments const & argv )
 	    {
-		return CallOpType::CallOnWeakSelf( argv );
-	    }
-	};
-
-	/**
-	   Helper used by ClassBinder::AddMemberFunc(). CallOpType
-	   must be an existing MemFuncCallOpN type, where N is an
-	   integer value.
-	*/
-	template <typename CallOpType>
-	struct MemFuncCallOp<CallOpType,void>
-	{
-	    typedef typename CallOpType::Type Type;
-	    typedef WeakJSClassCreator<Type> Wrapper;
-	    static Handle<Value> Call( Arguments const & argv )
-	    {
-		return CallOpType::CallOnWeakSelf( argv );
+                try
+                {
+                    return CallOpType::CallOnWeakSelf( argv );
+                }
+                catch( std::exception const & ex )
+                {
+                    return ThrowException(String::New(ex.what()));
+                }
+                catch( ... )
+                {
+                    return ThrowException(String::New("Native function threw an unknown native exception type!"));
+                }
+                return Undefined(); // cannot be reached.
 	    }
 	};
     }
@@ -255,7 +255,7 @@ namespace juice {
     void WeakBindMemFunc( WeakJSClassCreator<WrappedType> & tgt, char const * name )
     {
 	typedef Detail::MemFuncCallOp0< WrappedType, RV, Func > Caller;
-	tgt.Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
+	tgt.Set(name, Detail::MemFuncCallOp<Caller>::Call );
     }
     
     /**
@@ -265,7 +265,7 @@ namespace juice {
     void WeakBindMemFunc( WeakJSClassCreator<WrappedType> & tgt, char const * name )
     {
 	typedef Detail::MemFuncCallOp0< const typename WeakJSClassCreator<WrappedType>::WrappedType, RV, Func > Caller;
-	tgt.Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
+	tgt.Set(name, Detail::MemFuncCallOp<Caller>::Call );
     }
 
     template <typename NativeType, typename RV>
@@ -510,7 +510,7 @@ namespace juice {
 	ClassBinder & BindMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp0< WrappedType, RV, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
+	    this->Set(name, Detail::MemFuncCallOp<Caller>::Call );
 	    return *this;
 	}
 
@@ -522,7 +522,7 @@ namespace juice {
 	ClassBinder & BindMemFunc( char const * name )
 	{
 	    typedef Detail::MemFuncCallOp0< const WrappedType, RV, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp<Caller,RV>::Call );
+	    this->Set(name, Detail::MemFuncCallOp<Caller>::Call );
 	    return *this;
 	}
 #include "ClassBinder-BindMemFunc.h" // generated code
