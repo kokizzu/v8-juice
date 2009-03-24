@@ -311,35 +311,6 @@ namespace nc {
         }
     }
 
-    void window_dtor( JWindow * w )
-    {
-        //CERR << "Destroying wrapped NCWindow  object @"<<obj<<'\n';
-#if 0
-        NCWindow * n = 0;
-        for( NCWindow * p = w->ncwin->child(); p; p = n )
-        {
-            n = p->sibling();
-            if( w->ncwin == p )
-            {
-                continue;
-            }
-            JWindow * b = bind::GetBoundNative<JWindow>( p );
-            CERR << "Cleaning up child window @"<<p<<'/'<<b<<'\n';
-            //if( b ) JWindow_remove_stream_redirects(b);
-            WindowBinder::DestroyObject( CastToJS(b) );
-        }
-#endif
-        delete w;
-    }
-    void panel_dtor( JPanel * w )
-    {
-        //CERR << "Destroying wrapped NCPanel object @"<<w<<'\n';
-        window_dtor(w);
-    }
-    void pad_dtor( JPad * w )
-    {
-        window_dtor(w);
-    }
 
     JPanel * panel_ctor( Arguments const & argv, std::string & exceptionText )
     {
@@ -924,6 +895,8 @@ V8 version 1.1.1.4
                 .BindMemFunc< bool, int, &JWindow::is_linetouched >( "is_linetouched" )
                 .BindMemFunc< void, int, &JWindow::timeout > ("timeout")
                 .BindMemFunc< int, bool, &JWindow::nodelay > ("nodelay")
+                .BindMemFunc< int, JWindow *, &JWindow::overlay > ("overlay")
+                .BindMemFunc< int, JWindow *, &JWindow::overwrite > ("overwrite")
 
                 // Binary funcs:
                 .BindMemFunc< int, int, int, &JWindow::mvwin >("mvwin")
@@ -948,10 +921,11 @@ V8 version 1.1.1.4
                 .BindMemFunc< int, int,int,std::string,int, &JWindow::mvinsstrn>( "mvinsstrn" )
                 .BindMemFunc< int, int,int,int,int, &JWindow::mvcur>( "mvcur" )
 
-                // N-aray funcs:
+                // N-aray and 5+-ary funcs:
                 .BindMemFunc< &JWindow::getstring >("getstr" )
                 .BindMemFunc< &JWindow::box >("box")
                 .BindMemFunc< &JWindow::border >("border")
+                .BindMemFunc< int, JWindow *, int, int, int, int, int, int, bool, &JWindow::copywin > ("copywin")
 
                 // reminder: Set() returns a JSClassCreator, not a ClassBinder<>:
                 .Set("captureCout", nc_capture_cout)

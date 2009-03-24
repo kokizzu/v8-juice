@@ -167,6 +167,34 @@ namespace nc {
         int mvinsstrn(int v1,int v2,std::string v3,int v4) { return ncwin->insstr(v1,v2,v3.c_str(),v4); }
         int mvcur(int v1,int v2,int v3,int v4) { return ncwin->mvcur(v1,v2,v3,v4); }
 
+        int overlay( JWindow * dest ) const
+        {
+            return (dest && dest->ncwin && this->ncwin)
+                ? ncwin->overlay( *dest->ncwin )
+                : ERR;
+        }
+
+        int overwrite( JWindow * dest ) const
+        {
+            return (dest && dest->ncwin && this->ncwin)
+                ? ncwin->overwrite( *dest->ncwin )
+                : ERR;
+        }
+
+        int copywin(JWindow * dest,
+                    int sminrow, int smincol,
+                    int dminrow, int dmincol,
+                    int dmaxrow, int dmaxcol, bool overlay ) const
+        {
+            return (dest && dest->ncwin && this->ncwin)
+                ? ncwin->copywin( *dest->ncwin,
+                                  sminrow, smincol,
+                                  dminrow, dmincol,
+                                  dmaxrow, dmaxcol, overlay )
+                : ERR;
+        }
+            
+
         Handle<Value> getstring( Arguments const & );
         Handle<Value> box( Arguments const & );
         Handle<Value> border( Arguments const & );
@@ -228,8 +256,7 @@ namespace nc {
     */
     template <typename WrappedT,
               char const * &className,
-              WrappedT * (*ctor_proxy)( Arguments const &, std::string & exceptionText ),
-              void (*dtor_proxy)( WrappedT * )
+              WrappedT * (*ctor_proxy)( Arguments const &, std::string & exceptionText )
         >
     struct BaseWeakOps
     {
@@ -241,7 +268,6 @@ namespace nc {
             WrappedType * x = ctor_proxy(argv,exceptionText);
             if( x )
             {
-                //bind::BindNative<JWindow>( x->ncwin, x ); // to assist in window_dtor()
                 cleanup::AddToCleanup( x, cleanup_callback );
                 //CERR << "Constructed "<<ClassName()<<" object @"<<x<<'\n';
             }
@@ -253,8 +279,7 @@ namespace nc {
             //CERR << "Cleaning up "<<ClassName()<<" object @"<<obj<<'\n';
             //NCWindow * nw = obj->ncwin;
             cleanup::RemoveFromCleanup( obj );
-            dtor_proxy( obj );
-            //bind::UnbindNative<JWindow>( nw, obj ); // must come after dtor_proxy()
+            delete obj;
         }
     private:
         static void cleanup_callback( void * obj )
@@ -274,11 +299,8 @@ namespace nc {
     };
 
     JWindow * window_ctor( Arguments const & argv, std::string & exceptionText );
-    void window_dtor( JWindow * w );
     JPanel * panel_ctor( Arguments const & argv, std::string & exceptionText );
-    void panel_dtor( JPanel * w );
     JPad * pad_ctor( Arguments const & argv, std::string & exceptionText );
-    void pad_dtor( JPad * w );
 
 } /* namespaces */
 
@@ -286,8 +308,7 @@ namespace nc {
     struct WeakJSClassCreatorOps< nc::JWindow >
         : nc::BaseWeakOps< nc::JWindow,
                            nc::strings::classWindow,
-                           nc::window_ctor,
-                           nc::window_dtor
+                           nc::window_ctor
                            >
     {
     };
@@ -296,8 +317,7 @@ namespace nc {
     struct WeakJSClassCreatorOps< nc::JPanel >
         : nc::BaseWeakOps< nc::JPanel,
                            nc::strings::classPanel,
-                           nc::panel_ctor,
-                           nc::panel_dtor
+                           nc::panel_ctor
                            >
     {
     };
@@ -306,8 +326,7 @@ namespace nc {
     struct WeakJSClassCreatorOps< nc::JPad >
         : nc::BaseWeakOps< nc::JPad,
                            nc::strings::classPad,
-                           nc::pad_ctor,
-                           nc::pad_dtor
+                           nc::pad_ctor
                            >
     {
     };

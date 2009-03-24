@@ -244,7 +244,9 @@ Here we go...
 || `void` || `timeout(int)` || Analog to curses `wtimeout()`. ||
 || `int` || `box([int vchar=0, int hchar=0])` || Draws a box around the window. ||
 || `int` || `border([eight optional arguments])` || Analog to curses `wborder()`. ||
-
+|| `int` || `overlay(NCWindow)` || See `man overlay`. ||
+|| `int` || `overwrite(NCWindow)` || See `man overwrite`. ||
+|| `int` || `copywin(NCWindow,int,int,int,int,int,int,bool)` || See `man copywin`. ||
 TODOs:
   * Organize the member list by category.
   * Implement `overlay()`, `overwrite()`, and `copywin()` (needed for some PAD operations).
