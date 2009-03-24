@@ -13,8 +13,16 @@ be useful in some cross-plugin contexts.
 #include <v8/juice/cleanup.h>
 //#include <v8/juice/JSClassCreator.h>
 #include <v8/juice/WeakJSClassCreator.h>
-#include "whio_amalgamation.h" // this is the i/o lib we're uses as a basis.
 
+#if !defined(WHIO_PLUGIN_ENABLE_WHEFS)
+#define WHIO_PLUGIN_ENABLE_WHEFS 0
+#endif
+
+#if WHIO_PLUGIN_ENABLE_WHEFS
+#  include "whefs_amalgamation.h" // this includes libwhio and libwhefs
+#else
+#  include "whio_amalgamation.h" // this is the i/o lib we're uses as a basis.
+#endif
 namespace v8 { namespace juice { namespace whio {
 
     /**

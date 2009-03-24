@@ -649,10 +649,6 @@ namespace v8 { namespace juice { namespace whio {
 	return CastToJS( os.str() );
     }
 
-
-#undef EFSH
-#undef EFSHT
-#undef EFSTHIS
 #undef DEVHT
 #undef DEVHV
 #undef DEVH
