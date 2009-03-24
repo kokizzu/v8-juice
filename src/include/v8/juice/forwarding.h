@@ -59,17 +59,76 @@ namespace v8 { namespace juice { namespace convert {
     }
 #endif // !DOXYGEN
 
-    /**
-       Identical to FwdToFunc1() but expects a function taking 0 arguments.
-    */
-    template <typename ReturnT, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc0( Func func, ::v8::Arguments const & argv )
-    {
-	if( argv.Length() != 0 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 0 arguments!"));
-	return CastToJS( func() );
-    }
+
 
     /**
+       Base instantiation of a helper to forward v8::Arguments
+       to arbitrary functors. Must be specialized to be useful.
+
+       Arity is the minimum number of arguments the functor expects.
+       RV is the return type. A partial specializations void RV=void
+       is installed to support functions which return void.
+    */
+    template <int Arity_,typename RV>
+    struct FunctorForwarder
+    {
+        enum { Arity = Arity_ };
+    };
+
+    /** Specialization for functors taking no arguments. */
+    template <typename RV>
+    struct FunctorForwarder<0,RV>
+    {
+        enum { Arity = 0 };
+        template <typename Func>
+        static Handle<Value> Call( Func f )
+        {
+            try
+            {
+                return convert::CastToJS<RV>( f() );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("Native function threw an unknown native exception type!"));
+            }
+            return Undefined(); // cannot be reached.
+        }
+    };
+
+    /** Specialization for functor taking no arguments and returning void. */
+    template <>
+    struct FunctorForwarder<0,void>
+    {
+        enum { Arity = 0 };
+        template <typename Func>
+        static Handle<Value> Call( Func f )
+        {
+            try
+            {
+                f();
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("Native function threw an unknown native exception type!"));
+            }
+            return Undefined(); // cannot be reached.
+            return Undefined();
+        }
+    };
+
+
+    /**
+       This is the documentation for the whole family of FwdToFuncN()
+       functions, where N is some positive integer.
+
        Uses CastFromJS() to convert function arguments for the given
        function. The return result is then cast to JS using
        CastToJS(), and returned.
@@ -92,146 +151,23 @@ namespace v8 { namespace juice { namespace convert {
        template-based indirection. Maybe that will happen someday,
        maybe not.
     */
-    template <typename ReturnT, typename A1, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc1( Func func, ::v8::Arguments const & argv )
+    template <typename ReturnT, typename Func>
+    ::v8::Handle< ::v8::Value > FwdToFunc0( Func func, ::v8::Arguments const & argv )
     {
-	if( argv.Length() != 1 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 1 argument!"));
-	return CastToJS( func( CastFromJS<A1>( argv[0] ) ) );
+        return FunctorForwarder<0,ReturnT>::Call( func, argv );
     }
 
     /**
-       Identical to FwdToFunc1(), but for functions taking 2 arguments.
+       Functionally identical to FwdToFunc0(), but the return type can
+       be deduced by the compiler.
     */
-    template <typename ReturnT, typename A1, typename A2, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc2( Func func, ::v8::Arguments const & argv )
+    template <typename ReturnT>
+    ::v8::Handle< ::v8::Value > FwdToFunc( ReturnT (*func)(), ::v8::Arguments const & argv )
     {
-	if( argv.Length() != 2 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 2 arguments!"));
-	return CastToJS( func(
-			      CastFromJS<A1>( argv[0] ),
-			      CastFromJS<A2>( argv[1] ) ) );
+        return FunctorForwarder<0,ReturnT>::Call( func );
     }
 
-    /**
-       Identical to FwdToFunc1(), but for functions taking 3 arguments.
-    */
-    template <typename ReturnT, typename A1, typename A2, typename A3, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc3( Func func, ::v8::Arguments const & argv )
-    {
-	if( argv.Length() != 3 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 3 arguments!"));
-	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( argv[0] ),
-			      CastFromJS<A2>( argv[1] ),
-			      CastFromJS<A3>( argv[2] )
-			      ) );
-    }
-
-    /**
-       Identical to FwdToFunc1(), but for functions taking 4 arguments.
-    */
-    template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc4( Func func, ::v8::Arguments const & argv )
-    {
-	if( argv.Length() != 4 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 4 arguments!"));
-	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( argv[0] ),
-			      CastFromJS<A2>( argv[1] ),
-			      CastFromJS<A3>( argv[2] ),
-			      CastFromJS<A4>( argv[3] )
-			      ) );
-    }
-
-    /**
-       Identical to FwdToFunc1(), but for functions taking 5 arguments.
-    */
-    template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc5( Func func, ::v8::Arguments const & argv )
-    {
-	if( argv.Length() != 5 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 5 arguments!"));
-	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( argv[0] ),
-			      CastFromJS<A2>( argv[1] ),
-			      CastFromJS<A3>( argv[2] ),
-			      CastFromJS<A4>( argv[3] ),
-			      CastFromJS<A5>( argv[4] )
-			      ) );
-    }
-
-    /**
-       Identical to FwdToFunc1(), but for functions taking 6 arguments.
-    */
-    template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc6( Func func, ::v8::Arguments const & argv )
-    {
-	if( argv.Length() != 6 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 6 arguments!"));
-	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( argv[0] ),
-			      CastFromJS<A2>( argv[1] ),
-			      CastFromJS<A3>( argv[2] ),
-			      CastFromJS<A4>( argv[3] ),
-			      CastFromJS<A5>( argv[4] ),
-			      CastFromJS<A6>( argv[5] )
-			      ) );
-    }
-
-    /**
-       Identical to FwdToFunc1(), but for functions taking 7 arguments.
-    */
-    template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc7( Func func, ::v8::Arguments const & argv )
-    {
-	if( argv.Length() != 7 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 7 arguments!"));
-	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( argv[0] ),
-			      CastFromJS<A2>( argv[1] ),
-			      CastFromJS<A3>( argv[2] ),
-			      CastFromJS<A4>( argv[3] ),
-			      CastFromJS<A5>( argv[4] ),
-			      CastFromJS<A6>( argv[5] ),
-			      CastFromJS<A7>( argv[6] )
-			      ) );
-    }
-
-    /**
-       Identical to FwdToFunc1(), but for functions taking 8 arguments.
-    */
-    template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc8( Func func, ::v8::Arguments const & argv )
-    {
-	if( argv.Length() != 8 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 8 arguments!"));
-	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( argv[0] ),
-			      CastFromJS<A2>( argv[1] ),
-			      CastFromJS<A3>( argv[2] ),
-			      CastFromJS<A4>( argv[3] ),
-			      CastFromJS<A5>( argv[4] ),
-			      CastFromJS<A6>( argv[5] ),
-			      CastFromJS<A7>( argv[6] ),
-			      CastFromJS<A8>( argv[7] )
-			      ));
-    }
-
-
-    /**
-       Identical to FwdToFunc1(), but for functions taking 9 arguments. Yes, ncurses
-       has a function or two which take this many arguments.
-    */
-    template <typename ReturnT, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename Func>
-    ::v8::Handle< ::v8::Value > FwdToFunc9( Func func, ::v8::Arguments const & argv )
-    {
-	if( argv.Length() != 9 ) return ::v8::ThrowException(::v8::String::New("Function expects exactly 9 arguments!"));
-	return CastToJS( (ReturnT) func(
-			      CastFromJS<A1>( argv[0] ),
-			      CastFromJS<A2>( argv[1] ),
-			      CastFromJS<A3>( argv[2] ),
-			      CastFromJS<A4>( argv[3] ),
-			      CastFromJS<A5>( argv[4] ),
-			      CastFromJS<A6>( argv[5] ),
-			      CastFromJS<A7>( argv[6] ),
-			      CastFromJS<A8>( argv[7] ),
-			      CastFromJS<A9>( argv[9] )
-			      ));
-    }
-
+#include "forwarding-FunctorForwarder.h" // generated code
 
 
     /**

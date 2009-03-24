@@ -30,6 +30,8 @@ namespace juice {
         {
             enum { Arity = Arity_ };
         };
+
+
 	/**
 	   A helper type for forwarding JS arguments to member functions taking 0
 	   arguments. The classes MemFuncCaller(1..N) are generated but follow
