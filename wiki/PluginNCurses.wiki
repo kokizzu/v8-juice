@@ -298,7 +298,6 @@ see the curses man pages!), NCPad also provides:
 
 || *Return type* || *Name/Arguments* || *Notes* ||
 || `NCPad` || `new NCPad(NCWindow windowToWrap, int lines, int cols)` || Creates a new pad of the given size (which may be bigger than the screen). The given window is used as the drawing surface. ||
-
 || `int` ||`requestOp(int)` || Detailed in the native API. ||
 || `int` || `prefresh(six integers)` || Same as ncurses `prefresh()`. ||
 || `int` || `pnoutrefresh(six integers)` || Same as ncurses `pnoutrefresh()` ||
@@ -320,9 +319,8 @@ of which are numeric and all of which are accepted as arguments to the
 goes into much more detail about these.
 
 || *Name* || *Notes* ||
-
 || `PadReqFirstRequest` || First request type in the list, for use in loops. ||
-|| `PadReqRefresh` || Triggers a refresh operation. ||
+|| `PadReqRefresh` || Triggers a refresh operation, which has somewhat "special" internals for a pad. ||
 || `PadReqUp` || Scroll one line up. ||
 || `PadReqDown` || Scroll one line down. ||
 || `PadReqLeft` || Scroll left. ||
