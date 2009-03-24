@@ -308,7 +308,7 @@ namespace ncutil {
 
 	int NCPad::refresh()
 	{
-		int res = noutrefresh();
+		int res = this->noutrefresh();
 		if (res==OK && ((NCWindow*)0 != viewWin)) {
 			res = (viewWin->refresh());
 		}
@@ -337,12 +337,8 @@ namespace ncutil {
 	{
 		viewWin = &view;
 		min_row = min_col = 0;
-		if (h_grid <=0 || v_grid <= 0)
-			throw NCException("Illegal Gridsize");
-		else {
-			h_gridsize = h_grid;
-			v_gridsize = v_grid;
-		}
+                h_gridsize = (h_grid > 0) ? h_grid : 1;
+                v_gridsize = (v_grid > 0) ? v_grid : 1;
 	}
 
 	void NCPad::setSubWindow(NCWindow& sub) throw(NCException)
