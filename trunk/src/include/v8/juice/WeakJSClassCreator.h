@@ -441,6 +441,8 @@ namespace juice {
             subclassGettersN().insert( GetInheritedNative<SubT> );
             subclassGettersJ().insert( GetInheritedJSObject<SubT> );
         }
+
+        using JSClassCreator::Inherit;
         
 
         /**
@@ -577,12 +579,25 @@ namespace juice {
 	   Returns true if it passes a native object to the
 	   destructor, else false.
 
-           ACHTUNG: this function verifies that jo is-a WrappedType
-           object by calling GetSelf(jo,false). This routine must, so
-           that it can call the proper destructor, ensure that jo is
-           exactly WrappedType, as opposed to a derived type.
+           BIG FAT HAIRY ACHTUNG:
+
+           This function verifies the exact type of jo by calling
+           GetSelf(jo,checkSubclasses). If checkSubclasses is true
+           then it is the client's responsibility to ensure that the
+           destructor functions (WeakJSClassCreatorOps<>::Dtor()) for
+           both WrappedType and the actual registered subtype of the
+           object are equivalent. What that means is: if the subtype's
+           destructor simply calls "delete obj", and the base type
+           destructor does the same thing, then it is safe for the
+           subtype to use the base's destructor functions. If, on the
+           other hand, the subtype's destructor needs to do some
+           custom handling, then by all means use
+           (checkSubclasses==false) to ensure that
+           WeakJSClassCreator<WrappedType> will not try to pass a
+           pointer of type WrappedSubType to
+           WeakJSClassCreatorOps<WrappedType::Dtor().
 	*/
-	static bool DestroyObject( Handle<Object> jo )
+	static bool DestroyObject( Handle<Object> jo, bool checkSubclasses = false )
 	{
 	    WrappedType * t = GetSelf(jo,false); // sanity check
 	    if( ! t ) return false;

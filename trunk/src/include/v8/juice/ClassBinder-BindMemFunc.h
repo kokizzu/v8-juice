@@ -8,7 +8,7 @@ template < typename RV,  typename A0, RV (WrappedType::*Func)( A0)  >
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp1< WrappedType, RV,  A0, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -19,7 +19,7 @@ template < typename RV,  typename A0, RV (WrappedType::*Func)( A0)  const >
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp1< const WrappedType, RV,  A0, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -30,7 +30,7 @@ template < typename RV,  typename A0,  typename A1, RV (WrappedType::*Func)( A0,
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp2< WrappedType, RV,  A0, A1, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -41,7 +41,7 @@ template < typename RV,  typename A0,  typename A1, RV (WrappedType::*Func)( A0,
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp2< const WrappedType, RV,  A0, A1, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -52,7 +52,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2, RV (WrappedTyp
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp3< WrappedType, RV,  A0, A1, A2, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -63,7 +63,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2, RV (WrappedTyp
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp3< const WrappedType, RV,  A0, A1, A2, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -74,7 +74,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp4< WrappedType, RV,  A0, A1, A2, A3, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -85,7 +85,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp4< const WrappedType, RV,  A0, A1, A2, A3, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -96,7 +96,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp5< WrappedType, RV,  A0, A1, A2, A3, A4, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -107,7 +107,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp5< const WrappedType, RV,  A0, A1, A2, A3, A4, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -118,7 +118,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp6< WrappedType, RV,  A0, A1, A2, A3, A4, A5, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -129,7 +129,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp6< const WrappedType, RV,  A0, A1, A2, A3, A4, A5, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -140,7 +140,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp7< WrappedType, RV,  A0, A1, A2, A3, A4, A5, A6, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -151,7 +151,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp7< const WrappedType, RV,  A0, A1, A2, A3, A4, A5, A6, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -162,7 +162,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp8< WrappedType, RV,  A0, A1, A2, A3, A4, A5, A6, A7, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 /**
@@ -173,7 +173,7 @@ template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, 
 ClassBinder & BindMemFunc( char const * name )
 {
     typedef Detail::MemFuncCallOp8< const WrappedType, RV,  A0, A1, A2, A3, A4, A5, A6, A7, Func > Caller;
-    this->Set(name, Detail::MemFuncCallOp< Caller, RV >::Call );
+    this->Set(name, Detail::MemFuncCallOp< Caller >::Call );
     return *this;
 }
 #endif // if !defined(DOXYGEN)

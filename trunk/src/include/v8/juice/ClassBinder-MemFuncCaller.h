@@ -1,3 +1,5 @@
+// GENERATED CODE! Edit at your own risk!
+#if !defined(DOXYGEN)
 /**
 A helper class for forwarding JS arguments to member functions
 taking 1 arguments.
@@ -758,3 +760,4 @@ struct WeakMemFuncCaller<8> : MemFuncCaller<8>
     }
 
 };
+#endif // if !defined(DOXYGEN)
