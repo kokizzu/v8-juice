@@ -203,6 +203,75 @@ There are some real-world examples of using these types in the v8-juice source t
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-js.cc Pathfinder-js.cc] is a fairly straightforward example which wraps the majority of the `v8::juice::PathFinder` class using `ClassBinder`. Search that file for `SetupPathFinderClass` and you'll jump right to the relevant parts.
   * Or the much more detailed [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/v8-whio.cc v8-whio.cc] implements the [PluginWhio whio plugin]. This example is way more convoluted than normal, largely because it contains much evolutionary cruft from the various phases of WeakJSClassCreator's development. It also demonstrates `WeakJSClassCreator<T>` where `WeakJSClassCreator<T>::WrappedType` is-not `T`, which might be interesting to someone out there.
 
+==Dual JS/C++ Inheritance==
+
+As of 20090324 WeakJSClassCreator supports dual JS/C++ inheritance. What does that mean?
+It means that if we have native type called `ParentType` and a suclass called `SubType`,
+and we bind both of them with WeakJSClassCreator, then the JS-side `SubType` objects can
+access their _inherited_ bound member functions as if they were an object of type `ParentType`.
+That sounds a bit confusing, but an example might clear it up:
+
+{{{
+class ParentType
+{
+  ...
+  virtual int vfunc();
+};
+class SubType : public ParentType
+{
+...
+};
+
+... add WeakJSClassCreatorOps<ParentType>
+    and WeakJSClassCreatorOps<SubType> ...
+
+// And we can then do:
+typedef WeakJSClassCreator<ParentType> WP;
+WP wp( targetObject );
+wp.BindMemFunc< int, &ParentType::vfunc >("vfunc")
+  .Seal();
+
+typedef WeakJSClassCreator<SubType> WS;
+WS ws( targetObject );
+ws.Inherit( wp )
+  .Seal();
+}}}
+
+In C++ and JS, we take it for granted that calling
+`aSubTypeObject.vfunc()` would call the inherited virtual
+function. However, when crossing JS/C++ boundaries, that feature does
+not come for free. Since we use C++ templates to create the bindings
+for classes, any conversions must know the _exact_ templatized type
+of the native class. Because of this, `WeakJSClassCreator<ParentType>`
+and `WeakJSClassCreator<SubType>` are, for purposes of typing,
+unrelated, they provide no inherent down-casting ability.
+
+When `WeakJSClassCreator<SubType>::Inherit()` is called, an internal
+lookup function is added to `WeakJSClassCreator<ParentType>`, such
+that calls to `WeakJSClassCreator<ParentType>::GetSelf()` (and
+friends) will act "virtually". That is, if they cannot determine that
+the JS object being converted is-exactly-a `ParentType` object, they
+will use the internal lookup function to see if the object is an
+instance of some other subclass of `ParentType`. Using this approach,
+the member functions bound to `ParentType` can get a pointer to their
+`this` object, even though the objects weren't created by
+`WeakJSClassCreator<ParentType>`.
+
+It is a _compile-time_ error to try to inherit either a base type for
+which `WeakJSClassCreator<>` is not implemented or which is not a C++
+base type of the wrapped type.
+
+
+Any number of types may `Inherit()` a given base this way, and when
+looking for a conversion they will be searched in the order that the
+`Inherit()` calls were made. Thus the most-use subclasses should be
+declared first (if possible).
+
+
+This approach has some limitations, the most glaring being that when we have more than
+one level of inheritance, we must call `Inherit()` for each level of the hierarchy,
+which is a real drag. i'm looking into other approaches which won't require this.
+
 =!ClassBinder=
 
 The `ClassBinder` class template, [ClassBinder described on its own page], extends `WeakJSClassCreator` type to add the ability to bind member functions and member variables to native types. See that page for more information.
