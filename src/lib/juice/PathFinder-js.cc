@@ -102,6 +102,14 @@ namespace v8 { namespace juice {
 	}
     };
 
+}} // namespaces
+
+#define WEAK_CLASS_TYPE v8::juice::PathFinder
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
+
+namespace v8 { namespace juice {
+
+
     Handle<Value> SetupPathFinderClass(Handle<Object> target )
     {
 	HandleScope scope;
