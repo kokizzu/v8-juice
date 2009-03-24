@@ -122,7 +122,7 @@ Handle<Value> v = CastToJS("this is a (char const *)");
 This won't:
 
 {{{
-char const * v = CastFromJS(myJSVal);
+char const * v = CastFromJS<char const *>(myJSVal);
 }}}
 
 The problem here is ownership and lifetime of the string bytes. v8 does not document them (and also can't realistically provide any requirements which we would need for this conversion). We _can_ write a conversion routine for this, and it would probably work 99% of the time, but its results would technically be undefined. As a workaround, client code should use `std::string` instead (at least for `CastFromJS()`) or implement `JSToNative<>` and/or `NativeToJS<>` specializations for their string type of choice. The `CastToJS()` function is overloaded for (`char const *`) and "does the right thing", but `CastFromJS()` cannot handle such strings as transparently as it can most other types.
