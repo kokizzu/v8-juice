@@ -380,17 +380,18 @@ If we register the "standard" casting operators for a wrapped type using:
 
 {{{
 // must be in global-scope code
+#define WEAK_CLASS_TYPE ParentType
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
 #define WEAK_CLASS_TYPE SubType
 #include <v8/juice/WeakJSClassCreator-CastOps.h>
 }}}
 
 (or equivalent)
 
-then `CastToJS()` and `CastFromJS()` will use
-`WeakJSClassCreator<SubType>` for the conversions, and thus provide
-the same "virtual" conversions. `SubType` may then participate in type
-conversions which would normally apply to some base type object (for
-this to work, each base has to be `Inherit()`ed). This applies, for
-example, to the type conversions applied automatically to function
-arguments (as well as for the `this` object) for bound member
-function as well as for bound non-member functions.
+then `CastToJS<ParentType>()` and `CastFromJS<ParentType>()` will use
+`WeakJSClassCreator<ParentType>` for the conversions, and thus provide
+the same "virtual" conversions to `SubType` objects. `SubType` objects
+may then participate in type conversions which would normally apply
+to `ParentType` objects (for this to work, each base has to be
+`Inherit()`ed separately by its subclasses). This applies, for example, to the type conversions applied automatically to function arguments (as well as for the
+`this` object) for bound member function and bound non-member functions.
