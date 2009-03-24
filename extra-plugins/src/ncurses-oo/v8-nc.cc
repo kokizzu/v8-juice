@@ -885,6 +885,7 @@ namespace nc {
                 .BindMemFunc<int, &JWindow::refresh>("refresh")
                 .BindMemFunc<int, &JWindow::noutrefresh>("noutrefresh")
                 .BindMemFunc<bool, &JWindow::has_mouse>("hasmouse")
+                .BindMemFunc<uint32_t, &JWindow::windowID>("windowID")
 
                 // Unary funcs:
                 .BindMemFunc<void, std::string, &JWindow::name>( "setName" )
@@ -911,6 +912,7 @@ namespace nc {
                 .BindMemFunc< bool, int, &JWindow::is_linetouched >( "is_linetouched" )
                 .BindMemFunc< void, int, &JWindow::timeout > ("timeout")
                 .BindMemFunc< int, bool, &JWindow::nodelay > ("nodelay")
+
                 // Binary funcs:
                 .BindMemFunc< int, int, int, &JWindow::mvwin >("mvwin")
                 .BindMemFunc< int, int, int, &JWindow::move >("move")

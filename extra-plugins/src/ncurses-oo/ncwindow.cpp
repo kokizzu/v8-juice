@@ -209,6 +209,12 @@ namespace ncutil {
 
     void NCWindow::init()
     {
+        static uint32_t IDs = 0;
+        this->m_id = ++IDs;
+        if( 0 == m_id ) /* overflow */
+        {
+            throw NCException("Numeric overflow while getting window ID!");
+        }
         lifecheck().insert(this);
         this->m_clientflags = 0L;
         this->leaveok(0);
@@ -437,6 +443,11 @@ namespace ncutil {
         }
         if (m_ownswin && (0 != m_cwin))
             ::delwin(m_cwin);
+    }
+
+    uint32_t NCWindow::windowID() const
+    {
+        return this->m_id;
     }
 
 } // namespace ncutil

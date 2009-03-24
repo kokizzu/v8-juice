@@ -121,6 +121,7 @@ namespace nc {
         int refresh() { return ncwin->refresh(); }
         int noutrefresh() { return ncwin->noutrefresh(); }
         bool has_mouse() { return ncwin->has_mouse(); }
+        uint32_t windowID() { return ncwin->windowID(); }
 
         int insch(chtype v) { return ncwin->insch(v); }
         int insdelln(int v) { return ncwin->insdelln(v); }
