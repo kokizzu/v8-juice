@@ -45,7 +45,7 @@ it. _ncurses_ is the _de facto_ open source implementation of curses
 platform out there.
 
 This plugin is derived from an old ncurses C++ wrapper which i forked
-out of the ncurses 5.4 source tree in March of 2005. At one point is
+out of the ncurses 5.4 source tree in March of 2005. At one point it
 was also the basis for !JavaScript/ncurses binding for !SpiderMonkey.
 
 The first version of this plugin modelled the C-style API. After it was
