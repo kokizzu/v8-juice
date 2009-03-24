@@ -66,8 +66,6 @@ struct ${callBase}
     {
 	if( ! obj ) return ThrowException(String::New("${callBase}::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-	//return convert::CastToJS( (RV) (obj->*Func)( ${castCalls} ) );
-
 	return convert::CastToJS<RV>( (obj->*MemFunc)( ${castCalls} ) );
     }
     
@@ -96,6 +94,22 @@ struct ${callBase}
 	(obj->*MemFunc)(${castCalls} );
 	return Undefined();
     }
+
+    template <typename RV, ${aTDecl}, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func( ${castCalls} ) );
+    }
+
+    template <${aTDecl}, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+	Func( ${castCalls} );
+        return Undefined();
+    }
+
 };
 template <>
 struct ${callBaseWeak} : ${callBase}
@@ -150,6 +164,78 @@ struct ${callBaseWeak} : ${callBase}
 EOF
 } # makeCallBase()
 
+
+function makeFunctorForwarder()
+{
+    cat <<EOF
+/** Specialization for functor taking ${count} arguments. */
+template <typename RV>
+struct FunctorForwarder<${count},RV>
+{
+    enum { Arity = ${count} };
+    template < ${aTDecl}, typename Func >
+    static Handle<Value> Call( Func f, ::v8::Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<${count},RV>::Call() expects at least ${count} JS arguments!"));
+        try
+        {
+            return convert::CastToJS<RV>( f( ${castCalls} ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("FunctorForwarder<${count},ReturnType>: Native function threw an unknown native exception type!"));
+        }
+        return Undefined(); // cannot be reached.
+    }
+};
+/** Specialization for functor taking ${count} arguments and returning void. */
+template <>
+struct FunctorForwarder<${count},void>
+{
+    enum { Arity = ${count} };
+    template < ${aTDecl}, typename Func >
+    static Handle<Value> Call( Func f, ::v8::Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<${count},void>::Call() expects at least ${count} JS arguments!"));
+        try
+        {
+            f( ${castCalls} );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("FunctorForwarder<${count},void>: Native function threw an unknown native exception type!"));
+        }
+        return Undefined();
+    }
+};
+
+/**
+   See the docs for FwdToFunc0(). This variant takes ${count} argument(s).
+*/
+template <typename ReturnT, ${aTDecl}, typename Func>
+::v8::Handle< ::v8::Value > FwdToFunc${count}( Func func, ::v8::Arguments const & argv )
+{
+    return FunctorForwarder<${count},ReturnT>::template Call< ${aTParam} >( func, argv );
+}
+/**
+   Functionally identical to FwdToFunc${count}(), but the return type can
+   be deduced by the compiler.
+*/
+template <typename ReturnT, ${aTDecl}>
+::v8::Handle< ::v8::Value > FwdToFunc( ReturnT (*func)(${aTParam}), ::v8::Arguments const & argv )
+{
+    return FunctorForwarder<${count},ReturnT>::template Call< ${aTParam} >( func, argv );
+}
+EOF
+}
 
 function makeMemFuncCallOps()
 {
@@ -277,6 +363,9 @@ case $command in
 	    ;;
     'MemFuncCaller')
 	makeCallBase
+	;;
+    'FunctorForwarder')
+	makeFunctorForwarder
 	;;
     *)
 	echo "Unhandled command: ${command}"

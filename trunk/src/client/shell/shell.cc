@@ -49,6 +49,7 @@
 #include <v8/juice/plugin.h>
 #include <v8/juice/PathFinder.h>
 #include <v8/juice/cleanup.h>
+#include <v8/juice/forwarding.h>
 #include <v8/juice/WeakJSClassCreator.h>
 #include <v8/juice/ToSource.h>
 
@@ -91,6 +92,8 @@ struct my_native
     void avoid2(int x,double d ) {CERR << "my_native::avoid2("<<x<<","<<d<<")="<<this<<'\n'; }
 
     double takes3(int x, int y, int z) { return x * y * z; }
+
+    Handle<Value> forwarder( Arguments const & );
 
     my_native * other;
     my_native() : str(),other(0)
@@ -140,6 +143,28 @@ namespace v8 { namespace juice {
 
 #include <v8/juice/ClassBinder.h>
 
+int my_forwarded_func()
+{
+    CERR << "my_forwarded_func()!\n";
+    return 42;
+}
+int my_forwarded_func3(int x,int y,int z)
+{
+    CERR << "my_forwarded_func()!\n";
+    return x + y + z;
+}
+void my_void_forwarded_func(int x)
+{
+    CERR << "my_void_forwarded_func("<<x<<")!\n";
+}
+
+Handle<Value> my_native::forwarder( Arguments const & argv )
+{
+    v8::juice::convert::FwdToFunc( my_forwarded_func3, argv );
+    return v8::juice::convert::FwdToFunc3<int,int,int,int>( my_forwarded_func3, argv )
+        ;
+}
+
 int my_fwd( V8CxH & cx )
 {
     //typedef WeakJSClassCreator<my_native> WT;
@@ -162,6 +187,7 @@ int my_fwd( V8CxH & cx )
         .BindMemFunc< double,int,int,int, &MY::takes3 >( "takes3" )
         .BindMemVar<std::string, &MY::str>( "str" )
         .BindMemVar<my_native *, &MY::other>("other")
+        .BindMemFunc< &MY::forwarder >( "forwarder" )
         .Seal();
     w.AddClassTo( cx->Global() );
     return 0;
@@ -204,10 +230,13 @@ int my_tosource( V8CxH & cx )
     return 0;
 }
 
+
 int my_test( V8CxH & cx )
 {
     using namespace v8::juice::convert;
     using namespace v8;
+
+
     v8::HandleScope handle_scope;
     V8LObject gl = cx->Global();
     COUT << "gl.MyVar = ["<<CastFromJS<std::string>( gl->Get( String::New("MyVar") ) )<<"]\n";
@@ -356,7 +385,7 @@ int main(int argc, char* argv[]) {
         }
         if(1)
         {
-            //my_test( context );
+            // my_test( context );
             //my_class_test( context );
             my_fwd(context);
             //my_tosource(context);

@@ -14,8 +14,6 @@ struct MemFuncCaller<1>
     {
 	if( ! obj ) return ThrowException(String::New("MemFuncCaller<1>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<1>::Call(): wrong argument count!"));
-	//return convert::CastToJS( (RV) (obj->*Func)(  convert::CastFromJS< A0 >(argv[0]) ) );
-
 	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]) ) );
     }
     
@@ -44,6 +42,22 @@ struct MemFuncCaller<1>
 	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]) );
 	return Undefined();
     }
+
+    template <typename RV,  typename A0, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<1>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]) ) );
+    }
+
+    template < typename A0, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<1>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]) );
+        return Undefined();
+    }
+
 };
 template <>
 struct WeakMemFuncCaller<1> : MemFuncCaller<1>
@@ -109,8 +123,6 @@ struct MemFuncCaller<2>
     {
 	if( ! obj ) return ThrowException(String::New("MemFuncCaller<2>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<2>::Call(): wrong argument count!"));
-	//return convert::CastToJS( (RV) (obj->*Func)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]) ) );
-
 	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]) ) );
     }
     
@@ -139,6 +151,22 @@ struct MemFuncCaller<2>
 	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]) );
 	return Undefined();
     }
+
+    template <typename RV,  typename A0,  typename A1, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<2>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]) ) );
+    }
+
+    template < typename A0,  typename A1, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<2>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]) );
+        return Undefined();
+    }
+
 };
 template <>
 struct WeakMemFuncCaller<2> : MemFuncCaller<2>
@@ -204,8 +232,6 @@ struct MemFuncCaller<3>
     {
 	if( ! obj ) return ThrowException(String::New("MemFuncCaller<3>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<3>::Call(): wrong argument count!"));
-	//return convert::CastToJS( (RV) (obj->*Func)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]) ) );
-
 	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]) ) );
     }
     
@@ -234,6 +260,22 @@ struct MemFuncCaller<3>
 	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]) );
 	return Undefined();
     }
+
+    template <typename RV,  typename A0,  typename A1,  typename A2, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<3>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]) ) );
+    }
+
+    template < typename A0,  typename A1,  typename A2, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<3>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]) );
+        return Undefined();
+    }
+
 };
 template <>
 struct WeakMemFuncCaller<3> : MemFuncCaller<3>
@@ -299,8 +341,6 @@ struct MemFuncCaller<4>
     {
 	if( ! obj ) return ThrowException(String::New("MemFuncCaller<4>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<4>::Call(): wrong argument count!"));
-	//return convert::CastToJS( (RV) (obj->*Func)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]) ) );
-
 	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]) ) );
     }
     
@@ -329,6 +369,22 @@ struct MemFuncCaller<4>
 	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]) );
 	return Undefined();
     }
+
+    template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<4>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]) ) );
+    }
+
+    template < typename A0,  typename A1,  typename A2,  typename A3, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<4>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]) );
+        return Undefined();
+    }
+
 };
 template <>
 struct WeakMemFuncCaller<4> : MemFuncCaller<4>
@@ -394,8 +450,6 @@ struct MemFuncCaller<5>
     {
 	if( ! obj ) return ThrowException(String::New("MemFuncCaller<5>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<5>::Call(): wrong argument count!"));
-	//return convert::CastToJS( (RV) (obj->*Func)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]) ) );
-
 	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]) ) );
     }
     
@@ -424,6 +478,22 @@ struct MemFuncCaller<5>
 	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]) );
 	return Undefined();
     }
+
+    template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<5>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]) ) );
+    }
+
+    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<5>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]) );
+        return Undefined();
+    }
+
 };
 template <>
 struct WeakMemFuncCaller<5> : MemFuncCaller<5>
@@ -489,8 +559,6 @@ struct MemFuncCaller<6>
     {
 	if( ! obj ) return ThrowException(String::New("MemFuncCaller<6>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<6>::Call(): wrong argument count!"));
-	//return convert::CastToJS( (RV) (obj->*Func)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]) ) );
-
 	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]) ) );
     }
     
@@ -519,6 +587,22 @@ struct MemFuncCaller<6>
 	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]) );
 	return Undefined();
     }
+
+    template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<6>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]) ) );
+    }
+
+    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<6>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]) );
+        return Undefined();
+    }
+
 };
 template <>
 struct WeakMemFuncCaller<6> : MemFuncCaller<6>
@@ -584,8 +668,6 @@ struct MemFuncCaller<7>
     {
 	if( ! obj ) return ThrowException(String::New("MemFuncCaller<7>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<7>::Call(): wrong argument count!"));
-	//return convert::CastToJS( (RV) (obj->*Func)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]) ) );
-
 	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]) ) );
     }
     
@@ -614,6 +696,22 @@ struct MemFuncCaller<7>
 	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]) );
 	return Undefined();
     }
+
+    template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<7>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]) ) );
+    }
+
+    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<7>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]) );
+        return Undefined();
+    }
+
 };
 template <>
 struct WeakMemFuncCaller<7> : MemFuncCaller<7>
@@ -679,8 +777,6 @@ struct MemFuncCaller<8>
     {
 	if( ! obj ) return ThrowException(String::New("MemFuncCaller<8>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<8>::Call(): wrong argument count!"));
-	//return convert::CastToJS( (RV) (obj->*Func)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]) ) );
-
 	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]) ) );
     }
     
@@ -709,6 +805,22 @@ struct MemFuncCaller<8>
 	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]) );
 	return Undefined();
     }
+
+    template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<8>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]) ) );
+    }
+
+    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<8>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]) );
+        return Undefined();
+    }
+
 };
 template <>
 struct WeakMemFuncCaller<8> : MemFuncCaller<8>
@@ -756,6 +868,224 @@ struct WeakMemFuncCaller<8> : MemFuncCaller<8>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<8>::Call() could not find native 'this' object!"));
+        return Call( obj, func, argv );
+    }
+
+};
+/**
+A helper class for forwarding JS arguments to member functions
+taking 9 arguments.
+*/
+template <>
+struct MemFuncCaller<9>
+{
+    enum { Arity = 9 };
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
+    static Handle<Value> Call( T * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller<9>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<9>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]) ) );
+    }
+    
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
+    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller<9>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<9>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( (obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]) ) );
+    }
+    
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller<9>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<9>::Call(): wrong argument count!"));
+	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller<9>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<9>::Call(): wrong argument count!"));
+	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]) );
+	return Undefined();
+    }
+
+    template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<9>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]) ) );
+    }
+
+    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<9>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]) );
+        return Undefined();
+    }
+
+};
+template <>
+struct WeakMemFuncCaller<9> : MemFuncCaller<9>
+{
+    enum { Arity = 9 };
+
+    template <typename WeakWrappedType, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
+	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<9>::Call() could not find native 'this' object!"));
+	return Call( obj, func, argv );
+    }
+    
+    template <typename WeakWrappedType, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
+	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<9>::Call() could not find native 'this' object!"));
+	return Call( obj, func, argv );
+    }
+    
+    template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
+	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<9>::Call() could not find native 'this' object!"));
+	return Call( obj, func, argv );
+    }
+    
+    template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
+	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<9>::Call() could not find native 'this' object!"));
+        return Call( obj, func, argv );
+    }
+
+};
+/**
+A helper class for forwarding JS arguments to member functions
+taking 10 arguments.
+*/
+template <>
+struct MemFuncCaller<10>
+{
+    enum { Arity = 10 };
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
+    static Handle<Value> Call( T * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller<10>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<10>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( (obj->*MemFunc)(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]), convert::CastFromJS< A9 >(argv[9]) ) );
+    }
+    
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
+    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller<10>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<10>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( (obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]), convert::CastFromJS< A9 >(argv[9]) ) );
+    }
+    
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller<10>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<10>::Call(): wrong argument count!"));
+	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]), convert::CastFromJS< A9 >(argv[9]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+    {
+	if( ! obj ) return ThrowException(String::New("MemFuncCaller<10>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<10>::Call(): wrong argument count!"));
+	(obj->*MemFunc)( convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]), convert::CastFromJS< A9 >(argv[9]) );
+	return Undefined();
+    }
+
+    template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, typename Func>
+    static Handle<Value> Call( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<10>::Call(): wrong argument count!"));
+	return convert::CastToJS<RV>( Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]), convert::CastFromJS< A9 >(argv[9]) ) );
+    }
+
+    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, typename Func>
+    static Handle<Value> CallVoid( Func, Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ThrowException(String::New("MemFuncCaller<10>::Call(): wrong argument count!"));
+	Func(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]), convert::CastFromJS< A9 >(argv[9]) );
+        return Undefined();
+    }
+
+};
+template <>
+struct WeakMemFuncCaller<10> : MemFuncCaller<10>
+{
+    enum { Arity = 10 };
+
+    template <typename WeakWrappedType, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
+	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<10>::Call() could not find native 'this' object!"));
+	return Call( obj, func, argv );
+    }
+    
+    template <typename WeakWrappedType, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
+	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<10>::Call() could not find native 'this' object!"));
+	return Call( obj, func, argv );
+    }
+    
+    template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	//typename Wrapper::WrappedType * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
+	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<10>::Call() could not find native 'this' object!"));
+	return Call( obj, func, argv );
+    }
+    
+    template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+    {
+	typedef WeakJSClassCreator<WeakWrappedType> Wrapper;
+	//typename Wrapper::WrappedType const * obj = Wrapper::GetSelf( argv.This() );
+        typedef typename Wrapper::WrappedType WT;
+        WT * obj = CastFromJS<WT>( argv.This() );
+	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<10>::Call() could not find native 'this' object!"));
         return Call( obj, func, argv );
     }
 

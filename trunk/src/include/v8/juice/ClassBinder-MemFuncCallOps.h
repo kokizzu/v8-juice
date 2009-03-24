@@ -304,4 +304,80 @@ struct MemFuncCallOp8< WrappedType,void, A0, A1, A2, A3, A4, A5, A6, A7, Func >
     }
 };
 
+/**
+    Member function call forwarder for member functions taking 9 arguments.
+*/
+template < typename WrappedType, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV (WrappedType::*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8)  >
+struct MemFuncCallOp9
+{
+    enum { Arity = 9 };
+    typedef WrappedType Type;
+    typedef WeakMemFuncCaller<9> OpBase;
+    static Handle<Value> Call( Type * obj, Arguments const & argv )
+    {
+	return OpBase::Call( obj, Func, argv );
+    }
+    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+    {
+	return OpBase::CallOnWeakSelf<Type>( Func, argv );
+    }
+};
+
+/**
+    Specialization for member functions taking 9 args and returning void.
+*/
+template < typename WrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, void (WrappedType::*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8)  >
+struct MemFuncCallOp9< WrappedType,void, A0, A1, A2, A3, A4, A5, A6, A7, A8, Func >
+{
+    enum { Arity = 9 };
+    typedef WrappedType Type;
+    typedef WeakMemFuncCaller<9> OpBase;
+    static Handle<Value> Call( Type * obj, Arguments const & argv )
+    {
+	return OpBase::Call( obj, Func, argv );
+    }
+    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+    {
+	return OpBase::CallOnWeakSelf<Type>( Func, argv );
+    }
+};
+
+/**
+    Member function call forwarder for member functions taking 10 arguments.
+*/
+template < typename WrappedType, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV (WrappedType::*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9)  >
+struct MemFuncCallOp10
+{
+    enum { Arity = 10 };
+    typedef WrappedType Type;
+    typedef WeakMemFuncCaller<10> OpBase;
+    static Handle<Value> Call( Type * obj, Arguments const & argv )
+    {
+	return OpBase::Call( obj, Func, argv );
+    }
+    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+    {
+	return OpBase::CallOnWeakSelf<Type>( Func, argv );
+    }
+};
+
+/**
+    Specialization for member functions taking 10 args and returning void.
+*/
+template < typename WrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, void (WrappedType::*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9)  >
+struct MemFuncCallOp10< WrappedType,void, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, Func >
+{
+    enum { Arity = 10 };
+    typedef WrappedType Type;
+    typedef WeakMemFuncCaller<10> OpBase;
+    static Handle<Value> Call( Type * obj, Arguments const & argv )
+    {
+	return OpBase::Call( obj, Func, argv );
+    }
+    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
+    {
+	return OpBase::CallOnWeakSelf<Type>( Func, argv );
+    }
+};
+
 #endif // if !defined(DOXYGEN)
