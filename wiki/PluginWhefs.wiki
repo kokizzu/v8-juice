@@ -78,7 +78,7 @@ import/export files into/out of them.
 =C++ usage=
 
 When using the plugins API, you don't need to do anything C++-side to
-use this addon - simply load it as described on [Plugins the plugins page].
+use this add-on - simply load it as described on [Plugins the plugins page].
 
 This plugin is actually a part of the whio plugin, and is loaded when that
 plugin is loaded.
@@ -87,7 +87,7 @@ When loaded, this plugin will create an object called `whefs` inside the target 
 to which it is added (normally the global object). That `whefs` object holds the rest of the classes and functions for this plugin.
 
 The native whio API has huge amounts of API documentation which might be interesting
-to users of this API: [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins whio/whefs_amalgamation.h whefs_amalgamation.h]
+to users of this API: [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whefs_amalgamation.h whefs_amalgamation.h]
 
 But all of the "less technical" info one needs for using it in JS is documented below. For all kinds of more details than you'd ever want to know, see the API documentation
 
@@ -114,7 +114,7 @@ the `close()` member must be called when the client is done with the
 object, to ensure that all handles are closed and memory is
 released. Closing a device handle after the VFS instance has been
 closed, or allowing the object's destruction to depend on the garbage
-collector, both lead to undefined results.
+collector, will lead to undefined results.
 
 See below for the complete class and function list.
 
@@ -146,9 +146,9 @@ always 0, and `SizeTError`, which is always equal to -1. Interestingly
 enough, its _exact_ native value of -1 may depends on the
 compile-time size of the native `whio_size_t` type.
 
-While `whio` and `whefs` do share many of the same error code names,
-there is no guaranty that the values will be the same for the same
-error code names. e.g. `whio.rc.AccessError` might be (and actually
+While `whio` and `whefs` do share many of the same error code _names_,
+there is no guaranty that the _values_ will be the same for the same
+error code name. e.g. `whio.rc.AccessError` might be (and actually
 is) different than `whefs.rc.AccessError`.
 
 =JS API for whefs=
@@ -183,7 +183,7 @@ TODOs:
 || *Return type* || *Name/Signature* || *Notes* ||
 || `WhEfs` || `whefs.mkfs(string filename [,Object options])` || Creates a new filesystem (destroying any existing file with the same name). This is covered in more detail below. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
-|| `string` || `fsFormatVersion` || Version string describing the supported whefs file format (which depends on several compile-time options of whefs). Any given binary version of whefs is configured with certain parameters which determine core parameters its file format, and different configurations are not compatible. ||
+|| `string` || `fsFormatVersion` || Version string describing the supported whefs file format (which depends on several compile-time options of whefs). Any given binary version of whefs is configured with certain parameters which determine core properties of its file format, and different configurations are not compatible. ||
 || `string` || `homePage` || The home page URL of whefs. ||
 
 ===mkfs in more detail===
@@ -197,14 +197,14 @@ optional properties, along with sensible (or required) ranges for their values:
   * `inodeCount` = the number of inodes. Must be at least two. More than 1000-2000 is probably not suitable for the current whefs engine.
   * `blockCount` = the number of data blocks. Must be at least inodeCount, but may be greater (up to 64k).
   * `blockSize` = the size of each data block. 4k-32k is normally good.
-  * `filenameLength` = maximum length of filenames. Default is 64.
+  * `filenameLength` = maximum length of filenames. Default is 64 and there is a hard-coded limit explained [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tweaking-VFS on the whefs site].
 
-Each is described on the [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs page].
+Each parameter is described on the [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs page], and in even more detail on [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tweaking-VFS the whefs-tweaks page].
 
-If the object is null or any given parameter is missing then some
+If the options object is null or any given parameter is missing then some
 arbitrarily chosen defaults are used, and they are almost certainly
 not suitable for your particular case (see `whefs_amalgamation.h`,
-`whefs_mkfs()` for the full details). Each parameter certain valid ranges
+`whefs_mkfs()` for the full details). Each parameter has certain valid ranges
 (again, see the API docs) and `mkfs()` will fail if those ranges are
 not met.
 
