@@ -1,17 +1,16 @@
 #summary JS bindings for ncurses
 #labels Phase-UserDocs,Topic-Plugins
 
-*ACHTUNG:* this plugin was broken as a side effect of recent v8-juice API changes, and is being completely rewritten.
-
 <wiki:toc max_depth='3'/>
 
 =About=
 
-The ncurses bindings wrap up a great deal of the ncurses API for use in !JavaScript. Instead
-of providing an API directly compatible with the low-level C API (as earlier versions)
-of this plugin did), it provides an object-oriented interface. This is much easier to
-manage, in terms of window ownership, subwindows, etc., than the low-level interface. Nonetheless,
-it is still curses at heart, and "cant ake some getting used to."
+The ncurses bindings wrap up a great deal of the ncurses API for use in
+!JavaScript. Instead of providing an API directly compatible with the
+low-level C API (as earlier versions of this plugin did), it provides an
+object-oriented interface. This is much easier to manage, in terms of window
+ownership, subwindows, etc., than the low-level interface. Nonetheless, it is
+still curses at heart, and can therefore "take some getting used to."
 
 
 The advantages of writing curses apps in JS instead of C include:
@@ -19,14 +18,17 @@ The advantages of writing curses apps in JS instead of C include:
   *  MUCH faster development of curses UIs, as the whole compile/link cycle goes away.
   *  The event model of curses (keypress) ties in very well with !JavaScript, where it is trivial to bind the keypresses to event handlers.
 
+Unfortunately, no amount of wrapping will make the overall difficulties of
+developing with curses completely disappear.
+
 TODOs:
   *  lots more testing, in particular with the PANEL/PAD APIs.
   *  Utility routines/classes, e.g. dialog boxes, basic user input routines, scrollable areas, etc.
 
-ncurses features i have no plans for implementing:
+ncurses features which i have no plans to implement include:
   *  The FORMS and MENU sub-libraries will not be implemented.
   *  Terminal resize handling. That's a can of worms i don't want to open.
-  *  The wide-char ncurses API. Maybe someday, but not soon.
+  *  The wide-char ncurses API.
 
 ==Source Code==
 
@@ -35,7 +37,7 @@ http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/ncurses-oo
 ==History==
 
 Curses has been around since the 80's and is the _de facto_ library
-for implementing text-base user interfaces, and presumably gets its
+for implementing text-base user interfaces. It presumably gets its
 name from the fact that one spends half his time cursing while using
 it. _Ncurses_ is the _de facto_ open source implementation of curses
 (curses is actually a standard), and is available on almost every
@@ -45,42 +47,47 @@ This plugin is derived from an old ncurses C++ wrapper which i forked
 out of the ncurses 5.4 source tree in March of 2005. At one point is
 was also the basis for !JavaScript/ncurses binding for !SpiderMonkey.
 
-The first version of this plugin modelled the C-style API. It got
-broken in some major refactoring of v8-juice, and rather than fix it i
-decided an OO wrapper would be more useful, and revived the ancient
-code.
+The first version of this plugin modelled the C-style API. After it was
+implemented, i realized that the particular method of JS/C++ wrapping which it
+used was not only type-unsafe on the native side, but also easily subject to
+segfaults from script-side code. Aside from that, it also got seriously broken
+in some refactoring of v8-juice. Rather than fix/refactor it, i decided an OO
+wrapper would be more useful, and revived the ancient ncurses C++ wrapper for use
+as a basis.
 
 For new and old curses programmers alike,
 [http://www.c-for-dummies.com/ncurses/ Dan Gookin's Programmer's Guide to nCurses]
 is an excellent resource on how to work with the library. Printed in
 2007, it is the only curses book i'm aware of which was penned in the
-21st century.
+21st century. Curiously, even though Thomas Dickey still releases patches to ncurses
+on a weekly basis, not much has actually changed in curses since... well, since a very
+long time. So if you programmed curses back in 1992 and still remember how it works,
+there won't be much of a learning curve for you here.
 
 =API Overview=
 
 This plugin installs the following items:
 
-  * The `ncurses` object holds all classes, "global" functions, and shared symbolic constants (e.g. the curses macros like `A_BOLD`).
+  * The generic `ncurses` object holds all classes, shared functions, and shared symbolic constants (e.g. the curses macros like `A_BOLD`).
   * The `NCWindow` approximates an ncurses `WINDOW` handle.
   * The `NCPanel` approximates an ncurses `PANEL` handle.
   * The `NCPad` somewhat approximates an ncurses `PAD` handle.
 
 ==Naming Conventions==
 
-Curses was developed back in a time when it was cool to use the shortest, most ambiguous
-or cryptic (depending on the day of the weak) names possible. For example, `refresh()`
-by itself could mean anything, and `scrl()` and `scroll()` are both scrolling related,
-but one was to look up the difference in the docs every time they're used.
+Curses was developed back in a time when it was cool to use the shortest, most
+ambiguous or cryptic names possible. For example, `refresh()` by itself could
+mean anything, and `scrl()` and `scroll()` are both scrolling related, but without
+looking in the man pages i can't tell you which one does what.
 
-In order to make this API easier to use... for the vast majority of
-the cases we've kept the cryptic names! Why? Because it makes it
-simpler to go look up their meanings in the curses man pages. If we
-renamed them, curses gurus would be confused by the new names and
-curses newbies wouldn't be able to find the man pages. The function
-which don't keep the native names normally derive their names from the
-underlying C++ wrapper (which was originally developed by someone else). An
-example which comes to mind is `NCWindow.scroll()`, which behaves like
-`wscrl()`, and not like `scroll()`.
+In order to make this API easier to use... for the vast majority of the cases
+we've kept the cryptic names! Why? Because it makes it simpler to go look up
+their meanings in the curses man pages. If we renamed them, curses gurus would
+be confused by the new names and curses newbies wouldn't be able to find the
+man pages. The function which don't use names taken directly from the curses
+API normally derive their names from the underlying C++ wrapper (which was
+originally developed by someone else). An example which comes to mind is
+`NCWindow.scroll()`, which behaves like `wscrl()`, and not like `scroll()`.
 
 ==Error Reporting==
 
@@ -91,19 +98,19 @@ In practice, non-ERR is simply `OK`, which is 0.
 Many errors are reported via exceptions, either because they come from the
 JS side of the bindings (as opposed to being an ncurses error value) or because
 they inherit that behaviour from the underlying C++ wrapper (which throws for
-a number of error cases).
+a number of error cases, most notably for failed window construction).
 
 =The `ncurses` Object=
 
-This plugin installs an object called `ncurses` which holds all of the classes and
-a few non-class functions:
+This plugin installs an object (of an unspecified class) called `ncurses`
+which holds all of the plugin's classes and the following non-class functions:
 
 || *Return type* || *Name/Arguments* || *Notes* ||
 || `int` || `color_pair(string fg, string bg)` || Takes foreground/background color names (can insensitive) and return the equivalent curses color attributes. Color names are: black, red, green, yellow, blue, magenta, cyan, white. They can normally be OR'd together with `ncurses.A_BOLD` to get a brighter foreground color. ||
 || `int` || `color_pairnum(string fg, string bg)` || Like `color_pair()`, but returns a curses _color pair_ number, which is only very rarely useful or needed. ||
 || `int` || `KEY_F(int)` || Equivalent to the `KEY_F()` native macro. ||
 || `int` || `KEY_CTRL(int | char)` || Returns the ASCII value of the given integer or character (length-1 string), bitwise ORed with 0x1f, or undefined if the value is not in the inclusive integer or ASCII range 0-127. ||
-|| `int` || `intVal( string )` || Returns the ascii integer value of the first character in the given string ||
+|| `int` || `intVal( string )` || Returns the ASCII integer value of the first character in the given string ||
 || `int` || `charVal(int)` || If the given int is in the inclusive range of 0-127, it returns the ASCII character (as a string), otherwise it returns undefined. ||
 || `int` || `screenHeight()` || Height of the terminal, in text rows. Not valid until in curses mode. ||
 || `int` || `screenWidth()` || Width of the terminal, in text columns. Not valid until in curses mode. ||
@@ -121,6 +128,11 @@ a few non-class functions:
 || `int` || `noraw()` || Equivalent to `raw(false)`. ||
 || `int` || `halfdelay(int tenths)` || ||
 
+
+Aside from those functions, nearly all standard ncurses macros are defined as
+symbolic constants of the `ncurses` object. For example, `ncurses.A_BOLD` and
+`ncurses.A_UNDERLINE`.
+
 =NCWindow Class=
 
 NCWindow is the base class of most other classes in this package. It is a wrapper around
@@ -129,17 +141,19 @@ windows.
 
 ==Member Function List==
 
-Most of the functions are not documented here. They mostly map 1-to-1 with
-ncurses functions of the same (or very similar) names, and are
-described in great detail in the ncurses man pages. That also explains
-why their names are so cryptic and do not follow common !JavaScript
-naming conventions. The exceptions to the documentation rule are
-functions which are unique to this API or, for reasons of argument
-passing conventions, work differently than in the C API.
+Most of the functions listed below are not documented here. Most of them map
+1-to-1 with ncurses functions of the same (or very similar) names, and are
+described in great detail in the ncurses man pages. That also explains why
+their names are so cryptic and do not follow common !JavaScript naming
+conventions. The exceptions to the documentation rule are functions which are
+unique to this API or, for reasons of argument passing conventions, work
+differently than in the C API.
 
-Some functions which are overloaded in the native C++ API instead
-have several variants with slightly different names (all conforming
-to common curses naming conventions). e.g. `getch()` vs `mvgetch()`.
+Some functions which are overloaded in the native C++ API instead have several
+variants with slightly different names (all conforming to common curses naming
+conventions). e.g. `getch()` vs `mvgetch()`. At some point i may go back and
+implement proper overloads for JS, but for the moment it's more trouble than
+it's worth.
 
 Here we go...
 
@@ -151,6 +165,7 @@ Here we go...
 || `void` || `close()` || Closes/destroys this windows. The object cannot be used after this is called. || 
 || `string` ||  `name()` || ||
 || `void` || `setName(string)` || ||
+|| `int` || `windowID()` || Returns a unique integer ID for this window. No two windows have the same ID. It can be used to assist in mapping windows to arbitrary other data. ||
 || `int` ||  `lines()` || ||
 || `int` ||  `cols()` || ||
 || `int` ||  `tabsize()` || ||
@@ -161,6 +176,7 @@ Here we go...
 || `int` ||  `maxx()` || ||
 || `int` ||  `maxy()` || ||
 || `int` ||  `inch()` || ||
+|| `int` || `mvinch( int, int )` || Moves to the given y/x coords, then acts as `inch()`. ||
 || `int` ||  `insertln()` || ||
 || `int` ||  `erase()` || ||
 || `int` ||  `clear()` || ||
@@ -203,19 +219,19 @@ Here we go...
 || `int` || `keypad(bool)` || ||
 || `int` || `addch(int)` || ||
 || `int` || `echochar(int)` || ||
-|| `int` || `addstr(string)` || ||
 || `bool` || `is_linetouched(int)` || ||
 || `int` || `mvwin( int, int )` || Moves the window. Do not do this if the window has a parent, or Grief may ensue. ||
 || `int` || `move( int, int )` || Moves the cursor to the given position. ||
-|| `int` || `getch( int, int )` || ||
-|| `int` || `addstrn( string, int )` || ||
-|| `int` || `mvinch( int, int )` || ||
+|| `int` || `getch()` || Waits for a keypress and returns its key code. ||
+|| `int` || `mvgetch( int, int )` || Moves to the given y/x position, then acts as `getch()`. ||
+|| `int` || `addstrn( string, int n )` || Adds up to n bytes of the given string to the window. ||
+|| `int` || `addstr(string)` || Adds the given string to the window. ||
+|| `int` || `mvaddstr( int, int, string )` || ||
 || `int` || `mvdelch( int, int )` || ||
 || `int` || `setscrreg( int, int )` || ||
 || `int` || `touchln( int, int )` || ||
 || `int` || `redrawln( int, int )` || ||
 || `int` || `mvaddch( int,int,int )` || ||
-|| `int` || `mvaddstr( int, int, string )` || ||
 || `int` || `mvinsch( int,int,int )` || ||
 || `int` || `mvaddstrn( int, int, string,int )` || ||
 || `int` || `mvaddstrn( int, int, string,int )` || ||
@@ -223,7 +239,6 @@ Here we go...
 || `void` || `captureCout([int attributes])` || Redirects the `std::cout` object to this window until the window is closed or `captureReset()` is called. If the attributes argument is set, the output from that stream is colored using those attributes. ||
 || `void` || `captureCerr()` || Same as `captureCout()`, but applies to the native `std::cerr` object. ||
 || `void` || `captureReset()` || Undoes stream capturing enabled with `captureCout()` and `captureCerr()`, revering `cout` and/or `cerr` to their previous states. ||
-|| `int` || `getch()` || Waits for a keypress and returns its key code. ||
 || `string` || `getstr([int maxlen])`, `getstr(int y, int x [, int maxlen])` || Reads up to maxlen (or some arbitrarily chosen limit) characters from the window. ||
 || `int` || `nodelay(bool)` || Analog to curses `nodelay()` ||
 || `void` || `timeout(int)` || Analog to curses `wtimeout()`. ||
@@ -233,7 +248,7 @@ Here we go...
 TODOs:
   * Organize the member list by category.
   * Implement `overlay()`, `overwrite()`, and `copywin()` (needed for some PAD operations).
-  * Implement `ripoffline()`.
+  * Implement `ripoffline()` (just because it's interesting).
   * Maybe provide a standardized API for dispatching `getch()` key codes via callbacks.
 
 
@@ -277,8 +292,8 @@ general case it makes them much simpler to use.
 
 NCPad deserves much more documentation than is given here. Maybe someday. Until then...
 
-Aside from the NCWindow API (not all of which is strictly legal for a
-pad!), NCPad also provides:
+Aside from the NCWindow API (not all of which is strictly legal for a pad -
+see the curses man pages!), NCPad also provides:
 
 
 || *Return type* || *Name/Arguments* || *Notes* ||
@@ -306,7 +321,7 @@ goes into much more detail about these.
 
 || *Name* || *Notes* ||
 
-|| `PadReqFirstRequest` || Last request type in the list, for use in loops. ||
+|| `PadReqFirstRequest` || First request type in the list, for use in loops. ||
 || `PadReqRefresh` || Triggers a refresh operation. ||
 || `PadReqUp` || Scroll one line up. ||
 || `PadReqDown` || Scroll one line down. ||
@@ -314,11 +329,11 @@ goes into much more detail about these.
 || `PadReqRight` || Scroll right. ||
 || `PadReqExit` || End input loop. ||
 || `PadReqPageUp` || Page up. ||
-|| `PadReqPageDown` || Page down ||
+|| `PadReqPageDown` || Page down. ||
 || `PadReqScrollToTop` || Scrolls to the top. ||
 || `PadReqScrollToBottom` || Scrolls to the bottom. ||
-|| `PadReqIgnored` || An ignored request. Don't remember what this is for. ||
-|| `PadReqUnknown` || Used by `reqForKey()` to report an unknown event. ||
+|| `PadReqIgnored` || Used by some routines to report that a key was explicitly ignored. ||
+|| `PadReqUnknown` || Used by `reqForKey()` to report an unknown key mapping. ||
 || `PadReqLastRequest` || Last request type in the list, for use in loops. ||
 
 TODOs:
@@ -332,6 +347,7 @@ General tips include:
   * Never use stdscr, a window the size of the screen, or overlapping windows at all. They're problematic to draw correctly. Use NCPanel objects to partition off your main working space, and use sub-windows within the panels to further organize.
   * NCPad is weird. Just plain weird. It takes lots of study to get it to do what you want it to.
   * The `NCWindow.captureCout()` and `captureCerr()` methods should always be matched with `captureReset()`, or else "good luck!"
+  * If your curses script dies with a message like `object X has no function Y` it is easy to miss the error text unless one adds a try/catch block around the main app and sends it to stdout after curses mode is ended (which happens automatically when all windows are destroyed).
 
 ==Send debugging output to another console==
 
@@ -363,6 +379,10 @@ mywin.captureCerr( ncurses.color_pair('red','black') | ncurses.A_BOLD );
 mywin.captureReset(); // restores cout/cerr to their previous states
 }}}
 
+Note that JS has no standard (or even pseudostandard routines) which output to
+stderr, and it is generally expected that all intercepted `std::cerr` output
+will be coming from debuggering routines.
+
 =Examples=
 
 It's hard to make _short_/_concise_ examples for curses. i'll try to get
@@ -375,7 +395,8 @@ i add the app-specific widgets to those. i never touch stdscr, and instead
 do everything on panels. This saves a lot of hassle when it comes to moving
 windows and refreshing overlapping windows. For example, using a screen-sized
 panel as the "root window" overcomes screen corruption problems which we
-see when we have panels on top of stdscr and use stdscr for output.
+see when we have panels on top of stdscr _and_ use stdscr for output. Summary:
+don't output anything to stdscr unless it's the only window your app needs.
 
 Here's an example:
 
@@ -383,7 +404,7 @@ Here's an example:
 load_plugin('v8-juice-ncurses-oo');
 var nc = ncurses;
 nc.curs_set(0);
-var root = new nc.NCPanel();
+var root = new nc.NCPanel(); // full-screen panel.
 root.attrset( nc.color_pair('white','red') );
 root.mvaddstr(4,0,"I am the root panel.");
 root.captureCout();
