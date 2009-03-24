@@ -86,10 +86,10 @@ plugin is loaded.
 When loaded, this plugin will create an object called `whefs` inside the target object
 to which it is added (normally the global object). That `whefs` object holds the rest of the classes and functions for this plugin.
 
-The native whio API has huge amounts of API documentation which might be interesting
+The native API has huge amounts of API documentation which might be interesting
 to users of this API: [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whefs_amalgamation.h whefs_amalgamation.h]
 
-But all of the "less technical" info one needs for using it in JS is documented below. For all kinds of more details than you'd ever want to know, see the API documentation
+But all of the "less technical" info one needs for using it in JS is documented below. For more details than you'd ever want to know, see the native API documentation
 
 =JS usage=
 
