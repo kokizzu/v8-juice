@@ -196,12 +196,6 @@ then free to use slots 0..(N-1), as is conventional.
 That said, i haven't yet seen any v8 client code which would benefit
 from having more than one internal data field. Might be handy in some
 cases, but it would in general seem easier to bind only one native object (i.e. the `T` type wrapped by `WeakJSClassCreator<T>`) and store any other bound data in that native object.
-=Real-world examples=
-
-There are some real-world examples of using these types in the v8-juice source tree:
-
-  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-js.cc Pathfinder-js.cc] is a fairly straightforward example which wraps the majority of the `v8::juice::PathFinder` class using `ClassBinder`. Search that file for `SetupPathFinderClass` and you'll jump right to the relevant parts.
-  * Or the much more detailed [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/v8-whio.cc v8-whio.cc] implements the [PluginWhio whio plugin]. This example is way more convoluted than normal, largely because it contains much evolutionary cruft from the various phases of WeakJSClassCreator's development. It also demonstrates `WeakJSClassCreator<T>` where `WeakJSClassCreator<T>::WrappedType` is-not `T`, which might be interesting to someone out there.
 
 ==Dual JS/C++ Inheritance==
 
@@ -271,6 +265,15 @@ declared first (if possible).
 This approach has some limitations, the most glaring being that when we have more than
 one level of inheritance, we must call `Inherit()` for each level of the hierarchy,
 which is a real drag. i'm looking into other approaches which won't require this.
+
+
+=Real-world examples=
+
+There are some real-world examples of using these types in the v8-juice source tree:
+
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-js.cc Pathfinder-js.cc] is a fairly straightforward example which wraps the majority of the `v8::juice::PathFinder` class using `ClassBinder`. Search that file for `SetupPathFinderClass` and you'll jump right to the relevant parts.
+  * Or the much more detailed [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/v8-whio.cc v8-whio.cc] implements the [PluginWhio whio plugin]. This example is way more convoluted than normal, largely because it contains much evolutionary cruft from the various phases of WeakJSClassCreator's development. It also demonstrates `WeakJSClassCreator<T>` where `WeakJSClassCreator<T>::WrappedType` is-not `T`, which might be interesting to someone out there.
+
 
 =!ClassBinder=
 
