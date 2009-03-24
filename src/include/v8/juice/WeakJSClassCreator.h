@@ -37,7 +37,7 @@
 #include <string>
 #include <stdexcept>
 #include <map>
-#include <vector>
+#include <set>
 #include <sstream>
 namespace v8 {
 namespace juice {
@@ -357,7 +357,7 @@ namespace juice {
 	};
         
         typedef WrappedType * (*SubclassGetNative)( void const * );
-        typedef std::vector<SubclassGetNative> SubclassGetNatives;
+        typedef std::set<SubclassGetNative> SubclassGetNatives;
         /** Internal helper to do subtype lookups for GetSelf(). */
         static SubclassGetNatives & subclassGettersN()
         {
@@ -371,7 +371,7 @@ namespace juice {
             return Detail::WrapperMapper<SubT>::GetNative( key );
         }
         typedef Handle<Object> (*SubclassGetJSObject)( void const * );
-        typedef std::vector<SubclassGetJSObject> SubclassGetJSObjects;
+        typedef std::set<SubclassGetJSObject> SubclassGetJSObjects;
         /** Internal helper to do subtype lookups for GetJSObject(). */
         static SubclassGetJSObjects & subclassGettersJ()
         {
@@ -438,8 +438,8 @@ namespace juice {
         template <typename SubT>
         static void RegisterSelfSubclass()
         {              
-            subclassGettersN().push_back( GetInheritedNative<SubT> );
-            subclassGettersJ().push_back( GetInheritedJSObject<SubT> );
+            subclassGettersN().insert( GetInheritedNative<SubT> );
+            subclassGettersJ().insert( GetInheritedJSObject<SubT> );
         }
         
 
@@ -458,7 +458,7 @@ namespace juice {
            WrappedType must have the same values for
            ExtraInternalFieldCount. This is a bug without a current
            workaround, and this function throws a native exception if
-           that is not the case.
+           the values do not match.
 
            If those are met, then calls to GetSelf(), GetJSObject(),
            and GetNative() using type WeakJSClassCreator<ParentT>
