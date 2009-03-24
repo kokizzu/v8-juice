@@ -5,13 +5,14 @@
 
 =About=
 
-The ncurses bindings wrap up a great deal of the ncurses API for use in
-!JavaScript. Instead of providing an API directly compatible with the
-low-level C API (as earlier versions of this plugin did), it provides an
-object-oriented interface. This is much easier to manage, in terms of window
-ownership, subwindows, etc., than the low-level interface. Nonetheless, it is
-still curses at heart, and can therefore "take some getting used to."
-
+The ncurses bindings wrap up a great deal (over 120 functions) of the ncurses
+API for use in !JavaScript. Instead of providing an API directly compatible
+with the low-level C API (as earlier versions of this plugin did), it provides
+an object-oriented interface. This is much easier to manage, in terms of
+window ownership, subwindows, etc., than the low-level interface. That said,
+the OO interface is only a simple wrapper around the curses API (essentially
+adding only child ownership semantics), and will require some curses know-how
+in order to use effectively. As always, curses "takes some getting used to."
 
 The advantages of writing curses apps in JS instead of C include:
 
@@ -84,7 +85,7 @@ In order to make this API easier to use... for the vast majority of the cases
 we've kept the cryptic names! Why? Because it makes it simpler to go look up
 their meanings in the curses man pages. If we renamed them, curses gurus would
 be confused by the new names and curses newbies wouldn't be able to find the
-man pages. The function which don't use names taken directly from the curses
+man pages. The functions which don't use names taken directly from the curses
 API normally derive their names from the underlying C++ wrapper (which was
 originally developed by someone else). An example which comes to mind is
 `NCWindow.scroll()`, which behaves like `wscrl()`, and not like `scroll()`.
@@ -118,15 +119,15 @@ which holds all of the plugin's classes and the following non-class functions:
 || `int` || `flash()` || Flashes the terminal. ||
 || `int` || `getch()` || Similar, but not identical, to `NCWindow.getch()`. In theory they are indentical, but in practice the latter has no refresh side-effects, whereas the former sometimes does. ||
 || `int` || `curs_set(int)` || Sets the cursor to invisible, half-visible, or fully visible, depending on whether the argument is 0, 1, or 2, respectively ||
-|| `int` || `napms(int )` || Sleeps for the given number of milliseconds. ||
+|| `int` || `napms(int)` || Sleeps for the given number of milliseconds. ||
 || `int` || `endwin()` || Never call unless absolutely necessary - forcibly exits curses screen mode without cleaning up resources. If all windows are closed properly, curses will be shut down automatically when the last window goes away. ||
 || `int` || `echo([bool = true])` || If passed true, tells curses to echo all keypresses, otherwise keypresses are not echoed. This is off by default but should be turned on when using `NCWindow.getstr()` (or similar). ||
 || `int` || `noecho()` || Equivalent to `echo(false)`. ||
-|| `int` || `cbreak([bool = true])` || ||
+|| `int` || `cbreak([bool = true])` || See `man cbreak`. ||
 || `int` || `nocbreak()` || Equivalent to `cbreak(false)`. ||
-|| `int` || `raw([bool = true])` || ||
+|| `int` || `raw([bool = true])` || See `man raw`. ||
 || `int` || `noraw()` || Equivalent to `raw(false)`. ||
-|| `int` || `halfdelay(int tenths)` || ||
+|| `int` || `halfdelay(int tenths)` || See `man halfdelay`. ||
 
 
 Aside from those functions, nearly all standard ncurses macros are defined as
@@ -405,7 +406,7 @@ var root = new nc.NCPanel(); // full-screen panel.
 root.attrset( nc.color_pair('white','red') );
 root.mvaddstr(4,0,"I am the root panel.");
 root.captureCout();
-root.captureCerr();
+root.captureCerr( nc.color_pair('red','white') | ncurses.A_BLINK | ncurses.A_BOLD );
 print("std::cout is redirected here.");
 function tryPad()
 {
