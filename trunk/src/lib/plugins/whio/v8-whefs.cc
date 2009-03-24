@@ -122,6 +122,7 @@ namespace v8 { namespace juice { namespace whio {
         CERR << ClassName()<<" dtor passing on @"<<obj<<'\n';
         if( obj )
         {
+            bind::UnbindNative( obj, obj );
             ::v8::juice::cleanup::RemoveFromCleanup(obj);
             whefs_fs_finalize(obj);
         }
@@ -279,6 +280,21 @@ namespace v8 { namespace juice { namespace whio {
         return CastToJS( whefs_fs_calculate_size( whefs_fs_options_get(fs) ) );
     }
 
+    static Handle<Value> whefs_fs_tostring(const Arguments& argv)
+    {
+        EFSTHIS;
+        Handle<Object> self( argv.This() );
+	std::ostringstream os;
+	os << "[object "<<WHEFSOps::ClassName();
+	Local<String> key(JSTR(WhioStrings::fileName));
+	if( self->Has(key) )
+	{
+	    os << ' ' << WhioStrings::fileName<<":'"<<JSToStdString(self->Get(key))<<'\'';
+	}
+	os <<']';
+	return CastToJS( os.str() );
+    }
+
 #undef EFSH
 #undef EFSHT
 #undef EFSTHIS
@@ -326,6 +342,7 @@ namespace v8 { namespace juice { namespace whio {
                 .Set(WhefsStrings::dumpToFile, whefs_dump_to_file)
                 .Set(WhefsStrings::ls, whefs_ls)
                 .Set(WhioStrings::size, whefs_size)
+                .Set("toString", whefs_fs_tostring)
                 ;
             Handle<Function> ctor = binder.Seal();
             Handle<Function> fmkfs( FunctionTemplate::New(whefs_mkfs)->GetFunction() );
