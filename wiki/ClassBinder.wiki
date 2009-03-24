@@ -148,6 +148,7 @@ struct my_native
     my_native * other;
     my_native() : str(),other(0)
     {}
+};
 }}}
 
 Great, now that's out of the way...
@@ -347,7 +348,7 @@ not come for free. Since we use C++ templates to create the bindings
 for classes, any conversions must know the _exact_ templatized type of
 the native class. Because of this, `WeakJSClassCreator<ParentType>`
 and `WeakJSClassCreator<SubType>` are, for purposes of typing (and in
-particular for purposes of corss-JS/C++ conversions), unrelated, and
+particular for purposes of cross-JS/C++ conversions), unrelated, and
 thus have no inherent implicit conversion ability.
 
 When `WeakJSClassCreator<SubType>::Inherit()` is called, an internal
