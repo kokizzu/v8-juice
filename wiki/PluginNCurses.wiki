@@ -163,78 +163,77 @@ Here we go...
 || `NCWindow` || `new NCWindow(int lines, int cols, int y, int x)` || Creates a new wind with the given size/position. Throws on error. ||
 || `NCWindow` || `new NCWindow(NCWindow parent, int lines, int cols, int y, int x)` || Creates a subwindow of the given window, with coordinates relative to that window. ||
 || `void` || `close()` || Closes/destroys this windows. The object cannot be used after this is called. || 
-|| `string` ||  `name()` || ||
-|| `void` || `setName(string)` || ||
+|| `string` ||  `name()` || Returns the window's name. ||
+|| `void` || `setName(string)` || Sets the window's name. ||
 || `int` || `windowID()` || Returns a unique integer ID for this window. No two windows have the same ID. It can be used to assist in mapping windows to arbitrary other data. ||
 || `int` ||  `lines()` || ||
 || `int` ||  `cols()` || ||
 || `int` ||  `tabsize()` || ||
 || `int` ||  `height()` || ||
 || `int` ||  `width()` || ||
-|| `int` ||  `begy()` || ||
-|| `int` ||  `begx()` || ||
-|| `int` ||  `maxx()` || ||
-|| `int` ||  `maxy()` || ||
-|| `int` ||  `inch()` || ||
+|| `int` ||  `begy()` || See `man getbegy`. ||
+|| `int` ||  `begx()` || See `man getbegx`. ||
+|| `int` ||  `maxx()` || See `man getmaxx`. ||
+|| `int` ||  `maxy()` || See `man getmaxy`. ||
+|| `int` ||  `inch()` || See `man winch`. ||
 || `int` || `mvinch( int, int )` || Moves to the given y/x coords, then acts as `inch()`. ||
-|| `int` ||  `insertln()` || ||
-|| `int` ||  `erase()` || ||
-|| `int` ||  `clear()` || ||
-|| `int` ||  `clrtobot()` || ||
-|| `int` ||  `delch()` || ||
-|| `int` ||  `deleteln()` || ||
-|| `int` ||  `touchwin()` || ||
-|| `int` ||  `untouchwin()` || ||
-|| `bool` ||  `is_wintouched()` || ||
-|| `int` ||  `redrawwin()` || ||
-|| `int` ||  `doupdate()` || ||
-|| `void` ||  `syncdown()` || ||
-|| `void` ||  `syncup()` || ||
-|| `void` ||  `cursyncup()` || ||
-|| `int` ||  `standout()` || ||
-|| `int` ||  `standend()` || ||
-|| `int` ||  `refresh()` || ||
-|| `int` ||  `noutrefresh()` || ||
-|| `bool` ||  `has_mouse()` || ||
-|| `int` || `insch(int)` || ||
-|| `int` || `insdelln(int)` || ||
-|| `int` || `insstr(string)` || ||
-|| `int` || `insstrn( string, int )` || ||
-|| `int` || `mvinsstr( int,int,string )` || ||
-|| `int` || `mvinsstrn( int,int,string,int )` || ||
-|| `int` || `attron(int)` || ||
-|| `int` || `attroff(int)` || ||
-|| `int` || `attrset(int)` || ||
+|| `int` ||  `insertln()` || See `man winsertln`. ||
+|| `int` ||  `erase()` || See `man werase`. ||
+|| `int` ||  `clear()` || See `man wclear`. ||
+|| `int` ||  `clrtobot()` || See `man wclrtobot`. ||
+|| `int` ||  `delch()` || See `man wdelch`. ||
+|| `int` ||  `deleteln()` || See `man wdeleteln`. ||
+|| `int` ||  `touchwin()` || See `man touchwin`. ||
+|| `int` ||  `untouchwin()` || See `man untouchwin`. ||
+|| `bool` ||  `is_wintouched()` || See `man is_wintouched`. ||
+|| `int` ||  `redrawwin()` || See `man redrawwin`. ||
+|| `int` ||  `doupdate()` || See `man doupdate`. ||
+|| `void` ||  `syncdown()` || See `man wsyncdown`. ||
+|| `void` ||  `syncup()` || See `man wsyncup`. ||
+|| `void` ||  `cursyncup()` || See `man wcursyncup`. ||
+|| `int` ||  `standout()` || See `man wstandout`. ||
+|| `int` ||  `standend()` || See `man wstandend`. ||
+|| `int` ||  `refresh()` || See `man wrefresh`. ||
+|| `int` ||  `noutrefresh()` || See `man wnoutrefresh`. ||
+|| `bool` ||  `has_mouse()` || Returns true if curses is compiled with mouse support. TODO: move this to a static member. ||
+|| `int` || `insch(int)` || See `man winsch`. ||
+|| `int` || `insdelln(int)` || See `man winsdelln`. ||
+|| `int` || `insstr(string)` || See `man winsstr`. ||
+|| `int` || `insstrn( string, int )` || See `man winsstr`. ||
+|| `int` || `mvinsstr( int,int,string )` || See `man mvwinsstr`. ||
+|| `int` || `mvinsstrn( int,int,string,int )` || See `man mvwinsstr`. ||
+|| `int` || `attron(int)` || See `man wattron`. ||
+|| `int` || `attroff(int)` || See `man wattroff`. ||
+|| `int` || `attrset(int)` || See `man wattrset`. ||
 || `int` || `color_set(int)` || Don't use this. Use `ncurses.color_pair()` instead - much easier. ||
 || `int` || `bkgd(int)` || Immediately changes the window's whole background to the given attributes. ||
 || `void` || `bkgdset(int)` || Similar to `bkgd()`, but does not apply to the whole window. The man pages are seriously lacking on this one. ||
 || `int` ||  `getbkgd()` || Fetches the background attributes. ||
-|| `int` || `clearok(bool)` || ||
-|| `int` || `scroll(int)` || ||
-|| `int` || `scrollok(bool)` || ||
-|| `int` || `idlok(bool)` || ||
-|| `void` || `idcok(bool)` || ||
-|| `int` || `leaveok(bool)` || ||
-|| `void` || `immedok(bool)` || ||
-|| `int` || `keypad(bool)` || ||
-|| `int` || `addch(int)` || ||
-|| `int` || `echochar(int)` || ||
-|| `bool` || `is_linetouched(int)` || ||
+|| `int` || `clearok(bool)` || See `man clearok`. ||
+|| `int` || `scroll(int)` || See `man scroll`. ||
+|| `int` || `scrollok(bool)` || See `man scrollok`. ||
+|| `int` || `idlok(bool)` || See `man idlok`. ||
+|| `void` || `idcok(bool)` || See `man idcok`. ||
+|| `int` || `leaveok(bool)` || See `man leaveok`. ||
+|| `void` || `immedok(bool)` || See `man immedok`. ||
+|| `int` || `keypad(bool)` || See `man keypad`. ||
+|| `int` || `addch(int)` || See `man addch`. ||
+|| `int` || `echochar(int)` || See `man wechochar`. ||
+|| `bool` || `is_linetouched(int)` || See `man is_linetouched`. ||
 || `int` || `mvwin( int, int )` || Moves the window. Do not do this if the window has a parent, or Grief may ensue. ||
 || `int` || `move( int, int )` || Moves the cursor to the given position. ||
 || `int` || `getch()` || Waits for a keypress and returns its key code. ||
 || `int` || `mvgetch( int, int )` || Moves to the given y/x position, then acts as `getch()`. ||
 || `int` || `addstrn( string, int n )` || Adds up to n bytes of the given string to the window. ||
 || `int` || `addstr(string)` || Adds the given string to the window. ||
-|| `int` || `mvaddstr( int, int, string )` || ||
-|| `int` || `mvdelch( int, int )` || ||
-|| `int` || `setscrreg( int, int )` || ||
-|| `int` || `touchln( int, int )` || ||
-|| `int` || `redrawln( int, int )` || ||
-|| `int` || `mvaddch( int,int,int )` || ||
-|| `int` || `mvinsch( int,int,int )` || ||
-|| `int` || `mvaddstrn( int, int, string,int )` || ||
-|| `int` || `mvaddstrn( int, int, string,int )` || ||
+|| `int` || `mvaddstr( int, int, string )` || See `man mvaddstr`. ||
+|| `int` || `mvaddstrn( int, int, string,int maxLen )` || See `man mvaddstr`. ||
+|| `int` || `mvdelch( int, int )` || See `man mvwdelch`. ||
+|| `int` || `setscrreg( int, int )` || See `man wsetscrreg`. ||
+|| `int` || `touchln( int, int )` || See `man wtouchln`. ||
+|| `int` || `redrawln( int, int )` || See `man wredrawln`. ||
+|| `int` || `mvaddch( int,int,int )` || See `man mvwaddch`. ||
+|| `int` || `mvinsch( int,int,int )` || See `man mvwinsch`. ||
 || `int` || `mvcur( int,int,int,int )` || Low-level cursor movement. ||
 || `void` || `captureCout([int attributes])` || Redirects the `std::cout` object to this window until the window is closed or `captureReset()` is called. If the attributes argument is set, the output from that stream is colored using those attributes. ||
 || `void` || `captureCerr()` || Same as `captureCout()`, but applies to the native `std::cerr` object. ||
@@ -265,8 +264,8 @@ In addition to the NCWindow API, NCPanel has:
 || *Return type* || *Name/Arguments* || *Notes* ||
 || `NCPanel` || `new NCPanel()` || A top-level panel. ||
 || `NCPanel` || `new NCPanel(int lines, int cols [, int y=0, int x=0])` || Creates a new panel at the given position. A window can be wrapped around it with `new NCWindow(myPanel)`. Throws on error. ||
-|| `void` || `hide()` || Hides the panel ||
-|| `void` || `show()` || Shows the panel ||
+|| `void` || `hide()` || Hides the panel. ||
+|| `void` || `show()` || Shows the panel. ||
 || `void` || `top()` || Moves the panel to the top of the stack. ||
 || `void` || `bottom()` || Moves the panel to the bottom of the stack. ||
 || `bool` || `hidden()` || Returns true if the panel is hidden. ||
@@ -306,9 +305,9 @@ see the curses man pages!), NCPad also provides:
 || `bool` || `consumeKey(int)` || Tries to process a keypress, returning true if it can. See the native API. ||
 || `void` || `mapKeyToReq(int key, int requestID)` || See the list of `PadReq` vars below. This function maps key IDs to "pad requests", such that `inputLoop()` will react to them. ||
 || `int` || `reqForKey(int key)` || Returns a `PadReq` value (see below) corresponding to the given key. ||
-|| `int` || `echochar(int ch)` || Outputs a single character and refreshes the pad immediately. ||
+|| `int` || `echochar(int ch)` || Equivalent to `pechochar`. ||
 || `void` || `inputLoop()` || Starts a local input loop. Pressing the arrow/page keys scrolls the pad and Ctrl-W or F10 stops the loop. ||
-|| `int` || `refresh() || Reimplemented to take no args (as for NCWindow) or 6 args (equivalent to `prefresh()`) ||
+|| `int` || `refresh()` || Reimplemented to take no args (as for NCWindow) or 6 args (equivalent to `prefresh()`) ||
 || `int` || `noutrefresh()` || Reimplemented to accept no args (as for NCWindow) or 6 args (equivalent to `pnoutrefresh()`) ||
 
 The NCPad class also has the following shared symbolic contants, all
