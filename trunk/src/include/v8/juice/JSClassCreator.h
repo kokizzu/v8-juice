@@ -213,7 +213,7 @@ namespace juice {
 
 	   Returns this object.
 	*/
-	JSClassCreator & Inherit( JSClassCreator & parent );
+	virtual JSClassCreator & Inherit( JSClassCreator & parent );
 
     };
 
