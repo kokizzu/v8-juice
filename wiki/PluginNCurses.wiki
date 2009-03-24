@@ -39,7 +39,7 @@ http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/ncurses-oo
 Curses has been around since the 80's and is the _de facto_ library
 for implementing text-base user interfaces. It presumably gets its
 name from the fact that one spends half his time cursing while using
-it. _Ncurses_ is the _de facto_ open source implementation of curses
+it. _ncurses_ is the _de facto_ open source implementation of curses
 (curses is actually a standard), and is available on almost every
 platform out there.
 
@@ -60,7 +60,7 @@ For new and old curses programmers alike,
 is an excellent resource on how to work with the library. Printed in
 2007, it is the only curses book i'm aware of which was penned in the
 21st century. Curiously, even though Thomas Dickey still releases patches to ncurses
-on a weekly basis, not much has actually changed in curses since... well, since a very
+on a weekly basis, not much has fundamentally changed in curses since... well, since a very
 long time. So if you programmed curses back in 1992 and still remember how it works,
 there won't be much of a learning curve for you here.
 
@@ -166,17 +166,17 @@ Here we go...
 || `string` ||  `name()` || Returns the window's name. ||
 || `void` || `setName(string)` || Sets the window's name. ||
 || `int` || `windowID()` || Returns a unique integer ID for this window. No two windows have the same ID. It can be used to assist in mapping windows to arbitrary other data. ||
-|| `int` ||  `lines()` || ||
-|| `int` ||  `cols()` || ||
-|| `int` ||  `tabsize()` || ||
-|| `int` ||  `height()` || ||
-|| `int` ||  `width()` || ||
-|| `int` ||  `begy()` || See `man getbegy`. ||
-|| `int` ||  `begx()` || See `man getbegx`. ||
+|| `int` ||  `lines()` || The number of screen lines in the window. ||
+|| `int` ||  `cols()` || The number of screen columns in the window. ||
+|| `int` ||  `tabsize()` || ??? ||
+|| `int` ||  `height()` || The height of the window, in lines. ||
+|| `int` ||  `width()` || The width of the window, in columns. ||
+|| `int` ||  `begy()` || See `man getbegyx`. ||
+|| `int` ||  `begx()` || See `man getbegyx`. ||
 || `int` ||  `maxx()` || See `man getmaxx`. ||
 || `int` ||  `maxy()` || See `man getmaxy`. ||
 || `int` ||  `inch()` || See `man winch`. ||
-|| `int` || `mvinch( int, int )` || Moves to the given y/x coords, then acts as `inch()`. ||
+|| `int` || `mvinch( int, int )` || See `man mvwinch`. ||
 || `int` ||  `insertln()` || See `man winsertln`. ||
 || `int` ||  `erase()` || See `man werase`. ||
 || `int` ||  `clear()` || See `man wclear`. ||
@@ -443,7 +443,6 @@ function tryPad()
         print("exception:",e);
     }
 }
-
 tryPad();
 root.refresh();
 print("All done. Tap a key to quit.");
@@ -451,5 +450,4 @@ ncurses.beep();
 var rc = root.getch();
 root.close();
 print("Done! :-D");
-
 }}}
