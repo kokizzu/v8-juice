@@ -800,7 +800,19 @@ namespace nc {
 #endif // NCURSES_MOUSE_VERSION
 #undef SET_MAC
 
-        {
+        if(0) {
+            /**
+               Weird: this causes interactive loads of this plugin to hang:
+
+stephan@jareth:~/cvs/v8-juice/extra-plugins/src/ncurses-oo$ v8-juice-shell 
+V8 version 1.1.1.4
+> load_plugin('v8-juice-ncurses-oo.so');
+
+<waits until i press Ctrl-C or Ctrl-D, then...>
+
+[object Object]
+
+            */
             NCMode sentry;
             // The ACS_xxx defines don't actually work until curses has been started.
 #define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
