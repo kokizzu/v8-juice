@@ -3,9 +3,11 @@
 
 (This is now part of [PluginStringFuncs the stringfuncs plugin].)
 
-=sprintf() for JavaScript=
+20090325: sprintf was copied back into the core lib because it'll be useful from several plugins.
 
-The files `v8-sprintf.{h,cc}` contain an implementation of sprintf() for JS. It is independent of the rest of the library - those two files can be plugged in to arbitrary v8-based source trees.
+=`sprintf()` for JavaScript=
+
+The files `jssprintf.{h,cc}` contain an implementation of sprintf() for JS. It is independent of the rest of the library - those two files can be plugged in to arbitrary v8-based source trees.
 
 To include it in your C++ application, see the instructions in the header file. From JS, it is used just like printf(), but instead of printing the result somewhere it returns the result as a string. For example:
 
