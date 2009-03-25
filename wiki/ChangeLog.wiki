@@ -10,6 +10,9 @@ are at the top. Dates written extra large are release dates. This contains only 
   * http://code.google.com/p/v8-juice/source/list
 
 ----
+==2009 March 25==
+  * New release.
+
 *2009 March 24*
   * Found a way to support dual native- and JS-side inheritance via [CreatingJSClasses WeakJSClassCreator], and refactored [PluginNCurses the ncurses plugin] to use it.
   * The past few days have mostly been spent reimplementing [PluginNCurses the ncurses plugin], which is once again in a usable state (but has a much different API than before).
