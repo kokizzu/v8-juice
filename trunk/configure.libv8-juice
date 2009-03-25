@@ -44,7 +44,7 @@ echo "Searching for v8 library:"
 default_libpath="${prefix}/lib:/usr/lib:/usr/local/lib:$HOME/lib"
 v8libpath="${v8home}/lib:${default_libpath}"
 
-if [[ x1 = x${configure_enable_debug-0} ]]; then
+if [[ x0 != x${configure_enable_debug-0} ]]; then
     echo "Debuggering enabled. Preferring libv8_g over libv8."
     liblist="libv8_g.a libv8_g.so libv8.a libv8.so"
 else
