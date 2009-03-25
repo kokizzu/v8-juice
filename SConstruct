@@ -19,7 +19,7 @@ print("*************************************************************************
 v8_home = os.path.abspath('/home/stephan')
 v8_incdir = os.path.join(v8_home,'include')
 v8_libdir = os.path.join(v8_home,'lib')
-
+v8_libname = 'v8' #or use 'v8_g'
 env = Environment(
     CPPPATH = ['#/src/include',v8_incdir],
     LIBPATH = ['.',v8_libdir]
@@ -32,17 +32,18 @@ if( True ):
         'cleanup.cc',
         'convert.cc',
         'JSClassCreator.cc',
+        'jssprintf.cc',
         'juice.cc',
         'PathFinder.cc',
         'PathFinder-js.cc',
         'plugin.cc',
         'whprintf.c'
         ]]
+#    print("Creating static juice lib...");
+#    env.StaticLibrary(libjuice_libname,my_src)
     print("Creating shared juice lib...");
-    env.StaticLibrary(libjuice_libname,my_src)
-    print("Creating static juice lib...");
     env.SharedLibrary(libjuice_libname,my_src ,
-                      LIBS = ['dl','v8','pthread'],
+                      LIBS = ['dl',v8_libname,'pthread'],
                       )
 
 
@@ -53,7 +54,8 @@ if( True ):
     print("Creating shell...")
     env.Program( target = 'v8-juice-shell',
                  source = my_src,
-                 LIBS = [libjuice_libname]
+                 LIBS = [libjuice_libname,v8_libname],
+                 LDFLAGS = "-L."
                  )
 
 
