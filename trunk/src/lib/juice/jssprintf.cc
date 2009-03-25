@@ -25,6 +25,7 @@ get a more custom-fit/efficient solution.
 
 #include <string.h> /* strlen() */
 #include <stdlib.h> /* free/malloc() */
+#include <stdint.h>
 #include <ctype.h>
 
 #include <iostream>
@@ -90,7 +91,11 @@ explicitly running in c99 mode.
 #  if defined(__TINYC__)
 #    define WHPRINTF_HAVE_VARARRAY 0
 #  else
-#    define WHPRINTF_HAVE_VARARRAY 1
+    //#    if defined (__cplusplus)
+    //#      define WHPRINTF_HAVE_VARARRAY 0
+    //#    else
+#      define WHPRINTF_HAVE_VARARRAY 1
+    //#    endif
 #  endif
 #endif
 
@@ -363,9 +368,9 @@ static int et_getdigit(LONGDOUBLE_TYPE *val, int *cnt){
 #elif defined(_MSC_VER) || defined(__BORLANDC__)
   typedef __int64 int64_t;
   typedef unsigned __int64 uint64_t;
-#else
-  typedef long long int int64_t;
-  typedef unsigned long long int uint64_t;
+// #else
+//   typedef long long int int64_t;
+//   typedef unsigned long long int uint64_t;
 #endif
 
 #if 0

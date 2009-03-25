@@ -28,6 +28,7 @@ remove certain features/extensions.
 #include <string.h> /* strlen() */
 #include <stdlib.h> /* free/malloc() */
 #include <ctype.h>
+#include <stdint.h>
 
 #include "whprintf.h"
 typedef long double LONGDOUBLE_TYPE;
@@ -352,9 +353,12 @@ static int et_getdigit(LONGDOUBLE_TYPE *val, int *cnt){
 #elif defined(_MSC_VER) || defined(__BORLANDC__)
   typedef __int64 int64_t;
   typedef unsigned __int64 uint64_t;
+/**
+ rely on stdint.h here
 #else
   typedef long long int int64_t;
   typedef unsigned long long int uint64_t;
+*/
 #endif
 
 #if 0
