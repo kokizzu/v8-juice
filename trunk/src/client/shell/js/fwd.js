@@ -14,5 +14,6 @@ m.other = new MyNative();
 m.other.str = "i am the other!";
 //print("Re-assigned other.str.");
 print('m.other.str =',m.other.str,m.other.me());
+print('forwarder() =',m.other.forwarder(12,-13,8));
 
 
