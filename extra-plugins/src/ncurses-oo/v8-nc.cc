@@ -647,6 +647,18 @@ namespace nc {
         return CastToJS( ::halfdelay( JSToInt32(argv[0]) ) );
     }
 
+    template <char const *&N>
+    JS_WRAPPER(nc_window_tostring)
+    {
+        JWIN_THIS;
+	std::ostringstream os;
+	os << "[object "<<N;
+        os << " name=["<<jwin->name()<<"]";
+	os <<']';
+	return CastToJS( os.str() );
+    }
+
+
     static Handle<Value> SetupNCurses( Handle<Object> gl )
     {
         //CERR << "Initializing ncurses-oo wrapper plugin...\n";
@@ -928,6 +940,7 @@ V8 version 1.1.1.4
                 .BindMemFunc< int, JWindow *, int, int, int, int, int, int, bool, &JWindow::copywin > ("copywin")
 
                 // reminder: Set() returns a JSClassCreator, not a ClassBinder<>:
+                .Set( "toString", nc_window_tostring<strings::classWindow> )
                 .Set("captureCout", nc_capture_cout)
                 .Set("captureCerr", nc_capture_cerr)
                 .Set("captureReset", nc_capture_end)
@@ -954,6 +967,7 @@ V8 version 1.1.1.4
                 .BindMemFunc<void, &JPanel::bottom >( "bottom" )
                 .BindMemFunc<int, int, int, &JPanel::mvwin >( "mvwin" )
                 .BindMemFunc<bool, &JPanel::hidden >( "hidden" )
+                .Set( "toString", nc_window_tostring<strings::classPanel> )
                 .Set("close",ncwin_close<PanelBinder> )
                 ;
             bindP.Seal();
@@ -975,6 +989,7 @@ V8 version 1.1.1.4
                 .BindMemFunc<int,chtype,&JPad::echochar>( "echochar" )
                 .BindMemFunc<int,int,&JPad::reqForKey>( "reqForKey" )
                 .BindMemFunc<void,&JPad::inputLoop>( "inputLoop" )
+                .Set( "toString", nc_window_tostring<strings::classPad> )
                 .Set("refresh", ncpad_refresh)
                 .Set("noutrefresh", ncpad_noutrefresh)
                 .Set("close",ncwin_close<PadBinder> )
