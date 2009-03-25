@@ -368,7 +368,9 @@ namespace juice {
         template <typename SubT>
         static WrappedType * GetInheritedNative( void const * key )
         {
-            return Detail::WrapperMapper<SubT>::GetNative( key );
+            typedef WeakJSClassCreatorOps<SubT> OpsT;
+            typedef typename OpsT::WrappedType RealT;
+            return Detail::WrapperMapper<RealT>::GetNative( key );
         }
         typedef Handle<Object> (*SubclassGetJSObject)( void const * );
         typedef std::set<SubclassGetJSObject> SubclassGetJSObjects;
@@ -382,7 +384,9 @@ namespace juice {
         template <typename SubT>
         static Handle<Object> GetInheritedJSObject( void const * key )
         {
-            return Detail::WrapperMapper<SubT>::GetJSObject( key );
+            typedef WeakJSClassCreatorOps<SubT> OpsT;
+            typedef typename OpsT::WrappedType RealT;
+            return Detail::WrapperMapper<RealT>::GetJSObject( key );
         }
     public:
 
@@ -434,27 +438,49 @@ namespace juice {
            Why? Because this allows us to properly get at the 'this'
            pointer from inherited member functions in wrapped classes,
            and do to do transparently using CastFromJS<WrappedType>().
+
+           SubT must meet these requirements:
+
+           - WeakJSClassCreator<SubT>::WrappedType must be a virtual subclass of WrappedType.
+
+           - SubT must also be wrapped using WeakJSClassCreator.
+
+           - The WeakJSClassCreatorOps specializations for SubT and
+           WrappedType must have the same values for
+           ExtraInternalFieldCount. This is a bug without a current
+           workaround, and this function throws a native exception if
+           the values do not match.
+
+           If those conditions are met, then calls to GetSelf(),
+           GetJSObject(), and GetNative() using type
+           WeakJSClassCreator<WrappedT> might actually return an
+           object of SubT instead.
          */
         template <typename SubT>
         static void RegisterSelfSubclass()
         {              
+            typedef WeakJSClassCreatorOps<SubT> SubOpsT;
+            if( static_cast<int>(SubOpsT::ExtraInternalFieldCount)
+                != static_cast<int>(ClassOpsType::ExtraInternalFieldCount) )
+            {
+                throw std::runtime_error("WeakJSClassCreatorOps<WrappedT>::ExtraInternalFieldCount != WeakJSClassCreatorOps<SubT>::ExtraInternalFieldCount");
+            }
             subclassGettersN().insert( GetInheritedNative<SubT> );
             subclassGettersJ().insert( GetInheritedJSObject<SubT> );
         }
 
         using JSClassCreator::Inherit;
         
-
         /**
-           Similar to the inherited non-template member of the same
-           name but also calls
-           WeakJSClassCreator<ParentT>::RegisterSelfSubclass<WrappedType>().
+           This sets up "native" inheritance, such that bound
+           WrappedType objects can be converted to a baser type.
 
-           ParentT must meat these requirements:
+           ParentT must meet these requirements:
 
-           - It must be a virtual base type of WrappedType.
+           - WeakJSClassCreatorOps<ParentT>::WrappedType must be a
+           virtual base type of WrappedType.
 
-           - It must also be wrapped using WeakJSClassCreator.
+           - ParentT must also be wrapped using WeakJSClassCreator.
 
            - The WeakJSClassCreatorOps specializations for ParentT and
            WrappedType must have the same values for
@@ -462,24 +488,32 @@ namespace juice {
            workaround, and this function throws a native exception if
            the values do not match.
 
-           If those are met, then calls to GetSelf(), GetJSObject(),
-           and GetNative() using type WeakJSClassCreator<ParentT>
-           might actually return an object of WrappedType instead.
+           If those conditions are met, then calls to GetSelf(),
+           GetJSObject(), and GetNative() using type
+           WeakJSClassCreator<ParentT> might actually return an object
+           of WrappedType instead.
 
-           See RegisterSelfSubclass() for more information.
+           This function is basically a thin proxy for RegisterSelfSubclass(),
+           except that it is called from the subclass instance, not the parent
+           class.
+        */
+        template <typename ParentT>
+        WeakJSClassCreator & InheritNative()
+        {
+            typedef WeakJSClassCreator<ParentT> ParT;
+            ParT::template RegisterSelfSubclass< WrappedT >();
+            return *this;
+        }
+
+        /**
+           Like the inherited non-template member of the same name but
+           also calls InheritNative<ParentT>().
         */
         template <typename ParentT>
         WeakJSClassCreator & Inherit( WeakJSClassCreator<ParentT> & parent )
         {
-            typedef WeakJSClassCreator<ParentT> ParT;
-            typedef WeakJSClassCreatorOps<ParentT> ParOpsT;
-            if( static_cast<int>(ParOpsT::ExtraInternalFieldCount)
-                != static_cast<int>(ClassOpsType::ExtraInternalFieldCount) )
-            {
-                throw std::runtime_error("WeakJSClassCreatorOps<ParentT>::ExtraInternalFieldCount != WeakJSClassCreatorOps<WrappedT>::ExtraInternalFieldCount");
-            }
+            this->template InheritNative<ParentT>();
             JSClassCreator::Inherit( parent );
-            ParT::template RegisterSelfSubclass< WrappedType >();
             return *this;
         }
 
