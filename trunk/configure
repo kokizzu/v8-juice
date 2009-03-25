@@ -4,11 +4,6 @@
 . ./find_toc2.sh || exit
 
 export PACKAGE_NAME=libv8-juice
-export PACKAGE_VERSION=20090318
-#export PACKAGE_VERSION_DIGITS=${PACKAGE_VERSION}
-#export PACKAGE_VERSION_HEX=0x${PACKAGE_VERSION}
-# kick off the core toc process, which eventually calls
-# configure.${PACKAGE_NAME}. Do all of your package-specific checks in
-# configure.${PACKAGE_NAME}.
+export PACKAGE_VERSION=20090325
 . ${TOC2_HOME}/sbin/toc2_bootstrap.sh "$@"
 # post-configure processing can be done in postconfig.${PACKAGE_NAME}
