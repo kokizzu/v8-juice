@@ -1,4 +1,4 @@
-package.subdirs :=
+package.subdirs := js
 default: all
 include toc2.make
 
