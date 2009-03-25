@@ -1,12 +1,11 @@
 #!/bin/bash
 ########################################################################
-# a very, very ugly hack to generate code for the ClassBinder API.
-# It generates MemFuncCallOp${1} and friends.
+# Generates code for the ClassBinder API (and friends).
 count=${1-0}
 
 test "$count" -gt 0 || {
     echo "Usage: $0 NUMBER (>=0) [COMMAND=BindMemFunc]"
-    echo "Commands: MemFuncCallOps, BindMemFunc, MemFuncCaller"
+    echo "Commands: MemFuncCallOps, BindMemFunc, MemFuncCaller, FunctorForwarder"
     exit 1
 }
 
@@ -15,15 +14,17 @@ command=${2-BindMemFunc}
 tmplsig="typename WrappedType, typename RV, "
 ttlist="WrappedType, RV,"
 tmplsigV="typename WrappedType, void, "
-aTDecl=""
-aTParam=""
-castCalls=""
+aTDecl="" # typename A0, typename A1,...
+aTParam="" # A0, A1 ...
+castCalls="" # CastFromJS<A0>(argv[0), ...
 at=0
 callop=MemFuncCallOp${count}
 MemFuncCaller=MemFuncCaller
 callBase="${MemFuncCaller}<${count}>"
 callBaseWeak="WeakMemFuncCaller<${count}>"
 
+########################################################
+# must be called first to populate the shared vars
 function makeLists()
 {
     for (( at = 0; at < count; at = at + 1)); do
@@ -49,6 +50,8 @@ function makeLists()
 }
 
 
+#######################################################
+# Creates ${callBase} and ${callWeakBase} implementations.
 function makeCallBase()
 {
 cat <<EOF
@@ -165,6 +168,9 @@ EOF
 } # makeCallBase()
 
 
+#######################################################
+# Creates FunctorForwarder specializations and FwdToFunc()
+# overloads.
 function makeFunctorForwarder()
 {
     cat <<EOF
@@ -237,6 +243,8 @@ template <typename ReturnT, ${aTDecl}>
 EOF
 }
 
+#######################################################
+# Creates ${callop} specializations.
 function makeMemFuncCallOps()
 {
     cat <<EOF
@@ -281,7 +289,8 @@ EOF
 echo
 return
 }
-
+#######################################################
+# Creates ${callop} specializations for const members.
 function makeMemFuncCallOpsConst()
 {
     cat <<EOF
@@ -324,7 +333,8 @@ struct ${callop}< const WrappedType,void,${aTParam}, Func >
 };
 EOF
 }
-
+###############################################
+# Creates ClassBinder::BindMemFunc() overloads
 function makeBindFunc()
 {
 cat <<EOF
@@ -343,6 +353,8 @@ EOF
 
 }
 
+##########################################################
+# here we go...
 makeLists
 false && {
     echo funcSig=${funcSig}
@@ -359,7 +371,6 @@ case $command in
 	;;
     'MemFuncCallOps')
 	    makeMemFuncCallOps
-	    #makeMemFuncCallOpsConst
 	    ;;
     'MemFuncCaller')
 	makeCallBase
