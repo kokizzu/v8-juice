@@ -11,6 +11,7 @@ OBJECTS = $(addsuffix .o,\
 	juice \
 	JSClassCreator \
 	whprintf \
+	jssprintf \
 	)
 
 ########################################################################
