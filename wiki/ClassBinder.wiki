@@ -367,9 +367,8 @@ which `WeakJSClassCreator<>` is not implemented or which is not a C++
 base type of the wrapped type.
 
 Any number of types may `Inherit()` a given base this way, and when
-looking for a conversion they will be searched in the order that the
-`Inherit()` calls were made. Thus the most-use subclasses should be
-declared first (if possible).
+looking for a conversion they will be searched in an unspecified order
+(but in theory only one can possibly match).
 
 This approach has some limitations, the most glaring being that when we have more than
 one level of inheritance, we must call `Inherit()` for each level of the hierarchy,
