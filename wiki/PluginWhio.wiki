@@ -135,7 +135,7 @@ The API for this class includes any routines which are common amongst the `InStr
 || `int` || `flush()` || May (or may not) flush any device-specific cache. Returns 0 on success. ||
 || `bool` || `isGood()`  || Returns true if the object is in a usable state (i.e. there have been no i/o errors). ||
 || *Type* || *Properties* (read-only) || *Notes* ||
-|| `bool` || `canWrite` and `bool canRead`|| Specify whether the object is capable of reading or writing. These are static - set when the device is opened and never changed, so don't use them for error checking. ||
+|| `bool` || `canWrite` and `canRead`|| Specify whether the object is capable of reading or writing. These are static - set when the device is opened and never changed, so don't use them for error checking. ||
 
 ==!InStream Class==
 
@@ -144,13 +144,13 @@ The API for this class includes any routines which are common amongst the `InStr
 || *Return type* || *Name/Signature* || *Notes* ||
 || `InStream` || `new InStream(string file)` || Opens the given file in read mode. ||
 || `InStream` || `new InStream(IODevice)` || Creates a new stream which acts as a proxy for the given device, which must outlive the new stream. The current cursor position of the IODevice is always used as the current reading point for the stream. ||
-|| `int` || `gzipTo(Outstream[,int level])` || Consumes all input from this object and compresses it to the given output stream using gzip compression. Returns `whio.rc.OK` on success. The optional `level` argument specifies the compression level (0 for no compression to 9 for best compression).  ||
-|| `int` || `gunzipTo(Outstream)` || Consumes all input from this object and decompresses it to the given output stream using gzip decompression. Returns `whio.rc.OK` on success. ||
+|| `int` || `gzipTo(OutStream[,int level])` || Consumes all input from this object and compresses it to the given output stream using gzip compression. Returns `whio.rc.OK` on success. The optional `level` argument specifies the compression level (0 for no compression to 9 for best compression).  ||
+|| `int` || `gunzipTo(OutStream)` || Consumes all input from this object and decompresses it to the given output stream using gzip decompression. Returns `whio.rc.OK` on success. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `IODevice` || `ioDevice` || Only for objects created with the `InStream(IODevice)` constructor, this points to the stream's pointed-to device. ||
 || `string` || `fileName` || Only for objects which are associated with a file. ||
-|| `bool` || `canWrite` || Always false for !OutStreams. ||
-|| `bool` || `canRead` || Always true for !OutStreams. ||
+|| `bool` || `canWrite` || Always false for !InStreams. ||
+|| `bool` || `canRead` || Always true for !InStreams. ||
 
 ==!OutStream Class==
 
