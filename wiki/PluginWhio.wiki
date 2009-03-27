@@ -356,3 +356,25 @@ unpredictable (unless planned very carefully). Also be aware that an
 output stream might not actually write its data until it is flushed or
 closed, so do not rely on the contents of a wrapped i/o device to be
 accurate until the stream proxy has been closed or explicitly flushed.
+
+==Reimplementing `print()`==
+
+It is trivial to re-implement the `print()` function so that it writes to an output stream of your choice. As a simple example:
+
+{{{
+function print()
+{
+   ... for each argument, call print.stream.write(...) ...
+}
+print.stream = new whio.OutStream('/dev/stdout'); // or whatever
+}}}
+
+This allows one to easily swap out the destination while leaving client code which depends on `print()` to stay intact.
+
+==Don't forget to flush==
+
+The i/o API is ignorant of any underlying storage mechanism (if any) and may inherit certain behaviours which differ from implementation to implementation. The most notable case is _flushing_. To "flush" a device means "write any pending data," and is necessary because some device types buffer some amount of output to improve overall performance.
+
+When writing to an in-memory buffer, the device's i/o happens at the exact moment it is requested. On the other side, a write to a file may be cached somewhere (e.g. the C `FILE` object may do buffering of its own). Such a cache will not be written until `flush()` is called on the device (or the device is closed, in which case it is automatically flushed). The case where this is most visible is when using an `OutStream` to write to stdout. When doing so, it may be necessary to call `flush()` on the device before any output is written to the console. If the output need not appear immediately (e.g. it's not intended for interactive use) then explicit flushing is not necessary.
+
+It is never harmful to call flush (except on a closed device, in which case the function will throw an exception), but over-flushing may lead to performance problems for some devices. If you need to be certain that a certain bit of output is written to its final destination, call `flush()`. If you don't need to be certain (that is, you don't mind it internally buffering the data for a bit) then calling `flush()` is not necessary. The only use case i've personally experienced where it is necessary is when writing to stdout, so that the output becomes available immediately.
