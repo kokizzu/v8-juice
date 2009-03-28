@@ -1,5 +1,3 @@
-include toc2.make
-
 ########################################################################
 # set WHIO_USE_WHEFS to 0 for platforms where the whefs bits won't
 # build.
