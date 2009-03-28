@@ -7,17 +7,17 @@ v8-juice provides an API for loading DLLs with the intent of adding functionalit
 
 List of current plugins (in alphabetical order):
 
-  * [PluginNCurses ncurses]: ncurses bindings
-  * [PluginReadline readline]: minimalistic GNU Readline/BSD Editline wrapper
-  * [PluginSQLite3 sqlite3]: sqlite3 bindings
-  * [PluginStringFuncs stringstuff]: supplemental string functions
-  * [PluginWhio whio]: i/o device and stream classes
+  * An object-oriented [PluginNCurses ncurses wrapper].
+  * A minimalistic [PluginReadline GNU Readline/BSD Editline wrapper]
+  * [PluginSQLite3 sqlite3 bindings]
+  * [PluginStringFuncs supplemental string functions] (e.g. for escaping and quoting strings).
+  * [PluginWhio i/o device and stream classes], with an optional [PluginWhefs embedded filesystem component].
 
-The plugins which are "standalone" (have no hard dependencies on
-external/third-party software other than v8) are in the core source tree under
-[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/ trunk/src/lib/plugins]. Those which have external dependencies live in
+The plugins live in
 [http://code.google.com/p/v8-juice/source/browse/extra-plugins the
-extra-plugins repository].
+extra-plugins source repository], and can be downloaded from there. See the
+`README` file at the top of the source tree for build and installation
+instructions.
 
 If your copy of juice is configured without plugins, the API for loading
 plugins will still be there (for consistency and binary compatibility), but
