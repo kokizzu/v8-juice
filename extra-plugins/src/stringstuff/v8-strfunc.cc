@@ -3,8 +3,9 @@
 #include <v8/juice/convert.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/plugin.h>
+#include <v8/juice/jssprintf.h>
 #include "v8-strfunc.h"
-#include "v8-sprintf.h"
+
 
 namespace v8 {
 namespace juice {
@@ -61,7 +62,7 @@ namespace str {
     Handle<Value> SetupPlugin( Handle<Object> gl )
     {
 
-	//SetupSprintf( gl );
+	::v8::juice::SetupSprintf( gl );
 #define ADDFUNC(JSF,NF) gl->Set(String::New(# JSF), FunctionTemplate::New(NF)->GetFunction() )
 	ADDFUNC(escape_js_string,v8_escape_js);
 	ADDFUNC(quote_js_string,v8_quote_js);
