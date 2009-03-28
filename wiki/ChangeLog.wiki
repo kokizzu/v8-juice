@@ -10,6 +10,10 @@ are at the top. Dates written extra large are release dates. This contains only 
   * http://code.google.com/p/v8-juice/source/list
 
 ----
+==2009 March 28==
+  * Moved the remaining plugins from the core tree to the [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src extra-plugins source repo].
+
+
 ==2009 March 25==
   * New release.
 
