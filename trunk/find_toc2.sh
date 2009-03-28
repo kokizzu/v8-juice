@@ -2,7 +2,7 @@
 
 test x = "x${TOC2_HOME}" && {
     for d in $PWD/toc2 $PWD/../toc2 $HOME/toc2 /usr/share/toc2 /usr/local/share/toc2; do
-        test -e $d/sbin/toc2_bootstrap.sh -a -e $d/bin/mkdep-toc2.c && {
+        test -e $d/sbin/toc2_bootstrap.sh && {
             cd $d > /dev/null
             export TOC2_HOME=$PWD
             cd - > /dev/null
