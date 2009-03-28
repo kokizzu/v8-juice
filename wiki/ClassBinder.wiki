@@ -203,7 +203,8 @@ objects can also be converted generically:
 
 (That must be called from global-scope code!)
 
-That will generate a pair of template specialization for the cast operations, and can be included multiple times in the same file (once per wrapped type). Each time it is included `WEAK_CLASS_TYPE` must be defined anew, as the header file `#undef`s it on each call to `#include`.
+That will generate a pair of template specializations for the cast operators, and can be included multiple times in the same file (once per wrapped type).
+See [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/WeakJSClassCreator-CastOps.h WeakJSClassCreator-CastOps.h] for the complete docs.
 
 If the native type will never be passed as a parameter or returned
 from a function (i.e. it will only be the `this` object) then these
