@@ -1,0 +1,22 @@
+This file contains instructions for building the v8-juice plugins
+repository, which is available from:
+
+http://code.google.com/p/v8-juice/source/browse/extra-plugins
+
+
+To build with GNU Make, you must have 'libv8-juice-config' in your
+$PATH (it gets installed by the v8-juice build process) or you must
+tweak src/plugin_template.make to suite your v8-juice installation.
+
+Then:
+        cd src/PluginName
+        make && make install
+
+
+To build with scons, simply run 'scons' from the top-most build
+directory. You may need to tweak the SConstruct file for your system
+(e.g. to set the lib path for sqlite3, if it's not in the default
+place). To install the plugins, move the generated DLLs to
+PREFIX/lib/v8/juice/, where PREFIX is the installation location of
+libv8-juice (e.g. /usr/local (i normally use $HOME)).
+

@@ -1,0 +1,95 @@
+########################################################################
+# This is my first scons and first python, so this code is as ugly as
+# can be. scons hackers are welcomed to improve upon it! :)
+
+import platform
+import re
+import sys
+import os
+#from types import DictType, StringTypes
+#root_dir = os.path.dirname(File('SConstruct').rfile().abspath)
+
+print("********************************************************************************")
+print("BIG FAT HAIRY WARNING:");
+print("i am no scons expert and i hate python, so this build doesn't do very much!")
+print("\nThis file may need to be hacked to work on non-*nix.")
+print("\nFixes and additions for scons hackers are welcomed!")
+print("Edit this and set v8_home to the installation prefix of your libv8!")
+print("********************************************************************************")
+v8_home = os.path.abspath('/home/stephan')
+v8_incdir = os.path.join(v8_home,'include')
+v8_libdir = os.path.join(v8_home,'lib')
+v8_libname = 'v8' #or use 'v8_g'
+env = Environment(
+    CPPPATH = ['#/src/include',v8_incdir],
+    LIBPATH = ['.',v8_libdir]
+    )
+
+
+def buildPlugin(name,src,ldflags = []):
+    print("Creating plugin "+name+'...');
+    env.SharedLibrary( target = 'v8-juice-'+name,
+                       SHLIBPREFIX = '',
+                       LIBS = ldflags,
+                       source = src,
+                 )
+
+########################################################################
+# whio plugin
+if( True ):
+    whio_use_whefs = False
+    if( whio_use_whefs ):
+        my_src = [os.path.join('#/src/whio/', x) for x in [
+            'v8-whio.cc',
+            'v8-whefs.cc',
+            'whefs_amalgamation.c'
+            ]]
+    else:
+        my_src = [os.path.join('#/src/whio/', x) for x in [
+            'v8-whio.cc',
+            'whio_amalgamation.c'
+            ]]
+    buildPlugin('whio',my_src)
+
+########################################################################
+# stringstuff plugin
+if( True ):
+    my_src = [os.path.join('#/src/stringstuff/', x) for x in [
+            'v8-strfunc.cc'
+            ]]
+    buildPlugin('stringstuff',my_src)
+
+########################################################################
+# readline plugin    
+if( True ):
+    my_src = [os.path.join('#/src/readline/', x) for x in [
+            'Readline.cpp', 'v8-dll.cc'
+            ]]
+    my_ld = ['readline','ncurses'] # on many platforms, readline users need to link to curses explicitly
+    buildPlugin('readline',my_src,my_ld)
+
+########################################################################
+# ncurses-oo plugin    
+if( True ):
+    my_src = [os.path.join('#/src/ncurses-oo/', x) for x in [
+            'nckey.cpp',
+            'ncmode.cpp',
+            'ncpad.cpp',
+            'ncpalette.cpp',
+            'ncpanel.cpp',
+            'ncutil.cpp',
+            'ncwidgets.cpp',
+            'ncwindow.cpp',
+            'v8-nc.cc'
+            ]]
+    my_ld = ['ncurses','panel']
+    buildPlugin('ncurses-oo',my_src,my_ld)
+
+########################################################################
+# sqlite3 plugin
+if( True ):
+    my_src = [os.path.join('#/src/sqlite3/', x) for x in [
+            'v8-attempt2.cc'
+            ]]
+    my_ld = ['sqlite3']
+    buildPlugin('sqlite3',my_src,my_ld)
