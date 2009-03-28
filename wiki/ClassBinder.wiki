@@ -188,9 +188,9 @@ That example is feature-complete and ready for copy/paste into your source files
 
 ==Set up automatic JS/C++ conversions==
 
-The following macro hooks `my_native` in with the `v8::juice::convert`
+The following "supermacro" hooks `my_native` in with the `v8::juice::convert`
 API, so that we can use `CastToJS()` and `CastFromJS()` with
-`my_native`. We want that in this case because some of the `my_native`
+`my_native`. We want that in this because some of the `my_native`
 members take or return pointers to `my_native` objects. Since the
 function forwarding mechanism uses `CastToJS()` and `CastFromJS()` for
 all type conversions, we want to be able to hook in to that so that `my_native`
@@ -203,11 +203,12 @@ objects can also be converted generically:
 
 (That must be called from global-scope code!)
 
-That will generate a pair of templates for the cast operations, and can be included multiple times in the same file (one per wrapped type). Each time it is included `WEAK_CLASS_TYPE` must be defined anew, as the header file `#undef`s it on each call to `#include`.
+That will generate a pair of template specialization for the cast operations, and can be included multiple times in the same file (once per wrapped type). Each time it is included `WEAK_CLASS_TYPE` must be defined anew, as the header file `#undef`s it on each call to `#include`.
 
 If the native type will never be passed as a parameter or returned
 from a function (i.e. it will only be the `this` object) then these
-conversions are not strictly required.
+conversions are not strictly required. They're easy to add and allow you pass the custom
+types to/from other (non-member) functions with ease, so they're recommended.
 
 For the extremely curious, that macro generates something like the following:
 
@@ -264,7 +265,7 @@ And now what we originally set out to to: bind `my_native` with JS:
 
 Again, the templates syntax is ugly, but it also has no extra runtime memory costs other than that needed by the v8 internals and the conversion from JS to native.
 
-While it isn't demonstrated here, `const` member functions can also be bound. For more information on binding member variables, see the API docs for `v8::juice::MemVarGetter<>()` and `v8::juice::MemVarSetter<>()` (in [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h]).
+While it isn't demonstrated here, `const` member functions can also be bound (the syntax is the same). For more information on binding member variables, see the API docs for `v8::juice::MemVarGetter<>()` and `v8::juice::MemVarSetter<>()` (in [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h]).
 
 ==And finally... script code==
 
@@ -338,8 +339,10 @@ ws.Inherit( wp )
 
 This support is actually a feature of `WeakJSClassCreator<>`, the
 parent class of `ClassBinder`, but since `WeakJSClassCreator<>`
-has no direct support for binding member functions, this feature
-is only really accessible via subclasses like `ClassBinder`.
+has no direct support for binding member functions (because it is
+intentionally independent of the v8-juice core and therefore has no access to the
+type conversions framework), this feature is only really accessible
+via extensions or subclasses like `ClassBinder`.
 
 In C++ and JS, we take it for granted that calling
 `aSubTypeObject.vfunc()` would call the inherited virtual
