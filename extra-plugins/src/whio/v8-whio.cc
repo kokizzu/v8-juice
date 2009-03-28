@@ -177,6 +177,11 @@ namespace v8 { namespace juice { namespace whio {
 		bool writeMode = JSToBool(argv[1]);
 		char const * mode = (writeMode) ? "r+b" : "rb";
 		dev = whio_dev_for_filename( fname.c_str(), mode );
+                if( !dev && writeMode )
+                { // try to create it
+                    mode = "w+b";
+                    dev = whio_dev_for_filename( fname.c_str(), mode );
+                }
 		if( dev )
 		{
 		    self->Set(JSTR(WhioStrings::fileName), argv[0], v8::ReadOnly );
@@ -659,13 +664,14 @@ namespace v8 { namespace juice { namespace whio {
 	HandleScope v8scope;
 	Handle<Object> whio = Object::New();
 	target->Set(JSTR("whio"),whio);
-
         {
             Handle<Object> whiorc = Object::New();
             whio->Set(JSTR("rc"),whiorc);
-
-#define SET(K,V) whiorc->Set(JSTR(K), Integer::New(V), v8::ReadOnly ); \
-            whiorc->Set(Integer::New(V), JSTR(K), v8::ReadOnly )
+#define SET(K,V) \
+            if(0) CERR << "Setting "<< K << '='<<V<<'\n';                \
+            whiorc->Set(JSTR(K), Integer::New(static_cast<int>(V)) /*, v8::ReadOnly*/ ); \
+            whiorc->Set(Integer::New(static_cast<int>(V)), JSTR(K) /*, v8::ReadOnly*/ ); \
+            if(0) CERR << "Set "<< K << '\n'
             SET("OK", whio_rc.OK );
             SET("ArgError",whio_rc.ArgError);
             SET("IOError",whio_rc.IOError);

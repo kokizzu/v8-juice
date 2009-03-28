@@ -312,8 +312,8 @@ namespace v8 { namespace juice { namespace whio {
             Handle<Object> whefsrc = Object::New();
             whefs->Set(JSTR("rc"),whefsrc);
 
-#define SET(K,V) whefsrc->Set(JSTR(K), Integer::New(V), v8::ReadOnly ); \
-            whefsrc->Set(Integer::New(V), JSTR(K), v8::ReadOnly )
+#define SET(K,V) whefsrc->Set(JSTR(K), Integer::New(V) /*, v8::ReadOnly*/ ); \
+            whefsrc->Set(Integer::New(V), JSTR(K) /*, v8::ReadOnly*/ )
             SET("OK", whefs_rc.OK );
             SET("ArgError",whefs_rc.ArgError);
             SET("IOError",whefs_rc.IOError);
