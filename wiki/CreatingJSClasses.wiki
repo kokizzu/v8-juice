@@ -152,7 +152,7 @@ Again, that's all there is to it. Now when we call `new MyClass(...)` from JS, t
   * v8 will create a new _JS_ instance of !MyClass (not a native instance).
   * v8 will pass that new JS object to an internal WeakJSClassCreator proxy function which will pass on the arguments to the client-specified specified constructor.
   * If the client-side ctor fails, the internal constructor will throw a JS-side exception (there is no other way to notify JS of a failed construction).
-  * If the client ctor succeeds, the internal ctor will then set up a weak pointer callback, which will cause the client-specified dtor to be called _if_ the v8 GC ever decides to kick in. The internal ctor also packs the new native pointer into an internal field of the JS object for later reference by bound functions (see `WeakJSClassCreator::GetSelf()` and `WeakJSClassCreator::GetObject()`).
+  * If the client ctor succeeds, the internal ctor will then set up a weak pointer callback, which will cause the client-specified dtor to be called _if_ the v8 GC ever decides to kick in. The internal ctor also packs the new native pointer into an internal field of the JS object for later reference by bound functions (see `WeakJSClassCreator::GetNative()` and `WeakJSClassCreator::GetJSObject()`).
 
 The native object can be fetched later by passing a bound JS object to
 one of the static methods `WeakJSClassCreator::GetSelf()` or
@@ -171,12 +171,11 @@ which should free the underlying device handle. This feature is simple
 to implement: just call `WeakJSClassCreator::DestroyObject()` from the
 appropriate close/destroy routine.
 
-Clients can optionally use the `v8::juice::bind` and
-`v8::juice::cleanup` APIs in their ctors and dtors to get enhanced (and
-type-safe) type conversions and "supplemental" GC support. Or they can
-tie their own supplemental GC by adding the logic to their
-`WeakJSClassCreatorOps<T>::Ctor()` and `Dtor()` routines. See the API
-docs for more details.
+Clients can optionally tie in to their own "supplemental" GC (for when v8's GC doesn't kick in) by adding the logic to their `WeakJSClassCreatorOps<T>::Ctor()` and `Dtor()` routines.
+
+If client code also uses the [ConvertingType v8-juice type conversions framework],
+wrapped types can easily be tied in to the automatic type conversions process (which _really_ simplifies passing around wrapped types to arbitrary bound functions). Since
+that requires additional v8-juice functionality, and WeakJSClassCreator is intended to be "standalone" v8 code, that feature is covered in more detail on [ClassBinder the ClassBinder page].
 
 ==Extra internal fields==
 
