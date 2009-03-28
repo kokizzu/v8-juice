@@ -246,7 +246,19 @@ namespace nc {
         int echochar(chtype v) { return this->ncpad->echochar(v); }
         int reqForKey(int key) const { return this->ncpad->reqForKey(key); }
         void inputLoop() { return this->ncpad->inputLoop(); }
+
+        //Handle<Value> setWindow( Arguments const & argv );
+
     };
+    class JFramedPad : public JPad
+    {
+    public:
+        explicit JFramedPad( NCPad * p) : JPad(p)
+        {}
+        virtual ~JFramedPad()
+        {}
+    };
+
 
     enum { library_version = 0x20090322 };
 
@@ -295,12 +307,14 @@ namespace nc {
         static const char * classWindow;
         static const char * classPanel;
         static const char * classPad;
-
+        static const char * classFramedPad;
     };
 
     JWindow * window_ctor( Arguments const & argv, std::string & exceptionText );
     JPanel * panel_ctor( Arguments const & argv, std::string & exceptionText );
+
     JPad * pad_ctor( Arguments const & argv, std::string & exceptionText );
+    JFramedPad * pad_framed_ctor( Arguments const & argv, std::string & exceptionText );
 
 } /* namespaces */
 
@@ -331,6 +345,15 @@ namespace nc {
     {
     };
 
+    template <>
+    struct WeakJSClassCreatorOps< nc::JFramedPad >
+        : nc::BaseWeakOps< nc::JFramedPad,
+                           nc::strings::classFramedPad,
+                           nc::pad_framed_ctor
+                           >
+    {
+    };
+
 //     template <>
 //     struct WeakJSClassCreatorOps< JPanel >;
 //     template <>
@@ -349,6 +372,9 @@ namespace nc {
 #include <v8/juice/WeakJSClassCreator-CastOps.h>
 
 #define WEAK_CLASS_TYPE v8::juice::nc::JPad
+#include <v8/juice/WeakJSClassCreator-CastOps.h>
+
+#define WEAK_CLASS_TYPE v8::juice::nc::JFramedPad
 #include <v8/juice/WeakJSClassCreator-CastOps.h>
 
 #endif /* CODE_GOOGLE_COM_P_V8JUICE_PLUGIN_NCURSES_H_INCLUDED */

@@ -19,7 +19,9 @@ function tryPad()
         pnl.scrollok(true);
         pnl.bkgd( nc.intVal(' ') | nc.color_pair('white','blue') );
 
-        var pad = new nc.NCPad(pnl,100,100);
+        var pad = true
+            ? new nc.NCFramedPad(pnl,100,100)
+            : new nc.NCPad(pnl,100,100);
         print("Wrapper pad added.");
         pad.bkgd( nc.intVal(' ') | nc.color_pair('blue','white') | ncurses.A_BIM );
         pad.mapKeyToReq( ncurses.KEY_CTRL('G'), ncurses.NCPad.PadReqExit );

@@ -1,15 +1,5 @@
 load_plugin('v8-juice-ncurses-oo');
-load_plugin('v8-juice-whio');
 var nc = ncurses;
-var logger = new whio.OutStream('/dev/stderr',false);
-function log()
-{
-    for( var i = 0; i < arguments.length; ++i )
-    {
-        logger.write(arguments[i]+' ');
-    }
-    logger.write('\n',1);
-}
 var w = new nc.NCWindow();
 var name = w.name();
 w.attrset( nc.color_pair('white','red') );
@@ -39,7 +29,7 @@ function tryChild()
     }
     catch(e)
     {
-        log("exception:",e);
+        print("exception:",e);
     }
 }
 
@@ -49,7 +39,6 @@ tryChild();
 var rc = w.getch();
 w.close();
 //ncurses.endwin(); // kludge until i get window destruction working properly
-logger.close();
 print("window name =",name,", getch =",rc);
 if(0) {
     var check = ['*','!','a'];

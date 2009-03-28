@@ -73,6 +73,7 @@ This plugin installs the following items:
   * The `NCWindow` approximates an ncurses `WINDOW` handle.
   * The `NCPanel` approximates an ncurses `PANEL` handle.
   * The `NCPad` somewhat approximates an ncurses `PAD` handle.
+  * The `NCFramedPad` is an `NCPad` subclass which displays scrollbars.
 
 ==Naming Conventions==
 
@@ -128,6 +129,8 @@ which holds all of the plugin's classes and the following non-class functions:
 || `int` || `raw([bool = true])` || See `man raw`. ||
 || `int` || `noraw()` || Equivalent to `raw(false)`. ||
 || `int` || `halfdelay(int tenths)` || See `man halfdelay`. ||
+|| `Array` || `colorNames()` || Returns a list of the 8 basic color names, in an unspecified order. ||
+
 
 
 Aside from those functions, nearly all standard ncurses macros are defined as
@@ -277,7 +280,7 @@ In addition to the NCWindow API, NCPanel has:
 Some methods are overridden to accommodate for the slightly differing update/refresh
 conventions between windows and panels.
 
-=NCPad Class=
+=NCPad and NCFramedPad Classes=
 
 NCPad is another NCWindow subclass wrapping the very unusual ncurses
 PAD type.  Pads are windows which may be larger than the screen
@@ -288,6 +291,14 @@ creating scrollable areas. Unlike normal curses pads, these pads
 automatically draw a scrollbars border around themselves. This may
 make them less useful for creating scrollable menus, but in the
 general case it makes them much simpler to use.
+
+The NCFramedPad class is identical to the NCPad class in every way, including
+the constructor arguments, with the exception that it will draw a border around
+its scrollable area and will draw scroll indicators along the right and bottom
+of the scrollable area.
+
+Whether to use NCPad or NCFramedPad for a particular case is largely a
+matter of UI design tastes.
 
 ==Member Function List==
 
@@ -300,6 +311,7 @@ see the curses man pages!), NCPad also provides:
 
 || *Return type* || *Name/Arguments* || *Notes* ||
 || `NCPad` || `new NCPad(NCWindow windowToWrap, int lines, int cols)` || Creates a new pad of the given size (which may be bigger than the screen). The given window is used as the drawing surface. ||
+|| `NCFramedPad` || `new NCFramedPad(NCWindow windowToWrap, int lines, int cols)` || Identical to the `NCPad` ctor, except that the returned object is rendered with a border and scroll indicators. ||
 || `int` ||`requestOp(int)` || Detailed in the native API. ||
 || `int` || `prefresh(six integers)` || Same as ncurses `prefresh()`. ||
 || `int` || `pnoutrefresh(six integers)` || Same as ncurses `pnoutrefresh()` ||

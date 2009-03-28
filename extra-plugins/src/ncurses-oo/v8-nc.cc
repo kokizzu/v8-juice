@@ -89,6 +89,7 @@ namespace nc {
     const char * strings::classWindow = "NCWindow";
     const char * strings::classPanel = "NCPanel";
     const char * strings::classPad = "NCPad";
+    const char * strings::classFramedPad = "NCFramedPad";
 
 
     Persistent<Function> JWindow::js_ctor;
@@ -96,6 +97,7 @@ namespace nc {
     typedef ::v8::juice::ClassBinder<JWindow> WindowBinder;
     typedef ::v8::juice::ClassBinder<JPanel> PanelBinder;
     typedef ::v8::juice::ClassBinder<JPad> PadBinder;
+    typedef ::v8::juice::ClassBinder<JFramedPad> FramedPadBinder;
 
 #define JSTR(X) ::v8::String::New(X)
 #define TOSS(X) return ::v8::ThrowException(JSTR(X))
@@ -311,6 +313,27 @@ namespace nc {
         }
     }
 
+#if 0
+    Handle<Value> JPad::setWindow( Arguments const & argv )
+    {
+        ARGC; ASSERTARGS( (argc>0) && (argc<4) );
+        JWIN_ARGT(w,argv[0]);
+        int gy = (argc>1) ? JSToInt32(argv[0]) : 1;
+        int gh = (argc>2) ? JSToInt32(argv[1]) : 1;
+        if( gy < 1 ) gy = 1;
+        if( gh < 1 ) gh = 1;
+        try
+        {
+            this->ncpad->setWindow(*w->ncwin,gy,gh);
+        }
+        catch(std::exception const & ex)
+        {
+            return ThrowException(String::New(ex.what()));
+        }
+        return argv[0];
+    }
+#endif
+
 
     JPanel * panel_ctor( Arguments const & argv, std::string & exceptionText )
     {
@@ -359,7 +382,10 @@ namespace nc {
     }
 
 
-    JPad * pad_ctor( Arguments const & argv, std::string & exceptionText )
+    JPad * pad_ctor_impl( Arguments const & argv,
+                          std::string & exceptionText,
+                          JFramedPad ** fp
+                          )
     {
         ARGC;
         if(! ((argc>2) && (argc<6)))
@@ -384,8 +410,17 @@ namespace nc {
         JPad * jp = 0;
         try
         {
-            pad = new NCFramedPad(*par->ncwin,l,c,gv,gh);
-            jp = new JPad(pad);
+            if( fp )
+            {
+                pad = new NCFramedPad(*par->ncwin,l,c,gv,gh); 
+                jp = *fp = new JFramedPad(pad);
+            }
+            else
+            {
+                pad = new NCPad(l,c);
+                pad->setWindow(*par->ncwin,gv,gh);
+                jp = new JPad(pad);
+            }
             return jp;
         }
         catch(std::exception const & ex)
@@ -395,6 +430,18 @@ namespace nc {
         }
         exceptionText = "Unhandled ctor arguments!";
         return 0;
+    }
+
+    JPad * pad_ctor( Arguments const & argv, std::string & exceptionText )
+    {
+        return pad_ctor_impl( argv, exceptionText, (JFramedPad**)0 );
+    }
+
+    JFramedPad * pad_framed_ctor( Arguments const & argv, std::string & exceptionText )
+    {
+        JFramedPad * rc = 0;
+        pad_ctor_impl( argv, exceptionText, &rc );
+        return rc;
     }
 
 
@@ -442,10 +489,22 @@ namespace nc {
         return Undefined();
     }
 
-//     JS_WRAPPER(nc_capture_end)
-//     {
-//         return xxx;
-//     }
+    JS_WRAPPER(nc_color_names)
+    {
+        Handle<Array> ar( Array::New(8) );
+        int pos = 0;
+#define COLOR(X) ar->Set(Integer::New(pos++), JSTR(# X))
+        COLOR(red);
+        COLOR(magenta);
+        COLOR(green);
+        COLOR(yellow);
+        COLOR(blue);
+        COLOR(cyan);
+        COLOR(black);
+        COLOR(white);
+#undef COLOR
+        return ar;
+    }
 
     JS_WRAPPER(nc_endwin)
     {
@@ -688,6 +747,7 @@ namespace nc {
         SETF("cbreak",nc_cbreak);
         SETF("nocbreak",nc_nocbreak);
         SETF("halfdelay",nc_halfdelay);
+        SETF("colorNames",nc_color_names);
 #undef SETF
 
 #define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
@@ -975,8 +1035,8 @@ V8 version 1.1.1.4
         }
 
         /////////////////////////////////////////////////////////////////////////
+        PadBinder & bindD( PadBinder::Instance() );
         { // NCPad class
-            PadBinder & bindD( PadBinder::Instance() );
             bindD.Inherit( bindW );
             bindD
                 .BindMemFunc< int, int, &JPad::requestOp >( "requestOp" )
@@ -989,6 +1049,7 @@ V8 version 1.1.1.4
                 .BindMemFunc<int,chtype,&JPad::echochar>( "echochar" )
                 .BindMemFunc<int,int,&JPad::reqForKey>( "reqForKey" )
                 .BindMemFunc<void,&JPad::inputLoop>( "inputLoop" )
+                //.BindMemFunc< &JPad::setWindow >( "setWindow" )
                 .Set( "toString", nc_window_tostring<strings::classPad> )
                 .Set("refresh", ncpad_refresh)
                 .Set("noutrefresh", ncpad_noutrefresh)
@@ -1012,6 +1073,14 @@ V8 version 1.1.1.4
             SET(PadReqLastRequest);
 #undef SET
             bindD.AddClassTo(ncobj);
+        }
+        /////////////////////////////////////////////////////////////////////////
+        { // NCFramedPad class
+            FramedPadBinder & bindFP( FramedPadBinder::Instance() );
+            bindFP.Inherit( bindD );
+            bindFP.InheritNative<JWindow>();
+            bindFP.Seal();
+            bindFP.AddClassTo(ncobj);
         }
 
         return ncobj;
