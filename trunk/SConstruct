@@ -57,26 +57,3 @@ if( True ):
                  LIBS = [libjuice_libname,v8_libname],
                  LDFLAGS = "-L."
                  )
-
-
-def buildPlugin(name,src):
-    print("Creating plugin "+name+'...');
-    env.SharedLibrary( target = 'v8-juice-'+name,
-                       SHLIBPREFIX = '',
-                       source = src
-                 )
-
-if( True ):
-    my_src = [os.path.join('#/src/lib/plugins/whio/', x) for x in [
-        'v8-whio.cc',
-        'whio_amalgamation.c'
-        ]]
-    buildPlugin('whio',my_src)
-
-if( True ):
-    my_src = [os.path.join('#/src/lib/plugins/stringstuff/', x) for x in [
-        'v8-sprintf.cc',
-        'v8-strfunc.cc'
-        ]]
-    buildPlugin('stringstuff',my_src)
-
