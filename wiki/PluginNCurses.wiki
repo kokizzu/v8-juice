@@ -250,11 +250,68 @@ Here we go...
 || `int` || `overlay(NCWindow)` || See `man overlay`. ||
 || `int` || `overwrite(NCWindow)` || See `man overwrite`. ||
 || `int` || `copywin(NCWindow,int,int,int,int,int,int,bool)` || See `man copywin`. ||
-
+|| `void` || `ripoffline(bool fromTop)` || EXPERIMENTAL. Described below. ||
 TODOs:
   * Organize the member list by category.
   * Implement `ripoffline()`
   * Maybe provide a standardized API for dispatching `getch()` key codes via JS callbacks.
+
+==`ripoffline()`==
+
+ACHTUNG: EXPERIMENTAL and it might go away. Known to cause segfaults
+post-main() in some case, or cause an app to not exit curses mode at
+shutdown (hosing the console state). It has also been observed to
+interfere with `NCPad` scrolling operations (for reasons i cannot
+comprehend).
+
+`ripoffline()` allows one to "rip off" lines from the screen. These
+lines are outside of the `stdscr` area (and in fact cause `stdscr` to
+be smaller) and have several important restrictions described below and
+in the man pages for `ripoffline()` (though the native function has a slightly
+different signature).
+
+`ripoffline()`, if used at all, _must_ be called _before_ any window
+objects are created (more specifically, before curses mode is ever
+started). It can only rip one line at a time, and can only be called
+up to 5 times (these are limitations of curses). Each time it is
+called, it rips one line from the top or bottom of the screen,
+depending on the boolean parameter passed to it. Each line becomes a
+new window object, which is accessed via the roundabout approach
+shown below.
+
+{{{
+load_plugin('v8-juice-ncurses-oo');
+var nc = ncurses;
+nc.ripoffline(true); // rip from top
+nc.ripoffline(false); // rip from bottom
+
+/** We MUST (it is a curses requirement) initialize
+curses before we can access the ripped-off lines. That is done by creating
+our first window object: */
+var root = new NCPanel();
+
+// Now we can access the ripped-off lines like:
+function setupRips()
+{
+    var cl = ['white','red','white','black','cyan'];
+    for( var i = 0; i < 5; ++i ) // 5 is a built-in limit of curses
+    {
+        var rw = nc.getRippedLine(i);
+        if( ! rw ) break;
+        rw.bkgd( cl[i], cl[i+1] ) );
+        rw.addstr("ripped line #"+i+" ="+rw);
+        rw.refresh();
+    }
+}
+
+setupRips();
+}}}
+
+When using `ripoffline()`, if you find that your ncurses apps are not returning to
+normal screen mode when the last window is destroyed, try calling `ncwindow.endwin()`
+directly after destroying the last window. That will forcibly shut down curses mode
+and destroy those dangling ripped-off lines. Calling `endwin()` while other windows
+are still open can lead to a memory leak, and is not recommended.
 
 
 =NCPanel Class=
@@ -276,21 +333,20 @@ In addition to the NCWindow API, NCPanel has:
 || `void` || `bottom()` || Moves the panel to the bottom of the stack. ||
 || `bool` || `hidden()` || Returns true if the panel is hidden. ||
 || `int` || `mvwin(int y, int x)` || Moves the panel ||
+|| `void` || `interactivelyMove()` || When called, the panel can be moved using the arrow keys. Movement stops when a non-movement key is pressed or the panel would be moved out of the screen bounds. ||
 
-Some methods are overridden to accommodate for the slightly differing update/refresh
-conventions between windows and panels.
+Additionally, some methods are overridden at the native level to
+accommodate for the slightly differing update/refresh conventions
+between windows and panels.
 
 =NCPad and NCFramedPad Classes=
 
-NCPad is another NCWindow subclass wrapping the very unusual ncurses
-PAD type.  Pads are windows which may be larger than the screen
-(normal curses windows cannot be out of the screen bounds). They have
-some very intricate refreshing rules and are difficult to use properly
-(at least in my experience). They are, however, very useful in
-creating scrollable areas. Unlike normal curses pads, these pads
-automatically draw a scrollbars border around themselves. This may
-make them less useful for creating scrollable menus, but in the
-general case it makes them much simpler to use.
+NCPad is a NCWindow subclass wrapping the very unusual ncurses PAD
+type.  Pads are windows which may be larger than the screen (normal
+curses windows cannot be out of the screen bounds). They have some
+very intricate refreshing rules and are difficult to use properly (at
+least in my experience). They are, however, very useful in creating
+scrollable areas.
 
 The NCFramedPad class is identical to the NCPad class in every way, including
 the constructor arguments, with the exception that it will draw a border around
@@ -300,8 +356,13 @@ of the scrollable area.
 Whether to use NCPad or NCFramedPad for a particular case is largely a
 matter of UI design tastes.
 
-==Member Function List==
+==Known bugs==
 
+  * The native NCPad implementation is known to have problems drawing itself if its viewport
+smaller than the containing window. If your pad appears blank after drawing to it and refreshing it, try making it bigger as a workaround.
+  * Pads aren't known for their user friendliness.
+
+==Member Function List==
 
 NCPad deserves much more documentation than is given here. Maybe someday. Until then...
 
