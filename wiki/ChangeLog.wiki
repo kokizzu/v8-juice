@@ -10,8 +10,10 @@ are at the top. Dates written extra large are release dates. This contains only 
   * http://code.google.com/p/v8-juice/source/list
 
 ----
-==2009 March 28==
+==2009 March 28/29==
   * Moved the remaining plugins from the core tree to the [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src extra-plugins source repo].
+  * The [ConvertingTypes convert.h code] is now independent of the rest of the library.
+  * The [CreatingJSClasses WeakJSClassCreator cast operators] can now cast from JS to `(T&)` and `(T const &)`. This means functions taking reference types can now be bound.  The conversions must throw a std::exception if the conversion fails, to avoid dereferencing null. The function forwarding framework will catch such exceptions and return the result as a JS exception, rather than letting the native exception propagate through v8 (which can lead to a corrupt stack).
 
 
 ==2009 March 25==
