@@ -5,25 +5,17 @@
    A ticker widget displays a string of text, scrolling it sideways
    across the window.
 */
-load_plugin('v8-juice-ncurses-oo');
+//load_plugin('v8-juice-ncurses-oo');
+include('setup-ncurses-app.js');
 var nc = ncurses;
+var root = nc.App.panels.root;
+root.captureCout();
+print("std::cout is redirected here.");
 //nc.ripoffline(true);nc.ripoffline(true);nc.ripoffline(true);
-var root = new nc.NCPanel();
 nc.curs_set(0);
 var name = root.name();
 root.bkgd( nc.color_pair('white','blue') );
-root.addstr("I am the root panel");
-root.captureCout();
-print("std::cout is redirected here.");
 
-var ticker =
-    //new nc.NCPanel( 1, root.width(), 0, 0 );
-    new nc.NCPanel( 3, root.width(), 0, 0 );
-    //new nc.NCWindow( root, 3, root.width(), 0, 0 );
-    //new nc.NCWindow( root, 1, root.width(), 0, 0 );
-//ticker.top();
-ticker.bkgd( nc.color_pair('yellow','cyan') | nc.A_BOLD );
-//ticker.addstr("This will be the ticker.");
 
 
 /**
@@ -80,7 +72,7 @@ function setupTickerWindow(win,opt)
         }
     }
     win.ti.xpos = NaN;
-    win.resetTicker =function(){
+    win.resetTicker = function(){
         this.ti.xpos=NaN;
         // We do manual clear to (A) allow the client to reset
         // the ticker and (B) to try to play nice with any
@@ -88,13 +80,13 @@ function setupTickerWindow(win,opt)
         var to = this.width() - (2*this.ti.offset.x);
         this.move( this.ti.offset.y, this.ti.offset.x );
         //print("Adding padding to pos",to,this.width());
-        this.addstr(Array(to+1).join(' '));
-        this.refresh();
-//                   var sp = 32; // ascii space
-//                   for( var i = this.offset.x; i <= to; ++i )
-//                   {
-//                       this.addch(sp);
-//                   }
+//         this.addstr(Array(to+1).join(' '));
+//         this.refresh();
+        var sp = 32; // ascii space
+        for( var i = this.ti.offset.x; i <= to; ++i )
+        {
+            this.addch(sp);
+        }
         if(this.ti.onReset instanceof Function) this.ti.onReset(this);
     };
     win.doTick = function() {
@@ -133,6 +125,17 @@ function setupTickerWindow(win,opt)
     win.resetTicker();
     return win;
 }
+
+var ticker = nc.App.addPanel('ticker',
+    new nc.NCPanel( 1, root.width(), 0, 0 )
+    //new nc.NCPanel( 3, root.width(), 0, 0 )
+    //new nc.NCWindow( root, 3, root.width(), 0, 0 )
+    //new nc.NCWindow( root, 1, root.width(), 0, 0 )
+                             );
+//ticker.top();
+ticker.bkgd( nc.color_pair('yellow','cyan') | nc.A_BOLD );
+
+//ticker.addstr("This will be the ticker.");
 ticker.quitChar = 'q';
 ticker.quitKey = nc.intVal(ticker.quitChar);
 
@@ -154,39 +157,49 @@ setupTickerWindow(ticker,
                              "Tap 'n' to jump to next text."
                              ],
                     stringNum:-1,
-                    delayTenths:2,
-
+                          msPerTick:200, // msec/tick
+                          delayIncrement:50
                   });
 if(ticker.ti.offset.y) ticker.box();
 //ticker.ti.text = ticker.ti.strings[0];
-
 for( var k in ticker.ti.strings )
 {
     print(ticker.ti.strings[k]);
 }
 
+var tick2 = nc.App.addPanel('tick2', new ncurses.NCPanel(1,root.width(),root.maxy(),0) );
+setupTickerWindow(tick2,{text:"http://code.google.com/p/v8-juice/wiki/PluginNCurses"});
 
 function runTicker()
 {
+    var chwin = root;
     try
     {
-        nc.halfdelay(ticker.ti.delayTenths);
-        var ch = root.getch();
-        for( ; ch != ticker.quitKey; ch = root.getch() )
+        //nc.halfdelay(ticker.ti.delayTenths);
+        chwin.timeout( ticker.ti.msPerTick );
+        var ch = chwin.getch();
+        for( ; ; ch = chwin.getch() )
         {
             //if( nc.ERR == ch ) continue;
+            if( ticker.quitKey == ch ) { break; }
             if( nc.KEY_UP == ch )
             {
-                if( ticker.ti.delayTenths > 1 ) --ticker.ti.delayTenths;
+                if( ticker.ti.msPerTick > ticker.ti.delayIncrement )
+                {
+                    ticker.ti.msPerTick -= ticker.ti.delayIncrement;
+                }
                 else continue;
-                print("Setting delay to",ticker.ti.delayTenths);
-                nc.halfdelay(ticker.ti.delayTenths);
+                print("Setting speed to",ticker.ti.msPerTick,'msec/tick.');
+                chwin.timeout( ticker.ti.msPerTick );
+                //nc.halfdelay(ticker.ti.delayTenths);
                 continue;
             }
             else if( nc.KEY_DOWN == ch )
             {
-                nc.halfdelay(++ticker.ti.delayTenths);
-                print("Setting delay to",ticker.ti.delayTenths);
+                ticker.ti.msPerTick += ticker.ti.delayIncrement;
+                //nc.halfdelay(ticker.ti.delayTenths);
+                chwin.timeout( ticker.ti.msPerTick );
+                print("Setting speed to",ticker.ti.msPerTick,'msec/tick.');
                 continue;
             }
             else if( nc.intVal('p') == ch )
@@ -200,16 +213,19 @@ function runTicker()
                 continue;
             }
             ticker.doTick();
+            tick2.doTick();
             //print('tick. ch=',nc.charVal(ch),'tap "q" to stop.');
         }
     }
     catch(e)
     {
         //ncurses.nodelay(false)
+        //chwin.nodelay(false);
+        chwin.timeout(-1);
         for( var i = 0; i < 5; ++i ) ncurses.beep();
         print("EXCEPTION:",e);
-        ncurses.napms(3000);
-        root.getch();
+        ncurses.napms(5000);
+        chwin.getch();
     }
     finally
     {
@@ -220,14 +236,15 @@ function runTicker()
 //root.addstr("Hi, world! Tap a key to continue.");
 //root.refresh();
 runTicker();
-ticker.close();
+//ticker.close();
 root.refresh();
 print("All done. Tap a key to quit.");
 ncurses.beep();
 //ncurses.flash();
 //var rc = root.getch();
 root.captureReset();
-root.close();
+nc.App.close();
+//root.close();
 //nc.endwin(); // aarrgghh!
 print("Done! :-D");
 0;
