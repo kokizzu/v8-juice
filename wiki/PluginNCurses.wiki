@@ -251,10 +251,10 @@ Here we go...
 || `int` || `overwrite(NCWindow)` || See `man overwrite`. ||
 || `int` || `copywin(NCWindow,int,int,int,int,int,int,bool)` || See `man copywin`. ||
 || `void` || `ripoffline(bool fromTop)` || EXPERIMENTAL. Described below. ||
+
 TODOs:
   * Organize the member list by category.
-  * Implement `ripoffline()`
-  * Maybe provide a standardized API for dispatching `getch()` key codes via JS callbacks.
+  * Maybe provide a common API for dispatching `getch()` key codes via JS callbacks.
 
 ==`ripoffline()`==
 
