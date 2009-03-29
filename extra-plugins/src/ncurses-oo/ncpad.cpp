@@ -495,18 +495,21 @@ namespace ncutil {
 
 	NCFramedPad::NCFramedPad(NCWindow& win, int lines, int cols,
 				 int v_grid, int h_grid)
-		: NCPad(lines, (cols ? cols : win.width()-2))
+            : NCPad(lines, (cols ? cols : win.width()-2)),
+              subwin(0)
 	{
 		this->bkgd( win.getbkgd() );
 		this->NCPad::setWindow(win, v_grid, h_grid);
-		this->NCPad::setSubWindow(*(new NCWindow(win)));
+                this->subwin = new NCWindow(win);
+		this->NCPad::setSubWindow(*this->subwin);
 		this->scrollok(true);
 		this->getSubWindow()->scrollok( true );
 	}
 
 	NCFramedPad::~NCFramedPad()
 	{
-		delete getSubWindow();
+            //delete getSubWindow();
+            delete this->subwin;
 	}
 
 	void NCFramedPad::setWindow(NCWindow& view, int v_grid, int h_grid)  throw(NCException)

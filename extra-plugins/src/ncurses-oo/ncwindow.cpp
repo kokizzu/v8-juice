@@ -400,15 +400,18 @@ namespace ncutil {
     void
     NCWindow::kill_subwindows()
     {
-        for (NCWindow* p = subwins; p != 0; p = p->sib) {
+        if( ! this->subwins ) return;
+        for (NCWindow* p = subwins; p != 0; p = p->sib ) {
             p->kill_subwindows();
             if (p->m_ownswin) {
                 if (p->m_cwin != 0)
                     ::delwin(p->m_cwin);
                 p->m_ownswin = FALSE;
             }
+            p->par = 0;
             p->m_cwin = 0; // cause a run-time error if anyone attempts to use...
         }
+        this->subwins = 0;
     }
 
 
@@ -417,7 +420,7 @@ namespace ncutil {
         lifecheck().erase(this);
         this->clear();
         kill_subwindows();
-        if (par != 0)
+        if( (par != 0) ) //&& NCWindow::is_alive(par) )
         {  // Snip us from the parent's list of subwindows.
             NCWindow * win = par->subwins;
             NCWindow * trail = 0;

@@ -1087,7 +1087,8 @@ namespace ncutil {
     */
     class  NCFramedPad : public NCPad
     {
-
+    private:
+        NCWindow * subwin;
     public:
         /**
            win == window to act as our quasi-parent, where we will paint ourselves.
