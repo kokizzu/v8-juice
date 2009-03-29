@@ -357,6 +357,8 @@ int my_class_test( V8CxH & cx )
     return 0;
 }
 
+static bool PrintUsesStdErr = false;
+
 int main(int argc, char* argv[]) {
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
     {
@@ -404,6 +406,11 @@ int main(int argc, char* argv[]) {
         bool run_shell = (argc == 1);
         for (int i = 1; i < argc; i++) {
             const char* str = argv[i];
+            if( 0 == strcmp(str,"--print-cerr"))
+            {
+                PrintUsesStdErr = true;
+                continue;
+            }
             if (strcmp(str, "--shell") == 0) {
                 run_shell = true;
             } else if (strcmp(str, "-f") == 0) {
@@ -468,7 +475,7 @@ const char* ToCString(const v8::String::Utf8Value& value) {
 // spaces and ending with a newline.
 v8::Handle<v8::Value> Print(const v8::Arguments& args) {
   bool first = true;
-  std::ostream & os( std::cout );
+  std::ostream & os( PrintUsesStdErr ? std::cerr : std::cout );
   for (int i = 0; i < args.Length(); i++) {
     v8::HandleScope handle_scope;
     if (first) {
