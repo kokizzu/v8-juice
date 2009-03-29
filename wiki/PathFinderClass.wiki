@@ -3,14 +3,14 @@
 
 <wiki:toc max_depth='3'/>
 
-= !PathFinder =
+= !PathFinder Class =
 
 The `v8::juice::PathFinder` class responsible for doing all file searching
 which v8-juice does. This currently means looking for DLLs, but could just as easily mean finding source files to include into a script or image files to process. This class has been used for a number of years in other projects
 
 The class can be added to a JS engine by calling `v8::juice::SetupPathFinderClass()`, declared in [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/PathFinder.h PathFinder.h].
 
-== JS API ==
+= JS API =
 
 || *Return type* || *Name/Signature* || *Notes* ||
 || `PathFinder` || `new PathFinder( [string path=''], [string extensions=''], [string delimiter=':'])` || Creates a new !PathFinder with the given search path, extensions, and delimiter. ||
@@ -29,12 +29,13 @@ The class can be added to a JS engine by calling `v8::juice::SetupPathFinderClas
 || `String` || `find( String basename )`  || Searches for the given file. It will search through all combinations of path+name+extension to try to find the file. ||
 || `void` || `clearCache()` || Clears the internal file lookup cache which is used by `find()`. ||
 || `bool` || `isEmpty()` || Returns true only if this object has no path/search information. ||
+|| `bool` || `isAccessible(string)` || Returns true if the given filename is accessible (readable). This is both a static and per-instance function. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `string` || `dirSeparator` (read-only) || The platform-specific character used to separate directory names in a path. This is `\` on Windows and `/` everywhere else. ||
 
 Note that because the values in a !PathFinder object are internally native types, it is not possible to directly change them via JS objects. e.g. `obj.pathArray()[3]='/home'` will have no effect, as the object returned from `pathArray()` is necessarily a copy of the native data. All of the accessors are functions, as opposed to properties, to try to help avoid any confusion on that point.
 
-==Shared !PathFinder Instances==
+=Shared !PathFinder Instances=
 
 When the class is added to an object, the setup routine also creates a couple
 shared !PathFinder objects, accessible via the shared JS object
@@ -43,7 +44,7 @@ shared !PathFinder objects, accessible via the shared JS object
   * `PathFinder.shared.plugins` = the same object as `v8::juice::plugin::PluginsPath()`.
   * `PathFinder.shared.include` = the same object as `v8::juice::ScriptsPath()`.
 
-==Examples==
+=Examples=
 
 {{{
 print(PathFinder.shared.plugins.find("MyPlugin"));
@@ -57,7 +58,7 @@ var libsearch = new PathFinder("/lib:/usr/lib", ".so:.a");
 print(libsearch.find("libz")); // prints "/usr/lib/libz.so"
 }}}
 
-==TODOs==
+=TODOs=
 
   * The ctor should allow arrays or strings for the various arguments.
   * We really should do away with the delimited strings approach and go all-array, as we're just asking for problems on Windows platforms with ":"-delimited paths. i don't use Windows, so i'm not gonna worry about that too much.
