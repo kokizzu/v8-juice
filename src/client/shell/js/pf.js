@@ -7,7 +7,8 @@ function dumpPF(p,list)
     print("\tPath =",p.pathArray());
     print("\tExtensions =",p.extensionsArray() );
     for( k in li ) {
-	print('\tfind("'+li[k]+'") =',p.find(li[k]));
+        var f = p.find(li[k]);
+	print('\tfind("'+li[k]+'") = ['+f+'], isAccessible =',p.isAccessible(f));
     }
 }
 function tryOne()
