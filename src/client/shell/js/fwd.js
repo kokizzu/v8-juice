@@ -1,4 +1,4 @@
-var m = new MyNative();
+var m = MyNative();
 print('void returns:',m.avoid(),m.avoid1(32),m.avoid2(17,11));
 print(m.hi());
 print(m.func1());
