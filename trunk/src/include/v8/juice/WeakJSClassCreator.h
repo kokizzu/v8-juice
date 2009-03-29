@@ -777,7 +777,7 @@ namespace juice {
 	 */
 	static Handle<Value> ctor_proxy( const Arguments & argv )
 	{
-#if 1
+#if 0
             /**
                Why have this limitation? If we don't, v8 pukes when
                the ctor is called, with
@@ -790,6 +790,19 @@ namespace juice {
                 os << "The "<< ClassOpsType::ClassName() << " constructor cannot be called as function!";
 		return ThrowException(String::New(os.str().c_str()));
 	    }
+#else
+            /**
+               Allow construction without 'new' by forcing this
+               function to be called in a ctor context...
+            */
+	    if (!argv.IsConstructCall()) 
+            {
+                const int argc = argv.Length();
+                Handle<Function> ctor( Function::Cast(*argv.Callee()));
+                std::vector< Handle<Value> > av(static_cast<size_t>(argc),Undefined());
+                for( int i = 0; i < argc; ++i ) av[i] = argv[i];
+                return ctor->NewInstance( argc, &av[0] );
+            }
 #endif
 	    std::string err;
 	    WrappedType * obj = 0;
