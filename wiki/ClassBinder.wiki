@@ -378,6 +378,32 @@ This approach has some limitations, the most glaring being that when we have mor
 one level of inheritance, we must call `Inherit()` for each level of the hierarchy,
 which is a real drag. i'm looking into other approaches which won't require this.
 
+To inherit multiple levels deeply, we currently need to do the following:
+
+{{{
+struct TypeA
+{...};
+struct TypeB : TypeA
+{...};
+struct TypeC : TypeB
+{...};
+
+// When we bind TypeC:
+typedef ClassBinder<TypeC> CB;
+CB b( targetObject );
+b.Inherit( binderForTypeB ); // sets up inheritance of TypeB
+b.InheritNative<Type>(); // sets up inhertiance of TypeA
+...
+b.Seal();
+
+// And we need to include the WeakJSClassCreator-CastOps.h
+// supermacro, as shown above.
+}}}
+
+With that in place, JS-side `TypeC` objects will be able to convert their
+native object to a `TypeB` or `TypeA` object, as needed, via the standard
+type conversions mechanism.
+
 ==JS/C++ cast operations in the face of inheritance==
 
 If we register the "standard" casting operators for a wrapped type using:
