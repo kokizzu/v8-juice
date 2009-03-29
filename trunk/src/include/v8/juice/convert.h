@@ -349,7 +349,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->Int32Value())
-		: 0;
+		: static_cast<int16_t>( h->ToNumber()->Value() );
 	}
     };	
 
@@ -361,7 +361,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->Int32Value())
-		: 0;
+		: static_cast<uint16_t>( h->ToNumber()->Value() );
 	}
     };
 
@@ -374,7 +374,7 @@ namespace convert {
 	    // FIXME: try to lexically cast, if we can
 	    return h->IsNumber()
 		? h->Int32Value()
-		: 0;
+		: static_cast<int32_t>( h->ToNumber()->Value() );
 	}
     };
 
@@ -386,7 +386,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->Uint32Value())
-		: 0;
+		: static_cast<uint32_t>( h->ToNumber()->Value() );
 	}
     };
 
@@ -399,7 +399,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->IntegerValue())
-		: 0;
+		: static_cast<int64_t>( h->ToNumber()->Value() );
 	}
     };
 
@@ -411,7 +411,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->IntegerValue())
-		: 0;
+		: static_cast<uint64_t>( h->ToNumber()->Value() );
 	}
     };
 
@@ -423,7 +423,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? h->NumberValue()
-		: 0;
+		: h->ToNumber()->Value();
 	}
     };
 
