@@ -241,7 +241,7 @@ namespace ncutil {
 
 
         static int ripoffline(int ripoff_lines,
-                              int (*init)(NCWindow& win));
+                              int (*init)(NCWindow * win));
         // This function is used to generate a window of ripped-of lines.
         // If the argument is positive, lines are removed from the top, if it
         // is negative lines are removed from the bottom. This enhances the

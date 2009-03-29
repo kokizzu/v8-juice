@@ -345,8 +345,8 @@ namespace ncutil {
         }
     }
 
-    typedef int (*RIPOFFINIT)(NCWindow&);
-    static RIPOFFINIT R_INIT[5];       // There can't be more
+    typedef int (*RIPOFFINIT)(NCWindow*);
+    static RIPOFFINIT R_INIT[5];       // There can't be more than 5
     static int r_init_idx   = 0;
     static RIPOFFINIT* prip = R_INIT;
 
@@ -368,13 +368,13 @@ namespace ncutil {
         RIPOFFINIT init = *prip++;
         if (init) {
             NCWindow* W = new NCWindow(m_cwin,cols);
-            res = init(*W);
+            res = init(W);
         }
         return res;
     }
 
     int NCWindow::ripoffline(int ripoff_lines,
-                             int (*init)(NCWindow& win))
+                             int (*init)(NCWindow * win))
     {
         int code = ::ripoffline(ripoff_lines,ripoff_init);
         if (code==OK && init && ripoff_lines) {

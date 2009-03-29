@@ -1,5 +1,6 @@
 load_plugin('v8-juice-ncurses-oo');
 var nc = ncurses;
+//nc.ripoffline(true);nc.ripoffline(true);nc.ripoffline(true);
 nc.curs_set(0);
 var root = new nc.NCPanel();
 var name = root.name();
@@ -104,6 +105,7 @@ ncurses.beep();
 //ncurses.flash();
 var rc = root.getch();
 root.close();
+nc.endwin(); // aarrgghh!
 print("window name =",name,", getch =",rc);
 if(0) {
     var check = ['*','!','a'];

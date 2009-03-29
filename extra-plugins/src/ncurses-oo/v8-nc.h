@@ -148,7 +148,10 @@ namespace nc {
         void timeout( int v ) { ncwin->timeout(v); }
 
         int mvwin(int v1,int v2) { return ncwin->mvwin(v1,v2); }
-        int move(int v1,int v2) { return ncwin->move(v1,v2); }
+        int move(int v1,int v2) const {
+            //CERR << "move("<<v1<<","<<v2<<")\n";
+            return ncwin->move(v1,v2);
+        }
         int getch(int v1,int v2) { return ncwin->getch(v1,v2); }
         int addstrn(std::string v1,int v2) { return ncwin->addstr(v1.c_str(),v2); }
         chtype mvinch(int v1,int v2) { return ncwin->inch(v1,v2); }
@@ -159,7 +162,10 @@ namespace nc {
         int redrawln(int v1,int v2) { return ncwin->redrawln(v1,v2); }
 
         int mvinsstr(int v1,int v2,std::string v3) { return ncwin->insstr(v1,v2,v3.c_str()); }
-        int mvaddch(int v1,int v2,chtype v3) { return ncwin->addch(v1,v2,v3); }
+        int mvaddch(int v1,int v2,chtype v3) {
+            //CERR << "mvaddch("<<v1<<","<<v2<<","<<v3<<")\n";
+            return ncwin->addch(v1,v2,v3);
+        }
         int mvaddstr(int v1, int v2, std::string v3) { return ncwin->addstr(v1,v2,v3.c_str()); }
         int mvinsch(int v1,int v2,chtype v3) { return ncwin->insch(v1,v2,v3); }
 
@@ -193,7 +199,6 @@ namespace nc {
                                   dmaxrow, dmaxcol, overlay )
                 : ERR;
         }
-            
 
         Handle<Value> getstring( Arguments const & );
         Handle<Value> box( Arguments const & );
@@ -213,6 +218,11 @@ namespace nc {
         void bottom() { this->ncpnl->bottom(); }
         int mvwin(int y, int x) { return this->ncpnl->mvwin(y,x); }
         bool hidden() { return this->ncpnl->hidden(); }
+	void interactivelyMove()
+        {
+            ncutil::interactively_move_window( *this->ncwin);
+        }
+
     };
 
     class JPad : public JWindow
@@ -290,6 +300,7 @@ namespace nc {
         {
             //CERR << "Cleaning up "<<ClassName()<<" object @"<<obj<<'\n';
             //NCWindow * nw = obj->ncwin;
+            bind::UnbindNative<NCWindow>(obj,obj->ncwin);
             cleanup::RemoveFromCleanup( obj );
             delete obj;
         }

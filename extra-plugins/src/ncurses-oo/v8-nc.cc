@@ -58,6 +58,7 @@
 
 #include <v8.h>
 #include <v8/juice/juice.h>
+#include <v8/juice/bind.h>
 #include <v8/juice/convert.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/plugin.h>
@@ -81,6 +82,13 @@ namespace convert {
 } // namespace convert
 
 namespace nc {
+
+    static Handle<Object> & ncJSObj()
+    {
+        static Handle<Object> bob;
+        return bob;
+    }
+
     using namespace ::v8;
     using namespace ::v8::juice::convert;
     namespace bind = ::v8::juice::bind;
@@ -125,6 +133,44 @@ namespace nc {
     }
 
 
+    typedef std::pair< NCWindow *, JWindow * > RipPair;
+    struct ripoff_set : std::vector< RipPair >
+    {
+        ripoff_set()
+        {}
+        ~ripoff_set()
+        {
+#if 0
+            // When i delete these objects here, i'm seeing segfaults post-main.
+            this->nuke();
+#endif
+        }
+        void nuke()
+        {
+            iterator it = this->begin();
+            iterator et = this->end();
+            for( ; et != it; ++it )
+            {
+#if 0
+                // we're crashing sometimes post-main()/post-v8 if we do this:
+                if( (*it).second ) delete (*it).second;
+                else delete (*it).first;
+#else
+                delete (*it).first;
+#endif
+            }
+            this->clear();
+        }
+
+    };
+
+    static ripoff_set & ripset()
+    {
+        static ripoff_set bob;
+        return bob;
+    }
+
+
     JWindow * window_ctor( Arguments const & argv, std::string & exceptionText )
     {
         ARGC;
@@ -134,6 +180,17 @@ namespace nc {
             jw = new JWindow; // will call initwin() if needed
             jw->ncwin = new ncutil::NCWindow(::stdscr);
             return jw;
+        }
+        else if( (1 ==argc) && (argv[0]->IsExternal() ) )
+        { // internal-use ctor
+            Local<External> ex( External::Cast(*argv[0]) );
+            NCWindow * w = bind::GetBoundNative<NCWindow>( ex->Value() );
+            if( ! w )
+            {
+                exceptionText = "First argument failed type check!";
+                return 0;
+            }
+            return new JWindow(w);
         }
         else if( (1 == argc) || (2 == argc) )
         { // ctor(NCWindow parent [, bool box = yes])
@@ -218,12 +275,17 @@ namespace nc {
         m.erase(oldb, et);
     }
 
+
     JWindow::~JWindow()
     {
-        JWindow_remove_stream_redirects(this);
         if( this->ncwin && NCWindow::is_alive(this->ncwin) )
         {
+            JWindow_remove_stream_redirects(this);
             //CERR << "~JWindow @"<<this<<" destroying NCWindow (or subclass) @"<<this->ncwin<<'\n';
+            if( this->ncwin->ncwindow() == ::stdscr )
+            {
+                ripset().nuke();
+            }
             delete this->ncwin;
         }
         else
@@ -506,13 +568,6 @@ namespace nc {
         return ar;
     }
 
-    JS_WRAPPER(nc_endwin)
-    {
-        ARGC; ASSERTARGS((0==argc));
-        // FIXME: destroy open windows properly!
-        NCMode::shutdown();
-        return Undefined();
-    }
     JS_WRAPPER(ncwin_getch)
     {
         ARGC; ASSERTARGS((0==argc));
@@ -706,6 +761,53 @@ namespace nc {
         return CastToJS( ::halfdelay( JSToInt32(argv[0]) ) );
     }
 
+    static int ripoff_init( NCWindow * win )
+    {
+        //CERR << "ripoff_init(@"<<win<<")\n";
+        ripset().push_back( std::make_pair( win, (JWindow *)0 ) );
+        return 0;
+    }
+
+    JS_WRAPPER(nc_ripoffline)
+    {
+        ARGC; ASSERTARGS((argc==1));
+        //int from = JSToInt32(argv[0]);
+        bool fromTop = JSToBool(argv[0]);
+        //if( ! argv[1]->IsFunction() ) TOSS("Second argument must be-a Function!");
+        //Local<Function> func( Function::Cast(*argv[0]) );
+        return CastToJS( NCWindow::ripoffline( fromTop ? 1 : -1, ripoff_init ) );
+    }
+
+    JS_WRAPPER(nc_getrippedline)
+    {
+        ARGC; ASSERTARGS((argc==1));
+        uint16_t pos = CastFromJS<uint16_t>( argv[0] );
+        if( pos >= ripset().size() ) return Null();
+        RipPair & p = ripset()[pos];
+        if( p.second ) return WindowBinder::GetJSObject(p.second);
+
+        bind::BindNative( p.first, p.first );
+        Handle<Value> ex( External::New(p.first) );
+        Local<Object> winjo = JWindow::js_ctor->NewInstance( 1, &ex );
+        if( winjo.IsEmpty() || ! winjo->IsObject() ) return winjo;
+        JWindow * jw = WindowBinder::GetSelf( winjo );
+        assert(jw && "internal error - could not get native self from JS object!");
+        p.second = jw;
+        //if( ! argv[1]->IsFunction() ) TOSS("Second argument must be-a Function!");
+        //Local<Function> func( Function::Cast(*argv[0]) );
+        //return CastToJS( NCWindow::ripoffline( fromTop ? 1 : -1, ripoff_init ) );
+        return winjo;
+    }
+
+    JS_WRAPPER(nc_endwin)
+    {
+        ARGC; ASSERTARGS((0==argc));
+        // FIXME: destroy open windows properly!
+        ripset().nuke();
+        NCMode::shutdown();
+        return Undefined();
+    }
+
     template <char const *&N>
     JS_WRAPPER(nc_window_tostring)
     {
@@ -724,7 +826,7 @@ namespace nc {
 
         Handle<Object> ncobj( Object::New() );
         gl->Set(JSTR("ncurses"), ncobj);
-
+        ncJSObj() = ncobj;
 #define SETF(N,V) ncobj->Set(JSTR(N), FunctionTemplate::New(V)->GetFunction() )
         SETF("endwin", nc_endwin );
         SETF("color_pair",nc_color_pair);
@@ -748,7 +850,13 @@ namespace nc {
         SETF("nocbreak",nc_nocbreak);
         SETF("halfdelay",nc_halfdelay);
         SETF("colorNames",nc_color_names);
+        SETF("ripoffline",nc_ripoffline);
+        SETF("getRippedLine",nc_getrippedline);
 #undef SETF
+        {
+            Handle<Array> rips( Array::New(5) );
+            ncobj->Set( JSTR("rippedOffLines"), rips );
+        }
 
 #define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
 	//FIXME: add KEY_F(n) as a JS function
@@ -1027,6 +1135,7 @@ V8 version 1.1.1.4
                 .BindMemFunc<void, &JPanel::bottom >( "bottom" )
                 .BindMemFunc<int, int, int, &JPanel::mvwin >( "mvwin" )
                 .BindMemFunc<bool, &JPanel::hidden >( "hidden" )
+                .BindMemFunc<void, &JPanel::interactivelyMove>( "interactivelyMove" )
                 .Set( "toString", nc_window_tostring<strings::classPanel> )
                 .Set("close",ncwin_close<PanelBinder> )
                 ;
