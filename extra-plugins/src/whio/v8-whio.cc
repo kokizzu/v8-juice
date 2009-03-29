@@ -500,6 +500,8 @@ namespace v8 { namespace juice { namespace whio {
 	  case SEEK_END:
 	      break;
 	  default:
+              CERR << "Got seek arg of "<<whence << '\n';
+              if(argc>1) CERR<<"argv[1]="<<JSToStdString(argv[1])<<'\n';
 	      TOSS("The second argument to seek() must be one of SEEK_SET, SEEK_CUR, or SEEK_END!");
 	      break;
 	};
@@ -664,6 +666,13 @@ namespace v8 { namespace juice { namespace whio {
 	HandleScope v8scope;
 	Handle<Object> whio = Object::New();
 	target->Set(JSTR("whio"),whio);
+
+#if 0
+        whio->Set(JSTR(WhioStrings::SEEK_SET_),Integer::New(SEEK_SET) );
+        whio->Set(JSTR(WhioStrings::SEEK_END_), Integer::New(SEEK_END));
+        whio->Set(JSTR(WhioStrings::SEEK_CUR_),Integer::New(SEEK_CUR) );
+#endif
+
         {
             Handle<Object> whiorc = Object::New();
             whio->Set(JSTR("rc"),whiorc);
@@ -700,11 +709,11 @@ namespace v8 { namespace juice { namespace whio {
 		.Set(WhioStrings::isGood,func_noop)
 		.Set(WhioStrings::close,func_noop)
 		.Set(WhioStrings::flush,func_noop)
-		.Set(WhioStrings::toString, devT_tostring<WhioStrings::IOBase> )
-		.Set(WhioStrings::SEEK_SET_,Integer::New(SEEK_SET) )
-		.Set(WhioStrings::SEEK_END_, Integer::New(SEEK_END))
-		.Set(WhioStrings::SEEK_CUR_,Integer::New(SEEK_CUR) )
-		.Seal();
+		.Set(WhioStrings::toString, devT_tostring<WhioStrings::IOBase> );
+            Handle<Function> ctor = bindAbs.Seal();
+            ctor->Set(JSTR(WhioStrings::SEEK_SET_),Integer::New(SEEK_SET) );
+            ctor->Set(JSTR(WhioStrings::SEEK_END_), Integer::New(SEEK_END));
+            ctor->Set(JSTR(WhioStrings::SEEK_CUR_),Integer::New(SEEK_CUR) );
 	}
 
 	////////////////////////////////////////////////////////////
@@ -778,14 +787,8 @@ namespace v8 { namespace juice { namespace whio {
  		.Set(WhioStrings::toString, devT_tostring<WhioStrings::OutStream> )
 		.Seal();
 	}
-
-
-
-
 	return whio;
     }
-
-
 #undef JSTR
 #undef TOSS
 #undef ARGS
