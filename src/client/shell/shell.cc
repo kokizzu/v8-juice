@@ -81,7 +81,11 @@ struct my_native
     std::string str;
     int func1() { return 42; }
     int func2(int x) { return x*2; }
-    double func3(int x,int y) { return x*y; }
+    double func3(int x,int y)
+    {
+        CERR << "func3("<<x<<","<<y<<")\n";
+        return x*y;
+    }
     std::string hi() { return "hi!"; }
 
     my_native * me() { CERR << "my_native::me()="<<this<<'\n';return this; }
@@ -94,6 +98,11 @@ struct my_native
     double takes3(int x, int y, int z) { return x * y * z; }
 
     Handle<Value> forwarder( Arguments const & );
+
+    void someref( my_native & x )
+    {
+        CERR << "someref("<<&x<<")\n";
+    }
 
     my_native * other;
     my_native() : str(),other(0)
@@ -188,6 +197,7 @@ int my_fwd( V8CxH & cx )
         .BindMemVar<std::string, &MY::str>( "str" )
         .BindMemVar<my_native *, &MY::other>("other")
         .BindMemFunc< &MY::forwarder >( "forwarder" )
+        .BindMemFunc< void, MY &, &MY::someref >( "someref" )
         .Seal();
     w.AddClassTo( cx->Global() );
     return 0;
@@ -285,7 +295,7 @@ int my_bind_test2( V8CxH & cx )
 	return 1;
     }
     COUT << "MyNative = " << n << " == ["<<(n?n->str:"<NULL>")<<"]\n";
-#if 1
+#if 0
     n = CastFromJS<bind_tester>( jv );
     COUT << "MyNative = " << n << " == ["<<(n?n->str:"<NULL>")<<"]\n";
 #endif

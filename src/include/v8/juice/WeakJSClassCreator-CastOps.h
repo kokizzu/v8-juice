@@ -1,3 +1,4 @@
+#include <stdexcept>
 /**
    See the docs below...
 */
@@ -47,6 +48,47 @@ namespace v8 { namespace juice { namespace convert {
 	    return WT::GetNative(h);
 	}
     };
+
+    /**
+       See JSToNative< WEAK_CLASS_TYPE > for full the primary details.
+
+       The difference from that specialization and this one is that
+       this type will throw a std::exception if it cannot make the
+       conversion. It must do so to avoid dereferencing a null
+       pointer.
+     */
+    template <>
+    struct JSToNative<WEAK_CLASS_TYPE &>
+    {
+	typedef ::v8::juice::WeakJSClassCreator< WEAK_CLASS_TYPE >  WT;
+	typedef WT::WrappedType & ResultType;
+	ResultType operator()( ValueHandle const & h ) const
+        {
+            typedef JSToNative< WEAK_CLASS_TYPE > PT;
+            PT::ResultType r = PT()( h );
+            if( ! r ) throw std::runtime_error("JSToNative<T &>() could not get native (T*)!");
+            return *r;
+        }
+    };
+
+
+    /**
+       See JSToNative< WEAK_CLASS_TYPE & > for full full details.
+    */
+    template <>
+    struct JSToNative<WEAK_CLASS_TYPE const &>
+    {
+	typedef ::v8::juice::WeakJSClassCreator< WEAK_CLASS_TYPE >  WT;
+	typedef WT::WrappedType const & ResultType;
+	ResultType operator()( ValueHandle const & h ) const
+        {
+            typedef JSToNative< WEAK_CLASS_TYPE > PT;
+            PT::ResultType r = PT()( h );
+            if( ! r ) throw std::runtime_error("JSToNative<T const &>() could not get native (T*)!");
+            return *r;
+        }
+    };
+
 
 } } }
 
