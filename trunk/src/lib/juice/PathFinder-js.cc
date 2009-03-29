@@ -8,6 +8,7 @@
 #include <v8.h>
 #include <v8/juice/bind.h>
 #include <v8/juice/convert.h>
+#include <v8/juice/forwarding.h>
 #include <v8/juice/plugin.h>
 #include <v8/juice/cleanup.h>
 #include <v8/juice/ClassBinder.h>
@@ -103,6 +104,12 @@ namespace v8 { namespace juice {
 	}
     };
 
+
+    static Handle<Value> pf_is_accessible( Arguments const & argv )
+    {
+        return convert::FwdToFunc( PathFinder::IsAccessible, argv );
+    }
+
 }} // namespaces
 
 #define WEAK_CLASS_TYPE v8::juice::PathFinder
@@ -132,12 +139,15 @@ namespace v8 { namespace juice {
 	pw.BindMemFunc< std::string, std::string const &, &PF::Find >( "find" );
 	pw.BindMemFunc< void, &PF::ClearCache >( "clearCache" );
 	pw.BindMemFunc< bool, &PF::IsEmpty >( "isEmpty" );
+        pw.Set( "isAccessible", FunctionTemplate::New(pf_is_accessible)->GetFunction() );
 	pw.Set( "dirSeparator", CastToJS( PF::DirSeparator() ), v8::ReadOnly );
-	pw.Seal();
+	Handle<Function> pfctor( pw.Seal() );
 
         // Set up some shared instances:
 	Handle<Object> shared = Object::New();
-	pw.CtorTemplate()->GetFunction()->Set(JSTR("shared"),shared);
+	pfctor->Set(JSTR("shared"),shared);
+        pfctor->Set(JSTR("isAccessible"), FunctionTemplate::New(pf_is_accessible)->GetFunction() );
+
 	{
 	    // Install an instance wrapping the v8::juice::plugin::PluginsPath() shared object:
             PathFinder * pf = &::v8::juice::plugin::PluginsPath();
