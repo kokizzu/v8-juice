@@ -299,10 +299,11 @@ namespace convert {
     struct JSToNative
     {
 	typedef JST * ResultType;
-	ResultType operator()( ValueHandle const & h ) const
-	{
-	    return ::v8::juice::bind::GetBoundNative<JST>( h );
-	}
+	ResultType operator()( ValueHandle const & h ) const;
+        // Must be specialized to be useful
+// 	{
+// 	    return ::v8::juice::bind::GetBoundNative<JST>( h );
+// 	}
     };
     template <typename JST>
     struct JSToNative<JST *> : JSToNative<JST> {};
@@ -349,7 +350,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->Int32Value())
-		: static_cast<int16_t>( h->ToNumber()->Value() );
+		: 0;
 	}
     };	
 
@@ -361,7 +362,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->Int32Value())
-		: static_cast<uint16_t>( h->ToNumber()->Value() );
+		: 0;
 	}
     };
 
@@ -374,7 +375,7 @@ namespace convert {
 	    // FIXME: try to lexically cast, if we can
 	    return h->IsNumber()
 		? h->Int32Value()
-		: static_cast<int32_t>( h->ToNumber()->Value() );
+		: 0;
 	}
     };
 
@@ -386,7 +387,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->Uint32Value())
-		: static_cast<uint32_t>( h->ToNumber()->Value() );
+		: 0;
 	}
     };
 
@@ -399,7 +400,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->IntegerValue())
-		: static_cast<int64_t>( h->ToNumber()->Value() );
+		: 0;
 	}
     };
 
@@ -411,7 +412,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->IntegerValue())
-		: static_cast<uint64_t>( h->ToNumber()->Value() );
+		: 0;
 	}
     };
 
@@ -423,7 +424,7 @@ namespace convert {
 	{
 	    return h->IsNumber()
 		? h->NumberValue()
-		: h->ToNumber()->Value();
+		: 0;
 	}
     };
 
