@@ -2,7 +2,7 @@
 #define CODE_GOOGLE_COM_P_V8_V8_CONVERT_H_INCLUDED 1
 /*
    A min-framework to simplify casting between v8 JavaScript and
-   C++ native objects. Requires the v8-bind.h header.
+   C++ native objects.
 
    v8: http://code.google.com/p/v8/
 
@@ -38,13 +38,13 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //#include <cstdint> // arg! Requires C++0x!
+#include <v8.h>
 #include <stdint.h> // hope the client's platform is recent!
 #include <string>
 #include <cstring>
 #include <list>
 #include <vector>
 #include <map>
-#include "bind.h"
 namespace v8 {
 namespace juice {
 
@@ -288,7 +288,6 @@ namespace convert {
     /** Convenience instance of NativeToJS. */
     static const NativeToJS<std::string> StdStringToJS = NativeToJS<std::string>();
 
-    using ::v8::juice::bind::BindKeyType;
     /**
        Base interface for converting from native objects to JS
        objects. By default it uses GetBoundNative() to find
@@ -301,12 +300,10 @@ namespace convert {
 	typedef JST * ResultType;
 	ResultType operator()( ValueHandle const & h ) const;
         // Must be specialized to be useful
-// 	{
-// 	    return ::v8::juice::bind::GetBoundNative<JST>( h );
-// 	}
     };
     template <typename JST>
     struct JSToNative<JST *> : JSToNative<JST> {};
+
     template <typename JST>
     struct JSToNative<JST const &> : JSToNative<JST> {};
 
