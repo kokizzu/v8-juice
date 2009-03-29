@@ -192,7 +192,8 @@ namespace v8 { namespace juice { namespace convert {
 
        Instead of defining a callback as an InvocationCallback, it can
        be defined as a InvocationCallbackWithArray, and this type can
-       be used to do the conversion.  For example:
+       be used to do the conversion.  For example, in conjunction with
+       the WeakJSClassCreator:
 
        \code
        myobj->Set(String::New("func"), InvocationCallbackToArgv<MyCallback>::call );
