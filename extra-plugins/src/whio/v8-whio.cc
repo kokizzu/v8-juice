@@ -65,11 +65,6 @@ namespace v8 { namespace juice { namespace whio {
     char const * WhioStrings::truncate = "truncate";
     char const * WhioStrings::write = "write";
 
-    /**
-       Internal binding context for BindNative() and friends.
-    */
-    //static const void * bind_cx() { return 0;}
-
     Persistent<Function> IODevice::js_ctor;
 
     static Handle<Value> abstract_ctor(const Arguments& argv)
@@ -667,17 +662,13 @@ namespace v8 { namespace juice { namespace whio {
 	Handle<Object> whio = Object::New();
 	target->Set(JSTR("whio"),whio);
 
-#if 0
-        whio->Set(JSTR(WhioStrings::SEEK_SET_),Integer::New(SEEK_SET) );
-        whio->Set(JSTR(WhioStrings::SEEK_END_), Integer::New(SEEK_END));
-        whio->Set(JSTR(WhioStrings::SEEK_CUR_),Integer::New(SEEK_CUR) );
-#endif
-
         {
             Handle<Object> whiorc = Object::New();
             whio->Set(JSTR("rc"),whiorc);
+
 #define SET(K,V) \
             if(0) CERR << "Setting "<< K << '='<<V<<'\n';                \
+            /* Reminder to self v8 is currently (20090329) crashing if i pass ReadOnly here: */ \
             whiorc->Set(JSTR(K), Integer::New(static_cast<int>(V)) /*, v8::ReadOnly*/ ); \
             whiorc->Set(Integer::New(static_cast<int>(V)), JSTR(K) /*, v8::ReadOnly*/ ); \
             if(0) CERR << "Set "<< K << '\n'

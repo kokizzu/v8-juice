@@ -7,6 +7,10 @@ function showErrCodes()
     {
         print("\twhio.rc."+k,'==',whio.rc[whio.rc[k]],'==',whio.rc[k]);
     }
+    print('whio.SEEK_CUR =',whio.IOBase.SEEK_CUR);
+    print('whio.SEEK_END =',whio.IOBase.SEEK_END);
+    print('whio.SEEK_SET =',whio.IOBase.SEEK_SET);
+
 }
 function tryOne() {
     var fname = "iodev.out";
