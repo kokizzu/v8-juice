@@ -358,8 +358,7 @@ matter of UI design tastes.
 
 ==Known bugs==
 
-  * The native NCPad implementation is known to have problems drawing itself if its viewport
-smaller than the containing window. If your pad appears blank after drawing to it and refreshing it, try making it bigger as a workaround.
+  * The native NCPad implementation is known to have problems drawing itself if its viewport smaller than the containing window. If your pad appears blank after drawing to it and refreshing it, try making it bigger as a workaround.
   * Pads aren't known for their user friendliness.
 
 ==Member Function List==
@@ -417,9 +416,9 @@ TODOs:
 General tips include:
 
   * Remember that ncurses uses backwards coordinates: (y,x) instead of (x,y)
-  * Never use stdscr, a window the size of the screen, or overlapping windows at all. They're problematic to draw correctly. Use NCPanel objects to partition off your main working space, and use sub-windows within the panels to further organize.
+  * Never use stdscr (unless it is your _only_ window), and don't use overlapping windows (ever). Both cases are very problematic to redraw correctly. Use NCPanel objects to partition off your main working space, and use non-overlapping sub-windows within the panels to further organize the UI.
   * NCPad is weird. Just plain weird. It takes lots of study to get it to do what you want it to.
-  * The `NCWindow.captureCout()` and `captureCerr()` methods should always be matched with `captureReset()`, or else "good luck!"
+  * The `NCWindow.captureCout()` and `captureCerr()` methods should always be matched with `captureReset()`, or else "good luck!" Calling `close()` on a window will automatically undo any capturing for that window, revering it to its previous state.
   * If your curses script dies with a message like `object X has no function Y` it is easy to miss the error text unless one adds a try/catch block around the main app and sends it to stdout after curses mode is ended (which happens automatically when all windows are destroyed).
 
 ==Send debugging output to another console==
