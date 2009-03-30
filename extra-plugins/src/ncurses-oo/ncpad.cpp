@@ -298,7 +298,8 @@ namespace ncutil {
 		int req = this->requestOp( PadReqRefresh );
 		while( true )
 		{
-			req = this->reqForKey((key=::getch())); // using this->getch() causes a weird locking behaviour
+                    req = this->reqForKey((key=::getch())); // using this->getch() causes a weird locking behaviour
+                    //req = this->reqForKey((key=this->getch()));// causes a weird locking behaviour
 			if( req == PadReqUnknown ) continue;
 			if( req == PadReqExit ) break;
 			this->requestOp( req );
@@ -412,7 +413,7 @@ namespace ncutil {
 
 	void NCPad::OnNavigationError(int pad_req)
 	{
-		::beep();
+            //::beep();
 	}
 
  	void NCPad::OnOperation(int pad_req)
