@@ -33,7 +33,7 @@ This plugins provides the following features:
 
 ==Source code==
 
-This plugin's source code is currently part of the v8-juice core source tree,
+This plugin's source code is currently part of the v8-juice "extra plugins" source tree,
 and can be found here:
 
 http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/whio
