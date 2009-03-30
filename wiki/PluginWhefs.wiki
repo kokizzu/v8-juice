@@ -36,7 +36,7 @@ This plugins provides the following features:
 This plugin's source code is currently part of the v8-juice core source tree,
 and can be found here:
 
-http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio
+http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/whio
 
 See the file `v8-whefs.cc` for the particulars.
 
@@ -87,7 +87,7 @@ When loaded, this plugin will create an object called `whefs` inside the target 
 to which it is added (normally the global object). That `whefs` object holds the rest of the classes and functions for this plugin.
 
 The native API has huge amounts of API documentation which might be interesting
-to users of this API: [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whefs_amalgamation.h whefs_amalgamation.h]
+to users of this API: [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/whio/whefs_amalgamation.h whefs_amalgamation.h]
 
 But all of the "less technical" info one needs for using it in JS is documented below. For more details than you'd ever want to know, see the native API documentation
 
