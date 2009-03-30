@@ -39,7 +39,7 @@ classes and functions for this plugin.
 
 The native whio API has huge amounts of API documentation which might be interesting
 to users of this API:
-[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whio_amalgamation.h whio_amalgamation.h]
+[http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/whio/whio_amalgamation.h whio_amalgamation.h]
 
 But all of the "less technical" info one needs for using it in JS is documented below. For the _real_
 guts (e.g. "what are the behavioural differences for FILE- and memory-based i/o devices?") see
@@ -209,7 +209,7 @@ they are analogous to the C-standard constants of the same names, and are descri
 
 ===Subdevices===
 
-The IODevice class has a constructor with the signature `new IODevice(IODevice dev,int lower, int upper)` which used to create "subdevices". A subdevice is a proxy which wraps up a certain range of bytes inside of another IODevice object. This is covered in gross detail in the source file [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/plugins/whio/whio_amalgamation.h whio_amalgamation.h] (search for "subdev_create"), and here's a short demonstration:
+The IODevice class has a constructor with the signature `new IODevice(IODevice dev,int lower, int upper)` which used to create "subdevices". A subdevice is a proxy which wraps up a certain range of bytes inside of another IODevice object. This is covered in gross detail in the source file [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/whio/whio_amalgamation.h whio_amalgamation.h] (search for "subdev_create"), and here's a short demonstration:
 
 Here's one explanation of what subdevices are for:
 
