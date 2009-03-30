@@ -519,6 +519,7 @@ namespace nc {
         ARGC; ASSERTARGS((0==argc));
         JWIN_THIS;
         //CERR << "NC*.close() @"<<jwin<<'\n';
+        JWindow_remove_stream_redirects( jwin );
         BinderType::DestroyObject(argv.This());
         return Undefined();
     }
@@ -868,27 +869,17 @@ namespace nc {
 
 	// Page/Movement keys:
 	SET_MAC(KEY_DOWN);
-	SET_MAC(KEY_DOWN);
-	SET_MAC(KEY_UP);
 	SET_MAC(KEY_UP);
 	SET_MAC(KEY_LEFT);
-	SET_MAC(KEY_LEFT);
-	SET_MAC(KEY_RIGHT);
 	SET_MAC(KEY_RIGHT);
 	SET_MAC(KEY_HOME);
-	SET_MAC(KEY_HOME);
-	SET_MAC(KEY_BACKSPACE);
 	SET_MAC(KEY_BACKSPACE);
 	SET_MAC(KEY_END);
-	SET_MAC(KEY_END);
-	SET_MAC(KEY_DC);
 	SET_MAC(KEY_DC);
 	SET_MAC(KEY_IC);
-	SET_MAC(KEY_IC);
-	SET_MAC(KEY_NPAGE);
 	SET_MAC(KEY_NPAGE);
 	SET_MAC(KEY_PPAGE);
-	SET_MAC(KEY_PPAGE);
+        SET_MAC(KEY_ENTER);
 
 	// color/state attributes:
 	SET_MAC(A_BOLD);
