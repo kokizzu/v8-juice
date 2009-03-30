@@ -14,8 +14,7 @@ List of current plugins (in alphabetical order):
   * [PluginWhio i/o device and stream classes], with an optional [PluginWhefs embedded filesystem component].
 
 The plugins live in
-[http://code.google.com/p/v8-juice/source/browse/extra-plugins the
-extra-plugins source repository], and can be downloaded from there. See the
+[http://code.google.com/p/v8-juice/source/browse/extra-plugins the extra-plugins source repository], and can be downloaded from there. See the
 `README` file at the top of the source tree for build and installation
 instructions.
 
