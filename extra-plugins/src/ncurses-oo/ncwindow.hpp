@@ -104,7 +104,6 @@ namespace ncutil {
     {
     private:
         NCMode m_sentry;
-        static void    initialize(){} // ancient - not needed with NCMode
         static int     ripoff_init(WINDOW *, int);
         unsigned long m_clientflags;
         std::string m_name;
@@ -254,13 +253,13 @@ namespace ncutil {
         // -------------------------------------------------------------------------
         // terminal status
         // -------------------------------------------------------------------------
-        int            lines() const { initialize(); return LINES; }
+        int            lines() const { return LINES; }
         // Number of lines on terminal, *not* window
 
-        int            cols() const { initialize(); return COLS; }
+        int            cols() const { return COLS; }
         // Number of cols  on terminal, *not* window
 
-        int            tabsize() const { initialize(); return TABSIZE; }
+        int            tabsize() const { return TABSIZE; }
         // Size of a tab on terminal, *not* window
 
 //         static int     NumberOfColors();
@@ -279,10 +278,12 @@ namespace ncutil {
         // Number of columns in this window
 
         int            begx() const { return m_cwin->_begx; }
+        //int            begx() const { return par ? m_cwin->_parx : m_cwin->_begx; }
         // Column of top left corner relative to stdscr
 
         int            begy() const { return m_cwin->_begy; }
-        // Line of top left corner relative to stdscr
+        //int            begy() const { return par ? m_cwin->_pary : m_cwin->_begy; }
+        // Line of top left corner relative to parent or stdscr
 
         int            maxx() const { return m_cwin->_maxx; }
         // Largest x coord in window
