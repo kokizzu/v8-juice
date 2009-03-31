@@ -24,23 +24,33 @@ Object.prototype._extends_ = function( ChildClass, ParentClass )
     ChildClass.prototype._superConstructor_ = ParentClass;
     ChildClass.prototype._superClass_ = ParentClass.prototype;
 }
+Object.prototype._extends_ = function( ChildClass, ParentClass )
+{
+  function TempClass() {}
+  TempClass.prototype = ParentClass.prototype;
 
-function MyType()
+  ChildClass.prototype = new TempClass();
+  ChildClass.prototype.constructor = ChildClass;
+  ChildClass._superConstructor_ = ParentClass;
+  ChildClass._superClass_ = ParentClass.prototype;
+};
+var MyType = function()
 {
     var av = Array.prototype.slice.apply(arguments,[0]);
     print("new MyType(",av.join(','),')');
-    this.prop1 = 1;
-}
+  this.prop1 = 1;
+};
 
-function MySubType()
+var MySubType = function()
 {
-    this._superConstructor_.call( this, Array.prototype.slice.apply(arguments,[0]) );
-    var av = Array.prototype.slice.apply(arguments,[0]);
-    print("new MySubType(",av.join(','),')');
-    this.prop2 = 2;
-}
+  var av = Array.prototype.slice.apply(arguments,[0]);
+  MySubType._superConstructor_.call( this, av );
+  print("new MySubType(",av.join(','),')');
+  this.prop2 = 2;
+};
 
-MySubType._extends_( MyType );
+
+Object._extends_( MySubType, MyType );
 
 var x = new MySubType(7,3,11);
 
