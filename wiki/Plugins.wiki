@@ -42,8 +42,8 @@ That's all you need to do to enable the plugins support.
 
 On Linux systems (and probably other Unices), your application must be linked
 with the `-export-dynamic` (also known as `-rdynamic`) flag, or DLLs may not
-be able to load properly (they won't be able to see the native LoadPlugin API
-provided by the application!).
+be able to load properly (they won't be able to see the native v8::juice::plugin API
+provided by the application/v8-juice!).
 
 Now, in the code which you want to link as a DLL you need to add a few small
 bits of code. First, we will assume you have a function with this signature:
@@ -99,10 +99,10 @@ From native code, you can use the `v8::juice::plugin::PluginsPath()` function
 to get access to a shared `v8::juice::PathFinder` object which is used to do
 the actual searches for plugins. The plugins path is accessible via JS code if
 it has been explicitly added using (see
-`v8::juice::plugin::SetupPathFinderClass()`). Once it is added to the JS
+`v8::juice::SetupPathFinderClass()`). Once it is added to the JS
 engine, the plugins path is accessible via the shared JS object
 `PathFinder.shared.plugins` (it uses the same native instance returned by the
-!PluginsPath() function).
+`PluginsPath()` function).
 
 For example:
 
