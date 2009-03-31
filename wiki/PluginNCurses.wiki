@@ -180,7 +180,7 @@ function setupRips()
     {
         var rw = nc.getRippedLine(i);
         if( ! rw ) break;
-        rw.bkgd( cl[i], cl[i+1] ) );
+        rw.bkgd( nc.color_pair( cl[i], cl[i+1] ) );
         rw.addstr("ripped line #"+i+" ="+rw);
         rw.refresh();
     }
