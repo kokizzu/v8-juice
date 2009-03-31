@@ -1105,7 +1105,7 @@ V8 version 1.1.1.4
                 // 4-ary funcs:
                 .BindMemFunc< int, int, int, std::string,int, &JWindow::mvaddstrn>( "mvaddstrn" )
                 .BindMemFunc< int, int,int,std::string,int, &JWindow::mvinsstrn>( "mvinsstrn" )
-                .BindMemFunc< int, int,int,int,int, &JWindow::mvcur>( "mvcur" )
+                //.BindMemFunc< int, int,int,int,int, &JWindow::mvcur>( "mvcur" )
 
                 // N-aray and 5+-ary funcs:
                 .BindMemFunc< &JWindow::getstring >("getstr" )

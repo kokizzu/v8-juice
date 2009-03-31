@@ -171,7 +171,7 @@ namespace nc {
 
         int mvaddstrn(int v1, int v2, std::string v3,int v4) { return ncwin->addstr(v1,v2,v3.c_str(),v4); }
         int mvinsstrn(int v1,int v2,std::string v3,int v4) { return ncwin->insstr(v1,v2,v3.c_str(),v4); }
-        int mvcur(int v1,int v2,int v3,int v4) { return ncwin->mvcur(v1,v2,v3,v4); }
+        //int mvcur(int v1,int v2,int v3,int v4) { return ncwin->mvcur(v1,v2,v3,v4); }
 
         int overlay( JWindow * dest ) const
         {
