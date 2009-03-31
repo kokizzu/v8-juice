@@ -5,14 +5,15 @@
 
 =About=
 
-The ncurses bindings wrap up a great deal (over 120 functions) of the ncurses
-API for use in !JavaScript. Instead of providing an API directly compatible
-with the low-level C API (as earlier versions of this plugin did), it provides
-an object-oriented interface. This is much easier to manage, in terms of
-window ownership, subwindows, etc., than the low-level interface. That said,
-the OO interface is only a simple wrapper around the curses API (essentially
-adding only child ownership semantics), and will require some curses know-how
-in order to use effectively. As always, curses "takes some getting used to."
+The ncurses bindings wrap up a great deal (well over 100 functions) of
+the ncurses API for use in !JavaScript. Instead of providing an API
+directly compatible with the low-level C API (as earlier versions of
+this plugin did), it provides an object-oriented interface. This is
+much easier to manage, in terms of window ownership, subwindows, etc.,
+than the low-level interface. That said, the OO interface is only a
+simple wrapper around the curses API (essentially adding only child
+ownership semantics), and will require some curses know-how in order
+to use effectively. As always, curses "takes some getting used to."
 
 The advantages of writing curses apps in JS instead of C include:
 
