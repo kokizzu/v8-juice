@@ -180,7 +180,8 @@ int my_fwd( V8CxH & cx )
     typedef ClassBinder<my_native> WT;
     //WT & w = WT::Instance();
     WT w;
-
+    WT::SearchPrototypesForNative(true); // allows JS classes to subclass my_native
+    WT::AllowCtorWithoutNew(true);
     //BindMemFunc( w, "func1", &my_native::func1 );
     typedef my_native MY;
     w

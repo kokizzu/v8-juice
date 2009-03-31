@@ -356,6 +356,22 @@ namespace juice {
 	FieldCount = NativeFieldIndex + 1
 	};
         
+        enum Options {
+        OptSearchPrototypesForNative = 0,
+        OptAllowCtorWithoutNew = 1,
+        OptCount
+        };
+
+        static int* options()
+        {
+            static int bob[OptCount] =
+                {
+                0, // OptSearchPrototypesForNative
+                0  // OptAllowCtorWithoutNew
+                };
+            return bob;
+        }
+
         typedef WrappedType * (*SubclassGetNative)( void const * );
         typedef std::set<SubclassGetNative> SubclassGetNatives;
         /** Internal helper to do subtype lookups for GetSelf(). */
@@ -388,6 +404,28 @@ namespace juice {
             typedef typename OpsT::WrappedType RealT;
             return Detail::WrapperMapper<RealT>::GetJSObject( key );
         }
+
+        /**
+           If h is-an Object then retun GetSelf( h->GetPrototype(),
+           checkSubclasses ), else return 0.
+
+           If options()[OptSearchPrototypesForNative] is 0 then this function
+           always returns 0.
+        */
+	static WrappedType * GetSelfFromPrototype( Handle<Object> const & h, bool checkSubtypes = true )
+        {
+            if( options()[OptSearchPrototypesForNative] )
+            {
+                Local<Value> pv( h->GetPrototype() );
+                if( pv.IsEmpty() || ! pv->IsObject() ) return 0;
+                return GetSelf( Handle<Object>( Object::Cast(*pv) ), checkSubtypes );
+            }
+            else
+            {
+                return 0;
+            }
+        }
+
     public:
 
 	/**
@@ -534,23 +572,25 @@ namespace juice {
            checked (in an unspecified order) until a match is found,
            and 0 is returned if no match is found.
 	*/
-	static WrappedType * GetSelf( Handle<Object> h, bool checkSubtypes = true )
+	static WrappedType * GetSelf( Handle<Object> const & h, bool checkSubtypes = true )
 	{
-	    if( h.IsEmpty() || (h->InternalFieldCount() != (FieldCount)) ) return 0;
+	    if( h.IsEmpty() ) return 0;
+            if( h->InternalFieldCount() != FieldCount ) return GetSelfFromPrototype(h,checkSubtypes);
             /// ^^^^ reminder: that FieldCount check won't work with inheritance if subtypes have different counts :(
             /// we might have to start reserving slot 0 for ourselves, as opposed to the last slot. Hmmm. Ugly.
 	    Local<Value> lv( h->GetInternalField(NativeFieldIndex) );
-	    if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
+            if( lv.IsEmpty() || !lv->IsExternal() ) return GetSelfFromPrototype(h,checkSubtypes);
 	    Local<External> ex( External::Cast(*lv) );
             WrappedType * obj = TypeCheck::GetNative( ex->Value() );
-            if( obj || !checkSubtypes ) return obj;
+            if( obj ) return obj;
+            if( !checkSubtypes ) return GetSelfFromPrototype(h,checkSubtypes);
             typename SubclassGetNatives::iterator it = subclassGettersN().begin();
             typename SubclassGetNatives::iterator et = subclassGettersN().end();
             for( ; (!obj) && (et != it); ++it )
             {
                 obj = (*it)( ex->Value() );
             }
-            return obj;
+            return obj ? obj : GetSelfFromPrototype(h,checkSubtypes);
 	}
 
 	/**
@@ -582,7 +622,7 @@ namespace juice {
            See GetSelf() for the explanation of the checkSubtypes
            argument.
 	*/
-        static WrappedType * GetNative( Handle<Value> h, bool checkSubtypes = true )
+        static WrappedType * GetNative( Handle<Value> const & h, bool checkSubtypes = true )
         {
             if( h.IsEmpty() || ! h->IsObject() ) return 0;
             Local<Object> obj( Object::Cast(*h) );
@@ -630,7 +670,7 @@ namespace juice {
            pointer of type WrappedSubType to
            WeakJSClassCreatorOps<WrappedType::Dtor().
 	*/
-	static bool DestroyObject( Handle<Object> jo, bool checkSubclasses = false )
+	static bool DestroyObject( Handle<Object> const & jo, bool checkSubclasses = false )
 	{
 	    WrappedType * t = GetSelf(jo,false); // sanity check
 	    if( ! t ) return false;
@@ -696,6 +736,31 @@ namespace juice {
 //             return shared_inst;
 //         }
 
+        /**
+           Setting this option to true changes GetSelf()'s behaviour
+           somewhat. If the 'this' object cannot be associated with a
+           native object, then this.prototype will be checked.  This
+           option defaults to off because it is a performance hit on
+           every call to GetSelf() and friends, and it is normally
+           only useful when JS-side classes need to inherit a native
+           type.
+        */
+        static void SearchPrototypesForNative( bool b )
+        {
+            options()[OptSearchPrototypesForNative] = (b ? 1 : 0);
+        }
+
+        /**
+           If this option is set to true (it defaults to false)
+           then calling 'MyWrappedType()' in JS code is the same
+           as calling 'new MyWrappedType()'. If this option is false,
+           the former syntax will cause an exception to be thrown.
+        */
+        static void AllowCtorWithoutNew( bool b )
+        {
+            options()[OptAllowCtorWithoutNew] = (b ? 1 : 0);
+        }
+
     private:
 	typedef Detail::WrapperMapper<WrappedType> TypeCheck;
 	typedef typename TypeCheck::ObjBindT ObjBindT;
@@ -710,30 +775,24 @@ namespace juice {
 	}
 
 	/**
-	   Unbinds native and destroys it using CleanupFunctor.
-
-	   Must only be called from weak_callback().
-	*/
-	static void the_cleaner( WrappedType * native )
-	{
-	    if( native )
-	    {
-		ClassOpsType::Dtor( native );
-	    }
-	}
-
-	/**
-	   Only called by v8 GC. It removes the object from "supplemental" GC,
-	   calls the_cleaner(nobj), and Dipose()es the given object.
+	   Only called by v8 GC. It unbinds the native object from
+           pv and calls ClassOpsType::Dtor() on it. After this call,
+           pv will no longer contain a reference to the native.
 	*/
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
 	    //CERR << "weak callback @"<<nobj<<"\n";
 	    Local<Object> jobj( Object::Cast(*pv) );
-
-	    if( jobj->InternalFieldCount() != (FieldCount) ) return; // and warn on this, too!
+	    if( jobj->InternalFieldCount() != (FieldCount) ) return; // how to warn about this?
 	    Local<Value> lv( jobj->GetInternalField(NativeFieldIndex) );
-	    if( lv.IsEmpty() || !lv->IsExternal() ) return; // and this!
+	    if( lv.IsEmpty() || !lv->IsExternal() ) return; // how to warn about this?
+	    /**
+	       We have to ensure that we have no dangling External in JS space. This
+	       is so that functions like IODevice.close() can act safely with the
+	       knowledge that member funcs called after that won't get a dangling
+	       pointer. Without this, some code will crash in that case.
+	    */
+	    jobj->SetInternalField(NativeFieldIndex,Null());
 	    pv.Dispose();
 	    pv.Clear();
 	    TypeCheckIter it = typeCheck().find( nobj );
@@ -742,15 +801,8 @@ namespace juice {
 		return;
 	    }
             WrappedType * victim = (*it).second.first;
-	    the_cleaner( victim );
             typeCheck().erase(it);
-	    /**
-	       We have to ensure that we have no dangling External in JS space. This
-	       is so that functions like IODevice.close() can act safely with the
-	       knowledge that member funcs called after that won't get a dangling
-	       pointer. Without this, some code will crash in that case.
-	    */
-	    jobj->SetInternalField(NativeFieldIndex,Null());
+            ClassOpsType::Dtor( victim );
 	}
 
 	/**
@@ -777,33 +829,36 @@ namespace juice {
 	 */
 	static Handle<Value> ctor_proxy( const Arguments & argv )
 	{
-#if 0
-            /**
-               Why have this limitation? If we don't, v8 pukes when
-               the ctor is called, with
-               "v8::Object::SetInternalField() Writing internal field
-               out of bounds".
-            */
-	    if (!argv.IsConstructCall()) 
-	    {
-                std::ostringstream os;
-                os << "The "<< ClassOpsType::ClassName() << " constructor cannot be called as function!";
-		return ThrowException(String::New(os.str().c_str()));
-	    }
-#else
-            /**
-               Allow construction without 'new' by forcing this
-               function to be called in a ctor context...
-            */
-	    if (!argv.IsConstructCall()) 
+            if( options()[OptAllowCtorWithoutNew] )
             {
-                const int argc = argv.Length();
-                Handle<Function> ctor( Function::Cast(*argv.Callee()));
-                std::vector< Handle<Value> > av(static_cast<size_t>(argc),Undefined());
-                for( int i = 0; i < argc; ++i ) av[i] = argv[i];
-                return ctor->NewInstance( argc, &av[0] );
+                /**
+                   Allow construction without 'new' by forcing this
+                   function to be called in a ctor context...
+                */
+                if (!argv.IsConstructCall()) 
+                {
+                    const int argc = argv.Length();
+                    Handle<Function> ctor( Function::Cast(*argv.Callee()));
+                    std::vector< Handle<Value> > av(static_cast<size_t>(argc),Undefined());
+                    for( int i = 0; i < argc; ++i ) av[i] = argv[i];
+                    return ctor->NewInstance( argc, &av[0] );
+                }
             }
-#endif
+            else
+            {
+                /**
+                   Why have this limitation? If we don't, v8 pukes when
+                   the ctor is called, with
+                   "v8::Object::SetInternalField() Writing internal field
+                   out of bounds".
+                */
+                if (!argv.IsConstructCall()) 
+                {
+                    std::ostringstream os;
+                    os << "The "<< ClassOpsType::ClassName() << " constructor cannot be called as function!";
+                    return ThrowException(String::New(os.str().c_str()));
+                }
+            }
 	    std::string err;
 	    WrappedType * obj = 0;
 	    try
