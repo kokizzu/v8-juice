@@ -68,6 +68,7 @@
 #include "ncmode.hpp"
 #include "ncpalette.hpp"
 #include "ncutil.hpp"
+#include "ncwidgets.hpp"
 #include "v8-nc.h"
 /**
    Convenience macro for marking wrapper functions.
@@ -800,6 +801,19 @@ namespace nc {
         return winjo;
     }
 
+    JS_WRAPPER(nc_popup_dialog)
+    {
+        ARGC; ASSERTARGS((argc>1) && (argc<6));
+        std::string title( JSToStdString(argv[0]) );
+        std::string text( JSToStdString(argv[1]) );
+        int r = (argc>2) ? JSToInt32(argv[2]) : -1;
+        int l = (argc>3) ? JSToInt32(argv[3]) : -1;
+        int y = (argc>4) ? JSToInt32(argv[4]) : -1;
+        int x = (argc>5) ? JSToInt32(argv[5]) : -1;
+
+        return CastToJS( ncutil::popup_dialog(title,text,r,l,y,x) );
+    }
+
     JS_WRAPPER(nc_endwin)
     {
         ARGC; ASSERTARGS((0==argc));
@@ -853,6 +867,7 @@ namespace nc {
         SETF("colorNames",nc_color_names);
         SETF("ripoffline",nc_ripoffline);
         SETF("getRippedLine",nc_getrippedline);
+        SETF("popupDialog",nc_popup_dialog);
 #undef SETF
         {
             Handle<Array> rips( Array::New(5) );

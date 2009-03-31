@@ -1,8 +1,8 @@
 load_plugin('v8-juice-ncurses-oo');
 var nc = ncurses;
-nc.curs_set(0);
 //nc.ripoffline(true);nc.ripoffline(true);nc.ripoffline(false);nc.ripoffline(false);
 var root = new nc.NCPanel();
+nc.curs_set(0);
 var name = root.name();
 root.bkgd( nc.color_pair('yellow','cyan') );
 root.mvaddstr(14,0,"I am the root panel\n");
@@ -10,6 +10,9 @@ root.mvaddstr(14,0,"I am the root panel\n");
 root.captureCout( ncurses.color_pair('yellow','cyan') | nc.A_BOLD);
 root.captureCerr();
 print("std::cout is redirected here.");
+
+var rc = nc.popupDialog("Dialog! Achtung!","You are about to see... a PAD!");
+print("Dialog keypress was:",rc,nc.charVal(rc));
 function tryPad()
 {
     try
@@ -84,7 +87,6 @@ function colorPad()
     var theChar = ncurses.intVal('*');
     for( var b = 0; b < culrs.length; ++b )
     {
-        print(typeof b);
         var bg = culrs[b];
         var colm = 0;
         for(var f = 0; f < culrs.length; ++f, ++colm )
