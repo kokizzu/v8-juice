@@ -8,11 +8,14 @@ root.bkgd( nc.color_pair('yellow','cyan') );
 root.mvaddstr(14,0,"I am the root panel\n");
 //root.mvaddch(15,3,ncurses.intVal('*'));
 root.captureCout( ncurses.color_pair('yellow','cyan') | nc.A_BOLD);
-root.captureCerr();
+//root.captureCerr();
 print("std::cout is redirected here.");
 
-var rc = nc.popupDialog("Dialog! Achtung!","You are about to see... a PAD!");
-print("Dialog keypress was:",rc,nc.charVal(rc));
+if(0)
+{
+    var rc = nc.popupDialog("Dialog! Achtung!","You are about to see... a PAD!");
+    print("Dialog keypress was:",rc,nc.charVal(rc));
+}
 function tryPad()
 {
     try
@@ -76,7 +79,10 @@ function colorPad()
                     ];
     var ydim = culrs.length;
     var xdim = culrs.length * attrlist.length;
-    var pnl = new ncurses.NCPanel( 10,8,0,5);
+    var pnl = 
+        //new ncurses.NCPanel( 10,8,0,5 );
+        new ncurses.NCPanel( [10,8,0,5] );
+    print("Created wrapper panel.");
     var pad = new ncurses.NCFramedPad(pnl,ydim,xdim,1,1);
         //pad = new ncurses.NCWindow(pnl);
         //pnl;

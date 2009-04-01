@@ -133,30 +133,11 @@ which holds all of the plugin's classes and the following non-class functions:
 || `Array` || `colorNames()` || Returns a list of the 8 basic color names, in an unspecified order. ||
 || `void` || `ripoffline(bool fromTop)` || EXPERIMENTAL. Described below. ||
 || `int` || `popupDialog(title,text[,rows,cols,y,x])` || Pops up a _very basic_ dialog with the given title and text (it will try to guess a reasonably position and size, but you may need to help it). It waits for a single keypress, then destroys the dialog and returns that pressed key's value. ||
-|| `bool` || `enableWindowInheritance([bool=true])` || Explained below. ||
 
 
 Aside from those functions, nearly all standard ncurses macros are defined as
 symbolic constants of the `ncurses` object. For example, `ncurses.A_BOLD` and
 `ncurses.A_UNDERLINE`.
-
-==`enableWindowInheritance()`==
-
-To summarize a very long story...
-
-If you want to inherit any of the window classes from JS classes, you must
-call `ncurses.enableWindowInheritance(true)`, and then follow the
-instructions [ClassBinder#Inheriting_Native_Classes_from_JS on the ClassBinder page].
-
-This is turned off by default because it enables lookups which are only
-necessary when one needs to subclass one of the native window types
-from JS code. Those lookups are a waste of time (i.e. performance hit)
-when no native types are subclassed from JS code.
-
-Once this option is set, changing it may break objects which were created
-before the setting is changed. So, if it is to be used at all, call it
-directly after loading the plugin, before any windows are created.
-
 
 ==`ripoffline()`==
 
@@ -246,6 +227,7 @@ Here we go...
 || `NCWindow` || `new NCWindow(NCWindow [, bool box=true])` || Creates a subwindow of the given window, completely wrapping it with a 1-line/col border. If box is true, the border is decorated. Throws on error. ||
 || `NCWindow` || `new NCWindow(int lines, int cols, int y, int x)` || Creates a new wind with the given size/position. Throws on error. ||
 || `NCWindow` || `new NCWindow(NCWindow parent, int lines, int cols, int y, int x)` || Creates a subwindow of the given window, with coordinates relative to that window. ||
+|| `NCWindow` || `new NCWindow(Array)` || Special-case variant for use with JS-side subclasses. Expands the array and acts as one of the other ctors. e.g. `new ncurses.NCWindow([1,2,3,4])` and `new ncurses.NCWindow(1,2,3,4)` are semantically the same. ||
 
 ===Geometry, Cursor, and Movement===
 
@@ -371,6 +353,7 @@ In addition to the NCWindow API, NCPanel has:
 || *Return type* || *Name/Arguments* || *Notes* ||
 || `NCPanel` || `new NCPanel()` || A top-level panel. ||
 || `NCPanel` || `new NCPanel(int lines, int cols [, int y=0, int x=0])` || Creates a new panel at the given position. A window can be wrapped around it with `new NCWindow(myPanel)`. Throws on error. ||
+|| `NCPanel` || `new NCPanel(Array)` || See `NCWindow(Array)` - this acts the same way. ||
 || `void` || `hide()` || Hides the panel. ||
 || `void` || `show()` || Shows the panel. ||
 || `void` || `top()` || Moves the panel to the top of the stack. ||
@@ -416,6 +399,8 @@ see the curses man pages!), NCPad also provides:
 || *Return type* || *Name/Arguments* || *Notes* ||
 || `NCPad` || `new NCPad(NCWindow windowToWrap, int lines, int cols)` || Creates a new pad of the given size (which may be bigger than the screen). The given window is used as the drawing surface. ||
 || `NCFramedPad` || `new NCFramedPad(NCWindow windowToWrap, int lines, int cols)` || Identical to the `NCPad` ctor, except that the returned object is rendered with a border and scroll indicators. ||
+|| `NCPad` || `new NCPad(Array)` || See `NCWindow(Array)` - this acts the same way. ||
+|| `NCFramedPad` || `new NCFramedPad(Array)` || See `NCWindow(Array)` - this acts the same way. ||
 || `int` ||`requestOp(int)` || Detailed in the native API. ||
 || `int` || `prefresh(six integers)` || Same as ncurses `prefresh()`. ||
 || `int` || `pnoutrefresh(six integers)` || Same as ncurses `pnoutrefresh()` ||
@@ -503,6 +488,32 @@ Newer versions of the v8-juice shell application (under `src/client/shell/`)
 have the command-line option `--print-cerr`, which forces the JS `print()` function
 to use `std::cerr`, instead of `std::cout`, for output. Combined with redirection
 to another console, this is often useful when debugging [PluginNCurses curses applications].
+
+=Inheriting Window Types from JS=
+
+To summarize a very long story...
+
+If you want to inherit any of the window classes from JS classes, follow
+the instructions [ClassBinder#Inheriting_Native_Classes_from_JS on the ClassBinder page].
+Here is a shortened summary of what a subclass looks like:
+
+{{{
+/** Custon NCPanel subclass: */
+function MyPanel()
+{
+    var argv = Array.prototype.slice.apply(arguments,[0]);
+    // ^^^ convert 'arguments' pseudoarray to a real array
+    // for use with:
+    this.__proto__ = new ncurses.NCPanel(argv);
+    // (this instanceof ncurses.NCPanel) is now true!
+    ... add members, etc. ...
+    return this;
+}
+
+var p = new MyPanel(10,10,4,4);
+p.bkgd(nc.color_pair('white','red'));
+}}}
+
 
 =Examples=
 

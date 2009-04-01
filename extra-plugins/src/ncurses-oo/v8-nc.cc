@@ -172,9 +172,38 @@ namespace nc {
     }
 
 
-    JWindow * window_ctor( Arguments const & argv, std::string & exceptionText )
+    static int argv_convert(  Arguments const & argv_,
+                               std::vector< Handle<Value> > & tgt )
     {
-        ARGC;
+        const int argc = argv_.Length();
+        typedef std::vector< Handle<Value> > VT;
+        if( (1 == argc) && argv_[0]->IsArray() )
+        { // special case to assist in subclassing: if
+            // first arg is an array then convert that array to
+            // the argv...
+            Local<Array> ao( Array::Cast( *argv_[0] ) );
+            Local<Value> alenv( ao->Get(JSTR("length")));
+            int lenv = alenv->IntegerValue();
+            tgt.reserve(lenv);
+            for( int i = 0; i < lenv; ++i )
+            {
+                tgt[i] = ao->Get(Integer::New(i));
+            }
+            return lenv;
+        }
+        else
+        {
+            tgt.reserve(argc);
+            for( int i = 0; i < argc; ++i ) tgt[i] = argv_[i];
+            return argc;
+        }
+    }
+
+    JWindow * window_ctor( Arguments const & argv_, std::string & exceptionText )
+    {
+        typedef std::vector< Handle<Value> > VT;
+        VT argv;
+        const int argc = argv_convert(argv_,argv);
         JWindow * jw = 0;
         if( 0 == argc )
         { // default ctor - a wrapper for stdscr
@@ -398,9 +427,12 @@ namespace nc {
 #endif
 
 
-    JPanel * panel_ctor( Arguments const & argv, std::string & exceptionText )
+    JPanel * panel_ctor( Arguments const & _argv_, std::string & exceptionText )
     {
-        ARGC;
+        typedef std::vector< Handle<Value> > VT;
+        VT argv;
+        const int argc = argv_convert(_argv_,argv);
+        CERR << "GOT <"<<argc<<"> ctor args!\n";
         if( ! ( (0==argc) || (argc>1 && argc<5) ) )
         {
             exceptionText = "Incorrect ctor arguments!";
@@ -428,6 +460,7 @@ namespace nc {
             int c = JSToInt32(argv[1]);
             int y = (argc>2) ? JSToInt32(argv[2]) : 0;
             int x = (argc>3) ? JSToInt32(argv[3]) : 0;
+            CERR << argc << ": "<<l <<", "<< c <<", "<< y <<", "<< x <<"\n";
             try
             {
                 NCPanel * p = new NCPanel(l,c,y,x);
@@ -445,18 +478,24 @@ namespace nc {
     }
 
 
-    JPad * pad_ctor_impl( Arguments const & argv,
+    /**
+       Internal NCPad/NCFramedPad ctor impl. If (!fp) then this acts
+       as NCPad, otherwise it constructs an NCFramedPad and sets fp to
+       that NCFramedPad value.
+    */
+    JPad * pad_ctor_impl( Arguments const & argv_,
                           std::string & exceptionText,
                           JFramedPad ** fp
                           )
     {
-        ARGC;
+        typedef std::vector< Handle<Value> > VT;
+        VT argv;
+        const int argc = argv_convert(argv_,argv);
         if(! ((argc>2) && (argc<6)))
         {
             exceptionText = "Constructor expects (NCWindow,int lines, int cols [, int gridVert=1, int gridHoriz=1])";
             return 0;
         }
-        
         JWIN_ARG(par,argv[0]);
         if( ! par )
         {
@@ -814,6 +853,7 @@ namespace nc {
         return CastToJS( ncutil::popup_dialog(title,text,r,l,y,x) );
     }
 
+#if 0
     JS_WRAPPER(nc_enable_inheritance)
     {
         ARGC; ASSERTARGS(argc<=1);
@@ -822,8 +862,16 @@ namespace nc {
         PanelBinder::SearchPrototypesForNative( b );
         PadBinder::SearchPrototypesForNative( b );
         FramedPadBinder::SearchPrototypesForNative( b );
+
+        WindowBinder::AllowCtorWithoutNew(b);
+        PanelBinder::AllowCtorWithoutNew( b );
+        PadBinder::AllowCtorWithoutNew( b );
+        FramedPadBinder::AllowCtorWithoutNew( b );
+
         return BoolToJS(b);
     }
+#endif
+
     JS_WRAPPER(nc_endwin)
     {
         ARGC; ASSERTARGS((0==argc));
@@ -878,7 +926,7 @@ namespace nc {
         SETF("ripoffline",nc_ripoffline);
         SETF("getRippedLine",nc_getrippedline);
         SETF("popupDialog",nc_popup_dialog);
-        SETF("enableWindowInheritance", nc_enable_inheritance );
+        //SETF("enableWindowInheritance", nc_enable_inheritance );
 #undef SETF
         {
             Handle<Array> rips( Array::New(5) );
@@ -1207,6 +1255,14 @@ V8 version 1.1.1.4
             bindFP.InheritNative<JWindow>();
             bindFP.Seal();
             bindFP.AddClassTo(ncobj);
+        }
+
+        {
+            bool activeInheritance = true;
+            WindowBinder::SearchPrototypesForNative( activeInheritance );
+            PanelBinder::SearchPrototypesForNative( activeInheritance );
+            PadBinder::SearchPrototypesForNative( activeInheritance );
+            FramedPadBinder::SearchPrototypesForNative( activeInheritance );
         }
 
         return ncobj;
