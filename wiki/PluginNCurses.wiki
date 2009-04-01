@@ -511,7 +511,9 @@ function MyPanel()
 }
 
 var p = new MyPanel(10,10,4,4);
-p.bkgd(nc.color_pair('white','red'));
+p.bkgd(ncurses.color_pair('white','red'));
+...
+p.close();
 }}}
 
 
