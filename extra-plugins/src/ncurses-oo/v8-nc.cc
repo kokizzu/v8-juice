@@ -814,6 +814,16 @@ namespace nc {
         return CastToJS( ncutil::popup_dialog(title,text,r,l,y,x) );
     }
 
+    JS_WRAPPER(nc_enable_inheritance)
+    {
+        ARGC; ASSERTARGS(argc<=1);
+        bool b = (argc ? argv[0]->BooleanValue() : true);
+        WindowBinder::SearchPrototypesForNative( b );
+        PanelBinder::SearchPrototypesForNative( b );
+        PadBinder::SearchPrototypesForNative( b );
+        FramedPadBinder::SearchPrototypesForNative( b );
+        return BoolToJS(b);
+    }
     JS_WRAPPER(nc_endwin)
     {
         ARGC; ASSERTARGS((0==argc));
@@ -868,6 +878,7 @@ namespace nc {
         SETF("ripoffline",nc_ripoffline);
         SETF("getRippedLine",nc_getrippedline);
         SETF("popupDialog",nc_popup_dialog);
+        SETF("enableWindowInheritance", nc_enable_inheritance );
 #undef SETF
         {
             Handle<Array> rips( Array::New(5) );
@@ -1200,8 +1211,6 @@ V8 version 1.1.1.4
 
         return ncobj;
     }        
-
-
 
     V8_JUICE_PLUGIN_STATIC_INIT( SetupNCurses );
 

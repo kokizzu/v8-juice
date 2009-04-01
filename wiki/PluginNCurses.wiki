@@ -133,11 +133,30 @@ which holds all of the plugin's classes and the following non-class functions:
 || `Array` || `colorNames()` || Returns a list of the 8 basic color names, in an unspecified order. ||
 || `void` || `ripoffline(bool fromTop)` || EXPERIMENTAL. Described below. ||
 || `int` || `popupDialog(title,text[,rows,cols,y,x])` || Pops up a _very basic_ dialog with the given title and text (it will try to guess a reasonably position and size, but you may need to help it). It waits for a single keypress, then destroys the dialog and returns that pressed key's value. ||
+|| `bool` || `enableWindowInheritance([bool=true])` || Explained below. ||
 
 
 Aside from those functions, nearly all standard ncurses macros are defined as
 symbolic constants of the `ncurses` object. For example, `ncurses.A_BOLD` and
 `ncurses.A_UNDERLINE`.
+
+==`enableWindowInheritance()`==
+
+To summarize a very long story...
+
+If you want to inherit any of the window classes from JS classes, you must
+call `ncurses.enableWindowInheritance(true)`, and then follow the
+instructions [ClassBinder#Inheriting_Native_Classes_from_JS on the ClassBinder page].
+
+This is turned off by default because it enables lookups which are only
+necessary when one needs to subclass one of the native window types
+from JS code. Those lookups are a waste of time (i.e. performance hit)
+when no native types are subclassed from JS code.
+
+Once this option is set, changing it may break objects which were created
+before the setting is changed. So, if it is to be used at all, call it
+directly after loading the plugin, before any windows are created.
+
 
 ==`ripoffline()`==
 

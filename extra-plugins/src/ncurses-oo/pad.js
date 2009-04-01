@@ -104,7 +104,10 @@ function colorPad()
     print("Entering scroll area loop. Tap Ctrl-G to end.");
     pad.inputLoop();
     print("Done. Now use the cursor keys to move the window. Tap a non-movement key to quit.");
+    print("Panel pos:",pnl.begy(),pnl.begx());
     pnl.interactivelyMove();
+    print("Panel pos:",pnl.begy(),pnl.begx());
+
     print("Done. Tap a key to destroy the window.");
     pnl.getch();
     pad.close();
