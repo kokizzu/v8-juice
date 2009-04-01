@@ -13,6 +13,7 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 *2009 March 31*
   * Added toggles to [CreatingJSClasses WeakJSClassCreator] to allow constructors to be called without `new` and to activate searches for the native `this` object via JS-side prototypes (necessary if JS types are to subclass native types).
+  * Minor additions to the [PluginNCurses ncurses plugin].
 
 *2009 March 28/29*
   * Moved the remaining plugins from the core tree to the [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src extra-plugins source repo].
