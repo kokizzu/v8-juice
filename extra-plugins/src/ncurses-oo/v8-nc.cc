@@ -432,7 +432,6 @@ namespace nc {
         typedef std::vector< Handle<Value> > VT;
         VT argv;
         const int argc = argv_convert(_argv_,argv);
-        CERR << "GOT <"<<argc<<"> ctor args!\n";
         if( ! ( (0==argc) || (argc>1 && argc<5) ) )
         {
             exceptionText = "Incorrect ctor arguments!";
