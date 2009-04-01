@@ -31,7 +31,9 @@ try
         app.panels[name] = p;
         return p;
     }
-    app.addPanel( 'root', new ncurses.NCPanel() );
+    var  p = new ncurses.NCPanel();
+    //p.bkgd( ncurses.intVal(' ') );
+    app.addPanel( 'root', p );
     /** Refreshes the root panel. */
     app.refresh = function() { return this.panels.root.refresh(); };
     app.getch = function() { return this.panels.root.getch(); };

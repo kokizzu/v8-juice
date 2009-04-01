@@ -476,7 +476,7 @@ Secondly, in JS code we need to follow this pattern:
 {{{
 function MyClass()
 {
-    this.__proto__ = new MyNative(...);
+    this.prototype = this.__proto__ = new MyNative(...);
     ...
     return this;
 }
@@ -485,6 +485,10 @@ function MyClass()
 Setting the "magic" `__proto__` property is v8's way of forcing `this`
 to be of a specific class.
 
+The weird `this.prototype = this.__proto__ = ...` is the only way i've found
+to ensure that calling base implementations of overridden functions can be
+done in a conventional manner (see below).
+
 Lastly, use `MyClass` as if it is-a `MyNative`:
 
 {{{
@@ -492,9 +496,44 @@ var my = new MyClass();
 print( my instanceof MyNative ); // "true"
 }}}
 
+However, there are some weird limitations to this approach. The most
+notable is that the `prototype` object is not 100% of the correct
+type. When reimplementing member functions, we _have_ to do add
+them to _each_ new instance, as opposed to adding them to `MyClass.prototype`
+as we would normally do. The reason is because we force-set the prototype
+in the constructor, which causes the prototype to be different in different
+contexts. e.g `this.prototype` will _not_ be the same type as `MyClass.prototype`!
 
-The following approach will _almost_ do the same thing, but has the tragic flaw that
-all JS instances of the class share the exact same native instance:
+So, to implement new member, we have to add them in the constructor
+function (or after calling the ctor) _and_ we have to use an ugly hack
+to call the inherited members. It looks like this:
+
+{{{
+    // inside of the MyClass ctor:
+    this.toString = function() {
+        return '[MyPanel:'+this.__proto__.toString()+']';
+    /**
+    Actually, this.prototype will work here, but only
+    because of the explicit assignment demonstrated above.
+    this.prototype will not work, for this purpose, if
+    this member is defined outside of the ctor, even if
+    we use this.__proto__ instead, because the ctor actually
+    replaces the declared prototype with another one, which
+    means it never sees and functions set in MyClass.prototype.
+    */
+    };
+}}}
+
+This is an unfortunate limitation, and has implications other than
+just adding/calling member functions. i know of no workaround to 100%
+transparently work around this :(.
+
+
+==A slightly different, but even less correct, approach==
+
+The following approach will _almost_ do the same thing as above, but
+has the tragic flaw that all JS instances of the class share the exact
+same native instance:
 
 {{{
 function MyClass()

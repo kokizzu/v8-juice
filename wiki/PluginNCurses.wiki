@@ -504,9 +504,16 @@ function MyPanel()
     var argv = Array.prototype.slice.apply(arguments,[0]);
     // ^^^ convert 'arguments' pseudoarray to a real array
     // for use with:
-    this.__proto__ = new ncurses.NCPanel(argv);
+    this.prototype = this.__proto__ = new ncurses.NCPanel(argv);
     // (this instanceof ncurses.NCPanel) is now true!
     ... add members, etc. ...
+
+   // To call an inherited implementation of a member:
+   this.toString = function() {
+        return '[MyPanel:'+this.__proto__.toString()+']';
+        // ^^^ this.prototype.toString() won't work for this purpose!
+        // so use __proto__ inside of member functions instead.
+    };
     return this;
 }
 
