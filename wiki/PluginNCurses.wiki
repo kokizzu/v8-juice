@@ -261,6 +261,16 @@ Here we go...
 || `int` || `touchln( int start, int count )` || See `man wtouchln`. ||
 || `int` ||  `touchwin()` || See `man touchwin`. ||
 || `int` ||  `untouchwin()` || See `man untouchwin`. ||
+|| `int` || `scrollok(bool)` || See `man scrollok`. ||
+|| `int` || `idlok(bool)` || See `man idlok`. ||
+|| `void` || `idcok(bool)` || See `man idcok`. ||
+|| `int` || `leaveok(bool)` || See `man leaveok`. ||
+|| `void` || `immedok(bool)` || See `man immedok`. ||
+|| `int` || `keypad(bool)` || See `man keypad`. ||
+|| `int` || `clearok(bool)` || See `man clearok`. ||
+|| `int` || `nodelay(bool)` || Analog to curses `nodelay()` ||
+|| `void` || `timeout(int)` || Analog to curses `wtimeout()`. ||
+|| `bool` ||  `has_mouse()` || Returns true if curses is compiled with mouse support. TODO: move this to a static member. ||
 
 ===Drawing/Output===
 
@@ -300,6 +310,8 @@ Here we go...
 || `int` || `overlay(NCWindow)` || See `man overlay`. ||
 || `int` || `overwrite(NCWindow)` || See `man overwrite`. ||
 || `int` || `copywin(NCWindow,int,int,int,int,int,int,bool)` || See `man copywin`. ||
+|| `int` || `scroll(int)` || See `man scroll`. ||
+|| `int` ||  `insertln()` || See `man winsertln`. ||
 
 ===User Input===
 
@@ -315,21 +327,9 @@ Here we go...
 || `string` ||  `name()` || Returns the window's name. ||
 || `void` || `setName(string)` || Sets the window's name. ||
 || `int` || `windowID()` || Returns a unique integer ID for this window. No two windows have the same ID. It can be used to assist in mapping windows to arbitrary other data. ||
-|| `int` ||  `insertln()` || See `man winsertln`. ||
-|| `bool` ||  `has_mouse()` || Returns true if curses is compiled with mouse support. TODO: move this to a static member. ||
-|| `int` || `scroll(int)` || See `man scroll`. ||
-|| `int` || `scrollok(bool)` || See `man scrollok`. ||
-|| `int` || `idlok(bool)` || See `man idlok`. ||
-|| `void` || `idcok(bool)` || See `man idcok`. ||
-|| `int` || `leaveok(bool)` || See `man leaveok`. ||
-|| `void` || `immedok(bool)` || See `man immedok`. ||
-|| `int` || `keypad(bool)` || See `man keypad`. ||
 || `void` || `captureCout([int attributes])` || Redirects the `std::cout` object to this window until the window is closed or `captureReset()` is called. If the attributes argument is set, the output from that stream is colored using those attributes. ||
 || `void` || `captureCerr()` || Same as `captureCout()`, but applies to the native `std::cerr` object. ||
-|| `void` || `captureReset()` || Undoes stream capturing enabled with `captureCout()` and `captureCerr()`, reverting `std::cout` and/or `std::cerr` to their previous states. ||
-|| `int` || `clearok(bool)` || See `man clearok`. ||
-|| `int` || `nodelay(bool)` || Analog to curses `nodelay()` ||
-|| `void` || `timeout(int)` || Analog to curses `wtimeout()`. ||
+|| `void` || `captureReset()` || Undoes stream capturing enabled with `captureCout()` and `captureCerr()`, reverting `std::cout` and/or `std::cerr` to their previous states. This automatically happens when `close()` is called. ||
 
 
 ==TODOs==
@@ -479,6 +479,11 @@ mywin.captureReset(); // restores cout/cerr to their previous states
 Note that JS has no standard (or even pseudostandard routines) which output to
 stderr, and it is generally expected that all intercepted `std::cerr` output
 will be coming from debuggering routines.
+
+Newer versions of the v8-juice shell application (under `src/client/shell/`)
+have the command-line option `--print-cerr`, which forces the JS `print()` function
+to use `std::cerr`, instead of `std::cout`, for output. Combined with redirection
+to another console, this is often useful when debugging [PluginNCurses curses applications].
 
 =Examples=
 
