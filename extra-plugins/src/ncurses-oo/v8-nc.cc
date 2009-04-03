@@ -459,7 +459,7 @@ namespace nc {
             int c = JSToInt32(argv[1]);
             int y = (argc>2) ? JSToInt32(argv[2]) : 0;
             int x = (argc>3) ? JSToInt32(argv[3]) : 0;
-            CERR << argc << ": "<<l <<", "<< c <<", "<< y <<", "<< x <<"\n";
+            //CERR << argc << ": "<<l <<", "<< c <<", "<< y <<", "<< x <<"\n";
             try
             {
                 NCPanel * p = new NCPanel(l,c,y,x);
