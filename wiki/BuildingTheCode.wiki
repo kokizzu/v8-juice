@@ -52,6 +52,7 @@ As of 20090313 the tree has very minimal support for a build using SCons.
 
   * Tweak the top-most `SConstruct` file to set the path to your libv8 library and header.
   * If you are NOT on a Unix platform, also remove the reference to the library named "dl".
+  * Building the shell app seems to require the static v8-juice library, even if it links against the shared library. This might be a bug particular to my platform or version of scons.
 
 Finally, just type `scons`. All buildable objects will be created in the top of the source tree.
 
