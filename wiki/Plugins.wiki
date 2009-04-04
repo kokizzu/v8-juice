@@ -1,6 +1,8 @@
 #summary Extending v8 with plugins
 #labels Phase-UserDocs,Featured,Topic-Plugins
 
+<wiki:toc max_depth='3'/>
+
 =v8-juice Plugins=
 
 v8-juice provides an API for loading DLLs with the intent of adding functionality to a running JS engine.
@@ -22,7 +24,23 @@ If your copy of juice is configured without plugins, the API for loading
 plugins will still be there (for consistency and binary compatibility), but
 the functions won't do anything useful.
 
-==C++-side==
+=Building the plugins=
+
+There are two options for building the plugins, both of which require that v8-juice is installed and that its headers can be found.
+
+For scons, simply run `scons` from the top of the build tree. That will build all of the plugins. Simply copy them to `prefix/lib/v8/juice`, where `prefix` is explained in the build options, below.
+
+The `make` build requires that v8-juice be installed and that `libv8-juice-config` be in the `$PATH` (it is installed via the normal v8-juice installation process). If those conditions are met one can do:
+
+{{{
+~> cd src/pluginName
+~> make
+~> make install
+}}}
+
+It will install to `$(libv8-juice-config --prefix)/lib/v8/juice/VERSION`, where `VERSION` is the version of v8-juice it is compiled against. This path is in the default v8-juice plugins search path.
+
+=C++-side=
 
 To be able to load new plugins from JS code, we first have to add a small amount of C++ code.
 
@@ -32,8 +50,8 @@ First off, we need to add a plugin-loading function to our global JS object:
 #include <v8/juice/plugin.h>
 ...
 // when initializing the JS global object, add this function:
-  gl->Set(String::New("loadPlugin"),
-          FunctionTemplate::New(v8::juice::plugin::LoadPlugin)->GetFunction() );
+gl->Set(v8::String::New("loadPlugin"),
+        v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin)->GetFunction() );
 }}}
 
 That will create the loader function (name it whatever you like) in the specified object (it need not be the global object).
@@ -49,7 +67,7 @@ Now, in the code which you want to link as a DLL you need to add a few small
 bits of code. First, we will assume you have a function with this signature:
 
 {{{
-Handle<Value> SetupMyAddon( Handle<Object> target );
+v8::Handle<v8::Value> SetupMyAddon( v8::Handle<v8::Object> target );
 }}}
 
 That exact signature is not technically required, but it is a convenient
@@ -73,12 +91,13 @@ will be run automatically and it can set up its JS state. Optionally, we can
 pass an Object as a second argument to `loadPlugin()` and that object will be
 used as the logical global object. Multiple plugins may live inside a single
 DLL, and the above macro needs to be called one time per plugin initialization
-function.
+function. Opening a plugin multiple times will not trigger the initialization
+more than once (because it happens during the static initialization phase
+of the DLL opening process).
 
-The function name passed to the macro may not be qualified (i.e. no namespace
-part) because its name is used as part of a generated variable's name.
+The function name passed to the macro may not be namespace-qualified because its name is used as part of a generated variable's name (to allow multiple registrations per source file).
 
-==JS-side==
+=JS-side=
 
 {{{
 loadPlugin("MyPlugin");
@@ -90,10 +109,10 @@ loadPlugin("MyOtherPlugin",p2); // will pass p2 as the target object
 `loadPlugin()` will throw on error and the exception will explain the problem, which is normally one of:
 
   * No plugin could be found in the current plugins search path.
-  * A plugin was found but opening it failed (e.g. missing DLL symbols are sometimes problematic).
+  * A plugin was found but opening it failed (e.g. missing DLL symbols are sometimes problematic, and may indicate version incompatibility).
   * The DLL initialization code threw a JS exception.
 
-==The plugins search path==
+=The plugins search path=
 
 From native code, you can use the `v8::juice::plugin::PluginsPath()` function
 to get access to a shared `v8::juice::PathFinder` object which is used to do
@@ -119,7 +138,6 @@ The default plugins search path is:
 .
 PREFIX/lib/v8/juice/JUICE_VERSION
 PREFIX/lib/v8/juice
-(note to self: is that still correct?)
 }}}
 
 Where `PREFIX` is the installation prefix (see [BuildingTheCode]) and
@@ -127,8 +145,7 @@ Where `PREFIX` is the installation prefix (see [BuildingTheCode]) and
 process).
 
 
-
-==DLLs are _never_ unloaded==
+=DLLs are _never_ unloaded=
 
 Even if the DLL init code throws an exception, DLLs are _never_ unloaded. It cannot be safely done. Period. Don't argue with me on this. i'm right, for once, so just let me be right.
 
