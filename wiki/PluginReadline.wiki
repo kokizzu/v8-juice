@@ -13,16 +13,7 @@ and check out the `extra-plugins` directory instead of `trunk`.
 
 =Building/installing=
 
-First, you must have `libv8-juice-config` in your `$PATH` (it is installed by the v8-juice install process). You also need libreadline development files on your system or you need to edit `Readline_config.hpp` to configure it for libedit or stdin as an input source, and change the linker args in the Makefile accordingly.
-
-Then:
-
-{{{
-~> make
-~> make install
-}}}
-
-It will install to the default v8-juice plugins directory.
+See [Plugins the plugins page for build instructions].
 
 =Example usage=
 
