@@ -39,8 +39,8 @@ if( True ):
         'plugin.cc',
         'whprintf.c'
         ]]
-#    print("Creating static juice lib...");
-#    env.StaticLibrary(libjuice_libname,my_src)
+    print("Creating static juice lib...");
+    env.StaticLibrary(libjuice_libname,my_src)
     print("Creating shared juice lib...");
     env.SharedLibrary(libjuice_libname,my_src ,
                       LIBS = ['dl',v8_libname,'pthread'],
@@ -54,6 +54,6 @@ if( True ):
     print("Creating shell...")
     env.Program( target = 'v8-juice-shell',
                  source = my_src,
-                 LIBS = [libjuice_libname,v8_libname],
-                 LDFLAGS = "-L."
+                 LDFLAGS = "-L. -export-dynamic",
+                 LIBS = [libjuice_libname,v8_libname]
                  )
