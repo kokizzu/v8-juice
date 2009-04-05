@@ -210,4 +210,62 @@ The `ClassBinder` class template, [ClassBinder described on its own page], exten
 
 =Real-world problems and caveats=
 
-See the [CommentaryOnV8 v8 criticisms page].
+For general problems and caveats, see the [CommentaryOnV8 v8 criticisms page].
+
+There are other caveats and gotchas which are associated with certain types of bindings, documented
+here in the hopes that they might help other developers avoid them.
+
+==Heirarchical Native Types and Garbage Collection==
+
+When working with heirarchical native types, we must ensure that JS is aware of the parent/child relationships.
+If we do not, garbage collection might delete the child or parent before it should.
+
+For example, assume we have a Window class which, like all good GUI toolkits, uses parent/child relationships
+to control ownership of window objects:
+
+{{{
+function createWindows()
+{
+    var parent = new Window();
+    var child = new Window(child);
+    return parent;
+    // at this point, JS probably thinks that child is orphaned, and may clean it up.
+}
+}}}
+
+If, in the Window ctor, we set up the native `parent`/`child`
+relationship, but do not make JS aware that these is an association,
+then JS will not know that there is a connection between the parent
+and child objects. When it comes time to run GC, either the parent or
+the child need to be deleted (in the above example, it will almost
+certainly be the child).  If the native bindings do not take care to
+disconnect the native objects when this happens, the next time the
+parent (or child) tries to do something it may refer to the
+now-deleted other object and cause a crash. Even if one avoids the
+dangling pointer problem, not telling JS about the association can lead
+to child windows mysteriously disappearing at curious times (when GC
+is run).
+
+One workaround for the disappearing child problem is to add a JS Array
+object to the parent and simply insert the child into it. The array's
+only purpose is to hold a reference to the child, so that GC will not
+consider it for destruction (until the parent (and its Array) go
+away).
+
+In cases like these it is, in my experience, necessary to include a
+few kludges in the native implementation to ensure that objects cannot
+try to dereference a JS-destroyed object. The [PluginNCurses ncurses plugin]
+has several such kludges to help protect against premature deletion and
+prevent dereferencing of a dangling pointer.
+
+
+One simple and somewhat useful heuristic is: in the destructors for
+the bound types, do not actually destroy the objects if they have
+native parents, with the assumption that the parent object owns
+it. This can lead to other problems, however, such as the JS-side
+child being destroyed and the native one being there (and visible to
+the client), and the client then wonders why his calls to
+`child.func()` all throw with the error `"could not find native 'this'
+object"` (that's what the v8-juice binding framework says when the
+JS/C++ connection has been severed via the JS destruction process).
+
