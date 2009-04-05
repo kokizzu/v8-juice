@@ -227,7 +227,7 @@ to control ownership of window objects:
 function createWindows()
 {
     var parent = new Window();
-    var child = new Window(child);
+    var child = new Window(parent); // parent now owns child 
     return parent;
     // at this point, JS probably thinks that child is orphaned, and may clean it up.
 }
