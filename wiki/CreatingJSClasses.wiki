@@ -265,7 +265,7 @@ native parents, with the assumption that the parent object owns
 it. This can lead to other problems, however, such as the JS-side
 child being destroyed and the native one being there (and visible to
 the client), and the client then wonders why his calls to
-`child.func()` all throw with the error `"could not find native 'this'
-object"` (that's what the v8-juice binding framework says when the
+`child.func()` all throw with the error `"could not find native 'this' object"`
+(that's what the v8-juice binding framework says when the
 JS/C++ connection has been severed via the JS destruction process).
 
