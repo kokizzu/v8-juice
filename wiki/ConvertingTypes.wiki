@@ -110,6 +110,20 @@ struct JSToNative<MyType>
 
 There's not much else to say about it, really.
 
+There is no need to set up `T &` or `T const &` specializations. When
+asked to use `JSToNative<T&>`, a generic `X &` specialization will be
+triggered which will actually use `JSToNative<T>` to get a pointer to
+the object, and will then (if the pointer is not 0) dereference it to
+form a reference. If `JSToNative<T&>` cannot get a native pointer,
+it will throw a _native_ exception (it has no other choice except
+to crash). Thus client code which requires conversions to references
+must use `try`/`catch` blocks in order to keep potential exceptions
+for propagating through v8 (which can be fatal to the JS engine).
+
+While the conversions for the built-in numeric types (and certain
+POD-like types, e.g. `std::string`) return their natives by
+value, in practice we need `JSToNative<T>` to return pointers for any
+client-side bound types.
 
 =The `(char const *)` problem=
 
