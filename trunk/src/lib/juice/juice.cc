@@ -103,8 +103,9 @@ namespace v8 { namespace juice {
 	    {
 		return ThrowException(exc);
 	    }
+            rv = handle_scope.Close(rv);
 	}
-	return rv;
+        scope.Close(rv);
     }
 
 
