@@ -11,6 +11,10 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2009 May 27*
+
+  * Patch from robtsuk: `v8::juice::IncludeScript()` (JS `include()`) now returns a live reference instead of a dead one, fixing a crash when the return value of `include()` was dereferenced.
+
 ==2009 April 4==
   * New release.
 
