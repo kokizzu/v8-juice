@@ -117,9 +117,7 @@ loadPlugin("MyOtherPlugin",p2); // will pass p2 as the target object
 From native code, you can use the `v8::juice::plugin::PluginsPath()` function
 to get access to a shared `v8::juice::PathFinder` object which is used to do
 the actual searches for plugins. The plugins path is accessible via JS code if
-it has been explicitly added using (see
-`v8::juice::SetupPathFinderClass()`). Once it is added to the JS
-engine, the plugins path is accessible via the shared JS object
+it has been explicitly added using `v8::juice::SetupPathFinderClass()`. Once it is added to the JS engine, the plugins path is accessible via the shared JS object
 `PathFinder.shared.plugins` (it uses the same native instance returned by the
 `PluginsPath()` function).
 
