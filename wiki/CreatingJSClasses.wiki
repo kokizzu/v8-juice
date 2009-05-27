@@ -173,7 +173,7 @@ appropriate close/destroy routine.
 
 Clients can optionally tie in to their own "supplemental" GC (for when v8's GC doesn't kick in) by adding the logic to their `WeakJSClassCreatorOps<T>::Ctor()` and `Dtor()` routines.
 
-If client code also uses the [ConvertingType v8-juice type conversions framework],
+If client code also uses the [ConvertingTypes v8-juice type conversions framework],
 wrapped types can easily be tied in to the automatic type conversions process (which _really_ simplifies passing around wrapped types to arbitrary bound functions). Since
 that requires additional v8-juice functionality, and WeakJSClassCreator is intended to be "standalone" v8 code, that feature is covered in more detail on [ClassBinder the ClassBinder page].
 
@@ -183,7 +183,7 @@ The `WeakJSClassCreatorOps<T>` interface defines a constant integer value named 
 
 If a wrapper needs access to more internal fields for client-side use,
 define `ExtraInternalFieldCount` to be some other number. In v8 client
-code, clients conventional store their native data in the internal
+code, clients conventionally store their native data in the internal
 fields numbered 0 to (N-1), where N is the number of fields. To avoid
 interfering with this convention, `WeakJSClassCreator` stores its
 internal binding at field number N (that is, one past the last
@@ -268,4 +268,3 @@ the client), and the client then wonders why his calls to
 `child.func()` all throw with the error `"could not find native 'this' object"`
 (that's what the v8-juice binding framework says when the
 JS/C++ connection has been severed via the JS destruction process).
-
