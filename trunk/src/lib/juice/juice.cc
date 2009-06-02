@@ -105,7 +105,7 @@ namespace v8 { namespace juice {
 	    }
             rv = handle_scope.Close(rv);
 	}
-        scope.Close(rv);
+        return scope.Close(rv);
     }
 
 
