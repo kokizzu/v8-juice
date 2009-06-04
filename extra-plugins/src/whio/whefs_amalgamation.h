@@ -1,4 +1,4 @@
-/* auto-generated on Sun Mar 22 01:12:37 CET 2009. Do not edit! */
+/* auto-generated on Thu Jun  4 21:31:22 CEST 2009. Do not edit! */
 #define WHEFS_AMALGAMATION_BUILD 1
 #if ! defined __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS 1
@@ -93,7 +93,7 @@ extern "C" {
    perform much better).
 */
 #if !defined(WHIO_USE_STATIC_MALLOC)
-#  define WHIO_USE_STATIC_MALLOC 0
+#  define WHIO_USE_STATIC_MALLOC 1
 #endif
 
 #if defined(WHIO_SIZE_T_BITS)
@@ -107,7 +107,7 @@ extern "C" {
     client code (*cough* libwhefs *cough*) can use whio without having
     to fudge certain numeric types.
 */
-#define WHIO_SIZE_T_BITS 64
+#define WHIO_SIZE_T_BITS 32
 
 /** @def WHIO_SIZE_T_PFMT
 
@@ -2565,6 +2565,83 @@ int whio_stream_gunzip( whio_stream * src, whio_stream * dest );
 
 
 #endif /* WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED */
+/* begin file whio_zlib.h */
+#if !defined(WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED)
+#define WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED 1
+
+#if ! defined(WHIO_ENABLE_ZLIB)
+#  define WHIO_ENABLE_ZLIB 0
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+   Compresses src to dest using gzip compression of the level specified
+   by the level parameter (3 is an often-used choice). zlib provides
+   several constants for this value:
+
+   Z_NO_COMPRESSION, Z_BEST_SPEED, Z_BEST_COMPRESSION, and
+   Z_DEFAULT_COMPRESSION.
+
+   If level is not in the bounds defined by those constants, it will
+   be adjusted up (if too low) or down (if too high) to the minimum or
+   maximum compression level.
+
+   src must be a readable stream and dest must be writeable. They may
+   not be the same object.
+
+   If whio is not compiled with WHIO_ENABLE_ZLIB defined to a true value,
+   this function does nothing and returned whio_rc.UnsupportedError.
+
+   Returns whio_rc.OK on success, else some error value from one of
+   zlib routines (a non-zero error code defined in zlib.h). If
+   !src or !dest or (src==dest) then whio_rc.ArgError is returned.
+
+   The compressed data is decompressable by gzip-compatible tools.
+
+   Note that because a whio_stream instance can be created for any
+   whio_dev device (see whio_stream_for_dev()), it is possible to use
+   this routine to compress any i/o device to another.  However,
+   random access with transparent compression/decompression is not
+   supported (very few people have every managed to code that).
+
+   On error, any number of bytes may or may not have been read from src
+   or written to dest.
+
+   @see whio_stream_gunzip()
+   @see whio_stream_for_dev()
+ */
+int whio_stream_gzip( whio_stream * src, whio_stream * dest, int level );
+
+/**
+   Assumes src contains gzipped data and decompresses it to dest.
+
+   src must be a readable stream and dest must be writeable. They may
+   not be the same object.
+
+   If whio is not compiled with WHIO_ENABLE_ZLIB defined to a true value,
+   this function does nothing and returned whio_rc.UnsupportedError.
+
+   Returns whio_rc.OK on success, else some error value from one of
+   zlib routines (a non-zero error code defined in zlib.h). If !src or
+   !dest or (src==dest) then whio_rc.ArgError is returned.
+
+   On error, any number of bytes may or may not have been read from src
+   or written to dest.
+
+   @see whio_stream_gzip()
+   @see whio_stream_for_dev()
+*/
+int whio_stream_gunzip( whio_stream * src, whio_stream * dest );
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+
+#endif /* WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED */
 /* begin file whglob.h */
 #if !defined(WANDERINGHORSE_NET_WHGLOB_H_INCLUDED)
 #define WANDERINGHORSE_NET_WHGLOB_H_INCLUDED 1
@@ -3287,6 +3364,15 @@ fcntl.h in the files which need it.
 */
 #define WHIO_FS_USE_FCNTL 1
 
+/** @def WHIO_ENABLE_THREADS
+
+WHIO_ENABLE_THREADS doesn't yet do anything. It is reserved for
+when some form of thread locking is enabled.
+
+*/
+#if !defined(WHIO_ENABLE_THREADS)
+#  define WHIO_ENABLE_THREADS 0
+#endif
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -4969,6 +5055,11 @@ typedef struct whefs_inode
 /** Empty initialization object. */
 extern const whefs_inode whefs_inode_init;
 
+/** @struct whefs_inode_list
+
+   whefs_inode_list is a doubly-linked list of inode objects, used for
+   holding a list of "opened" inodes.
+*/
 typedef struct whefs_inode_list
 {
     whefs_inode inode;
@@ -4977,24 +5068,15 @@ typedef struct whefs_inode_list
 } whefs_inode_list;
 #define whefs_inode_list_init_m { whefs_inode_init_m, 0, 0 }
 extern const whefs_inode_list whefs_inode_list_init;
-typedef struct whefs_inode_cache
-{
-    whefs_inode ** list;
-    whefs_id_type size;
-    whefs_id_type alloced;
-} whefs_inode_cache;
-
-#define whefs_inode_cache_init_m { 0, 0, 0 }
-
 
 
 /**
-   Reads a whefs_inode's metadata from disk. Neither n nor n->id may
-   be 0, but the remaining contents of n are irrelevant (they will be
-   overwritten). On success, whefs_rc.OK is returned and n is updated
-   to the on-disk state, otherwise some other value is returned and n
-   is left in an undefined state (that is, possibly partially
-   populated).
+   Reads a whefs_inode's metadata, except for its name, from
+   disk. Neither n nor n->id may be 0, but the remaining contents of n
+   are irrelevant (they will be overwritten). On success, whefs_rc.OK
+   is returned and n is updated to the on-disk state, otherwise some
+   other value is returned and n is left in an undefined state (that
+   is, possibly partially populated).
 
    Ownership of n is not changed by calling this function.
 
@@ -5005,8 +5087,14 @@ typedef struct whefs_inode_cache
    ino.id = 42;
    whefs_inode_read( fs, &ino );
    @endcode
+
+   WARNING: if n->id is already opened, then ino is overwritten with a
+   copy of that object. This means that updates to n->open_count and
+   n->name will not be accurately synced between n and the original
+   copy, which can lead to bugs.
 */
 int whefs_inode_read( whefs_fs * fs, whefs_inode * n );
+
 
 /**
    Reads the flags field of the given inode and assigns the flags
@@ -5031,8 +5119,9 @@ int whefs_inode_read( whefs_fs * fs, whefs_inode * n );
 int whefs_inode_read_flags( whefs_fs * fs, whefs_id_type nid, uint32_t * flags );
 
 /**
-   Opens an inode for concurrent (but NOT multi-threaded!) access,
-   such that the node will be shared by open file and devive handles.
+   Opens an inode for concurrent (but NOT multi-threaded!) access
+   WITHIN ONE PROCESS, such that the node will be shared by open file
+   and devive handles.
 
    This should be the only function the remaining API uses to "open
    up" an inode.
@@ -5066,10 +5155,14 @@ int whefs_inode_open( whefs_fs * fs, whefs_id_type nodeID, whefs_inode ** tgt, v
    up leaking one opened inode handle.
 
    On success, whefs_rc.OK is returned. The src object was allocated
-   by whefs_inode_open() and will be cleaned up here.
+   by whefs_inode_open() and will be cleaned up here once the open
+   count goes to zero.
 
-   If (writer != 0) and (writer == src->writer) then the inode is
-   flushed to disk as part of the closing process.
+   The writer argument is an arbitrary client pointer which is used to
+   tag who is the write-mode owner of the inode. If (writer != 0) and
+   (writer == src->writer) then the inode is flushed to disk as part
+   of the closing process. writer may be 0 to signify read-only access,
+   but the calling code is required to enforce access.
 
    @see whefs_inode_open()
 */
@@ -5164,7 +5257,7 @@ size_t whefs_fs_sizeof_inode( whefs_fs_options const * opt );
    (!fs or !nid, or nid is out of range), 0 is returned. Does not require
    any i/o.
 */
-size_t whefs_inode_pos( whefs_fs const * fs, whefs_id_type nid );
+whio_size_t whefs_inode_pos( whefs_fs const * fs, whefs_id_type nid );
 
 /**
    Seeks to the given inode's on-disk position. Returns whefs_rc.OK
@@ -5178,19 +5271,19 @@ int whefs_inode_seek( whefs_fs * fs, whefs_inode const * ino );
 int whefs_inode_id_seek( whefs_fs * fs, whefs_id_type id );
 
 /**
-   Sets n's name to name. Returns whefs_rc.OK on success, or some
-   other value on error. If the name is longer than the smaller of
+   Sets the name of the given inode, updating the on-disk
+   record. Returns whefs_rc.OK on success, or some other value on
+   error. If the name is longer than the smaller of
    whefs_fs_options_get(fs)->filename_length or
-   WHEFS_MAX_FILENAME_LENGTH, whefs_rc.RangeError is returned and n is
-   not modified.
+   WHEFS_MAX_FILENAME_LENGTH, whefs_rc.RangeError is returned and n's
+   record is not modified.
 
-   This function does NOT change n->mtime but does update the on-disk
-   record. If n is currently opened (that is, n->open_count is not 0)
-   then its in-memory record (whefs_inode::name) is also updated, otherwise
-   n->name is NOT updated (because it would probably not get cleaned
-   up).
+   This function does NOT change the inode's mtime but does update the on-disk
+   name record. If the inode is currently opened (via whefs_inode_open())
+   then its in-memory record (whefs_inode::name) is also updated.
 */
-int whefs_inode_name_set( whefs_fs * fs, whefs_inode * n, char const * name );
+//int whefs_inode_name_set( whefs_fs * fs, whefs_inode const * n, char const * name );
+int whefs_inode_name_set( whefs_fs * fs, whefs_id_type node_id, char const * name );
 
 /**
    Loads the name for the given inode id into the given target string
@@ -5215,8 +5308,8 @@ int whefs_inode_update_mtime( whefs_fs * fs, whefs_inode * n );
 
 /**
    Marks the given inode as unused and wipes all associated data
-   blocks. The inode need not be fully populated - only its
-   ID is considered.
+   blocks. The inode object must be fully populated if its associated
+   blocks are to be properly freed.
 
    The the inode is currently opened, unlinking will not be allowed
    and whefs_rc.AccessError will be returned.
@@ -5227,12 +5320,17 @@ int whefs_inode_update_mtime( whefs_fs * fs, whefs_inode * n );
 
    Ownership of inode is not transfered but the inode object will be
    wiped clean of all state except its ID.
-  
+
+   As part of the deletion process, blocks in use by the unlinked
+   inode are wiped with zeroes. It is hoped that this feature will
+   one day become a toggleable option.
 */
 int whefs_inode_unlink( whefs_fs * fs, whefs_inode * inode );
 
 /**
    Equivalent to whefs_inode_unlink(), but takes an inode ID.
+   It will fail if the inode is invalid, cannot be read, or
+   unlinking fails.
 */
 int whefs_inode_id_unlink( whefs_fs * fs, whefs_id_type nid );
 
