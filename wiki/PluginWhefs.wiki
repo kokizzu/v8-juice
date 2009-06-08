@@ -67,8 +67,11 @@ interesting possible uses of whefs (e.g. as read/write a data store
 for server-side JS, possibly storing client-generated data from
 multiple clients).
 
-Lastly, you can get more out of whefs by making use of the
-whefs-specific tools which come with the whefs source tree:
+Thirdly, do not try to store binary data in, or retrieve binary data from, a whefs
+via JavaScript (doing so via the native API is okay). The problem is in how v8 stores string data - if it sees any character above ASCII 127 then it assumes the data is well-formed UC16 and internally transforms it. This will change the size of the data and
+cause Grief.
+
+Lastly, you can get more out of whefs by making use of the whefs-specific tools which come with the whefs source tree:
 
 http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools
 
@@ -87,9 +90,7 @@ When loaded, this plugin will create an object called `whefs` inside the target 
 to which it is added (normally the global object). That `whefs` object holds the rest of the classes and functions for this plugin.
 
 The native API has huge amounts of API documentation which might be interesting
-to users of this API: [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/whio/whefs_amalgamation.h whefs_amalgamation.h]
-
-But all of the "less technical" info one needs for using it in JS is documented below. For more details than you'd ever want to know, see the native API documentation
+to users of this API: [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/whio/whefs_amalgamation.h whefs_amalgamation.h]. But all of the "less technical" info one needs for using it in JS is documented below. For more details than you'd ever want to know, see the native API documentation
 
 =JS usage=
 
