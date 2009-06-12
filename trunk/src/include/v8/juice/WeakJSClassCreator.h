@@ -203,7 +203,7 @@ namespace juice {
 	    exceptionText = "WeakOpsNoop<T>::Ctor() not implemented!";
 	    return 0;
 	}
-	/** Warning - Does Nothing! Reimplement this in subclasses! */
+	/** Warning - Does Nothing! Implement this in specializations! */
 	static void Dtor( WrappedType * obj )
 	{
 	    return 0;
