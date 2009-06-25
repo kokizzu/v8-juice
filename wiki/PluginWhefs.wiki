@@ -13,7 +13,7 @@ closer to the version you're working with (follow that link, and there are optio
 
 The whefs plugin is actually an extension of the [PluginWhio whio plugin], and is loaded
 with it. It builds off of the i/o device API to act as a wrapper for the
-[http://fossil.wanderinghorse.net/repos/whefs/ whefs embedded filesystem library],
+[http://code.google.com/p/whefs whefs embedded filesystem library],
 which is (not coincidentally) based off of the same C library as the i/o plugin is.
 
 <wiki:toc max_depth="3" />
@@ -22,7 +22,7 @@ which is (not coincidentally) based off of the same C library as the i/o plugin 
 ==About==
 whefs gets its name from the library it is based on:
 
-http://fossil.wanderinghorse.net/repos/whefs/
+http://code.google.com/p/whefs
 
 That library is provided with this plugin, and need not be installed separately.
 
@@ -40,14 +40,14 @@ http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/whio
 
 See the file `v8-whefs.cc` for the particulars.
 
-_Much_ more information about [http://fossil.wanderinghorse.net/repos/whefs/ whefs]
-can be found on [http://fossil.wanderinghorse.net/repos/whefs/ its home page].
+_Much_ more information about [http://code.google.com/p/whefs whefs]
+can be found on [http://code.google.com/p/whefs its home page].
 
 =Important Caveats=
 
 (Never been tested on Windows. Might work. Might not. Same for Mac.)
 
-The [http://fossil.wanderinghorse.net/repos/whefs whefs home page] goes into great detail
+The [http://code.google.com/p/whefs whefs home page] goes into great detail
 about the cans and cannots of whefs. _Please_ browse that site to get an understanding
 of what whefs can and cannot do.
 
@@ -60,7 +60,7 @@ Secondly, whefs currently as only the most utterly basic support for multi-proce
 concurrency, and no support whatsoever for multi-thread concurrency (which _will_
 cause corruption). See this page page for more information:
 
-http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/ConcurrencyInWHEFS
+http://code.google.com/p/whefs/wiki/WhefsConcurrency
 
 The concurrency limitations rule out certain otherwise very
 interesting possible uses of whefs (e.g. as read/write a data store
@@ -73,10 +73,9 @@ cause Grief.
 
 Lastly, you can get more out of whefs by making use of the whefs-specific tools which come with the whefs source tree:
 
-http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools
+http://code.google.com/p/whefs/wiki/WhefsTools
 
-For example, they allow one to easily create VFS containers and
-import/export files into/out of them.
+For example, they allow one to easily create VFS containers and import/export files into/out of them.
 
 =C++ usage=
 
