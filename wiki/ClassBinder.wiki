@@ -420,7 +420,7 @@ struct TypeC : TypeB
 typedef ClassBinder<TypeC> CB;
 CB b( targetObject );
 b.Inherit( binderForTypeB ); // sets up inheritance of TypeB
-b.InheritNative<Type>(); // sets up inhertiance of TypeA
+b.InheritNative<TypeA>(); // sets up inhertiance of TypeA
 ...
 b.Seal();
 
