@@ -1,4 +1,5 @@
-/* auto-generated on Thu Mar 19 22:23:04 CET 2009. Do not edit! */
+/* auto-generated on Wed Jul  1 15:56:14 CEST 2009. Do not edit! */
+#line 1 "whio_amalgamation.c"
 #if !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200112L /* needed for ftello() and friends */
 #endif
@@ -6,7 +7,8 @@
 #define _ISOC99_SOURCE 1 /* needed for snprintf() */
 #endif
 #include "whio_amalgamation.h"
-/* begin file whio.c */
+/* begin file src/whio.c */
+#line 8 "src/whio.c"
 /*
   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
 
@@ -44,7 +46,34 @@ const whio_rc_t whio_rc =
 void whio_noop_printf(char const * fmt, ...)
 {
 }
-/* begin file whio_dev.c */
+/* end file src/whio.c */
+/* begin file src/whio_common.c */
+#line 8 "src/whio_common.c"
+#include <string.h> /* strchr() */
+
+const whio_client_data whio_client_data_init = whio_client_data_init_m;
+const whio_impl_data whio_impl_data_init = whio_impl_data_init_m;
+
+short whio_mode_to_iomode( char const * mode )
+{
+    if( ! mode ) return -1;
+    else if( (0 != strchr( mode, 'w' )) )
+    { 
+        return 1;
+    }
+    else if( 0 != strchr( mode, 'r' ) )
+    {
+	if( 0 != strchr( mode, '+' ) )
+        {
+            return 1;
+        }
+	else return 0;
+    }
+    else return -1;
+}
+/* end file src/whio_common.c */
+/* begin file src/whio_dev.c */
+#line 8 "src/whio_dev.c"
 /*
   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
 
@@ -67,19 +96,17 @@ void whio_noop_printf(char const * fmt, ...)
 #include <stdlib.h> /* calloc() and friends */
 #include <inttypes.h> /* PRIuXX */
 
-const whio_dev_client whio_dev_client_init = whio_dev_client_init_m;
-
-#define WHIO_DEV_EMPTY_INIT {0/*api*/, {/*impl*/ 0/*data*/, 0/*typeID*/}, whio_dev_client_init_m }
+#define WHIO_DEV_EMPTY_INIT {0/*api*/, whio_impl_data_init_m, whio_client_data_init_m }
 
 static const whio_dev whio_dev_empty_init = WHIO_DEV_EMPTY_INIT;
 
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
 /**
    The number of elements to statically allocate
    in the whio_dev_alloc_slots object.
 */
-whio_dev_alloc_count = 5
+whio_dev_alloc_count = 15
 };
 struct
 {
@@ -92,7 +119,7 @@ struct
 whio_dev * whio_dev_alloc()
 {
     whio_dev * dev = 0;
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     size_t i = whio_dev_alloc_slots.next;
     for( ; i < whio_dev_alloc_count; ++i )
     {
@@ -103,7 +130,7 @@ whio_dev * whio_dev_alloc()
 	//WHIO_DEBUG("Allocated device #%u @0x%p\n", i, (void const *)dev );
 	break;
     }
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! dev ) dev = (whio_dev *) malloc( sizeof(whio_dev) );
     if( dev ) *dev = whio_dev_empty_init;
     return dev;
@@ -113,7 +140,7 @@ void whio_dev_free( whio_dev * dev )
 {
     if( dev ) *dev = whio_dev_empty_init;
     else return;	
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (dev < &whio_dev_alloc_slots.devs[0]) ||
 	(dev > &whio_dev_alloc_slots.devs[whio_dev_alloc_count-1]) )
     { /* doesn't belong to us. */
@@ -126,14 +153,14 @@ void whio_dev_free( whio_dev * dev )
 	if( 0 )
 	{
 	    WHIO_DEBUG("Address range = 0x%p to 0x%p, ndx=%u\n",
-		       &whio_dev_alloc_slots.devs[0],
-		       &whio_dev_alloc_slots.devs[whio_dev_alloc_count-1],
+		       (void const *)&whio_dev_alloc_slots.devs[0],
+		       (void const *)&whio_dev_alloc_slots.devs[whio_dev_alloc_count-1],
 		       ndx
 		       );
 	    WHIO_DEBUG("Freeing object @0x%p from static pool index %u (@0x%p)\n",
-		       dev,
+		       (void const *)dev,
 		       ndx,
-		       &whio_dev_alloc_slots.devs[ndx] );
+		       (void const *)&whio_dev_alloc_slots.devs[ndx] );
 	}
 	whio_dev_alloc_slots.used[ndx] = 0;
 	if( ndx < whio_dev_alloc_slots.next ) whio_dev_alloc_slots.next = ndx;
@@ -141,7 +168,7 @@ void whio_dev_free( whio_dev * dev )
     }
 #else
     free(dev);
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
 }
 
 
@@ -210,213 +237,6 @@ int whio_dev_copy( whio_dev * src, whio_dev * dest )
     return rc;
 }
 
-
-static const unsigned char whio_dev_uint64_tag_char = 0x80 | 64;
-size_t whio_dev_uint64_encode( whio_dev * fs, uint64_t i )
-{
-    unsigned char buf[whio_dev_sizeof_uint64]; /* Flawfinder: ignore This is intentional and safe as long as whio_dev_sizeof_uint64 is the correct size. */
-    const uint64_t mask = UINT64_C(0x00ff);
-    size_t x = 0;
-    buf[x++] = whio_dev_uint64_tag_char;
-    buf[x++] = (unsigned char)((i>>56) & mask);
-    buf[x++] = (unsigned char)((i>>48) & mask);
-    buf[x++] = (unsigned char)((i>>40) & mask);
-    buf[x++] = (unsigned char)((i>>32) & mask);
-    buf[x++] = (unsigned char)((i>>24) & mask);
-    buf[x++] = (unsigned char)((i>>16) & mask);
-    buf[x++] = (unsigned char)((i>>8) & mask);
-    buf[x++] = (unsigned char)(i & mask);
-    return whio_dev_write( fs, buf, whio_dev_sizeof_uint64 );
-}
-
-int whio_dev_uint64_decode( whio_dev * dev, uint64_t * tgt )
-{
-    if( ! dev || ! tgt ) return whio_rc.ArgError;
-    unsigned char buf[whio_dev_sizeof_uint64]; /* Flawfinder: ignore This is intentional and safe as long as whio_dev_sizeof_uint64 is the correct size. */
-    memset( buf, 0, whio_dev_sizeof_uint64 );
-    size_t rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_dev_sizeof_uint64*/, whio_dev_sizeof_uint64 );
-    if( whio_dev_sizeof_uint64 != rc )
-    {
-	return whio_rc.IOError;
-    }
-    if( whio_dev_uint64_tag_char != buf[0] )
-    {
-	return whio_rc.ConsistencyError;
-    }
-#define SHIFT(X) ((uint64_t)buf[X])
-    uint64_t val = (SHIFT(1) << UINT64_C(56))
-	+ (SHIFT(2) << UINT64_C(48))
-	+ (SHIFT(3) << UINT64_C(40))
-	+ (SHIFT(4) << UINT64_C(32))
-	+ (SHIFT(5) << UINT64_C(24))
-	+ (SHIFT(6) << UINT64_C(16))
-	+ (SHIFT(7) << UINT64_C(8))
-	+ (SHIFT(8));
-#undef SHIFT
-    *tgt = val;
-    return whio_rc.OK;
-}
-
-
-static const unsigned char whio_dev_uint32_tag_char = 0x80 | 32;
-size_t whio_dev_uint32_encode( whio_dev * fs, uint32_t i )
-{
-    unsigned char buf[whio_dev_sizeof_uint32];  /* Flawfinder: ignore This is intentional and safe as long as whio_dev_sizeof_uint32 is the correct size. */
-    const unsigned short mask = 0x00ff;
-    size_t x = 0;
-    /** We tag all entries with a prefix mainly to simplify debugging
-	of the vfs files (it's easy to spot them in a file viewer),
-	but it incidentally also gives us a sanity-checker at
-	read-time (we simply confirm that the first byte is this
-	prefix).
-    */
-    buf[x++] = whio_dev_uint32_tag_char;
-    buf[x++] = (unsigned char)(i>>24) & mask;
-    buf[x++] = (unsigned char)(i>>16) & mask;
-    buf[x++] = (unsigned char)(i>>8) & mask;
-    buf[x++] = (unsigned char)(i & mask);
-    //WHIO_DEBUG("wrote int=%u to [%02x %02x %02x %02x]\n",i,buf[1],buf[2],buf[3],buf[4]);
-    return whio_dev_write( fs, buf, whio_dev_sizeof_uint32 );
-}
-
-int whio_dev_uint32_decode( whio_dev * dev, uint32_t * tgt )
-{
-    if( ! dev || ! tgt ) return whio_rc.ArgError;
-    unsigned char buf[whio_dev_sizeof_uint32];  /* Flawfinder: ignore This is intentional and safe as long as whio_dev_sizeof_uint32 is the correct size. */
-    memset( buf, 0, whio_dev_sizeof_uint32 );
-    size_t rc = dev->api->read( dev, buf, whio_dev_sizeof_uint32 ); /*Flawfinder: ignore  This is safe in conjunction with whio_dev_sizeof_uint32*/
-    if( whio_dev_sizeof_uint32 != rc )
-    {
-	//WHIO_DEBUG("read of integer failed! rc=%u\n",rc);
-	return whio_rc.IOError;
-    }
-    //WHIO_DEBUG("read int(?) from [%c %02x %02x %02x %02x]\n",buf[0],buf[1],buf[2],buf[3],buf[4]);
-    if( whio_dev_uint32_tag_char != buf[0] )
-    {
-	//WHIO_DEBUG("read bytes are not an encoded integer value!\n");
-	return whio_rc.ConsistencyError;
-    }
-    uint32_t val = (buf[1] << 24)
-	+ (buf[2] << 16)
-	+ (buf[3] << 8)
-	+ (buf[4]);
-    *tgt = val;
-    //WHIO_DEBUG("read int=%u from [%c %02x %02x %02x %02x]\n",val,buf[0],buf[1],buf[2],buf[3],buf[4]);
-    return whio_rc.OK;
-}
-
-
-static const unsigned char whio_dev_uint16_tag_char = 0x80 | 16;
-size_t whio_dev_uint16_encode( whio_dev * fs, uint16_t i )
-{
-    unsigned char buf[whio_dev_sizeof_uint16]; /* Flawfinder: ignore This is intentional and safe as long as whio_dev_sizeof_uint16 is the correct size. */
-    const size_t mask = 0x00ff;
-    size_t x = 0;
-    buf[x++] = whio_dev_uint16_tag_char;
-    buf[x++] = (unsigned char)(i>>8) & mask;
-    buf[x++] = (unsigned char)(i & mask);
-    return whio_dev_write( fs, buf, whio_dev_sizeof_uint16 );
-}
-
-int whio_dev_uint16_decode( whio_dev * dev, uint16_t * tgt )
-{
-    if( ! dev || ! tgt ) return whio_rc.ArgError;
-    unsigned char buf[whio_dev_sizeof_uint16]; /* Flawfinder: ignore This is intentional and safe as long as whio_dev_sizeof_uint16 is the correct size. */
-    memset( buf, 0, whio_dev_sizeof_uint16 );
-    size_t rc = dev->api->read( dev, buf, whio_dev_sizeof_uint16 ); /*Flawfinder: ignore  This is safe in conjunction with whio_dev_sizeof_uint16*/
-    if( whio_dev_sizeof_uint16 != rc )
-    {
-	//WHIO_DEBUG("read of uint16 failed! rc=%u\n",rc);
-	return whio_rc.IOError;
-    }
-    if( whio_dev_uint16_tag_char != buf[0] )
-    {
-	//WHIO_DEBUG("read bytes are not an encoded uint16 value!\n");
-	return whio_rc.ConsistencyError;
-    }
-    uint16_t val = + (buf[1] << 8)
-	+ (buf[2]);
-    *tgt = val;
-    return whio_rc.OK;
-}
-
-size_t whio_dev_uint32_array_encode( whio_dev * dev, size_t n, uint32_t const * list )
-{
-    size_t i = (dev && n && list) ? 0 : n;
-    size_t rc = 0;
-    for( ; i < n; ++i, ++rc )
-    {
-	if( whio_dev_sizeof_uint32 != whio_dev_uint32_encode( dev, *(list++) ) )
-	{
-	    break;
-	}
-    }
-    return rc;
-}
-
-size_t whio_dev_uint32_array_decode( whio_dev * dev, size_t n, uint32_t * list )
-{
-    size_t i = (dev && n && list) ? 0 : n;
-    size_t rc = 0;
-    for( ; i < n; ++i, ++rc )
-    {
-	if( whio_rc.OK != whio_dev_uint32_decode( dev, &list[i] ) )
-	{
-	    break;
-	}
-    }
-    return rc;
-}
-
-static const unsigned char whio_dev_cstring_tag_char = 0x80 | '"';
-size_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n )
-{
-    if( ! dev || !s ) return 0;
-    if( ! n )
-    {
-	char const * x = s;
-	loop: if( x && *x ) { ++x; ++n; goto loop; }
-	//for( ; x && *x ; ++x, ++n ){}
-    }
-    size_t rc = dev->api->write( dev, &whio_dev_cstring_tag_char, 1 );
-    if( 1 != rc ) return rc;
-    rc += whio_dev_uint32_encode( dev, n );
-    if( (1 + whio_dev_sizeof_uint32) != rc ) return rc;
-    return rc + dev->api->write( dev, s, n );
-}
-
-int whio_dev_cstring_decode( whio_dev * dev, char ** tgt, size_t * length )
-{
-    if( !dev || ! tgt ) return whio_rc.ArgError;
-
-    { /* check tag byte */
-	unsigned char tagbuf[1] = {0}; /* Flawfinder: ignore  This is intended and safe. */
-	size_t sz = dev->api->read( dev, tagbuf, 1 );/*Flawfinder: ignore  This is safe used safely.*/
-	if( (1 != sz) || (whio_dev_cstring_tag_char != tagbuf[0]) )
-	{
-	    return sz ? whio_rc.ConsistencyError : whio_rc.IOError;
-	}
-    }
-    uint32_t slen = 0;
-    int rc = whio_dev_uint32_decode( dev, &slen );
-    if( whio_rc.OK != rc ) return rc;
-    if( ! slen )
-    {
-	*tgt = 0;
-	if(length) *length = 0;
-	return whio_rc.OK;
-    }
-    char * buf = (char *)calloc( slen + 1, sizeof(char) );
-    if( ! buf ) return whio_rc.AllocError;
-    if( slen != dev->api->read( dev, buf /*Flawfinder: ignore  This is safe in conjunction with slen. See above. */, slen ) )
-    {
-	free( buf );
-	return whio_rc.IOError;
-    }
-    *tgt = buf;
-    if( length ) *length = slen;
-    return whio_rc.OK;
-}
 
 static long whio_dev_printf_appender( void * arg, char const * data, long n )
 {
@@ -554,7 +374,7 @@ int whio_dev_fetch_free_data( whio_fetch_result * r )
 
 
 const whio_blockdev whio_blockdev_init = whio_blockdev_init_m;
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
 /**
    The number of elements to statically allocate
@@ -573,7 +393,7 @@ static struct
 whio_blockdev * whio_blockdev_alloc()
 {
     whio_blockdev * obj = 0;
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     size_t i = 0;
     for( ; i < whio_blockdev_alloc_count; ++i )
     {
@@ -582,7 +402,7 @@ whio_blockdev * whio_blockdev_alloc()
 	obj = &whio_blockdev_alloc_slots.objs[i];
 	break;
     }
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whio_blockdev *) malloc( sizeof(whio_blockdev) );
     if( obj ) *obj = whio_blockdev_init;
     return obj;
@@ -591,7 +411,7 @@ whio_blockdev * whio_blockdev_alloc()
 void whio_blockdev_free( whio_blockdev * obj )
 {
     whio_blockdev_cleanup( obj );
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whio_blockdev_alloc_slots.objs[0]) ||
 	(obj > &whio_blockdev_alloc_slots.objs[whio_blockdev_alloc_count-1]) )
     { /* it does not belong to us */
@@ -606,8 +426,9 @@ void whio_blockdev_free( whio_blockdev * obj )
 	return;
     }
 #else
+    if( obj ) *obj = whio_blockdev_init;
     free(obj);
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
 }
 
 bool whio_blockdev_cleanup( whio_blockdev * self )
@@ -624,7 +445,7 @@ bool whio_blockdev_cleanup( whio_blockdev * self )
 
 
 int whio_blockdev_setup( whio_blockdev * self, whio_dev * parent, whio_size_t parent_offset,
-			   whio_size_t block_size, whio_blockdev_id count, void const * prototype )
+			   whio_size_t block_size, whio_size_t count, void const * prototype )
 {
     if( ! self || ! parent || ! count || ! block_size ) return whio_rc.ArgError;
     *self = whio_blockdev_init;
@@ -636,12 +457,12 @@ int whio_blockdev_setup( whio_blockdev * self, whio_dev * parent, whio_size_t pa
     return whio_rc.OK;
 }
 
-int whio_blockdev_wipe( whio_blockdev * self, whio_blockdev_id id )
+int whio_blockdev_wipe( whio_blockdev * self, whio_size_t id )
 {
     return whio_blockdev_write( self, id, self->blocks.prototype );
 }
 
-bool whio_blockdev_in_range( whio_blockdev * self, whio_blockdev_id id )
+bool whio_blockdev_in_range( whio_blockdev const * self, whio_size_t id )
 {
     return !self
 	? false
@@ -653,20 +474,20 @@ bool whio_blockdev_in_range( whio_blockdev * self, whio_blockdev_id id )
    self, or whio_rc.SizeTError if !self or if id is not in range for
    self.
 */
-static whio_size_t whio_block_offset_for_id( whio_blockdev * self, whio_blockdev_id id )
+static whio_size_t whio_block_offset_for_id( whio_blockdev * self, whio_size_t id )
 {
     return ( ! self || !whio_blockdev_in_range( self, id ) )
 	? whio_rc.SizeTError
 	: (id * self->blocks.size);
 }
 
-int whio_blockdev_write( whio_blockdev * self, whio_blockdev_id id, void const * src )
+int whio_blockdev_write( whio_blockdev * self, whio_size_t id, void const * src )
 {
     if( ! src ) return whio_rc.ArgError;
     whio_size_t pos = whio_block_offset_for_id( self, id );
     if( whio_rc.SizeTError == pos )
     {
-	WHIO_DEBUG("id #%"PRIu32" is not valid for this whio_blockdev. block count=%"PRIu32"\n",id,self->blocks.count);
+	WHIO_DEBUG("id #%"WHIO_SIZE_T_PFMT" is not valid for this whio_blockdev. block count=%"WHIO_SIZE_T_PFMT"\n",id,self->blocks.count);
 	return whio_rc.RangeError;
     }
     if( ! src ) return false;
@@ -676,7 +497,7 @@ int whio_blockdev_write( whio_blockdev * self, whio_blockdev_id id, void const *
 	: whio_rc.IOError;
 }
 
-int whio_blockdev_read( whio_blockdev * self, whio_blockdev_id id, void * dest )
+int whio_blockdev_read( whio_blockdev * self, whio_size_t id, void * dest )
 {
     whio_size_t pos = whio_block_offset_for_id( self, id );
     if( whio_rc.SizeTError == pos ) return whio_rc.RangeError;
@@ -685,7 +506,9 @@ int whio_blockdev_read( whio_blockdev * self, whio_blockdev_id id, void * dest )
 	? whio_rc.OK
 	: whio_rc.IOError;
 }
-/* begin file whio_dev_FILE.c */
+/* end file src/whio_dev.c */
+/* begin file src/whio_dev_FILE.c */
+#line 8 "src/whio_dev_FILE.c"
 /*
   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
 
@@ -705,9 +528,19 @@ along with the factory functions for creating the device objects.
 //#  define _POSIX_C_SOURCE 199506L
 #endif
 
+#include <unistd.h> /* ftruncate() */
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h> /* ftruncate() */
+#if defined(__GNUC__) || defined(__TINYC__)
+#if !defined(GCC_VERSION) || (GCC_VERSION < 40100)
+/* i don't actually know which versions need this, but 4.0.2 does. */
+    extern int ftruncate(int , off_t);
+    extern int fsync(int fd);
+//#  warning "Kludging ftruncate() and fsync() declartions."
+//#else
+//#  warning "Hoping ftruncate() and fsync() are declared."
+#endif
+#endif /* __GNUC__ */
 
 
 
@@ -728,6 +561,7 @@ typedef struct whio_dev_FILE
      */
     short needsFlush;
     bool ownsFile;
+    short iomode;
 } whio_dev_FILE;
 
 
@@ -739,11 +573,12 @@ typedef struct whio_dev_FILE
     0, /* fp */ \
     0, /* fileno */ \
     0, /* needsFlush */ \
-    0 /* ownsFile */ \
+    0, /* ownsFile */                       \
+   -1 /*iomode*/ \
     }
 static const whio_dev_FILE whio_dev_FILE_meta_init = WHIO_DEV_FILE_INIT;
 
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
 /**
    The number of elements to statically allocate
@@ -761,7 +596,7 @@ struct
 static whio_dev_FILE * whio_dev_FILE_alloc()
 {
     whio_dev_FILE * obj = 0;
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     size_t i = 0;
     for( ; i < whio_dev_FILE_alloc_count; ++i )
     {
@@ -770,7 +605,7 @@ static whio_dev_FILE * whio_dev_FILE_alloc()
 	obj = &whio_dev_FILE_alloc_slots.objs[i];
 	break;
     }
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whio_dev_FILE *) malloc( sizeof(whio_dev_FILE) );
     if( obj ) *obj = whio_dev_FILE_meta_init;
     return obj;
@@ -778,7 +613,7 @@ static whio_dev_FILE * whio_dev_FILE_alloc()
 
 static void whio_dev_FILE_free( whio_dev_FILE * obj )
 {
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whio_dev_FILE_alloc_slots.objs[0]) ||
 	(obj > &whio_dev_FILE_alloc_slots.objs[whio_dev_FILE_alloc_count-1]) )
     { /* it does not belong to us */
@@ -794,7 +629,7 @@ static void whio_dev_FILE_free( whio_dev_FILE * obj )
     }
 #else
     free(obj);
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
 }
 
 
@@ -902,13 +737,19 @@ static int whio_dev_FILE_ioctl( whio_dev * dev, int arg, va_list vargs )
     return rc;
 }
 
+short whio_dev_FILE_iomode( whio_dev * dev )
+{
+    WHIO_FILE_DECL(-1);
+    return f->iomode;
+}
+
 static bool whio_dev_FILE_close( whio_dev * dev )
 {
     if( dev )
     {
 	dev->api->flush(dev);
 	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
-	dev->client = whio_dev_client_init;
+	dev->client = whio_client_data_init;
 	whio_dev_FILE * f = (whio_dev_FILE*)dev->impl.data;
 	if( f )
 	{
@@ -946,7 +787,8 @@ static const whio_dev_api whio_dev_FILE_api =
     whio_dev_FILE_seek,
     whio_dev_FILE_flush,
     whio_dev_FILE_trunc,
-    whio_dev_FILE_ioctl
+    whio_dev_FILE_ioctl,
+    whio_dev_FILE_iomode
     };
 
 static const whio_dev whio_dev_FILE_init =
@@ -981,6 +823,7 @@ whio_dev * whio_dev_for_FILE( FILE * F, bool takeOwnership )
     meta->fp = F;
     meta->ownsFile = takeOwnership;
     meta->fileno = fileno(F);
+    meta->iomode = -1;
     return dev;
 }
 
@@ -994,13 +837,17 @@ whio_dev * whio_dev_for_filename( char const * fname, char const * mode )
     if( ! d )
     {
 	fclose(f);
-	f = 0;
+        return 0;
     }
+    whio_dev_FILE * meta = (whio_dev_FILE*)d->impl.data;
+    meta->iomode = whio_mode_to_iomode( mode );
     return d;
 }
 #endif
 
-/* begin file whio_dev_fileno.c */
+/* end file src/whio_dev_FILE.c */
+/* begin file src/whio_dev_fileno.c */
+#line 8 "src/whio_dev_fileno.c"
 /*
   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
 
@@ -1029,9 +876,19 @@ to provide dramatic speed increases.
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h> /* ftruncate(), fdatasync() */
-#include <string.h>
 #include <fcntl.h>
 #include <errno.h>
+
+#if defined(__GNUC__) || defined(__TINYC__)
+#if !defined(GCC_VERSION) || (GCC_VERSION < 40100)
+/* i don't actually know which versions need this, but 4.0.2 does. */
+    extern int ftruncate(int, off_t);
+    extern int fsync(int fd);
+//#  warning "Kludging ftruncate() and fsync() declartions."
+//#else
+//#  warning "Hoping ftruncate() and fsync() are declared."
+#endif
+#endif /* __GNUC__ */
 
 
 
@@ -1049,6 +906,7 @@ typedef struct whio_dev_fileno
     char const * filename;
     bool atEOF;
     int errstate;
+    short iomode;
 } whio_dev_fileno;
 
 
@@ -1061,11 +919,12 @@ typedef struct whio_dev_fileno
     0, /* fileno */ \
     0, /* filename */ \
     false, /* atEOF */ \
-    0 /* errstate */ \
+    0, /* errstate */                       \
+   -1 /*iomode*/ \
     }
 static const whio_dev_fileno whio_dev_fileno_meta_init = WHIO_DEV_fileno_INIT;
 
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
 /**
    The number of elements to statically allocate
@@ -1083,7 +942,7 @@ struct
 static whio_dev_fileno * whio_dev_fileno_alloc()
 {
     whio_dev_fileno * obj = 0;
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     size_t i = 0;
     for( ; i < whio_dev_fileno_alloc_count; ++i )
     {
@@ -1093,14 +952,14 @@ static whio_dev_fileno * whio_dev_fileno_alloc()
 	obj = &whio_dev_fileno_alloc_slots.objs[i];
 	break;
     }
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whio_dev_fileno *) malloc( sizeof(whio_dev_fileno) );
     return obj;
 }
 
 static void whio_dev_fileno_free( whio_dev_fileno * obj )
 {
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whio_dev_fileno_alloc_slots.objs[0]) ||
 	(obj > &whio_dev_fileno_alloc_slots.objs[whio_dev_fileno_alloc_count-1]) )
     { /* it does not belong to us */
@@ -1116,7 +975,7 @@ static void whio_dev_fileno_free( whio_dev_fileno * obj )
     }
 #else
     free(obj);
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
 }
 
 
@@ -1229,6 +1088,12 @@ static int whio_dev_fileno_trunc( whio_dev * dev, off_t len )
     return rc;
 }
 
+short whio_dev_fileno_iomode( whio_dev * dev )
+{
+    WHIO_fileno_DECL(-1);
+    return f->iomode;
+}
+
 static int whio_dev_fileno_ioctl( whio_dev * dev, int arg, va_list vargs )
 {
     WHIO_fileno_DECL(whio_rc.ArgError);
@@ -1295,7 +1160,7 @@ static bool whio_dev_fileno_close( whio_dev * dev )
     {
 	dev->api->flush(dev);
 	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
-	dev->client = whio_dev_client_init;
+	dev->client = whio_client_data_init;
 	whio_dev_fileno * f = (whio_dev_fileno*)dev->impl.data;
 	if( f )
 	{
@@ -1332,7 +1197,8 @@ static const whio_dev_api whio_dev_fileno_api =
     whio_dev_fileno_seek,
     whio_dev_fileno_flush,
     whio_dev_fileno_trunc,
-    whio_dev_fileno_ioctl
+    whio_dev_fileno_ioctl,
+    whio_dev_fileno_iomode
     };
 
 static const whio_dev whio_dev_fileno_init =
@@ -1344,24 +1210,40 @@ static const whio_dev whio_dev_fileno_init =
     }
     };
 
-#if 1 /* there is a separate implementation in whio_dev_FILE.c, but the API
-	 docs describe this one. */
-whio_dev * whio_dev_for_filename( char const * fname, char const * mode )
+/**
+   Implementation for whio_dev_for_fileno() and whio_dev_for_filename().
+
+   If fname is 0 or empty then fdopen(fileno,mode) is used, otherwise
+   fopen(fname,mode) is used.
+*/
+static whio_dev * whio_dev_for_file_impl( char const * fname, int filenum, char const * mode )
 {
-    if( ! fname || !mode ) return 0;
+    if( ((!fname || !*fname) && (filenum<1)) || (!mode || !*mode) )
+    {
+        return 0;
+    }
+    /** Maintenance reminder:
+
+        i would like to move these two allocs to below the fopen(),
+        but if we open the file first then we have to check whether we
+        created the file, and delete it if we did not.
+    */
     whio_dev * dev = whio_dev_alloc();
-    if( ! dev ) return 0;
+    if( ! dev )
+    {
+        return 0;
+    }
     whio_dev_fileno * meta = whio_dev_fileno_alloc();
     if( ! meta )
     {
 	whio_dev_free(dev);
 	return 0;
     }
-    FILE * f = fopen( fname, mode );
+    FILE * f = (fname && *fname) ? fopen(fname,mode) : fdopen( filenum, mode );
     if( ! f )
     {
-	whio_dev_free(dev);
-	whio_dev_fileno_free(meta);
+        whio_dev_free(dev);
+        whio_dev_fileno_free(meta);
 	return 0;
     }
     *dev = whio_dev_fileno_init;
@@ -1370,10 +1252,28 @@ whio_dev * whio_dev_for_filename( char const * fname, char const * mode )
     meta->fp = f;
     meta->fileno = fileno(f);
     meta->filename = fname;
+    meta->iomode = whio_mode_to_iomode( mode );
     return dev;
 }
+
+whio_dev * whio_dev_for_fileno( int fileno, char const * mode )
+{
+    return whio_dev_for_file_impl( 0, fileno, mode );
+}
+
+#if 1 /* there is a separate implementation in whio_dev_FILE.c, but the API
+	 docs describe this one. */
+whio_dev * whio_dev_for_filename( char const * fname, char const * mode )
+{
+    return (fname && *fname)
+        ? whio_dev_for_file_impl( fname, -1, mode )
+        : NULL;
+}
 #endif
-/* begin file whio_dev_mem.c */
+
+/* end file src/whio_dev_fileno.c */
+/* begin file src/whio_dev_mem.c */
+#line 8 "src/whio_dev_mem.c"
 /*
   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
 
@@ -1396,8 +1296,7 @@ along with the factory functions for creating the device objects.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h> /* memcpy() */
-
-
+#include <stdint.h>
 
 /**
    Internal implementation details for the whio_dev memory
@@ -1452,11 +1351,10 @@ typedef struct whio_dev_membuf_meta
     }
 /**
    Initialization object for new whio_dev_membuf objects.
-   Also used as whio_dev::typeID for membuf.
 */
 static const whio_dev_membuf_meta whio_dev_membuf_meta_init = WHIO_DEV_MEMBUF_META_INIT;
 
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
 /**
    The number of elements to statically allocate
@@ -1474,7 +1372,7 @@ static struct
 static whio_dev_membuf_meta * whio_dev_membuf_meta_alloc()
 {
     whio_dev_membuf_meta * obj = 0;
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     size_t i = 0;
     for( ; i < whio_dev_membuf_meta_alloc_count; ++i )
     {
@@ -1484,14 +1382,14 @@ static whio_dev_membuf_meta * whio_dev_membuf_meta_alloc()
 	obj = &whio_dev_membuf_meta_alloc_slots.objs[i];
 	break;
     }
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whio_dev_membuf_meta *) malloc( sizeof(whio_dev_membuf_meta) );
     return obj;
 }
 
 static void whio_dev_membuf_meta_free( whio_dev_membuf_meta * obj )
 {
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whio_dev_membuf_meta_alloc_slots.objs[0]) ||
 	(obj > &whio_dev_membuf_meta_alloc_slots.objs[whio_dev_membuf_meta_alloc_count-1]) )
     { /* it does not belong to us */
@@ -1507,7 +1405,7 @@ static void whio_dev_membuf_meta_free( whio_dev_membuf_meta * obj )
     }
 #else
     free(obj);
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
 }
 
 
@@ -1516,7 +1414,7 @@ static void whio_dev_membuf_meta_free( whio_dev_membuf_meta * obj )
    parameter be-a whio_dev and that that device is-a whio_dev_membuf.
  */
 #define WHIO_MEMBUF_DECL(RV) whio_dev_membuf_meta * mb = (dev ? (whio_dev_membuf_meta*)dev->impl.data : 0); \
-    if( !mb  || ((void const *)&whio_dev_membuf_meta_init != dev->impl.typeID) ) return RV
+    if( !mb  || ((void const *)&whio_dev_api_membuf != dev->impl.typeID) ) return RV
 
 static whio_size_t whio_dev_membuf_read( whio_dev * dev, void * dest, whio_size_t n )
 {
@@ -1688,7 +1586,7 @@ static int whio_dev_membuf_trunc( whio_dev * dev, off_t _len )
 	//WHIO_DEBUG("Grew buffer from %u to %u bytes\n", mb->alloced, alen);
 	if( mb->alloced < alen )
 	{   /* clean up new memory to avoid RAM artifacts. */
-	    memset( b + mb->alloced, 0, alen - mb->alloced );
+	    memset( WHIO_VOID_PTR_ADD(b,mb->alloced), 0, alen - mb->alloced );
 	}
 	mb->alloced = alen;
 	mb->size = ulen;
@@ -1721,18 +1619,58 @@ static int whio_dev_membuf_trunc( whio_dev * dev, off_t _len )
     return whio_rc.OK;
 }
 
+short whio_dev_membuf_iomode( whio_dev * dev )
+{
+    WHIO_MEMBUF_DECL(-1);
+    return 1;
+}
+
 static int whio_dev_membuf_ioctl( whio_dev * dev, int arg, va_list vargs )
 {
     int rc = whio_rc.UnsupportedError;
     WHIO_MEMBUF_DECL(rc);
+    whio_size_t * x = 0;
+    unsigned char const ** cp = 0;
     switch( arg )
     {
-      case whio_dev_ioctl_BUFFER_size:
-      case whio_dev_ioctl_GENERAL_size:
-	  rc = whio_rc.OK;
-	  *(va_arg(vargs,whio_size_t*)) = mb->alloced;
+      case whio_dev_ioctl_BUFFER_uchar_ptr:
+          cp = va_arg(vargs,unsigned char const **);
+          if( cp )
+          {
+              rc = whio_rc.OK;
+              *cp = mb->buffer;
+          }
+          else
+          {
+              rc = whio_rc.ArgError;
+          }
 	  break;
-      default: break;
+      case whio_dev_ioctl_GENERAL_size:
+          x = va_arg(vargs,whio_size_t*);
+          if( x )
+          {
+              rc = whio_rc.OK;
+              *x = mb->size;
+          }
+          else
+          {
+              rc = whio_rc.ArgError;
+          }
+	  break;
+      case whio_dev_ioctl_BUFFER_size:
+          x = va_arg(vargs,whio_size_t*);
+          if( x )
+          {
+              rc = whio_rc.OK;
+              *x = mb->alloced;
+          }
+          else
+          {
+              rc = whio_rc.ArgError;
+          }
+	  break;
+      default:
+          break;
     };
     return rc;
 }
@@ -1742,7 +1680,7 @@ static bool whio_dev_membuf_close( whio_dev * dev )
     if( dev )
     {
 	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
-	dev->client = whio_dev_client_init;
+	dev->client = whio_client_data_init;
 	whio_dev_membuf_meta * f = (whio_dev_membuf_meta*)dev->impl.data;
 	if( f )
 	{
@@ -1767,7 +1705,7 @@ static void whio_dev_membuf_finalize( whio_dev * dev )
 }
 #undef WHIO_MEMBUF_DECL
 
-static const whio_dev_api whio_dev_api_membuf =
+const whio_dev_api whio_dev_api_membuf =
     {
     whio_dev_membuf_read,
     whio_dev_membuf_write,
@@ -1780,14 +1718,15 @@ static const whio_dev_api whio_dev_api_membuf =
     whio_dev_membuf_seek,
     whio_dev_membuf_flush,
     whio_dev_membuf_trunc,
-    whio_dev_membuf_ioctl
+    whio_dev_membuf_ioctl,
+    whio_dev_membuf_iomode
     };
 
 #define WHIO_DEV_MEMBUF_INIT { \
     &whio_dev_api_membuf, \
     { /* impl */ \
     0, /* data. Must be-a (whio_dev_membuf*) */ \
-    (void const *)&whio_dev_membuf_meta_init /* typeID */ \
+    (void const *)&whio_dev_api_membuf /* typeID */ \
     } }
 
 static const whio_dev whio_dev_membuf_init = WHIO_DEV_MEMBUF_INIT;
@@ -1806,7 +1745,7 @@ whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor )
     *mb = whio_dev_membuf_meta_init;
     dev->impl.data = mb;
     //mb->alloc_policy = expandable ? whio_dev_membuf_alloc_policy_133 : 0;
-    mb->expandable = (expFactor > 1.0);
+    mb->expandable = (expFactor >= 1.0);
     mb->expfactor = expFactor;
     int rc = dev->api->truncate( dev, size );
     if( whio_rc.OK != rc )
@@ -1858,7 +1797,6 @@ typedef struct whio_dev_memmap
 
 /**
    Initialization object for new whio_dev_memmap objects.
-   Also used as whio_dev::typeID for memmap.
 */
 #define WHIO_DEV_MEMMAP_INIT { \
     0, /* size */ \
@@ -1871,7 +1809,7 @@ typedef struct whio_dev_memmap
 static const whio_dev_memmap whio_dev_memmap_init = WHIO_DEV_MEMMAP_INIT;
 
 
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
 /**
    The number of elements to statically allocate
@@ -1889,7 +1827,7 @@ static struct
 static whio_dev_memmap * whio_dev_memmap_alloc()
 {
     whio_dev_memmap * obj = 0;
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     size_t i = 0;
     for( ; i < whio_dev_memmap_alloc_count; ++i )
     {
@@ -1899,14 +1837,14 @@ static whio_dev_memmap * whio_dev_memmap_alloc()
 	obj = &whio_dev_memmap_alloc_slots.objs[i];
 	break;
     }
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whio_dev_memmap *) malloc( sizeof(whio_dev_memmap) );
     return obj;
 }
 
 static void whio_dev_memmap_free( whio_dev_memmap * obj )
 {
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whio_dev_memmap_alloc_slots.objs[0]) ||
 	(obj > &whio_dev_memmap_alloc_slots.objs[whio_dev_memmap_alloc_count-1]) )
     { /* it does not belong to us */
@@ -1922,7 +1860,7 @@ static void whio_dev_memmap_free( whio_dev_memmap * obj )
     }
 #else
     free(obj);
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
 }
 
 
@@ -1934,7 +1872,7 @@ static void whio_dev_memmap_free( whio_dev_memmap * obj )
    mismatch) it calls (return RV).
  */
 #define WHIO_MEMMAP_DECL(RV) whio_dev_memmap * mb = (dev ? (whio_dev_memmap*)dev->impl.data : 0); \
-    if( !mb  || ((void const *)&whio_dev_memmap_init != dev->impl.typeID) ) return RV
+    if( !mb  || ((void const *)&whio_dev_api_memmap != dev->impl.typeID) ) return RV
 
 static whio_size_t whio_dev_memmap_read( whio_dev * dev, void * dest, whio_size_t n )
 {
@@ -1950,7 +1888,7 @@ static whio_size_t whio_dev_memmap_read( whio_dev * dev, void * dest, whio_size_
     }
     if( rlen )
     {
-	memcpy( dest, mb->ro + mb->pos, rlen );
+	memcpy( dest, WHIO_VOID_CPTR_ADD(mb->ro,mb->pos), rlen );
 	mb->pos += rlen;
     }
     return rlen;
@@ -1976,7 +1914,7 @@ static whio_size_t whio_dev_memmap_write( whio_dev * dev, void const * src, whio
     }
     if( wlen )
     {
-	memcpy( mb->rw + mb->pos, src, wlen );
+	memcpy( WHIO_VOID_PTR_ADD(mb->rw,mb->pos), src, wlen );
 	mb->pos += wlen;
     }
     return wlen;
@@ -2061,18 +1999,45 @@ static int whio_dev_memmap_trunc( whio_dev * dev, off_t _len )
     return whio_rc.OK;
 }
 
+short whio_dev_memmap_iomode( whio_dev * dev )
+{
+    WHIO_MEMMAP_DECL(-1);
+    return (NULL == mb->rw) ? 0 : 1;
+}
+
 static int whio_dev_memmap_ioctl( whio_dev * dev, int arg, va_list vargs )
 {
     int rc = whio_rc.UnsupportedError;
     WHIO_MEMMAP_DECL(rc);
+    whio_size_t * x = 0;
     switch( arg )
     {
       case whio_dev_ioctl_GENERAL_size:
-      case whio_dev_ioctl_BUFFER_size:
-	  rc = whio_rc.OK;
-	  *(va_arg(vargs,whio_size_t*)) = mb->maxsize;
+          x = va_arg(vargs,whio_size_t*);
+          if( x )
+          {
+              rc = whio_rc.OK;
+              *x = mb->size;
+          }
+          else
+          {
+              rc = whio_rc.ArgError;
+          }
 	  break;
-      default: break;
+      case whio_dev_ioctl_BUFFER_size:
+          x = va_arg(vargs,whio_size_t*);
+          if( x )
+          {
+              rc = whio_rc.OK;
+              *x = mb->maxsize;
+          }
+          else
+          {
+              rc = whio_rc.ArgError;
+          }
+	  break;
+      default:
+          break;
     };
     return rc;
 }
@@ -2082,7 +2047,7 @@ static bool whio_dev_memmap_close( whio_dev * dev )
     if( dev )
     {
 	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
-	dev->client = whio_dev_client_init;
+	dev->client = whio_client_data_init;
 	whio_dev_memmap * f = (whio_dev_memmap*)dev->impl.data;
 	if( f )
 	{
@@ -2105,7 +2070,7 @@ static void whio_dev_memmap_finalize( whio_dev * dev )
 }
 #undef WHIO_MEMMAP_DECL
 
-static const whio_dev_api whio_dev_api_memmap =
+const whio_dev_api whio_dev_api_memmap =
     {
     whio_dev_memmap_read,
     whio_dev_memmap_write,
@@ -2118,7 +2083,8 @@ static const whio_dev_api whio_dev_api_memmap =
     whio_dev_memmap_seek,
     whio_dev_memmap_flush,
     whio_dev_memmap_trunc,
-    whio_dev_memmap_ioctl
+    whio_dev_memmap_ioctl,
+    whio_dev_memmap_iomode
     };
 
 static const whio_dev whio_dev_memmap_dev_init =
@@ -2126,7 +2092,7 @@ static const whio_dev whio_dev_memmap_dev_init =
     &whio_dev_api_memmap,
     { /* impl */
     0, /* data. Must be-a (whio_dev_memmap*) */
-    (void const *)&whio_dev_memmap_init /* typeID */
+    (void const *)&whio_dev_api_memmap /* typeID */
     }
     };
 
@@ -2187,7 +2153,10 @@ whio_dev * whio_dev_for_memmap_ro( const void * mem, whio_size_t size )
 {
     return whio_dev_for_memmap( 0, mem, size );
 }
-/* begin file whio_dev_subdev.c */
+
+/* end file src/whio_dev_mem.c */
+/* begin file src/whio_dev_subdev.c */
+#line 8 "src/whio_dev_subdev.c"
 /*
   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
 
@@ -2248,7 +2217,7 @@ typedef struct whio_dev_subdev_meta
     }
 static const whio_dev_subdev_meta whio_dev_subdev_meta_init = WHIO_DEV_SUBDEV_META_INIT;
 
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
 /**
    The number of elements to statically allocate
@@ -2266,7 +2235,7 @@ static struct
 whio_dev_subdev_meta * whio_dev_subdev_meta_alloc()
 {
     whio_dev_subdev_meta * obj = 0;
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     size_t i = 0;
     for( ; i < whio_dev_subdev_meta_alloc_count; ++i )
     {
@@ -2277,14 +2246,14 @@ whio_dev_subdev_meta * whio_dev_subdev_meta_alloc()
 	//WHIO_DEBUG("Allocated device #%u @0x%p\n", i, (void const *)obj );
 	break;
     }
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whio_dev_subdev_meta *) malloc( sizeof(whio_dev_subdev_meta) );
     return obj;
 }
 
 void whio_dev_subdev_meta_free( whio_dev_subdev_meta * obj )
 {
-#if WHIO_USE_STATIC_MALLOC
+#if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whio_dev_subdev_meta_alloc_slots.objs[0]) ||
 	(obj > &whio_dev_subdev_meta_alloc_slots.objs[whio_dev_subdev_meta_alloc_count-1]) )
     { /* it does not belong to us */
@@ -2297,14 +2266,14 @@ void whio_dev_subdev_meta_free( whio_dev_subdev_meta * obj )
 	if( 0 )
 	{
 	    WHIO_DEBUG("Address range = 0x%p to 0x%p, ndx=%u\n",
-		       &whio_dev_subdev_meta_alloc_slots.objs[0],
-		       &whio_dev_subdev_meta_alloc_slots.objs[whio_dev_subdev_meta_alloc_count-1],
+		       (void const *)&whio_dev_subdev_meta_alloc_slots.objs[0],
+		       (void const *)&whio_dev_subdev_meta_alloc_slots.objs[whio_dev_subdev_meta_alloc_count-1],
 		       ndx
 		       );
 	    WHIO_DEBUG("Freeing object @0x%p from static pool index %u (@0x%p)\n",
-		       obj,
+		       (void const *)obj,
 		       ndx,
-		       &whio_dev_subdev_meta_alloc_slots.objs[ndx] );
+		       (void const *)&whio_dev_subdev_meta_alloc_slots.objs[ndx] );
 	}
 
 	whio_dev_subdev_meta_alloc_slots.objs[ndx] = whio_dev_subdev_meta_init;
@@ -2313,7 +2282,7 @@ void whio_dev_subdev_meta_free( whio_dev_subdev_meta * obj )
     }
 #else
     free(obj);
-#endif /* WHIO_USE_STATIC_MALLOC */
+#endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
 }
 
 
@@ -2450,6 +2419,12 @@ static int whio_dev_subdev_flush( whio_dev * dev )
     return sub->dev ? sub->dev->api->flush( sub->dev ) : whio_rc.ArgError;
 }
 
+short whio_dev_subdev_iomode( whio_dev * dev )
+{
+    WHIO_subdev_DECL(-1);
+    return sub->dev->api->iomode( sub->dev );
+}
+
 static int whio_dev_subdev_trunc( whio_dev * dev, off_t len )
 {
     return whio_rc.UnsupportedError;
@@ -2516,7 +2491,8 @@ static const whio_dev_api whio_dev_api_subdev =
     whio_dev_subdev_seek,
     whio_dev_subdev_flush,
     whio_dev_subdev_trunc,
-    whio_dev_subdev_ioctl
+    whio_dev_subdev_ioctl,
+    whio_dev_subdev_iomode
     };
 
 static const whio_dev whio_dev_subdev_init =
@@ -2559,7 +2535,9 @@ int whio_dev_subdev_rebound( whio_dev * dev, whio_size_t lowerBound, whio_size_t
     sub->upper = upperBound;
     return whio_rc.OK;
 }
-/* begin file whio_stream.c */
+/* end file src/whio_dev_subdev.c */
+/* begin file src/whio_stream.c */
+#line 8 "src/whio_stream.c"
 #include <stdlib.h> /* free/malloc */
 
 
@@ -2597,6 +2575,8 @@ int whio_stream_default_flush( whio_stream * ARG_UNUSED(self) )
 
 bool whio_stream_default_close( whio_stream * ARG_UNUSED(self) )
 {
+    if( self->client.dtor ) self->client.dtor( self->client.data );
+    self->client = whio_client_data_init;
     return false;
 }
 
@@ -2623,10 +2603,8 @@ const whio_stream_api whio_stream_api_init =
 const whio_stream whio_stream_init = 
     {
     &whio_stream_api_init,
-    { /* impl */
-    0, /* data */
-    0 /* typeID */
-    }
+    whio_impl_data_init_m,
+    whio_client_data_init_m
     };
 
 bool whio_stream_getchar( whio_stream * self, char * tgt )
@@ -2671,11 +2649,30 @@ whio_size_t whio_stream_writef( whio_stream * str, const char *fmt, ... )
     return rc;
 }
 
+int whio_stream_copy( whio_stream * restrict istr, whio_stream * restrict ostr )
+{
+    if( istr == ostr ) return 0;
+    whio_size_t rdrc = 0;
+    whio_size_t wrc = 0;
+    enum { bufSize = 1024 * 4 };
+    unsigned char buf[bufSize];
+    do
+    {
+        rdrc = istr->api->read( istr, buf, bufSize );
+        if( ! rdrc ) return whio_rc.IOError;
+        wrc = ostr->api->write( ostr, buf, rdrc );
+        if( rdrc != wrc ) return whio_rc.IOError;
+    } while( bufSize == rdrc );
+    return whio_rc.OK;
+}
+
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-/* begin file whio_stream_dev.c */
+/* end file src/whio_stream.c */
+/* begin file src/whio_stream_dev.c */
+#line 8 "src/whio_stream_dev.c"
 #include <stdlib.h> /* free/malloc */
 
 /*
@@ -2694,6 +2691,7 @@ static whio_size_t whio_stream_dev_write( whio_stream * self, void const * src, 
 static int whio_stream_dev_flush( whio_stream * ARG_UNUSED(self) );
 static bool whio_stream_dev_close( whio_stream * self );
 static void whio_stream_dev_finalize( whio_stream * self );
+static short whio_stream_dev_iomode( whio_stream * self );
 /** whio_dev::impl::typeID value for whio_stream_dev objects. */
 
 const whio_stream_api whio_stream_api_dev = 
@@ -2703,7 +2701,8 @@ const whio_stream_api whio_stream_api_dev =
     whio_stream_dev_close,
     whio_stream_dev_finalize,
     whio_stream_dev_flush,
-    whio_stream_dev_isgood
+    whio_stream_dev_isgood,
+    whio_stream_dev_iomode
     };
 
 const whio_stream whio_stream_dev =
@@ -2761,21 +2760,30 @@ int whio_stream_dev_flush( whio_stream * ARG_UNUSED(self) )
 bool whio_stream_dev_close( whio_stream * self )
 {
     whio_stream_dev_meta * meta = (self ? (whio_stream_dev_meta*)self->impl.data : 0);
-    if( meta )
+    if( ! meta ) return false;
+    self->impl.data = 0;
+    if( meta->dev )
     {
-	self->impl.data = 0;
-	if( meta->dev )
-	{
-	    meta->dev->api->flush( meta->dev );
-	    if( meta->ownsDev )
-	    {
-		meta->dev->api->finalize( meta->dev );
-	    }
-	}
-	free( meta );
-	return true;
+        if( meta->dev->api->iomode(meta->dev) > 0 )
+        {
+            meta->dev->api->flush( meta->dev );
+        }
     }
-    return false;
+    if( self->client.dtor ) self->client.dtor( self->client.data );
+    self->client = whio_client_data_init;
+    if( meta->dev && meta->ownsDev )
+    {
+        meta->dev->api->finalize( meta->dev );
+    }
+    free( meta );
+    return true;
+}
+
+
+static short whio_stream_dev_iomode( whio_stream * self )
+{
+    WHIO_STR_DEV_DECL(-1);
+    return meta->dev->api->iomode( meta->dev );
 }
 
 
@@ -2812,7 +2820,15 @@ whio_stream * whio_stream_for_dev( whio_dev * dev, bool takeOwnership )
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-/* begin file whio_stream_FILE.c */
+/* end file src/whio_stream_dev.c */
+/* begin file src/whio_stream_FILE.c */
+#line 8 "src/whio_stream_FILE.c"
+
+#if !defined(_POSIX_C_SOURCE)
+/* required for for fileno(), ftello(), maybe others */
+#  define _POSIX_C_SOURCE 200112L
+#endif
+
 /*
   whio_stream wrapper implementation for FILE handles.
 */
@@ -2826,6 +2842,7 @@ static whio_size_t whio_stream_FILE_write( whio_stream * self, void const * src,
 static int whio_stream_FILE_flush( whio_stream * self );
 static void whio_stream_FILE_finalize( whio_stream * self );
 static bool whio_stream_FILE_close( whio_stream * self );
+static short whio_stream_FILE_iomode( whio_stream * self );
 
 const whio_stream_api whio_stream_api_FILE = 
     {
@@ -2834,7 +2851,8 @@ const whio_stream_api whio_stream_api_FILE =
     whio_stream_FILE_close,
     whio_stream_FILE_finalize,
     whio_stream_FILE_flush,
-    whio_stream_FILE_isgood
+    whio_stream_FILE_isgood,
+    whio_stream_FILE_iomode
     };
 
 const whio_stream whio_stream_FILE_init = 
@@ -2862,12 +2880,14 @@ typedef struct whio_stream_FILEINFO
        then api->finalize() will fclose() it.
      */
     bool ownsFile;
+    short iomode;
 } whio_stream_FILEINFO;
 static const whio_stream_FILEINFO whio_stream_FILEINFO_init =
     {
     0, /* fp */
     0, /* fileno */
-    false /* ownsFile */
+    false, /* ownsFile */
+    -1 /* iomode */
     };
 
 whio_stream * whio_stream_for_FILE( FILE * fp, bool takeOwnership )
@@ -2887,6 +2907,7 @@ whio_stream * whio_stream_for_FILE( FILE * fp, bool takeOwnership )
     meta->ownsFile = takeOwnership;
     meta->fp = fp;
     meta->fileno = fileno(fp);
+    meta->iomode = -1;
     return st;
 }
 
@@ -2900,6 +2921,11 @@ whio_stream * whio_stream_for_filename( char const * src, char const * mode )
     {
 	fclose(fp);
     }
+    else
+    {
+        whio_stream_FILEINFO * meta = (whio_stream_FILEINFO*)st->impl.data;
+        meta->iomode = whio_mode_to_iomode( mode );
+    }
     return st;
 }
 
@@ -2911,6 +2937,11 @@ whio_stream * whio_stream_for_fileno( int fileno, bool writeMode )
     if( ! st )
     {
 	fclose(fp);
+    }
+    else
+    {
+        whio_stream_FILEINFO * meta = (whio_stream_FILEINFO*)st->impl.data;
+        meta->iomode = writeMode ? 1 : 0;
     }
     return st;
 }
@@ -2933,6 +2964,12 @@ static bool whio_stream_FILE_isgood( whio_stream * self )
 	return meta->fp && (0 == ferror(meta->fp));
     }
     return false;
+}
+
+static short whio_stream_FILE_iomode( whio_stream * self )
+{
+	WHIO_STR_FILE_DECL(-1);
+        return meta->iomode;
 }
 
 /**
@@ -2969,19 +3006,18 @@ static bool whio_stream_FILE_close( whio_stream * self )
     whio_stream_FILEINFO * meta = (self && self->impl.data)
 	? (whio_stream_FILEINFO*)self->impl.data
 	: 0;
-    if( meta )
+    if( ! meta ) return false;
+    self->api->flush( self );
+    if( self->client.dtor ) self->client.dtor( self->client.data );
+    self->client = whio_client_data_init;
+    self->impl.data = 0;
+    if( meta->fp && meta->ownsFile )
     {
-	self->api->flush( self );
-	self->impl.data = 0;
-	if( meta->fp && meta->ownsFile )
-	{
-	    fclose( meta->fp );
-	}
-	*meta = whio_stream_FILEINFO_init;
-	free(meta);
-	return true;
+        fclose( meta->fp );
     }
-    return false;
+    *meta = whio_stream_FILEINFO_init;
+    free(meta);
+    return true;
 }
 
 /**
@@ -2997,7 +3033,610 @@ static void whio_stream_FILE_finalize( whio_stream * self )
     }
 }
 
-/* begin file whprintf.c */
+/* end file src/whio_stream_FILE.c */
+/* begin file src/whio_zlib.c */
+#line 8 "src/whio_zlib.c"
+/*
+  Implementations for whio gzip support.
+
+  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
+
+  License: Public Domain
+*/
+
+#if WHIO_ENABLE_ZLIB
+#include <zlib.h>
+#endif /* WHIO_ENABLE_ZLIB */
+
+int whio_stream_gzip( whio_stream * restrict src, whio_stream * restrict dest, int level )
+{
+#if ! WHIO_ENABLE_ZLIB
+    return whio_rc.UnsupportedError;
+#else
+    if( !src || !dest || (src == dest) ) return whio_rc.ArgError;
+    if( level != Z_DEFAULT_COMPRESSION )
+    {
+	if( level < Z_NO_COMPRESSION ) level = Z_NO_COMPRESSION;
+	else if (level > Z_BEST_COMPRESSION) level = Z_BEST_COMPRESSION;
+    }
+    /* Code taken 99% from http://zlib.net/zlib_how.html */
+    int ret;
+    int flush;
+    size_t have;
+    z_stream strm;
+    enum { bufSize  = 1024 * 8 };
+    unsigned char in[bufSize];
+    unsigned char out[bufSize];
+
+    /* allocate deflate state */
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    ret = //deflateInit(&strm, level)
+	deflateInit2( &strm, level, Z_DEFLATED, 16+MAX_WBITS, 8, Z_DEFAULT_STRATEGY )
+	;
+    if (ret != Z_OK)
+    {
+	WHIO_DEBUG("defaultInit() failed with rc %d\n", ret );
+        return ret;
+    }
+
+    /* compress until end of file */
+    do
+    {
+	size_t iosize = src->api->read( src, in, bufSize );
+	strm.avail_in = iosize;
+        if( ! src->api->isgood(src)  )
+	{
+            (void)deflateEnd(&strm);
+            return Z_ERRNO;
+        }
+        flush = (iosize < bufSize) ? Z_FINISH : Z_NO_FLUSH;
+        strm.next_in = in;
+	/* run deflate() on input until output buffer not full, finish
+           compression if all of source has been read in */
+        do
+	{
+	    strm.avail_out = bufSize;
+            strm.next_out = out;
+	    ret = deflate(&strm, flush);    /* no bad return value */
+	    if( Z_STREAM_ERROR == ret )
+	    {
+		WHIO_DEBUG("deflate() returned Z_STREAM_ERROR!\n");
+                (void)deflateEnd(&strm);
+		return Z_STREAM_ERROR;
+	    }
+	    have = bufSize - strm.avail_out;
+	    if( have )
+	    {
+		iosize = dest->api->write( dest, out, have );
+		if( (iosize != have)
+		    || !dest->api->isgood(dest) )
+		{
+		    WHIO_DEBUG("Write of %u bytes failed - wrote only %u.\n", have, iosize );
+		    (void)deflateEnd(&strm);
+		    return Z_ERRNO;
+		}
+            }
+	} while (strm.avail_out == 0);
+	if( strm.avail_in != 0)
+	{
+	    WHIO_DEBUG("Not all input was consumed! %u byte(s) remain!", strm.avail_in );
+	    (void)deflateEnd(&strm);
+	}
+        /* done when last data in file processed */
+    } while (flush != Z_FINISH);
+    //assert(ret == Z_STREAM_END);        /* stream will be complete */
+    /* clean up and return */
+    (void)deflateEnd(&strm);
+    return (ret == Z_STREAM_END) ? Z_OK : ret;
+#endif /* WHIO_ENABLE_ZLIB */
+
+}
+
+
+int whio_stream_gunzip( whio_stream * restrict src, whio_stream * restrict dest )
+{
+#if ! WHIO_ENABLE_ZLIB
+    return whio_rc.UnsupportedError;
+#else
+    if( !src || !dest || (src == dest) ) return whio_rc.ArgError;
+    /* Code taken 99% from http://zlib.net/zlib_how.html */
+    int ret;
+    size_t have;
+    z_stream strm;
+    enum { bufSize  = 1024 * 8 };
+    unsigned char in[bufSize];
+    unsigned char out[bufSize];
+
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    strm.avail_in = 0;
+    strm.next_in = Z_NULL;
+    ret = //inflateInit( &strm )
+	inflateInit2( &strm, 16+MAX_WBITS )
+	;
+    if (ret != Z_OK)
+    {
+	WHIO_DEBUG("Initialization of z_stream failed with rc %d!\n", ret );
+        return ret;
+    }
+    do
+    {
+	size_t iosize = src->api->read( src, in, bufSize );
+	strm.avail_in = iosize;
+	if( ! src->api->isgood( src ) )
+	{
+            (void)inflateEnd( &strm );
+	    WHIO_DEBUG("!src->isgood()!\n" );
+            return Z_ERRNO;
+        }
+        if (strm.avail_in == 0)
+            break;
+        strm.next_in = in;
+        /* run inflate() on input until output buffer not full */
+        do
+	{
+            strm.avail_out = bufSize;
+            strm.next_out = out;
+            ret = inflate(&strm, Z_NO_FLUSH);
+            switch (ret)
+	    {
+	      case Z_NEED_DICT:
+		  WHIO_DEBUG("inflate() says Z_NEED_DICT\n");
+		  ret = Z_DATA_ERROR; /* and fall through */
+	      case Z_STREAM_ERROR:
+		  WHIO_DEBUG("Z_STREAM_ERROR\n");
+	      case Z_DATA_ERROR:
+		  WHIO_DEBUG("Z_DATA_ERROR\n");
+	      case Z_MEM_ERROR:
+		  WHIO_DEBUG("inflate() returned unwanted value %d!\n", ret );
+		  (void)inflateEnd(&strm);
+		  return ret;
+	      default:
+		  break;
+            }
+            have = bufSize - strm.avail_out;
+	    if( have )
+	    {
+		iosize = dest->api->write( dest, out, have );
+		if ( (iosize != have)
+		     || !dest->api->isgood(dest) )
+		{
+		    WHIO_DEBUG("write failed or !dest->isgood()! Wrote %u of %u bytes?\n", iosize, have );
+		    (void)inflateEnd(&strm);
+		    return Z_ERRNO;
+		}
+	    }
+	} while (strm.avail_out == 0);
+	/* done when inflate() says it's done */
+    } while (ret != Z_STREAM_END);
+    (void)inflateEnd( &strm );
+    return (ret == Z_STREAM_END) ? Z_OK : Z_DATA_ERROR;
+#endif /* WHIO_ENABLE_ZLIB */
+}
+/* end file src/whio_zlib.c */
+/* begin file src/whio_encode.c */
+#line 8 "src/whio_encode.c"
+/*
+  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/
+
+  License: Public Domain
+*/
+
+/* Note from linux stdint.h:
+
+   The ISO C99 standard specifies that in C++ implementations these
+   should only be defined if explicitly requested. 
+*/
+#if defined __cplusplus && ! defined __STDC_CONSTANT_MACROS
+#  define __STDC_CONSTANT_MACROS
+#endif
+#include <stdlib.h> /* calloc() */
+#include <string.h> /* memset() */
+static const unsigned char whio_uint64_tag_char = 0x80 | 64;
+size_t whio_uint64_encode( unsigned char * dest, uint64_t i )
+{
+    if( ! dest ) return 0;
+    static const uint64_t mask = UINT64_C(0x00ff);
+    size_t x = 0;
+    dest[x++] = whio_uint64_tag_char;
+    dest[x++] = (unsigned char)((i>>56) & mask);
+    dest[x++] = (unsigned char)((i>>48) & mask);
+    dest[x++] = (unsigned char)((i>>40) & mask);
+    dest[x++] = (unsigned char)((i>>32) & mask);
+    dest[x++] = (unsigned char)((i>>24) & mask);
+    dest[x++] = (unsigned char)((i>>16) & mask);
+    dest[x++] = (unsigned char)((i>>8) & mask);
+    dest[x++] = (unsigned char)(i & mask);
+    return whio_sizeof_encoded_uint64;
+}
+
+
+int whio_uint64_decode( unsigned char const * src, uint64_t * tgt )
+{
+    if( ! src || ! tgt ) return whio_rc.ArgError;
+    if( whio_uint64_tag_char != src[0] )
+    {
+	return whio_rc.ConsistencyError;
+    }
+#define SHIFT(X) ((uint64_t)src[X])
+    uint64_t val = (SHIFT(1) << UINT64_C(56))
+	+ (SHIFT(2) << UINT64_C(48))
+	+ (SHIFT(3) << UINT64_C(40))
+	+ (SHIFT(4) << UINT64_C(32))
+	+ (SHIFT(5) << UINT64_C(24))
+	+ (SHIFT(6) << UINT64_C(16))
+	+ (SHIFT(7) << UINT64_C(8))
+	+ (SHIFT(8));
+#undef SHIFT
+    *tgt = val;
+    return whio_rc.OK;
+}
+
+
+static const unsigned char whio_uint32_tag_char = 0x80 | 32;
+size_t whio_uint32_encode( unsigned char * dest, uint32_t i )
+{
+    if( ! dest ) return 0;
+    static const unsigned short mask = 0x00ff;
+    size_t x = 0;
+    /** We tag all entries with a prefix mainly to simplify debugging
+	of the vfs files (it's easy to spot them in a file viewer),
+	but it incidentally also gives us a sanity-checker at
+	read-time (we simply confirm that the first byte is this
+	prefix).
+    */
+    dest[x++] = whio_uint32_tag_char;
+    dest[x++] = (unsigned char)(i>>24) & mask;
+    dest[x++] = (unsigned char)(i>>16) & mask;
+    dest[x++] = (unsigned char)(i>>8) & mask;
+    dest[x++] = (unsigned char)(i & mask);
+    return whio_sizeof_encoded_uint32;
+}
+
+int whio_uint32_decode( unsigned char const * src, uint32_t * tgt )
+{
+    if( ! src ) return whio_rc.ArgError;
+    if( whio_uint32_tag_char != src[0] )
+    {
+	//WHIO_DEBUG("read bytes are not an encoded integer value!\n");
+	return whio_rc.ConsistencyError;
+    }
+    uint32_t val = (src[1] << 24)
+	+ (src[2] << 16)
+	+ (src[3] << 8)
+	+ (src[4]);
+    if( tgt ) *tgt = val;
+    return whio_rc.OK;
+}
+
+static const unsigned char whio_uint16_tag_char = 0x80 | 16;
+size_t whio_uint16_encode( unsigned char * dest, uint16_t i )
+{
+    if( ! dest ) return 0;
+    static const uint16_t mask = 0x00ff;
+    uint8_t x = 0;
+    dest[x++] = whio_uint16_tag_char;
+    dest[x++] = (unsigned char)(i>>8) & mask;
+    dest[x++] = (unsigned char)(i & mask);
+    return whio_sizeof_encoded_uint16;
+}
+
+int whio_uint16_decode( unsigned char const * src, uint16_t * tgt )
+{
+    if( ! src ) return whio_rc.ArgError;
+    if( whio_uint16_tag_char != src[0] )
+    {
+	return whio_rc.ConsistencyError;
+    }
+    uint16_t val = + (src[1] << 8)
+	+ (src[2]);
+    *tgt = val;
+    return whio_rc.OK;
+}
+
+static const unsigned char whio_uint8_tag_char = 0x80 | 8;
+size_t whio_uint8_encode( unsigned char * dest, uint8_t i )
+{
+    if( ! dest ) return 0;
+    dest[0] = whio_uint8_tag_char;
+    dest[1] = i;
+    return whio_sizeof_encoded_uint8;
+}
+
+int whio_uint8_decode( unsigned char const * src, uint8_t * tgt )
+{
+    if( ! src ) return whio_rc.ArgError;
+    if( whio_uint8_tag_char != src[0] )
+    {
+	return whio_rc.ConsistencyError;
+    }
+    *tgt = src[1];
+    return whio_rc.OK;
+}
+
+
+size_t whio_uint32_array_encode( unsigned char * dest, size_t n, uint32_t const * list )
+{
+    size_t i = (dest && n && list) ? 0 : n;
+    size_t rc = 0;
+    for( ; i < n; ++i, ++rc )
+    {
+	if( whio_sizeof_encoded_uint32 != whio_uint32_encode( dest, *(list++) ) )
+	{
+	    break;
+	}
+    }
+    return rc;
+}
+
+size_t whio_uint32_array_decode( unsigned char const * src, size_t n, uint32_t * list )
+{
+    size_t i = (src && n && list) ? 0 : n;
+    size_t rc = 0;
+    for( ; i < n; ++i, ++rc )
+    {
+	if( whio_rc.OK != whio_uint32_decode( src, &list[i] ) )
+	{
+	    break;
+	}
+    }
+    return rc;
+}
+
+static const unsigned char whio_cstring_tag_char = 0x80 | '"';
+size_t whio_cstring_encode( unsigned char * dest, char const * s, uint32_t n )
+{
+    if( ! dest || !s ) return 0;
+    if( ! n )
+    {
+	char const * x = s;
+	loop: if( x && *x ) { ++x; ++n; goto loop; }
+	//for( ; x && *x ; ++x, ++n ){}
+    }
+    *(dest++) = whio_cstring_tag_char;
+    size_t rc = whio_uint32_encode( dest, n );
+    if( whio_sizeof_encoded_uint32 != rc ) return rc;
+    dest += rc;
+    rc = 1 + whio_sizeof_encoded_uint32;
+    size_t i = 0;
+    for( ; i < n; ++i, ++rc )
+    {
+	*(dest++) = *(s++);
+    }
+    *dest = 0;
+    return rc;
+}
+
+int whio_cstring_decode( unsigned char const * src, char ** tgt, size_t * length )
+{
+    if( !src || ! tgt ) return whio_rc.ArgError;
+
+    if( whio_cstring_tag_char != *src )
+    {
+	return whio_rc.ConsistencyError;
+    }
+    ++src;
+    uint32_t slen = 0;
+    int rc = whio_uint32_decode( src, &slen );
+    if( whio_rc.OK != rc ) return rc;
+    if( ! slen )
+    {
+	*tgt = 0;
+	if(length) *length = 0;
+	return whio_rc.OK;
+    }
+    char * buf = (char *)calloc( slen + 1, sizeof(char) );
+    if( ! buf ) return whio_rc.AllocError;
+    if( length ) *length = slen;
+    *tgt = buf;
+    size_t i = 0;
+    src += whio_sizeof_encoded_uint32;
+    for(  ; i < slen; ++i )
+    {
+	*(buf++) = *(src++);
+    }
+    *buf = 0;
+    return whio_rc.OK;
+}
+
+/**
+   tag byte for encoded whio_id_type objects.
+*/
+static const unsigned int whio_size_t_tag_char = 0x08 | 'p';
+whio_size_t whio_size_t_encode( unsigned char * dest, whio_size_t v )
+{
+#if WHIO_SIZE_T_BITS == 64
+    return whio_uint64_encode( dest, v );
+#elif WHIO_SIZE_T_BITS == 32
+    return whio_uint32_encode( dest, v );
+#elif WHIO_SIZE_T_BITS == 16
+    return whio_uint16_encode( dest, v );
+#elif WHIO_SIZE_T_BITS == 8
+    return whio_uint8_encode( dest, v );
+#else
+#error "whio_size_t size (WHIO_SIZE_T_BITS) is not supported!"
+#endif
+}
+
+int whio_size_t_decode( unsigned char const * src, whio_size_t * v )
+{
+#if WHIO_SIZE_T_BITS == 64
+    return whio_uint64_decode( src, v );
+#elif WHIO_SIZE_T_BITS == 32
+    return whio_uint32_decode( src, v );
+#elif WHIO_SIZE_T_BITS == 16
+    return whio_uint16_decode( src, v );
+#elif WHIO_SIZE_T_BITS == 8
+    return whio_uint8_decode( src, v );
+#else
+#error "whio_size_t is not a supported type!"
+#endif
+}
+
+whio_size_t whio_dev_size_t_encode( whio_dev * dev, whio_size_t v )
+{
+    unsigned char buf[whio_sizeof_encoded_size_t];
+    whio_size_t_encode( buf, v );
+    return dev->api->write( dev, &buf, whio_sizeof_encoded_size_t );
+}
+
+int whio_dev_size_t_decode( whio_dev * dev, whio_size_t * tgt )
+{
+    unsigned char buf[whio_sizeof_encoded_size_t]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint16 is the correct size. */
+    memset( buf, 0, whio_sizeof_encoded_size_t );
+    size_t rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint16*/, whio_sizeof_encoded_size_t );
+    return ( whio_sizeof_encoded_size_t == rc )
+        ? whio_size_t_decode( buf, tgt )
+        : whio_rc.IOError;
+}
+
+
+size_t whio_dev_uint64_encode( whio_dev * dev, uint64_t i )
+{
+    unsigned char buf[whio_sizeof_encoded_uint64]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint64 is the correct size. */
+    size_t const x = whio_uint64_encode( buf, i );
+    return ( whio_sizeof_encoded_uint64 == x )
+        ? whio_dev_write( dev, buf, whio_sizeof_encoded_uint64 )
+        : 0;
+}
+
+int whio_dev_uint64_decode( whio_dev * dev, uint64_t * tgt )
+{
+    if( ! dev || ! tgt ) return whio_rc.ArgError;
+    unsigned char buf[whio_sizeof_encoded_uint64]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint64 is the correct size. */
+    memset( buf, 0, whio_sizeof_encoded_uint64 );
+    size_t rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint64*/, whio_sizeof_encoded_uint64 );
+    return ( whio_sizeof_encoded_uint64 == rc )
+        ? whio_uint64_decode( buf, tgt )
+        : whio_rc.IOError;
+}
+
+
+size_t whio_dev_uint32_encode( whio_dev * dev, uint32_t i )
+{
+    unsigned char buf[whio_sizeof_encoded_uint32]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint32 is the correct size. */
+    size_t const x = whio_uint32_encode( buf, i );
+    return ( whio_sizeof_encoded_uint32 == x )
+        ? whio_dev_write( dev, buf, whio_sizeof_encoded_uint32 )
+        : 0;
+}
+
+int whio_dev_uint32_decode( whio_dev * dev, uint32_t * tgt )
+{
+    if( ! dev || ! tgt ) return whio_rc.ArgError;
+    unsigned char buf[whio_sizeof_encoded_uint32]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint32 is the correct size. */
+    memset( buf, 0, whio_sizeof_encoded_uint32 );
+    size_t rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint32*/, whio_sizeof_encoded_uint32 );
+    return ( whio_sizeof_encoded_uint32 == rc )
+        ? whio_uint32_decode( buf, tgt )
+        : whio_rc.IOError;
+}
+
+
+static const unsigned char whio_dev_uint16_tag_char = 0x80 | 16;
+size_t whio_dev_uint16_encode( whio_dev * dev, uint16_t i )
+{
+    unsigned char buf[whio_sizeof_encoded_uint16]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint16 is the correct size. */
+    size_t const x = whio_uint16_encode( buf, i );
+    return ( whio_sizeof_encoded_uint16 == x )
+        ? whio_dev_write( dev, buf, whio_sizeof_encoded_uint16 )
+        : 0;
+}
+
+int whio_dev_uint16_decode( whio_dev * dev, uint16_t * tgt )
+{
+    if( ! dev || ! tgt ) return whio_rc.ArgError;
+    unsigned char buf[whio_sizeof_encoded_uint16]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint16 is the correct size. */
+    memset( buf, 0, whio_sizeof_encoded_uint16 );
+    size_t rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint16*/, whio_sizeof_encoded_uint16 );
+    return ( whio_sizeof_encoded_uint16 == rc )
+        ? whio_uint16_decode( buf, tgt )
+        : whio_rc.IOError;
+}
+
+size_t whio_dev_uint32_array_encode( whio_dev * dev, size_t n, uint32_t const * list )
+{
+    size_t i = (dev && n && list) ? 0 : n;
+    size_t rc = 0;
+    for( ; i < n; ++i, ++rc )
+    {
+	if( whio_sizeof_encoded_uint32 != whio_dev_uint32_encode( dev, *(list++) ) )
+	{
+	    break;
+	}
+    }
+    return rc;
+}
+
+size_t whio_dev_uint32_array_decode( whio_dev * dev, size_t n, uint32_t * list )
+{
+    size_t i = (dev && n && list) ? 0 : n;
+    size_t rc = 0;
+    for( ; i < n; ++i, ++rc )
+    {
+	if( whio_rc.OK != whio_dev_uint32_decode( dev, &list[i] ) )
+	{
+	    break;
+	}
+    }
+    return rc;
+}
+
+static const unsigned char whio_dev_cstring_tag_char = 0x80 | '"';
+whio_size_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n )
+{
+    if( ! dev || !s ) return 0;
+    if( ! n )
+    {
+	char const * x = s;
+	loop: if( x && *x ) { ++x; ++n; goto loop; }
+	//for( ; x && *x ; ++x, ++n ){}
+    }
+    whio_size_t rc = dev->api->write( dev, &whio_dev_cstring_tag_char, 1 );
+    if( 1 != rc ) return rc;
+    rc += whio_dev_uint32_encode( dev, n );
+    if( (1 + whio_sizeof_encoded_uint32) != rc ) return rc;
+    return rc + dev->api->write( dev, s, (whio_size_t)n );
+}
+
+int whio_dev_cstring_decode( whio_dev * dev, char ** tgt, uint32_t * length )
+{
+    if( !dev || ! tgt ) return whio_rc.ArgError;
+
+    { /* check tag byte */
+	unsigned char tagbuf[1] = {0}; /* Flawfinder: ignore  This is intended and safe. */
+	whio_size_t const sz = dev->api->read( dev, tagbuf, 1 );/*Flawfinder: ignore  This is safe used safely.*/
+	if( (1 != sz) || (whio_dev_cstring_tag_char != tagbuf[0]) )
+	{
+	    return sz ? whio_rc.ConsistencyError : whio_rc.IOError;
+	}
+    }
+    uint32_t slen = 0;
+    int rc = whio_dev_uint32_decode( dev, &slen );
+    if( whio_rc.OK != rc ) return rc;
+    if( ! slen )
+    {
+	*tgt = 0;
+	if(length) *length = 0;
+	return whio_rc.OK;
+    }
+    char * buf = (char *)calloc( slen + 1, sizeof(char) );
+    if( ! buf ) return whio_rc.AllocError;
+    if( slen != dev->api->read( dev, buf /*Flawfinder: ignore  This is safe in conjunction with slen. See above. */, slen ) )
+    {
+	free( buf );
+	return whio_rc.IOError;
+    }
+    *tgt = buf;
+    if( length ) *length = slen;
+    return whio_rc.OK;
+}
+/* end file src/whio_encode.c */
+/* begin file src/whprintf.c */
+#line 8 "src/whprintf.c"
 /************************************************************************
 The printf-like implementation in this file is based on the one found
 in the sqlite3 distribution is in the Public Domain.
@@ -3028,7 +3667,7 @@ remove certain features/extensions.
 #include <string.h> /* strlen() */
 #include <stdlib.h> /* free/malloc() */
 #include <ctype.h>
-
+#include <stdint.h>
 typedef long double LONGDOUBLE_TYPE;
 
 /*
@@ -3345,6 +3984,7 @@ static int et_getdigit(LONGDOUBLE_TYPE *val, int *cnt){
 #  define WHPRINTF_BUF_SIZE 350  /* Size of the output buffer for numeric conversions */
 #endif
 
+#if ! defined(__STDC__) && !defined(__TINYC__)
 #ifdef WHPRINTF_INT64_TYPE
   typedef WHPRINTF_INT64_TYPE int64_t;
   typedef unsigned WHPRINTF_INT64_TYPE uint64_t;
@@ -3354,6 +3994,7 @@ static int et_getdigit(LONGDOUBLE_TYPE *val, int *cnt){
 #else
   typedef long long int int64_t;
   typedef unsigned long long int uint64_t;
+#endif
 #endif
 
 #if 0
@@ -3762,7 +4403,7 @@ long whprintfv(
   char buf[WHPRINTF_BUF_SIZE];       /* Conversion buffer */
   char prefix;               /* Prefix character.  "+" or "-" or " " or '\0'. */
   etByte errorflag = 0;      /* True if an error is encountered */
-  etByte xtype;              /* Conversion paradigm */
+  etByte xtype = 0;              /* Conversion paradigm */
   char * zExtra = 0;              /* Extra memory used for etTCLESCAPE conversions */
 #if ! WHPRINTF_OMIT_FLOATING_POINT
   int  exp, e2;              /* exponent of real numbers */
@@ -4366,190 +5007,4 @@ char * whprintf_str( char const * fmt, ... )
     va_end( vargs );
     return ret;
 }
-/* begin file whio_zlib.c */
-/*
-  Implementations for whio gzip support.
-
-  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
-
-  License: Public Domain
-*/
-
-#if WHIO_ENABLE_ZLIB
-#include <zlib.h>
-#endif /* WHIO_ENABLE_ZLIB */
-
-int whio_stream_gzip( whio_stream * src, whio_stream * dest, int level )
-{
-#if ! WHIO_ENABLE_ZLIB
-    return whio_rc.UnsupportedError;
-#else
-    if( !src || !dest || (src == dest) ) return whio_rc.ArgError;
-    if( level != Z_DEFAULT_COMPRESSION )
-    {
-	if( level < Z_NO_COMPRESSION ) level = Z_NO_COMPRESSION;
-	else if (level > Z_BEST_COMPRESSION) level = Z_BEST_COMPRESSION;
-    }
-    /* Code taken 99% from http://zlib.net/zlib_how.html */
-    int ret;
-    int flush;
-    size_t have;
-    z_stream strm;
-    enum { bufSize  = 1024 * 8 };
-    unsigned char in[bufSize];
-    unsigned char out[bufSize];
-
-    /* allocate deflate state */
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-    ret = //deflateInit(&strm, level)
-	deflateInit2( &strm, level, Z_DEFLATED, 16+MAX_WBITS, 8, Z_DEFAULT_STRATEGY )
-	;
-    if (ret != Z_OK)
-    {
-	WHIO_DEBUG("defaultInit() failed with rc %d\n", ret );
-        return ret;
-    }
-
-    /* compress until end of file */
-    do
-    {
-	size_t iosize = src->api->read( src, in, bufSize );
-	strm.avail_in = iosize;
-        if( ! src->api->isgood(src)  )
-	{
-            (void)deflateEnd(&strm);
-            return Z_ERRNO;
-        }
-        flush = (iosize < bufSize) ? Z_FINISH : Z_NO_FLUSH;
-        strm.next_in = in;
-	/* run deflate() on input until output buffer not full, finish
-           compression if all of source has been read in */
-        do
-	{
-	    strm.avail_out = bufSize;
-            strm.next_out = out;
-	    ret = deflate(&strm, flush);    /* no bad return value */
-	    if( Z_STREAM_ERROR == ret )
-	    {
-		WHIO_DEBUG("deflate() returned Z_STREAM_ERROR!\n");
-                (void)deflateEnd(&strm);
-		return Z_STREAM_ERROR;
-	    }
-	    have = bufSize - strm.avail_out;
-	    if( have )
-	    {
-		iosize = dest->api->write( dest, out, have );
-		if( (iosize != have)
-		    || !dest->api->isgood(dest) )
-		{
-		    WHIO_DEBUG("Write of %u bytes failed - wrote only %u.\n", have, iosize );
-		    (void)deflateEnd(&strm);
-		    return Z_ERRNO;
-		}
-            }
-	} while (strm.avail_out == 0);
-	if( strm.avail_in != 0)
-	{
-	    WHIO_DEBUG("Not all input was consumed! %u byte(s) remain!", strm.avail_in );
-	    (void)deflateEnd(&strm);
-	}
-        /* done when last data in file processed */
-    } while (flush != Z_FINISH);
-    //assert(ret == Z_STREAM_END);        /* stream will be complete */
-    /* clean up and return */
-    (void)deflateEnd(&strm);
-    return (ret == Z_STREAM_END) ? Z_OK : ret;
-#endif /* WHIO_ENABLE_ZLIB */
-
-}
-
-
-int whio_stream_gunzip( whio_stream * src, whio_stream * dest )
-{
-#if ! WHIO_ENABLE_ZLIB
-    return whio_rc.UnsupportedError;
-#else
-    if( !src || !dest || (src == dest) ) return whio_rc.ArgError;
-    /* Code taken 99% from http://zlib.net/zlib_how.html */
-    int ret;
-    size_t have;
-    z_stream strm;
-    enum { bufSize  = 1024 * 8 };
-    unsigned char in[bufSize];
-    unsigned char out[bufSize];
-
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-    strm.avail_in = 0;
-    strm.next_in = Z_NULL;
-    ret = //inflateInit( &strm )
-	inflateInit2( &strm, 16+MAX_WBITS )
-	;
-    if (ret != Z_OK)
-    {
-	WHIO_DEBUG("Initialization of z_stream failed with rc %d!\n", ret );
-        return ret;
-    }
-    do
-    {
-	size_t iosize = src->api->read( src, in, bufSize );
-	strm.avail_in = iosize;
-	if( ! src->api->isgood( src ) )
-	{
-            (void)inflateEnd( &strm );
-	    WHIO_DEBUG("!src->isgood()!\n" );
-            return Z_ERRNO;
-        }
-        if (strm.avail_in == 0)
-            break;
-        strm.next_in = in;
-	if(0)
-	{
-	    size_t x = 0;
-	    for( ; x < 100; ++x ) putchar(in[x]);
-	    putchar('\n');
-	}
-        /* run inflate() on input until output buffer not full */
-        do
-	{
-            strm.avail_out = bufSize;
-            strm.next_out = out;
-            ret = inflate(&strm, Z_NO_FLUSH);
-            switch (ret)
-	    {
-	      case Z_NEED_DICT:
-		  WHIO_DEBUG("inflate() says Z_NEED_DICT\n");
-		  ret = Z_DATA_ERROR; /* and fall through */
-	      case Z_STREAM_ERROR:
-		  WHIO_DEBUG("Z_STREAM_ERROR\n");
-	      case Z_DATA_ERROR:
-		  WHIO_DEBUG("Z_DATA_ERROR\n");
-	      case Z_MEM_ERROR:
-		  WHIO_DEBUG("inflate() returned unwanted value %d!\n", ret );
-		  (void)inflateEnd(&strm);
-		  return ret;
-	      default:
-		  break;
-            }
-            have = bufSize - strm.avail_out;
-	    if( have )
-	    {
-		iosize = dest->api->write( dest, out, have );
-		if ( (iosize != have)
-		     || !dest->api->isgood(dest) )
-		{
-		    WHIO_DEBUG("write failed or !dest->isgood()! Wrote %u of %u bytes?\n", iosize, have );
-		    (void)inflateEnd(&strm);
-		    return Z_ERRNO;
-		}
-	    }
-	} while (strm.avail_out == 0);
-	/* done when inflate() says it's done */
-    } while (ret != Z_STREAM_END);
-    (void)inflateEnd( &strm );
-    return (ret == Z_STREAM_END) ? Z_OK : Z_DATA_ERROR;
-#endif /* WHIO_ENABLE_ZLIB */
-}
+/* end file src/whprintf.c */

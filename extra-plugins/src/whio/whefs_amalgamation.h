@@ -1,9 +1,79 @@
-/* auto-generated on Thu Jun  4 21:31:22 CEST 2009. Do not edit! */
+/* auto-generated on Wed Jul  1 16:21:03 CEST 2009. Do not edit! */
 #define WHEFS_AMALGAMATION_BUILD 1
 #if ! defined __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS 1
 #endif
-/* begin file whio_config.h */
+#if defined(__cplusplus) && !defined(restrict)
+#  define restrict
+#endif
+/* begin file include/wh/whefs/whefs_license.h */
+#line 8 "include/wh/whefs/whefs_license.h"
+#ifndef WANDERINGHORSE_NET_WHEFS_LICENSE_H_INCLUDED
+#define WANDERINGHORSE_NET_WHEFS_LICENSE_H_INCLUDED
+/**
+   This is the license text for the libwhefs source code.
+
+   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
+
+   The license for this code is as follows:
+
+   - If the code is used in a jurisdiction where Public Domain
+   property is regonized, then this code may be considered to be
+   in the Public Domain. Its author expressly disclaims copyright
+   in jurisdictions where such a disclaimer is allowed.
+
+   - If the code is used in a jurisdiction which does not recognize
+   Public Domain, the code must be used in terms with the MIT license,
+   as described clearly and concisely at:
+
+   http://en.wikipedia.org/wiki/MIT_License
+
+   and reproduced in full below.
+
+   - If the code is used in a jurisdiction which recognizes Public
+   Domain, the user may use the code without limits, as for Public
+   Domain property, or may instead opt to use the code under the terms
+   of the MIT license.
+
+   The MIT licensing terms follow:
+
+   ========================================================================
+   Copyright (c) 2008, 2009 Stephan Beal (http://wanderinghorse.net/home/stephan/)
+
+   Permission is hereby granted, free of charge, to any person
+   obtaining a copy of this software and associated documentation
+   files (the "Software"), to deal in the Software without
+   restriction, including without limitation the rights to use, copy,
+   modify, merge, publish, distribute, sublicense, and/or sell copies
+   of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+   ========================================================================
+   (END LICENSE TEXT)
+
+   The MIT license is compatible with both the GPL and commercial
+   software, affording one all of the rights of Public Domain with the
+   minor nuisance of being required to keep the above copyright notice
+   and license text in the source code. Note also that by accepting the
+   Public Domain "license" you can re-license your copy using whatever
+   license you like.
+*/
+
+#endif /* WANDERINGHORSE_NET_WHEFS_LICENSE_H_INCLUDED */
+/* end file include/wh/whefs/whefs_license.h */
+/* begin file include/wh/whio/whio_config.h */
+#line 8 "include/wh/whio/whio_config.h"
 #ifndef WANDERINGHORSE_NET_WHIO_CONFIG_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_CONFIG_H_INCLUDED 1
 /*
@@ -17,7 +87,8 @@
 
 #include <stdint.h> /* uintXX_t */
 #include <inttypes.h> /* PRIuXX macros */
-
+//#include <unistd.h> /* ONLY for off_t. We need a better way to do this. */
+#include <sys/types.h> /* off_t on Linux */
 
 #ifndef __cplusplus
 /* Try to find a usable bool, or make one up ... */
@@ -63,12 +134,12 @@ extern "C" {
 #endif
 
 
-/** @def WHIO_USE_STATIC_MALLOC
+/** @def WHIO_CONFIG_ENABLE_STATIC_MALLOC
    Changing this only has an effect when building this library
    or when building extensions which want to follow these
    conventions...
 
-   If WHIO_USE_STATIC_MALLOC is true then certain operations
+   If WHIO_CONFIG_ENABLE_STATIC_MALLOC is true then certain operations
    which are normally done via malloc() and free() are instead
    done first via a static list of pre-allocated objects and then
    (if the list is all used up) fall back malloc()/free().
@@ -92,8 +163,8 @@ extern "C" {
    this option can potentially save many calls to malloc() (and should
    perform much better).
 */
-#if !defined(WHIO_USE_STATIC_MALLOC)
-#  define WHIO_USE_STATIC_MALLOC 1
+#if !defined(WHIO_CONFIG_ENABLE_STATIC_MALLOC)
+#  define WHIO_CONFIG_ENABLE_STATIC_MALLOC 0
 #endif
 
 #if defined(WHIO_SIZE_T_BITS)
@@ -165,12 +236,26 @@ porting to machines with different size_t sizes.
 #  error "WHIO_SIZE_T_BITS must be one of: 8, 16, 32, 64"
 #endif
 
+/** @def WHIO_VOID_PTR_ADD()
+   WHIO_VOID_PTR_ADD() is a workaround for gcc's -pedantic mode
+   and other compilers which warn when void pointers are used
+   in addition.
+*/
+#  define WHIO_VOID_PTR_ADD(VP,PLUS) ((void*)((unsigned char *)(VP)+(PLUS)))
+/** @def WHIO_VOID_CPTR_ADD()
+   Equivalent to WHIO_VOID_PTR_ADD() but applies to a const void
+   pointer.
+*/
+#  define WHIO_VOID_CPTR_ADD(VP,PLUS) ((void const*)((unsigned char const *)(VP)+(PLUS)))
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif /* WANDERINGHORSE_NET_WHIO_CONFIG_H_INCLUDED */
-/* begin file whio_common.h */
+/* end file include/wh/whio/whio_config.h */
+/* begin file include/wh/whio/whio_common.h */
+#line 8 "include/wh/whio/whio_common.h"
 #ifndef WANDERINGHORSE_NET_WHIO_COMMON_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_COMMON_H_INCLUDED
 /*
@@ -183,6 +268,8 @@ porting to machines with different size_t sizes.
 
 //#include <stdio.h>
 //#include <unistd.h> /* off_t on Linux? */
+//#include <sys/types.h> /* off_t on Linux? */
+
 #include <stdint.h> /* uint32_t */
 #include <stdarg.h> /* va_list */
 
@@ -274,190 +361,145 @@ typedef struct whio_rc_t
 */
 extern const whio_rc_t whio_rc;
 
+/** @struct whio_client_data
+
+whio_client_data is an abstraction for tying client-specific data to a
+whio_dev object. The data is not used by the public whio_dev API with
+one exception: when whio_dev_api::close() or whio_stream_api::close()
+is called, the implementation must clean up this data IFF the dtor
+member is not 0. For example:
+
+  @code
+  if( my->client.dtor ) {
+    my->client.dtor( my->client.data );
+    my->client = whio_client_data_init; // zero it out
+  }
+  @endcode
+   
+*/
+struct whio_client_data
+{
+    /**
+       Arbitrary data associated with an i/o device or stream.
+
+       This data is for sole use by whio_dev clients, with one
+       important exception: if dtor is not 0 then device implementations
+       take that as a hint to destroy this object using that
+       function.
+
+       The object pointed to by client.data should not do any i/o on
+       this stream or any stream/device during its destructor. Since
+       client.data can point to arbitrary objects, it is impossible
+       for this API to ensure that they are destroyed in a kosher
+       order.  Thus it is the client's responsibility to use
+       client.data wisely and carefully. A good use would be for a
+       client-side buffer, e.g.  to implement buffered readahead. A
+       bad use would be using it to store links to other i/o devices,
+       as the destructor would presumably then close or flush them and
+       they might not be live at that point. Device implementors should
+       use whio_impl_data to store "more private" data.
+    */
+    void * data;
+    /**
+       If this function is not 0 then whio_dev implementations
+       MUST call this function, passing the data member to it,
+       in their cleanup routines. If it is 0 then they must
+       ignore the data member.
+    */
+    void (*dtor)( void * );
+};
+typedef struct whio_client_data whio_client_data;
+/**
+   Static initializer for whio_client_data objects.
+*/
+#define whio_client_data_init_m {0/*data*/,0/*dtor*/}
+
+/**
+   An empty whio_client_data object for use in initialization
+   of whio_client_data objects.
+*/
+extern const whio_client_data whio_client_data_init;
+
+/**
+   Holds private implementation details for whio_dev instances. Each
+   instance may (and in practice always does) store instance-specific
+   data here. These data are for use only by the functions related to
+   this implementation and must be cleaned up via
+   dev->api->close(dev).
+*/
+struct whio_impl_data
+{
+    /**
+       data is SOLELY for use by concrete implementations of
+       whio_stream.
+       
+       data can be used to store private data required by the
+       implementation functions. Each instance may have its own
+       information (which should be cleaned up via the finalize()
+       member function, assuming the stream owns the data).
+
+       This data should be freed in the owning object's finalize() or
+       close() routine.
+    */
+    void * data;
+
+    /**
+       A type identifier for use solely by whio_dev implementations,
+       not client code. If the implementation uses this (it is an
+       optional component), it must be set by the whio_dev
+       initialization routine (typically a factory function).
+
+       This mechanism works by assigning some arbitrary opaque value
+       to all instances of a specific whio_dev implementation. The
+       implementation funcs can then use that to ensure that they are
+       passed the correct type. The typeID need not be public, but may
+       be so. e.g. the author of the impl may provide a non-member
+       whio_dev-related function which requires a specific type (or
+       types), and in that case the types would possibly need to be
+       known by the caller.
+    */
+    void const * typeID;
+};
+/**
+   Static initializer for whio_impl_data objects.
+*/
+#define whio_impl_data_init_m {0/*data*/,0/*dtor*/}
+typedef struct whio_impl_data whio_impl_data;
+/**
+   Empty initializer object for whio_impl_data.
+*/
+extern const whio_impl_data whio_impl_data_init;
+
+/**
+   Tries to convert an fopen()-compatible mode string to a number
+   compatible with whio_dev::iomode() and whio_stream::iomode().
+
+   Returns a positive number of mode appears to be writeable,
+   0 if it appears to be read-only, and a negative value if it
+   cannot determine the mode.
+
+   This function is intended for use with whio_dev/whio_stream
+   factories which use an fopen()-like mode string.
+*/
+short whio_mode_to_iomode( char const * mode );
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif /* WANDERINGHORSE_NET_WHIO_COMMON_H_INCLUDED */
-/* begin file whprintf.h */
-#ifndef WANDERINGHORSE_NET_WHPRINTF_H_INCLUDED
-#define WANDERINGHORSE_NET_WHPRINTF_H_INCLUDED 1
-#include <stdarg.h>
-#include <stdio.h> /* FILE handle */
-#ifdef __cplusplus
-extern "C" {
-#endif
-/** @page whprintf_page_main whprintf printf-like API
-
-   This API contains a printf-like implementation which supports
-   aribtrary data destinations.
-
-   Authors: many, probably. This code supposedly goes back to the
-   early 1980's.
-
-   Current maintainer: Stephan Beal (http://wanderinghorse.net/home/stephan)
-
-   License: Public Domain.
-
-   The primary functions of interest are whprintfv() and whprintf(), which works
-   similarly to printf() except that they take a callback function which they
-   use to send the generated output to arbitrary destinations. e.g. one can
-   supply a callback to output formatted text to a UI widget or a C++ stream
-   object.
-*/
-
-/**
-   @typedef long (*whprintf_appender)( void * arg, char const * data, long n )
-
-
-   The whprintf_appender typedef is used to provide whprintfv()
-   with a flexible output routine, so that it can be easily
-   send its output to arbitrary targets.
-
-   The policies which implementations need to follow are:
-
-   - arg is an implementation-specific pointer (may be 0) which is
-   passed to vappendf. whprintfv() doesn't know what this argument is
-   but passes it to its whprintf_appender. Typically it will be an
-   object or resource handle to which string data is pushed or output.
-
-   - The 'data' parameter is the data to append. If it contains
-   embedded nulls, this function will stop at the first one. Thus
-   it is not binary-safe.
-
-   - n is the number of bytes to read from data. If n<0 then
-   strlen(data) should be used.
-
-   - Returns, on success, the number of bytes appended (may be 0).
-
-   - Returns, on error, an implementation-specified negative number.
-   Returning a negative error code will cause whprintfv() to stop the
-   processing of that string. Note that 0 is a success value (some
-   printf format specifiers do not add anything to the output).
-*/
-typedef long (*whprintf_appender)( void * arg,
-				   char const * data,
-				   long n );
-
-
-/**
-  This function works similarly to classical printf implementations,
-  but instead of outputing somewhere specific, it uses a callback
-  function to push its output somewhere. This allows it to be used for
-  arbitrary external representations. It can be used, for example, to
-  output to an external string, a UI widget, or file handle (it can
-  also emulate printf by outputing to stdout this way).
-
- INPUTS:
-
- pfAppend : The is a whprintf_appender function which is responsible
- for accumulating the output. If pfAppend returns a negative integer
- then processing stops immediately.
-
- pfAppendArg : is ignored by this function but passed as the first
- argument to pfAppend. pfAppend will presumably use it as a data
- store for accumulating its string.
-
- fmt : This is the format string, as in the usual printf().
-
- ap : This is a pointer to a list of arguments.  Same as in
- vprintf() and friends.
-
-
- OUTPUTS:
-
- The return value is the total number of characters sent to the
- function "func", or a negative number on a pre-output error. If this
- function returns an integer greater than 1 it is in general
- impossible to know if all of the elements were output. As such
- failure can only happen if the callback function returns an error,
- and this type of error is very rare in a printf-like context, this is
- not considered to be a significant problem. (The same is true for any
- classical printf implementations, as far as i'm aware.)
-
-
- CURRENT (documented) PRINTF EXTENSIONS:
-
- %%z works like %%s, but takes a non-const (char *) and vappendf
- deletes the string (using free()) after appending it to the output.
-
- %%h (HTML) works like %s but converts certain characters (like '<' and '&' to
- their HTML escaped equivalents.
-
- %%t (URL encode) works like %%s but converts certain characters into a representation
- suitable for use in an HTTP URL. (e.g. ' ' gets converted to %%20)
-
- %%T (URL decode) does the opposite of %t - it decodes URL-encoded
- strings.
-
- %%r requires an int and renders it in "ordinal form". That is,
- the number 1 converts to "1st" and 398 converts to "398th".
-
- %%q quotes a string as required for SQL. That is, '\'' characters get
- doubled.
-
- %%Q as %%q, but includes the outer '\'' characters and null pointers
- replaced by SQL NULL.
-
- (The %%q and %%Q specifiers are options inherited from this printf
- implementation's sqlite3 genes.)
-
- These extensions may be disabled by setting certain macros when
- compiling vappendf.c (see that file for details).
-*/
-long whprintfv(
-  whprintf_appender pfAppend,          /* Accumulate results here */
-  void * pfAppendArg,                /* Passed as first arg to pfAppend. */
-  const char *fmt,                   /* Format string */
-  va_list ap                         /* arguments */
-  );
-
-/**
-   Identical to whprintfv() but takes a (...) ellipses list instead of a
-   va_list.
-*/
-long whprintf(whprintf_appender pfAppend,
-	     void * pfAppendArg,
-	     const char *fmt,
-	     ... );
-
-/**
-   Emulates fprintf() using whprintfv().
-*/
-long whprintf_file( FILE * fp, char const * fmt, ... );
-
-
-/**
-   Works like whprintfv(), but appends all output to a
-   dynamically-allocated string, expanding the string as necessary to
-   collect all formatted data. The returned null-terminated string is
-   owned by the caller and it must be cleaned up using free(). If !fmt
-   or if the expanded string evaluates to empty, null is returned, not
-   a 0-byte string.
-*/
-char * whprintfv_str( char const * fmt, va_list vargs );
-
-/**
-   Equivalent to whprintfv_str(), but takes elipsis arguments instead
-   of a va_list.
-*/
-char * whprintf_str( char const * fmt, ... );
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-#endif /* WANDERINGHORSE_NET_WHPRINTF_H_INCLUDED */
-/* begin file whio_dev.h */
+/* end file include/wh/whio/whio_common.h */
+/* begin file include/wh/whio/whio_dev.h */
+#line 8 "include/wh/whio/whio_dev.h"
 #ifndef WANDERINGHORSE_NET_WHIO_DEV_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_DEV_H_INCLUDED
+
 
 #include <stdio.h> /* FILE */
 #include <stdint.h> /* uint32_t */
 #include <stdarg.h> /* va_list */
 #include <stddef.h> /* ??? */
 #include <stdarg.h> /* va_list */
-
-#include <sys/types.h> /* off_t on Linux */
 
 /*
    This file contains declarations and documentation for the generic
@@ -733,87 +775,22 @@ struct whio_dev_api
        that function's docs for why this one takes a va_list).
     */
     int (*ioctl)( struct whio_dev * dev, int operation, va_list args );
+
+    /**
+       This function must return a positive number if dev is writable,
+       0 if it is read-only, and a negative number if the device
+       cannot report this information or if the given argument is null
+       or otherwise invalid.
+    */
+    short (*iomode)( struct whio_dev * dev );
 };
 typedef struct whio_dev_api whio_dev_api;
 
-/**
-   Implementation details for whio_dev instances. Each instance may
-   (and in practice always does) store instance-specific data
-   here. These data are for use only by the functions related to this
-   implementation and must be cleaned up via dev->api->finalize(dev).
-*/
-struct whio_dev_impl
-{
-    /**
-       For use only by concrete implementations, to store any data
-       they need for the member function implementations. This data
-       should be freed in the owning object's finalize() or close()
-       routine.
-    */
-    void * data;
 
-    /**
-       A type identifier for use solely by whio_dev implementations,
-       not client code. If the implementation uses this (it is an
-       optional component), it must be set by the whio_dev
-       initialization routine (typically a factory function).
-
-       This mechanism works by assigning some arbitrary opaque value
-       to all instances of a specific whio_dev implementation. The
-       implementation funcs can then use that to ensure that they are
-       passed the correct type. The typeID need not be public, but may
-       be so. e.g. the author of the impl may provide a non-member
-       whio_dev-related function which requires a specific type (or
-       types), and in that case the types would possibly need to be
-       known by the caller.
-    */
-    void const * typeID;
-};
-typedef struct whio_dev_impl whio_dev_impl;
-
-/** @struct whio_dev_client
-
-whio_dev_client is an abstraction for tying client-specific
-data to a whio_dev object. The data is not used by the public
-whio_dev API with one exception: when whio_dev_api::close()
-is called, the implementation must clean up this data IFF
-the dtor member is not 0. For example:
-
-  @code
-  if( my->client.dtor ) my->client.dtor( my->client.data );
-  @endcode
-   
-*/
-struct whio_dev_client
-{
-    /**
-       Arbitrary data associated with the device.
-    */
-    void * data;
-    /**
-       If this function is not 0 then whio_dev implementations
-       MUST call this function, passing the data member to it,
-       in their cleanup routines. If it is 0 then they must
-       ignore the data member.
-    */
-    void (*dtor)( void * );
-};
-typedef struct whio_dev_client whio_dev_client;
-
-/**
-   An empty whio_dev_client object for use in initialization
-   of whio_dev_client objects.
-*/
-extern const whio_dev_client whio_dev_client_init;
-
-/**
-   Static initializer for whio_dev_client objects.
-*/
-#define whio_dev_client_init_m {0/*data*/,0/*dtor*/}
 
 /**
    whio_dev is an interface for communicating with an underlying
-   random access data store via. It is modelled after the
+   random access data store. It is modelled after the
    POSIX-standard FILE API, and it "should" be able to act as a
    wrapper for any stream type for which we can implement the
    appropriate operations. The most significant limitation is that the
@@ -840,7 +817,7 @@ extern const whio_dev_client whio_dev_client_init;
    or write to go somewhere other than desired. It is in theory not
    problematic for multiple threads to share one whio_dev instance as
    long as access to the device is strictly serialized via a
-   marshaller and device positioning operations are written to take
+   marshaller and device positioning operations are implemented taking
    that into account.
 */
 typedef struct whio_dev
@@ -859,14 +836,14 @@ typedef struct whio_dev
        implementation-specific close() method should free up this
        memory.
     */
-    whio_dev_impl impl;
+    whio_impl_data impl;
 
     /**
        This data is for sole use by whio_dev clients, with one
-       important exception: see the docs for whio_dev_client for
+       important exception: see the docs for whio_client_data for
        details.
     */
-    whio_dev_client client;
+    whio_client_data client;
 } whio_dev;
 
 
@@ -979,198 +956,6 @@ whio_size_t whio_dev_writeat( whio_dev * dev, whio_size_t pos, void const * data
    at dest's current position. Returns whio_rc.OK on success.
 */
 int whio_dev_copy( whio_dev * src, whio_dev * dest );
-
-/**
-   This enum defines some on-disk sizes for the utility routines
-   which encode/decode data to/from whio_dev objects.
-*/
-enum whio_dev_encoded_sizes {
-
-/** @var whio_dev_sizeof_uint64
-
-   whio_dev_sizeof_uint64 is the length (in bytes) of an encoded uint64 value.
-   It is 9: 1 tag byte + 8 data bytes.
-
-   @see whio_dev_uint64_decode()
-   @see whio_dev_uint64_encode()
-*/
-whio_dev_sizeof_uint64 = 9,
-/** @var whio_dev_sizeof_uint32
-
-   whio_dev_sizeof_uint32 is the length (in bytes) of an encoded uint32 value.
-   It is 5: 1 tag byte + 4 data bytes.
-
-   @see whio_dev_uint32_decode()
-   @see whio_dev_uint32_encode()
-*/
-whio_dev_sizeof_uint32 = 5,
-
-/** @var whio_dev_sizeof_uint16
-
-   whio_dev_sizeof_uint16 is the length (in bytes) of an encoded uint16 value.
-   It is 3: 1 tag byte + 2 data bytes.
-
-   @see whio_dev_uint16_decode()
-   @see whio_dev_uint16_encode()
-*/
-whio_dev_sizeof_uint16 = 3,
-
-/** @var whio_dev_sizeof_cstring
-
-   whio_dev_size_cstring is the encoded length of a C-style string,
-   NOT INCLUDING the actual string bytes. i.e. this is the header
-   size.
-
-   @see whio_dev_cstring_decode()
-   @see whio_dev_cstring_encode()
-*/
-whio_dev_sizeof_cstring = whio_dev_sizeof_uint32 + 1
-};
-
-/**
-   Encodes a 32-bit integer value into 5 bytes - a leading tag/check
-   byte, then the 4 bytes of the number, in big-endian format. Returns
-   the number of bytes written, which will be equal to
-   whio_dev_sizeof_uint32 on success.
-
-   @see whio_dev_uint32_decode()
-*/
-size_t whio_dev_uint32_encode( whio_dev * dev, uint32_t i );
-
-/**
-   The converse of whio_dev_uint32_encode(), this tries to read an encoded
-   32-bit value from the current position of dev. On success it returns
-   whio_rc.OK and sets target to that value. On error it returns some
-   other value from whio_rc and does not modify tgt.
-
-   Error values include:
-
-   - whio_rc.ArgError = !dev or !tgt
-
-   - whio_rc.IOError = an error while reading the value (couldn't read enough bytes)
-
-   - whio_rc.ConsistencyError = the bytes at the current location were not encoded
-   with whio_dev_uint32_encode().
-
-   @see whio_dev_uint32_encode()
-
-*/
-int whio_dev_uint32_decode( whio_dev * dev, uint32_t * tgt );
-
-/**
-   Similar to whio_dev_uint32_encode(), with the same conventions, but
-   works on 16-bit numbers. Returns the number of bytes written, which
-   will be equal to whio_dev_sizeof_uint16 on success.
-
-   @see whio_dev_uint16_decode()
-*/
-size_t whio_dev_uint16_encode( whio_dev * dev, uint16_t i );
-
-/**
-   Similar to whio_dev_uint32_decode(), with the same conventions and
-   error codes, but works on 16-bit numbers.  On success it returns
-   whio_rc.OK and sets target to that value. On error it returns some
-   other value from whio_rc and does not modify tgt.
-
-   @see whio_dev_uint16_encode()
-*/
-
-int whio_dev_uint16_decode( whio_dev * dev, uint16_t * tgt );
-
-
-/**
-   The 64-bit variant of whio_dev_uint32_encode(). Follows the same
-   conventions as that function but handles a uint64_t value instead
-   of uint32_t.
-
-   @see whio_dev_uint16_encode()
-   @see whio_dev_uint32_encode()
-   @see whio_dev_uint64_decode()
-*/
-size_t whio_dev_uint64_encode( whio_dev * fs, uint64_t i );
-
-/**
-   The 64-bit variant of whio_dev_uint32_decode(). Follows the same
-   conventions as that function but handles a uint64_t value instead
-   of uint32_t.
-
-   @see whio_dev_uint16_decode()
-   @see whio_dev_uint32_decode()
-   @see whio_dev_uint64_encode()
-*/
-int whio_dev_uint64_decode( whio_dev * dev, uint64_t * tgt );
-
-/**
-   Uses whio_dev_uint32_encode() to write n elements from the given
-   array to dev.  Returns whio_rc.OK on success. Returns the number of
-   items written.
-
-   @see whio_dev_uint32_encode()
-*/
-size_t whio_dev_uint32_array_encode( whio_dev * dev, size_t n, uint32_t const * list );
-
-/**
-   Reads n consecutive numbers from dev, populating list (which must
-   point to at least n uint32_t objects) with the results. Returns the
-   number of items read, which will be less than n on error.
-
-   @see whio_dev_uint32_decode()
-*/
-size_t whio_dev_uint32_array_decode( whio_dev * dev, size_t n, uint32_t * list );
-
-/**
-   Encodes a C string into the device by writing a tag byte, the length of
-   the string, and then the string bytes. If n is 0 then n is equivalent to
-   strlen(s). Zero is also legal string length.
-
-   Returns the number of bytes written, which will be (n +
-   whio_dev_size_cstring) on success, 0 if !dev or !s.
-
-   @see whio_dev_cstring_decode()
-*/
-size_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n );
-
-/**
-   The converse of whio_dev_cstring_encode(), this routine tries to
-   decode a string from the current location in the device.
-
-   On success, tgt is assigned to the new (null-terminated) string
-   (allocated via calloc()) and length (if it is not null) is set to
-   the length of the string (not counting the terminating null). The
-   caller must free the string using free(). If the string has a
-   length of 0 then tgt is set to 0, not "", and no memory is
-   allocated.
-
-   Neither dev nor tgt may be 0, but length may be 0.
-
-   Returns whio_rc.OK on success.
-
-   On error, neither tgt nor length are modified and some non-OK value
-   is returned:
-
-   - whio_rc.ArgError = dev or tgt are 0.
-
-   - whio_rc.ConsistencyError = current position of the device does not
-   appear to be an encoded string written by whio_dev_cstring_encode().
-
-   - whio_rc.IOError = some form of IO error.
-
-
-   Example:
-
-@code
-char * str = 0;
-size_t len = 0;
-int rc = whio_dev_cstring_decode( myDevice, &str, &len );
-if( whio_rc.OK != rc ) ... error ...
-... use str ...
-free(str);
-@endcode
-
-
-   @see whio_dev_cstring_encode()
-*/
-int whio_dev_cstring_decode( whio_dev * dev, char ** tgt, size_t * length );
 
 /**
    Similar to printf() and friends, this writes a formatted string
@@ -1487,6 +1272,27 @@ whio_dev_ioctl_GENERAL_name = whio_dev_ioctl_mask_GENERAL | 0x02,
 */
 whio_dev_ioctl_BUFFER_size = whio_dev_ioctl_mask_BUFFER | 0x01,
 
+/**
+   Devices which store an internal memory buffer *might* want to expose it,
+   for performance/access reasons, to the client. The argument to this ioctl
+   must be a (unsigned char const **), which will be set to the start of the
+   buffer's address. However, a memory buffer might be reallocated and the
+   address invalidated, so it should not be stored.
+
+   Example:
+
+   @code
+   unsigned char const * buf = 0;
+   int rc = whio_dev_ioctl( dev, whio_dev_ioctl_BUFFER_uchar_ptr, &buf );
+   if( whio_rc.OK == rc )
+   {
+       ... Use buf. It is valid until the next write() or truncate() on dev...
+       ... It MIGHT be valid longer but it might be moved through reallocation...
+   }
+   @endcode
+*/
+whio_dev_ioctl_BUFFER_uchar_ptr = whio_dev_ioctl_mask_BUFFER | 0x02,
+
 /** @var whio_dev_ioctl_FILE_fd
 
    A FILE-based whio_dev can use this ioctl to return the underlying
@@ -1552,7 +1358,744 @@ whio_dev_ioctl_FCNTL_lock_get = whio_dev_ioctl_mask_FCNTL | 0x04
 #endif
 
 #endif /* WANDERINGHORSE_NET_WHIO_DEV_H_INCLUDED */
-/* begin file whio_devs.h */
+/* end file include/wh/whio/whio_dev.h */
+/* begin file include/wh/whio/whio_stream.h */
+#line 8 "include/wh/whio/whio_stream.h"
+#ifndef WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED
+#define WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED 1
+
+/*
+   This file contains declarations and documentation for the generic
+   whio_stream API. The specific stream implementations are declared
+   in whio_streams.h.
+*/
+
+/** @page page_whio_stream whio_stream C Stream API
+
+  The whio_stream API provides an abstract interface for sequential
+  streams which are either read-only or write-only. In practice, this
+  type of stream is often the only type an application has access to
+  for certain operations (as opposed to a full-fledged i/o device with
+  random access, as modelled by the whio_dev API). This API is similar
+  to that of whio_dev, but is somewhat smaller (because sequential
+  streams have fewer requirements than random-access streams do).
+
+   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
+
+   License: Public Domain
+
+ */
+#include <stdarg.h> /* va_list */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct whio_stream;
+/** @struct whio_stream_api
+
+   whio_stream_api defines the "member functions" of the whio_stream
+   class. It is an abstract interface for sequential streams.
+
+   @see whio_stream
+*/
+struct whio_stream_api
+{
+    /**
+       read() must read (at most) count bytes from its underlying
+       source and write them to dest. It may read more than count
+       (e.g. buffering) but must not write more than count bytes to
+       dest, nor may it actually consume more bytes than that.
+
+       It must return the number of bytes read, or 0 on EOF or error.
+    */
+    whio_size_t (*read)( struct whio_stream * self, void * dest, whio_size_t count );
+
+    /**
+       write() tries to write count bytes from src to its underlying
+       destination. Returns the number of bytes written, 0 if it cannot
+       write, or a number smaller than count on error.       
+    */
+    whio_size_t (*write)( struct whio_stream * self, void const * src, whio_size_t count );
+
+    /**
+       Close must close the stream, such that further reads or writes will
+       fail. It must also free any resources owned by the instance, but must
+       not free the self object.
+
+       The interface requires that finalize() call close(), so normally
+       client code does not need to call this. It is provided to allow
+       for stack-allocated stream objects which otherwise could not
+       be cleaned up uniformly.
+
+       If dev->client.dtor is not null then this routine must call
+       that function and pass it dev->client.data. If it is null then
+       dev->client.data must not be modified (the lack of a destructor
+       function is a signal that the client owns the object).
+
+       This function should returned false if !self or if the stream is
+       not opened.
+    */
+    bool (*close)( struct whio_stream * self );
+
+    /**
+       finalize() must call close() and then free the self object.
+       After finalize() returns, self is not a valid
+       object.
+
+       The proper way to destroy a whio_stream object is:
+
+       @code
+       theStream->api->finalize(theStream);
+       @endcode
+
+       Implementations of this function must ensure that they meet
+       that expectation.
+
+       DO NOT call this on a stack-allocated object - use close()
+       instead (which is provided primarily for stack-allocated
+       objects).
+    */
+    void (*finalize)( struct whio_stream * self );
+
+    /**
+       Flushes the write buffer (for write streams). On success it
+       must return whio_rc.OK. On error it returns an
+       implementation-defined non-zero value.
+    */
+    int (*flush)( struct whio_stream * self );
+
+    /**
+       isgood() returns whether or not self is in a valid use state.
+       It should return true on eof, as eof is not strictly an error.
+       To report EOF it should return 0 from the read()
+       implementation.
+    */
+    bool (*isgood)( struct whio_stream * self );
+
+    /**
+       This function must return a positive number if self is writable,
+       0 if it is read-only, and a negative number if the device
+       cannot report this information or if the given argument is null
+       or otherwise invalid.
+    */
+    short (*iomode)( struct whio_stream * dev );
+};
+
+typedef struct whio_stream_api whio_stream_api;
+
+/** @struct whio_stream
+
+   whio_stream is an abstract interface for sequential streams. There
+   is no default implementation - custom implementations must be
+   provided which can handle specific stream types, e.g. FILE handles,
+   an in-memory buffer, or a socket.
+
+   The proper way to create any stream instance is from a factory
+   function. The function may take any arguments necessary for
+   constructing a new stream (or connecting to an existing one). For
+   example, to create a stream for a FILE handle we might do:
+
+   @code
+   whio_stream * theStream = whio_stream_for_FILE(stdin,false);
+   @endcode
+
+   The public API of a stream object is accessed like:
+
+   @code
+   theStream->api->write( theStream, ... );
+   @endcode
+
+   (The first parameter as the equivalent of a "this" pointer,
+   so we can get at instance-specific data.)
+
+   For an explanation of why the "extra" api member exists, see the
+   documentation for the whio_dev interface, which uses this same
+   technique.
+
+   The proper way to destroy a whio_stream object is:
+
+   @code
+   theStream->api->finalize(theStream);
+   @endcode
+
+   Implementations are responsible for properly implementing the
+   finalize() member. Ownership of the underlying native stream is
+   defined by the factory function which creates the stream.
+
+   For examples of creating concrete implementations of this type,
+   see the files whio_stream_FILE.c and whio_stream_dev.c.
+*/
+struct whio_stream
+{
+    /**
+       Holds all "member functions" of this interface.  It is never
+       legal for api to be NULL, and if a device with a NULL api
+       member is used with the whio API then a segfault will certainly
+       quickly result.
+    */
+    const whio_stream_api * api;
+    /**
+       Holds instance-specific, implementation-dependent
+       information. Not for use by client code. The
+       implementation-specific close() method should free up this
+       memory.
+    */
+    whio_impl_data impl;
+    /**
+       This data is for sole use by whio_dev clients, with one
+       important exception: see the docs for whio_client_data for
+       details.
+    */
+    whio_client_data client;
+};
+/**
+   Convenience typedef.
+*/
+typedef struct whio_stream whio_stream;
+
+/**
+   Empty initialization object for whio_streams.
+*/
+extern const whio_stream whio_stream_init;
+
+/**
+   An initializer macro for use in whio_stream subclass struct
+   initializers.
+
+   The arguments correspond to the five member functions,
+   followed by the type ID (which may be set to 0 if factory
+   code will later set it to a valid value).
+*/
+#define whio_stream_init_m(Read,Write,Destroy,Flush,IsGood,TypeID)	\
+    { { Read, Write, Destroy, Flush, IsGood, { 0, TypeID } }
+
+/**
+   Equivalent to whio_dev_writefv() except that it takes a whio_stream
+   object instead of a whio_dev.
+*/
+whio_size_t whio_stream_writefv(whio_stream * stream, char const * fmt, va_list args );
+
+/**
+   Equivalent to whio_stream_writefv() except that it takes an (...) 
+   elipses list instead of a va_list.
+*/
+whio_size_t whio_stream_writef( whio_stream * stream, char const * fmt, ... );
+
+/**
+   Convenience function to read the next character from a whio_stream. If tgt
+   is not 0 then it is assigned to the value of the character.
+   Returns true if it reads a character, else false.
+
+   Example:
+
+   @code
+   char x = 0;
+   if( whio_stream_getchar( myStream, &x ) ) {  ... }
+   @endcode
+*/
+bool whio_stream_getchar( whio_stream * stream, char * tgt );
+
+/**
+   Copies all data from istr to ostr, stopping only when
+   istr->api->read() returns fewer bytes than requested. On success
+   whio_rc.OK is returned, on error some other value.  On error this
+   function unfortunately cannot report whether the failure was at the
+   read or write level.
+
+   The data is copied in chunks of some unspecified static size (hint: a few kb).
+*/
+int whio_stream_copy( whio_stream * restrict istr, whio_stream * restrict ostr );
+
+
+/**
+   Consumes stream to the first \\n character.  It appends that data, minus the newline,
+   to dest. Returns the number of characters appended to dest, or 0 at EOF or on a read
+   error.
+
+   Note that the stream is consumed and the trailing newline character
+   (if any) is effectively lost.
+*/
+//whio_size_t whio_stream_readln_membuf(whio_stream * stream, struct memblob * dest );
+
+/**
+   Functionally identical to whio_stream_readln_membuf() except that the
+   line is returned as a null-termined string which the caller must
+   clean up using free(). On error or EOF 0 is returned.
+*/
+//char * whio_stream_readln(whio_stream * stream);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+#endif // WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED
+/* end file include/wh/whio/whio_stream.h */
+/* begin file include/wh/whio/whio_encode.h */
+#line 8 "include/wh/whio/whio_encode.h"
+#if !defined(WANDERINGHORSE_NET_WHIO_ENCODE_H_INCLUDED)
+#define WANDERINGHORSE_NET_WHIO_ENCODE_H_INCLUDED 1
+/*
+  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/
+
+  License: Public Domain
+*/
+
+#include <stddef.h> /* size_t on my box */
+/** @file whio_encode.h
+
+   This file contains an API for encoding/decoding binary data to/from
+   memory buffers and i/o devices.
+*/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+   This enum defines some on-disk sizes for the utility routines
+   which encode/decode data to/from whio_dev objects.
+*/
+enum whio_sizeof_encoded {
+
+/** @var whio_sizeof_encoded_uint64
+
+   whio_sizeof_encoded_uint64 is the length (in bytes) of an encoded uint64 value.
+   It is 9: 1 tag byte + 8 data bytes.
+
+   @see whio_uint64_decode()
+   @see whio_uint64_encode()
+*/
+whio_sizeof_encoded_uint64 = 9,
+/** @var whio_sizeof_encoded_uint32
+
+   whio_sizeof_encoded_uint32 is the length (in bytes) of an encoded uint32 value.
+   It is 5: 1 tag byte + 4 data bytes.
+
+   @see whio_uint32_decode()
+   @see whio_uint32_encode()
+*/
+whio_sizeof_encoded_uint32 = 5,
+
+/** @var whio_sizeof_encoded_uint16
+
+   whio_sizeof_encoded_uint16 is the length (in bytes) of an encoded uint16 value.
+   It is 3: 1 tag byte + 2 data bytes.
+
+   @see whio_uint16_decode()
+   @see whio_uint16_encode()
+*/
+whio_sizeof_encoded_uint16 = 3,
+
+/** @var whio_sizeof_encoded_uint8
+
+   whio_sizeof_encoded_uint8 is the length (in bytes) of an encoded uint8 value.
+   It is 2: 1 tag byte + 1 data byte.
+
+   @see whio_uint8_decode()
+   @see whio_uint8_encode()
+*/
+whio_sizeof_encoded_uint8 = 2,
+
+/** @var whio_size_cstring
+
+   whio_size_cstring is the encoded length of a C-style string,
+   NOT INCLUDING the actual string bytes. i.e. this is the header
+   size.
+
+   @see whio_cstring_decode()
+   @see whio_cstring_encode()
+*/
+whio_sizeof_encoded_cstring = 1 + whio_sizeof_encoded_uint32,
+
+/**
+   The encoded size of a whio_size_t object. Its size depends
+   on the value of WHIO_SIZE_T_BITS.
+*/
+whio_sizeof_encoded_size_t =
+#if WHIO_SIZE_T_BITS == 64
+    whio_sizeof_encoded_uint64
+#elif WHIO_SIZE_T_BITS == 32
+    whio_sizeof_encoded_uint32
+#elif WHIO_SIZE_T_BITS == 16
+    whio_sizeof_encoded_uint16
+#elif WHIO_SIZE_T_BITS == 8
+    whio_sizeof_encoded_uint8
+#else
+#error "whio_size_t is not a supported type!"
+#endif
+
+};
+
+
+/**
+   Encodes a 32-bit integer value into 5 bytes - a leading tag/check
+   byte, then the 4 bytes of the number, in big-endian format. Returns
+   the number of bytes written, which will be equal to
+   whio_sizeof_encoded_uint32 on success.
+
+   dest must be valid memory at least whio_sizeof_encoded_uint32 bytes long.
+
+   @see whio_uint32_decode()
+*/
+size_t whio_uint32_encode( unsigned char * dest, uint32_t i );
+
+/**
+   The converse of whio_uint32_encode(), this tries to read an
+   encoded 32-bit value from the given memory. On success it returns
+   whio_rc.OK and sets tgt (if not null) to that value. On error it
+   returns some other value from whio_rc and does not modify tgt.
+
+   src must be valid memory at least whio_sizeof_encoded_uint32 bytes
+   long.
+
+   Error values include:
+
+   - whio_rc.ArgError = !src
+
+   - whio_rc.ConsistencyError = the bytes at the current location
+   were not encoded with whio_uint32_encode().
+
+   @see whio_uint32_encode()
+
+*/
+int whio_uint32_decode( unsigned char const * src, uint32_t * tgt );
+
+/**
+   Similar to whio_uint32_encode(), with the same conventions, but
+   works on 16-bit numbers. Returns the number of bytes written, which
+   will be equal to whio_sizeof_encoded_uint16 on success.
+
+   dest must be valid memory at least whio_sizeof_encoded_uint16
+   bytes long.
+
+   @see whio_uint16_decode()
+*/
+size_t whio_uint16_encode( unsigned char * dest, uint16_t i );
+
+/**
+   Similar to whio_uint32_decode(), with the same conventions and
+   error codes, but works on 16-bit numbers.  On success it returns
+   whio_rc.OK and sets target to that value. On error it returns some
+   other value from whio_rc and does not modify tgt.
+
+   src must be valid memory at least whio_sizeof_encoded_uint16 bytes
+   long.
+
+
+   @see whio_uint16_encode()
+*/
+
+int whio_uint16_decode( unsigned char const * src, uint16_t * tgt );
+
+/**
+   The uint8 counterpart of whio_uint16_encode(). Returns
+   whio_sizeof_encoded_uint8 on success and 0 on error. The only
+   error condition is that dest is null.
+*/
+size_t whio_uint8_encode( unsigned char * dest, uint8_t i );
+
+/**
+   The uint8 counterpart of whio_uint16_decode(). Returns whio_rc.OK
+   on success. If !src then whio_rc.ArgError is returned. If src
+   does not appear to be an encoded value then whio_rc.ConsistencyError
+   is returned.
+*/
+int whio_uint8_decode( unsigned char const * src, uint8_t * tgt );
+
+
+/**
+   Encodes v to dest. This is just a proxy for one of:
+   whio_uint8_encode(), whio_uint16_encode(), whio_uint32_encode() or
+   whio_uint64_encode(), depending on the value of WHIO_SIZE_T_BITS.
+*/
+whio_size_t whio_size_t_encode( unsigned char * dest, whio_size_t v );
+
+/**
+   Decodes v from src. This is just a proxy for one of:
+   whio_uint8_decode(), whio_uint16_decode(), whio_uint32_decode() or
+   whio_uint64_decode(), depending on the value of WHIO_SIZE_T_BITS.
+*/
+int whio_size_t_decode( unsigned char const * src, whio_size_t * v );
+
+/**
+   Encodes v to dev using whio_size_t_encode().
+*/
+whio_size_t whio_dev_size_t_encode( whio_dev * dev, whio_size_t v );
+
+/**
+   Decodes v from dev using whio_size_t_decode().
+*/
+int whio_dev_size_t_decode( whio_dev * dev, whio_size_t * v );
+
+/**
+   The 64-bit variant of whio_uint32_encode(). Follows the same
+   conventions as that function but handles a uint64_t value instead
+   of uint32_t.
+
+   @see whio_uint16_encode()
+   whio_uint32_encode()
+   whio_uint64_decode()
+*/
+size_t whio_uint64_encode( unsigned char * dest, uint64_t i );
+
+/**
+   The 64-bit variant of whio_uint32_decode(). Follows the same
+   conventions as that function but handles a uint64_t value instead
+   of uint32_t.
+
+   @see whio_uint16_decode()
+   whio_uint32_decode()
+   whio_uint64_encode()
+*/
+int whio_uint64_decode( unsigned char const * src, uint64_t * tgt );
+
+/**
+   Uses whio_uint32_encode() to write n elements from the given
+   array to dev.  Returns whio_rc.OK on success. Returns the number of
+   items written.
+
+   @see whio_uint32_encode()
+*/
+size_t whio_uint32_array_encode( unsigned char * dest, size_t n, uint32_t const * list );
+
+/**
+   Reads n consecutive numbers from src, populating list (which must
+   point to at least n uint32_t objects) with the results. Returns the
+   number of items read, which will be less than n on error.
+
+   @see whio_uint32_decode()
+*/
+size_t whio_uint32_array_decode( unsigned char const * src, size_t n, uint32_t * list );
+
+/**
+   Encodes a C string into the destination by writing a tag byte, the length of
+   the string, and then the string bytes. If n is 0 then n is equivalent to
+   strlen(s). Zero is also legal string length.
+
+   Returns the number of bytes written, which will be (n +
+   whio_sizeof_encoded_cstring) on success, 0 if !dev or !s.
+
+   dest must be at least (n + whio_sizeof_encoded_cstring) bytes long,
+   and on success exactly that many bytes will be written. The null
+   terminator (if any) is not stored and not counted in the length.
+   s may contain null characters.
+
+   @see whio_cstring_decode()
+*/
+size_t whio_cstring_encode( unsigned char * dest, char const * s, uint32_t n );
+
+/**
+   The converse of whio_cstring_encode(), this routine tries to
+   decode a string from the given source memory.
+
+   src must contain at least (whio_sizeof_encoded_cstring + N) bytes,
+   where N is the number which is encoded in the first part of the data.
+   On success exactly that many bytes will be read from src. The null
+   terminator (if any) is not stored and not counted in the length.
+   s may contain null characters.
+
+   On success, tgt is assigned to the new (null-terminated) string
+   (allocated via calloc()) and length (if it is not null) is set to
+   the length of the string (not counting the terminating null). The
+   caller must free the string using free(). If the string has a
+   length of 0 then tgt is set to 0, not "", and no memory is
+   allocated.
+
+   Neither dev nor tgt may be 0, but length may be 0.
+
+   Returns whio_rc.OK on success.
+
+   On error, neither tgt nor length are modified and some non-OK value
+   is returned:
+
+   - whio_rc.ArgError = dev or tgt are 0.
+
+   - whio_rc.ConsistencyError = src does not contain a string written
+   by whio_cstring_encode().
+
+   Example:
+
+@code
+char * str = 0;
+size_t len = 0;
+int rc = whio_cstring_decode( mySource, &str, &len );
+if( whio_rc.OK != rc ) ... error ...
+... use str ...
+free(str);
+@endcode
+
+   @see whio_cstring_encode()
+*/
+int whio_cstring_decode( unsigned char const * src, char ** tgt, size_t * length );
+
+
+/**
+   Encodes a 32-bit integer value into 5 bytes - a leading tag/check
+   byte, then the 4 bytes of the number, in big-endian format. Returns
+   the number of bytes written, which will be equal to
+   whio_dev_sizeof_uint32 on success.
+
+   @see whio_dev_uint32_decode()
+*/
+size_t whio_dev_uint32_encode( whio_dev * dev, uint32_t i );
+
+/**
+   The converse of whio_dev_uint32_encode(), this tries to read an encoded
+   32-bit value from the current position of dev. On success it returns
+   whio_rc.OK and sets target to that value. On error it returns some
+   other value from whio_rc and does not modify tgt.
+
+   Error values include:
+
+   - whio_rc.ArgError = !dev or !tgt
+
+   - whio_rc.IOError = an error while reading the value (couldn't read enough bytes)
+
+   - whio_rc.ConsistencyError = the bytes at the current location were not encoded
+   with whio_dev_uint32_encode().
+
+   @see whio_dev_uint32_encode()
+
+*/
+int whio_dev_uint32_decode( whio_dev * dev, uint32_t * tgt );
+
+/**
+   Similar to whio_dev_uint32_encode(), with the same conventions, but
+   works on 16-bit numbers. Returns the number of bytes written, which
+   will be equal to whio_dev_sizeof_uint16 on success.
+
+   @see whio_dev_uint16_decode()
+*/
+size_t whio_dev_uint16_encode( whio_dev * dev, uint16_t i );
+
+/**
+   Similar to whio_dev_uint32_decode(), with the same conventions and
+   error codes, but works on 16-bit numbers.  On success it returns
+   whio_rc.OK and sets target to that value. On error it returns some
+   other value from whio_rc and does not modify tgt.
+
+   @see whio_dev_uint16_encode()
+*/
+
+int whio_dev_uint16_decode( whio_dev * dev, uint16_t * tgt );
+
+
+/**
+   The 64-bit variant of whio_dev_uint32_encode(). Follows the same
+   conventions as that function but handles a uint64_t value instead
+   of uint32_t.
+
+   @see whio_dev_uint16_encode()
+   @see whio_dev_uint32_encode()
+   @see whio_dev_uint64_decode()
+*/
+size_t whio_dev_uint64_encode( whio_dev * fs, uint64_t i );
+
+/**
+   The 64-bit variant of whio_dev_uint32_decode(). Follows the same
+   conventions as that function but handles a uint64_t value instead
+   of uint32_t.
+
+   @see whio_dev_uint16_decode()
+   @see whio_dev_uint32_decode()
+   @see whio_dev_uint64_encode()
+*/
+int whio_dev_uint64_decode( whio_dev * dev, uint64_t * tgt );
+
+/**
+   Uses whio_dev_uint32_encode() to write n elements from the given
+   array to dev.  Returns whio_rc.OK on success. Returns the number of
+   items written.
+
+   @see whio_dev_uint32_encode()
+*/
+size_t whio_dev_uint32_array_encode( whio_dev * dev, size_t n, uint32_t const * list );
+
+/**
+   Reads n consecutive numbers from dev, populating list (which must
+   point to at least n uint32_t objects) with the results. Returns the
+   number of items read, which will be less than n on error.
+
+   @see whio_dev_uint32_decode()
+*/
+size_t whio_dev_uint32_array_decode( whio_dev * dev, size_t n, uint32_t * list );
+
+/**
+   Decodes a whio_size_t object from dev. On success whio_rc.OK is returned
+   and tgt (if not null) is modified, otherwise tgt is not modified.
+*/
+int whio_dev_size_t_decode( whio_dev * dev, whio_size_t * tgt );
+
+/**
+   Encodes i using whio_size_t_encode(). Returns
+   whio_sizeof_encoded_size_t on success.
+*/
+size_t whio_dev_size_t_encode( whio_dev * fs, whio_size_t i );
+
+/**
+   Encodes a C string into the device by writing a tag byte, the length of
+   the string, and then the string bytes. If n is 0 then n is equivalent to
+   strlen(s). Zero is also legal string length.
+
+   Returns the number of bytes written, which will be (n +
+   whio_dev_size_cstring) on success, 0 if !dev or !s.
+
+   @see whio_dev_cstring_decode()
+*/
+uint32_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n );
+
+/**
+   The converse of whio_dev_cstring_encode(), this routine tries to
+   decode a string from the current location in the device.
+
+   On success, tgt is assigned to the new (null-terminated) string
+   (allocated via calloc()) and length (if it is not null) is set to
+   the length of the string (not counting the terminating null). The
+   caller must free the string using free(). If the string has a
+   length of 0 then tgt is set to 0, not "", and no memory is
+   allocated.
+
+   Neither dev nor tgt may be 0, but length may be 0.
+
+   Returns whio_rc.OK on success.
+
+   On error, neither tgt nor length are modified and some non-OK value
+   is returned:
+
+   - whio_rc.ArgError = dev or tgt are 0.
+
+   - whio_rc.ConsistencyError = current position of the device does not
+   appear to be an encoded string written by whio_dev_cstring_encode().
+
+   - whio_rc.IOError = some form of IO error.
+
+
+   Example:
+
+@code
+char * str = 0;
+size_t len = 0;
+int rc = whio_dev_cstring_decode( myDevice, &str, &len );
+if( whio_rc.OK != rc ) ... error ...
+... use str ...
+free(str);
+@endcode
+
+
+   @see whio_dev_cstring_encode()
+*/
+int whio_dev_cstring_decode( whio_dev * dev, char ** tgt, uint32_t * length );
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+
+#endif /* WANDERINGHORSE_NET_WHIO_ENCODE_H_INCLUDED */
+/* end file include/wh/whio/whio_encode.h */
+/* begin file include/wh/whio/whio_devs.h */
+#line 8 "include/wh/whio/whio_devs.h"
 #ifndef WANDERINGHORSE_NET_WHIO_DEVS_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_DEVS_H_INCLUDED
 
@@ -1598,6 +2141,9 @@ extern "C" {
    - See the docs for whio_dev_ioctl_FILE_fd for how to fetch the
    underlying file descriptor.
 
+   - The iomode() member will always return -1 because it cannot know
+   (without trying to write) if f is writeable.
+
    @see whio_dev_for_filename()
 */
 whio_dev * whio_dev_for_FILE( FILE * f, bool takeOwnership );
@@ -1638,9 +2184,49 @@ whio_dev * whio_dev_for_FILE( FILE * f, bool takeOwnership );
    whio_dev_ioctl_FCNTL_lock_nowait, and whio_dev_ioctl_FCNTL_lock_get
    ioctls (from the whio_dev_ioctls enum).
 
+   - The iomode() member will return 0 or 1 depending on mode: If mode
+   contains "w" or "+" then it is write mode (iomode() returns a
+   positive value). If mode contains "r" and does not have a "+" then
+   iomode() returns 0.
+
+
    @see whio_dev_for_FILE()
 */
 whio_dev * whio_dev_for_filename( char const * fname, char const * mode );
+
+/**
+   Equivalent to whio_dev_for_filename(), but takes an opened file
+   descriptor and calls fdopen() on it.
+
+   PLEASE read your local man pages for fdopen() regarding caveats in
+   the setting of the mode parameter and the close()
+   handling. e.g. destroying the returned device will close it, so the
+   descriptor should not be used by client code after that. Likewise,
+   client code should not close the descriptor as long as the returned
+   device is alive. Thus ownership of the handle is effectively passed
+   to the returned object, and there is no way to relinquish it.
+
+   My local man pages say:
+
+   @code
+   The fdopen() function associates a stream with the existing file
+   descriptor, fd.  The mode of the stream (one of the values "r",
+   "r+", "w", "w+", "a", "a+") must be compatible with the mode of the
+   file descriptor.  The file position indicator of the new stream is
+   set to that belonging to fd, and the error and end-of-file
+   indicators are cleared.  Modes "w" or "w+" do not cause truncation
+   of the file.  The file descriptor is not dup’ed, and will be
+   closed when the stream created by fdopen() is closed.  The result
+   of applying fdopen() to a shared memory object is undefined.
+   @endcode
+
+
+   The returned device is identical to one returned by
+   whio_dev_for_filename(), except that the ioctl()
+   whio_dev_ioctl_GENERAL_name will return NULL (but will succeed
+   without an error).
+*/
+whio_dev * whio_dev_for_fileno( int filedescriptor, char const * mode );
 
 
 /**
@@ -1650,21 +2236,23 @@ whio_dev * whio_dev_for_filename( char const * fname, char const * mode );
    seek() operations is defined by the remaining parameters.
 
    The expFactor specifies a growth expansion value, as follows. If
-   expFactor is 1.0 or less then the buffer will never be allowed to
-   expand more than the original size. If it is greater than 1.0, then
-   it will be made expandable (that is, write() may cause it to
-   grow). Every time its size grows, it will grow by a factor of
-   expFactor. e.g. 1.5 means grow by 1.5 times (a common growth factor
-   for dynamic memory allocation). Likewise, when a buffer shrinks
-   (via truncate()), it will be reallocated if (currentSize/expFactor)
-   is greater than the number of bytes being used. For example, if a
-   buffer of 1024 bytes with an expFactor of 1.5 is being shrunk, it
-   will not release the allocated memory unless doing so will drop it
-   below ((1024/1.5)=682) bytes. A very large expFactor (more than
-   2.0) is not disallowed, but may not be good for your sanity.
+   expFactor is less than 1.0 then the buffer will never be allowed to
+   expand more than the original size. If it is equal to or greater
+   than 1.0, then it will be made expandable (that is, write() may
+   cause it to grow). Every time its size grows, it will grow by a
+   factor of expFactor (or to exactly the requested amount, for a
+   factor of 1.0). e.g. 1.5 means grow by 1.5 times (a common growth
+   factor for dynamic memory allocation). Likewise, when a buffer
+   shrinks (via truncate()), it will be reallocated if
+   (currentSize/expFactor) is greater than the number of bytes being
+   used. For example, if a buffer of 1024 bytes with an expFactor of
+   1.5 is being shrunk, it will not release the allocated memory
+   unless doing so will drop it below ((1024/1.5)=682) bytes. A very
+   large expFactor (more than 2.0) is not disallowed, but may not be
+   good for your sanity.
 
    For purposes of the following text, a membuf device with an
-   expFactor of greater than 1.0 is said to be "growable".
+   expFactor of equal to or greater than 1.0 is said to be "growable".
 
    If the buffer is growable then calling write() when we are at (or
    past) EOF will cause the buffer to try to expand to accommodate.
@@ -1723,7 +2311,12 @@ whio_dev * whio_dev_for_filename( char const * fname, char const * mode );
    - ioctl(): all of the ictl operations listed in the whio_dev_ioctls
    enum and marked with whio_dev_ioctl_mask_BUFFER are supported, as
    documented in that enum. The whio_dev_ioctl_GENERAL_size ioctl
-   is also supported (from the whio_dev_ioctls enum).
+   is also supported (from the whio_dev_ioctls enum), but it returns
+   the size to the virtual EOF, whereas whio_dev_ioctl_BUFFER_size
+   returns the allocated size of the buffer.
+
+   - iomode() always returns a positive value as long as its "this"
+   argument is valid.
 */
 whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor );
 
@@ -1763,8 +2356,16 @@ whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor );
    - write() on a read-only memory buffer returns 0, as opposed to
    whio_rc.SizeTError.
 
-   - Supports the same ioctl() arguments as described for
-   whio_dev_for_membuf().
+   - Supports the ioctl()s whio_dev_ioctl_BUFFER_size, which returns
+   the allocated size of the buffer (as passed to the factory
+   function), and whio_dev_ioctl_GENERAL_size, which returns the
+   position of the virtual EOF. It is not yet clear if we can support
+   whio_dev_ioctl_BUFFER_uchar_ptr without violating constness of
+   read-only buffers.
+
+   - iomode() always returns a positive value as long as its "this"
+   argument is valid.
+
 
    @see whio_dev_for_memmap_ro()
    @see whio_dev_for_membuf()
@@ -1772,14 +2373,44 @@ whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor );
 whio_dev * whio_dev_for_memmap_rw( void * mem, whio_size_t size );
 
 /**
-   This is equivalent to whio_dev_for_memmap_rw() except that it
+   This is nearly identical to whio_dev_for_memmap_rw() except that it
    creates a read-only device and ownership of mem is not changed by
    calling this function.
+
+   In addition to the description for whio_dev objects returned from
+   whio_dev_for_memmap_rw(), these notes apply:
+
+   - iomode() always returns 0 unless its "this" argument is invalid,
+   in which case it returns a negative value.
+
 
    @see whio_dev_for_memmap_rw()
    @see whio_dev_for_membuf()
 */
 whio_dev * whio_dev_for_memmap_ro( const void * mem, whio_size_t size );
+
+/**
+   This object is the api member used by whio_dev instances returned by
+   whio_dev_for_memmap_rw() and whio_dev_for_memmap_ro(). It is in the public
+   interface because there are some interesting use-cases where we want
+   to override parts of the API to do custom handling.
+
+   The address of this object is also used as the whio_dev::typeID value
+   for memmap devices.
+*/
+extern const whio_dev_api whio_dev_api_memmap;
+
+/**
+   This object is the api member used by whio_dev instances returned
+   by whio_dev_for_membuf() . It is in the public interface because
+   there are some interesting use-cases where we want to override
+   parts of the API to do custom handling.
+
+   The address of this object is also used as the whio_dev::typeID value
+   for membuf devices.
+*/
+extern const whio_dev_api whio_dev_api_membuf;
+
 
 /**
    Creates a new whio_dev object which acts as a proxy for a specified
@@ -1860,9 +2491,10 @@ whio_dev * whio_dev_for_memmap_ro( const void * mem, whio_size_t size );
    whio_dev_ioctls enum having the name prefix
    whio_dev_ioctl_SUBDEV_. See those docs for details.
 
+   - iomode() returns the same as the parent device does.
+
    - It is theoretically possible to nest subdevices, and it may be
    even useful in some cases, but i haven't tried it.
-
 
    Example:
 
@@ -1918,17 +2550,6 @@ whio_dev * whio_dev_subdev_create( whio_dev * parent, whio_size_t lowerBound, wh
 */
 int whio_dev_subdev_rebound( whio_dev * dev, whio_size_t lowerBound, whio_size_t upperBound );
 
-
-/**
-   A type used to represent sequential block IDs for the whio_blockdev
-   API.  It is not hard-coded because for my intended uses it will be
-   changed to other types depending on compilation options.
-
-   FIXME: make this type macro-configurable, so it can play nice with
-   whefs's configurable sizes. It'll work as-is for <=32 bit whefs.
-*/
-typedef uint32_t whio_blockdev_id;
-
 /** @struct whio_blockdev
 
    whio_blockdev is a helper intended to assist in
@@ -1942,7 +2563,7 @@ typedef uint32_t whio_blockdev_id;
 
    whio_blockdev objects are initialized via whio_blockdev_setup()
    and cleaned up (depending on how they were created) using
-   whio_blockdev_clean() or whio_blockdev_finalize().
+   whio_blockdev_cleanup() or whio_blockdev_finalize().
 
    Though this type's internals are publically viewable,
    they should not be used by client code. Use the
@@ -1973,7 +2594,7 @@ typedef struct whio_blockdev
 	   Number of blocks. MUST NOT be changed after setting up
 	   this object, and doing so may lead to errors.
 	*/
-	whio_blockdev_id count;
+	whio_size_t count;
 	/**
 	   Must be null or valid memory at least 'size' bytes
 	   long. When a block is "wiped", this memory is copied over
@@ -1987,14 +2608,14 @@ typedef struct whio_blockdev
     } blocks;
     /**
        Implementation details which the client should neither touch
-       not look at.
+       nor look at.
     */
     struct impl
     {
 	/**
 	   This object's i/o device. It is created via
 	   whio_blockdev_setup() and cleaned up by
-	   whio_blockdev_clean(). It is a whio_dev subdevice
+	   whio_blockdev_cleanup(). It is a whio_dev subdevice
 	   which fences i/o operations on the parent device
 	   to the range defined by whio_blockdev_setup().
 	*/
@@ -2058,7 +2679,7 @@ whio_blockdev * whio_blockdev_alloc();
    Returns whio_rc.OK on success, some other value on error.
 */
 int whio_blockdev_setup( whio_blockdev * bdev, whio_dev * parent_store, whio_size_t parent_offset,
-			 whio_size_t block_size, whio_blockdev_id block_count, void const * prototype );
+			 whio_size_t block_size, whio_size_t block_count, void const * prototype );
 /**
    Cleans up internal memory owned by bdev but does not free bdev
    itself. After this, bdev may be passed to whio_blockdev_setup() to
@@ -2090,7 +2711,7 @@ void whio_blockdev_free( whio_blockdev * bdev );
 /**
    Returns true if id is a valid block ID for bdev, else false.
 */
-bool whio_blockdev_in_range( whio_blockdev * bdev, whio_blockdev_id id );
+bool whio_blockdev_in_range( whio_blockdev const * bdev, whio_size_t id );
 
 /**
    Writes the contents of src to bdev at the underlying device
@@ -2099,294 +2720,29 @@ bool whio_blockdev_in_range( whio_blockdev * bdev, whio_blockdev_id id );
    null, id is not in bounds, or on an i/o error. src must be valid
    memory at least bdev->blocks.size bytes long.
 */
-int whio_blockdev_write( whio_blockdev * bdev, whio_blockdev_id id, void const * src );
+int whio_blockdev_write( whio_blockdev * bdev, whio_size_t id, void const * src );
 /**
    Reads bdev->blocks.size bytes of memory from the block with the
    given id from bdev and copies it to dest. dest must be valid memory
    at least bdev->blocks.size bytes long. Returns whio_rc.OK on success.
 */
-int whio_blockdev_read( whio_blockdev * bdev, whio_blockdev_id id, void * dest );
+int whio_blockdev_read( whio_blockdev * bdev, whio_size_t id, void * dest );
 
 /**
    If a block prototype object was passed to whio_blockdev_setuo()
    then that object is written to the given block of bdev, otherwise
    whio_rc.ArgError is returned. Returns whio_rc.OK on success.
 */
-int whio_blockdev_wipe( whio_blockdev * bdev, whio_blockdev_id id );
+int whio_blockdev_wipe( whio_blockdev * bdev, whio_size_t id );
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif /* WANDERINGHORSE_NET_WHIO_DEVS_H_INCLUDED */
-/* begin file whio_stream.h */
-#ifndef WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED
-#define WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED 1
-
-/*
-   This file contains declarations and documentation for the generic
-   whio_stream API. The specific stream implementations are declared
-   in whio_streams.h.
-*/
-
-/** @page page_whio_stream whio_stream C Stream API
-
-  The whio_stream API provides an abstract interface for sequential
-  streams which are either read-only or write-only. In practice, this
-  type of stream is often the only type an application has access to
-  for certain operations (as opposed to a full-fledged i/o device with
-  random access, as modelled by the whio_dev API). This API is similar
-  to that of whio_dev, but is somewhat smaller (because sequential
-  streams have fewer requirements than random-access streams do).
-
-   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
-
-   License: Public Domain
-
- */
-#include <stdarg.h> /* va_list */
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct whio_stream;
-/** @struct whio_stream_api
-
-   whio_stream_api defines the "member functions" of the whio_stream
-   class. It is an abstract interface for sequential streams.
-
-   @see whio_stream
-*/
-struct whio_stream_api
-{
-    /**
-       read() must read (at most) count bytes from its underlying
-       source and write them to dest. It may read more than count
-       (e.g. buffering) but must not write more than count bytes to
-       dest, nor may it actually consume more bytes than that.
-
-       It must return the number of bytes read, or 0 on EOF or error.
-    */
-    whio_size_t (*read)( struct whio_stream * self, void * dest, whio_size_t count );
-
-    /**
-       write() tries to write count bytes from src to its underlying
-       destination. Returns the number of bytes written, 0 if it cannot
-       write, or a number smaller than count on error.       
-    */
-    whio_size_t (*write)( struct whio_stream * self, void const * src, whio_size_t count );
-
-    /**
-       Close must close the stream, such that further reads or writes will
-       fail. It must also free any resources owned by the instance, but must
-       not free the self object.
-
-       The interface requires that finalize() call close(), so normally
-       client code does not need to call this. It is provided to allow
-       for stack-allocated stream objects which otherwise could not
-       be cleaned up uniformly.
-
-       This function should returned false if !self or if the stream is
-       not opened.
-    */
-    bool (*close)( struct whio_stream * self );
-
-    /**
-       finalize() must call close() and then free the self object.
-       After finalize() returns, self is not a valid
-       object.
-
-       The proper way to destroy a whio_stream object is:
-
-       @code
-       theStream->api->finalize(theStream);
-       @endcode
-
-       Implementations of this function must ensure that they meet
-       that expectation.
-
-       DO NOT call this on a stack-allocated object - use close()
-       instead (which is provided primarily for stack-allocated
-       objects).
-    */
-    void (*finalize)( struct whio_stream * self );
-
-    /**
-       Flushes the write buffer (for write streams). On success it
-       must return whio_rc.OK. On error it returns an
-       implementation-defined non-zero value.
-    */
-    int (*flush)( struct whio_stream * self );
-
-    /**
-       isgood() returns whether or not self is in a valid use state.
-       It should return true on eof, as eof is not strictly an error.
-       To report EOF it should return 0 from the read()
-       implementation.
-    */
-    bool (*isgood)( struct whio_stream * self );
-};
-
-typedef struct whio_stream_api whio_stream_api;
-
-/**
-   Hold implementation details for whio_stream instances. These are
-   for use only by the functions related to a specific implementation
-   of whio_stream implementation, and not client use.
-*/
-struct whio_stream_impl
-{
-    /**
-       data is SOLELY for use by concrete implementations of
-       whio_stream.
-       
-       data can be used to store private data required by the
-       implementation functions. Each instance may have its own
-       information (which should be cleaned up via the finalize()
-       member function, assuming the stream owns the data).
-    */
-    void * data;
-
-    /**
-       A type identifier for use solely by whio_stream implementations,
-       not client code. If the implementation uses this (it is an
-       optional component), it must be set by the whio_stream
-       initialization routine (typically a factory function).
-
-       This mechanism works by assigning some arbitrary opaque
-       value (unique per class) to all instances of a specific
-       whio_stream implementation. The implementation funcs can
-       then use that to ensure that they are passed the correct
-       type. The typeID need not be public, but may be so. e.g.
-       the author of the impl may provide a non-member
-       whio_stream-related function which requires a specific type
-       (or types), and in that case the typeID would possibly need
-       to be known by the caller.
-    */
-    void const * typeID;
-};
-typedef struct whio_stream_impl whio_stream_impl;
-
-
-/** @struct whio_stream
-
-   whio_stream is an abstract interface for sequential streams. There
-   is no default implementation - custom implementations must be
-   provided which can handle specific stream types, e.g. FILE handles,
-   an in-memory buffer, or a socket.
-
-   The proper way to create any stream instance is from a factory
-   function. The function may take any arguments necessary for
-   constructing a new stream (or connecting to an existing one). For
-   example, to create a stream for a FILE handle we might do:
-
-   @code
-   whio_stream * theStream = whio_stream_for_FILE(stdin,false);
-   @endcode
-
-   The public API of a stream object is accessed like:
-
-   @code
-   theStream->api->write( theStream, ... );
-   @endcode
-
-   (The first parameter as the equivalent of a "this" pointer,
-   so we can get at instance-specific data.)
-
-   For an explanation of why the "extra" api member exists, see the
-   documentation for the whio_dev interface, which uses this same
-   technique.
-
-   The proper way to destroy a whio_stream object is:
-
-   @code
-   theStream->api->finalize(theStream);
-   @endcode
-
-   Implementations are responsible for properly implementing the
-   finalize() member. Ownership of the underlying native stream is
-   defined by the factory function which creates the stream.
-
-   For examples of creating concrete implementations of this type,
-   see the files whio_stream_FILE.c and whio_stream_dev.c.
-*/
-struct whio_stream
-{
-    const whio_stream_api * api;
-    whio_stream_impl impl;
-};
-/**
-   Convenience typedef.
-*/
-typedef struct whio_stream whio_stream;
-
-/**
-   Empty initialization object for whio_streams.
-*/
-extern const whio_stream whio_stream_init;
-
-/**
-   An initializer macro for use in whio_stream subclass struct
-   initializers.
-
-   The arguments correspond to the five member functions,
-   followed by the type ID (which may be set to 0 if factory
-   code will later set it to a valid value).
-*/
-#define whio_stream_init_m(Read,Write,Destroy,Flush,IsGood,TypeID)	\
-    { { Read, Write, Destroy, Flush, IsGood, { 0, TypeID } }
-
-/**
-   Equivalent to whio_dev_writefv() except that it takes a whio_stream
-   object instead of a whio_dev.
-*/
-whio_size_t whio_stream_writefv(whio_stream * stream, char const * fmt, va_list args );
-
-/**
-   Equivalent to whio_stream_writefv() except that it takes an (...) 
-   elipses list instead of a va_list.
-*/
-whio_size_t whio_stream_writef( whio_stream * stream, char const * fmt, ... );
-
-/**
-   Convenience function to read the next character from a whio_stream. If tgt
-   is not 0 then it is assigned to the value of the character.
-   Returns true if it reads a character, else false.
-
-   Example:
-
-   @code
-   char x = 0;
-   if( whio_stream_getchar( myStream, &x ) ) {  ... }
-   @endcode
-*/
-bool whio_stream_getchar( whio_stream * stream, char * tgt );
-
-
-/**
-   Consumes stream to the first \\n character.  It appends that data, minus the newline,
-   to dest. Returns the number of characters appended to dest, or 0 at EOF or on a read
-   error.
-
-   Note that the stream is consumed and the trailing newline character
-   (if any) is effectively lost.
-*/
-//whio_size_t whio_stream_readln_membuf(whio_stream * stream, struct memblob * dest );
-
-/**
-   Functionally identical to whio_stream_readln_membuf() except that the
-   line is returned as a null-termined string which the caller must
-   clean up using free(). On error or EOF 0 is returned.
-*/
-//char * whio_stream_readln(whio_stream * stream);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-
-#endif // WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED
-/* begin file whio_streams.h */
+/* end file include/wh/whio/whio_devs.h */
+/* begin file include/wh/whio/whio_streams.h */
+#line 8 "include/wh/whio/whio_streams.h"
 #ifndef WANDERINGHORSE_NET_WHIO_STREAMS_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_STREAMS_H_INCLUDED 1
 /*
@@ -2488,7 +2844,9 @@ whio_stream * whio_stream_for_fileno( int fileno, bool writeMode );
 #endif
 
 #endif // WANDERINGHORSE_NET_WHIO_STREAMS_H_INCLUDED
-/* begin file whio_zlib.h */
+/* end file include/wh/whio/whio_streams.h */
+/* begin file include/wh/whio/whio_zlib.h */
+#line 8 "include/wh/whio/whio_zlib.h"
 #if !defined(WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED)
 #define WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED 1
 
@@ -2536,7 +2894,7 @@ extern "C" {
    @see whio_stream_gunzip()
    @see whio_stream_for_dev()
  */
-int whio_stream_gzip( whio_stream * src, whio_stream * dest, int level );
+int whio_stream_gzip( whio_stream * restrict src, whio_stream * restrict dest, int level );
 
 /**
    Assumes src contains gzipped data and decompresses it to dest.
@@ -2557,7 +2915,7 @@ int whio_stream_gzip( whio_stream * src, whio_stream * dest, int level );
    @see whio_stream_gzip()
    @see whio_stream_for_dev()
 */
-int whio_stream_gunzip( whio_stream * src, whio_stream * dest );
+int whio_stream_gunzip( whio_stream * restrict src, whio_stream * restrict dest );
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -2565,84 +2923,179 @@ int whio_stream_gunzip( whio_stream * src, whio_stream * dest );
 
 
 #endif /* WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED */
-/* begin file whio_zlib.h */
-#if !defined(WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED)
-#define WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED 1
-
-#if ! defined(WHIO_ENABLE_ZLIB)
-#  define WHIO_ENABLE_ZLIB 0
-#endif
-
+/* end file include/wh/whio/whio_zlib.h */
+/* begin file include/wh/whprintf.h */
+#line 8 "include/wh/whprintf.h"
+#ifndef WANDERINGHORSE_NET_WHPRINTF_H_INCLUDED
+#define WANDERINGHORSE_NET_WHPRINTF_H_INCLUDED 1
+#include <stdarg.h>
+#include <stdio.h> /* FILE handle */
 #ifdef __cplusplus
 extern "C" {
 #endif
+/** @page whprintf_page_main whprintf printf-like API
 
-/**
-   Compresses src to dest using gzip compression of the level specified
-   by the level parameter (3 is an often-used choice). zlib provides
-   several constants for this value:
+   This API contains a printf-like implementation which supports
+   aribtrary data destinations.
 
-   Z_NO_COMPRESSION, Z_BEST_SPEED, Z_BEST_COMPRESSION, and
-   Z_DEFAULT_COMPRESSION.
+   Authors: many, probably. This code supposedly goes back to the
+   early 1980's.
 
-   If level is not in the bounds defined by those constants, it will
-   be adjusted up (if too low) or down (if too high) to the minimum or
-   maximum compression level.
+   Current maintainer: Stephan Beal (http://wanderinghorse.net/home/stephan)
 
-   src must be a readable stream and dest must be writeable. They may
-   not be the same object.
+   License: Public Domain.
 
-   If whio is not compiled with WHIO_ENABLE_ZLIB defined to a true value,
-   this function does nothing and returned whio_rc.UnsupportedError.
-
-   Returns whio_rc.OK on success, else some error value from one of
-   zlib routines (a non-zero error code defined in zlib.h). If
-   !src or !dest or (src==dest) then whio_rc.ArgError is returned.
-
-   The compressed data is decompressable by gzip-compatible tools.
-
-   Note that because a whio_stream instance can be created for any
-   whio_dev device (see whio_stream_for_dev()), it is possible to use
-   this routine to compress any i/o device to another.  However,
-   random access with transparent compression/decompression is not
-   supported (very few people have every managed to code that).
-
-   On error, any number of bytes may or may not have been read from src
-   or written to dest.
-
-   @see whio_stream_gunzip()
-   @see whio_stream_for_dev()
- */
-int whio_stream_gzip( whio_stream * src, whio_stream * dest, int level );
-
-/**
-   Assumes src contains gzipped data and decompresses it to dest.
-
-   src must be a readable stream and dest must be writeable. They may
-   not be the same object.
-
-   If whio is not compiled with WHIO_ENABLE_ZLIB defined to a true value,
-   this function does nothing and returned whio_rc.UnsupportedError.
-
-   Returns whio_rc.OK on success, else some error value from one of
-   zlib routines (a non-zero error code defined in zlib.h). If !src or
-   !dest or (src==dest) then whio_rc.ArgError is returned.
-
-   On error, any number of bytes may or may not have been read from src
-   or written to dest.
-
-   @see whio_stream_gzip()
-   @see whio_stream_for_dev()
+   The primary functions of interest are whprintfv() and whprintf(), which works
+   similarly to printf() except that they take a callback function which they
+   use to send the generated output to arbitrary destinations. e.g. one can
+   supply a callback to output formatted text to a UI widget or a C++ stream
+   object.
 */
-int whio_stream_gunzip( whio_stream * src, whio_stream * dest );
+
+/**
+   @typedef long (*whprintf_appender)( void * arg, char const * data, long n )
+
+
+   The whprintf_appender typedef is used to provide whprintfv()
+   with a flexible output routine, so that it can be easily
+   send its output to arbitrary targets.
+
+   The policies which implementations need to follow are:
+
+   - arg is an implementation-specific pointer (may be 0) which is
+   passed to whprintf(). whprintfv() doesn't know what this argument is
+   but passes it to its whprintf_appender. Typically it will be an
+   object or resource handle to which string data is pushed or output.
+
+   - The 'data' parameter is the data to append. If it contains
+   embedded nulls, this function will stop at the first one. Thus
+   it is not binary-safe.
+
+   - n is the number of bytes to read from data. If n<0 then
+   strlen(data) should be used.
+
+   - Returns, on success, the number of bytes appended (may be 0).
+
+   - Returns, on error, an implementation-specified negative number.
+   Returning a negative error code will cause whprintfv() to stop the
+   processing of that string. Note that 0 is a success value (some
+   printf format specifiers do not add anything to the output).
+*/
+typedef long (*whprintf_appender)( void * arg,
+				   char const * data,
+				   long n );
+
+
+/**
+  This function works similarly to classical printf implementations,
+  but instead of outputing somewhere specific, it uses a callback
+  function to push its output somewhere. This allows it to be used for
+  arbitrary external representations. It can be used, for example, to
+  output to an external string, a UI widget, or file handle (it can
+  also emulate printf by outputing to stdout this way).
+
+ INPUTS:
+
+ pfAppend : The is a whprintf_appender function which is responsible
+ for accumulating the output. If pfAppend returns a negative integer
+ then processing stops immediately.
+
+ pfAppendArg : is ignored by this function but passed as the first
+ argument to pfAppend. pfAppend will presumably use it as a data
+ store for accumulating its string.
+
+ fmt : This is the format string, as in the usual printf().
+
+ ap : This is a pointer to a list of arguments.  Same as in
+ vprintf() and friends.
+
+
+ OUTPUTS:
+
+ The return value is the total number of characters sent to the
+ function "func", or a negative number on a pre-output error. If this
+ function returns an integer greater than 1 it is in general
+ impossible to know if all of the elements were output. As such
+ failure can only happen if the callback function returns an error,
+ and this type of error is very rare in a printf-like context, this is
+ not considered to be a significant problem. (The same is true for any
+ classical printf implementations, as far as i'm aware.)
+
+
+ CURRENT (documented) PRINTF EXTENSIONS:
+
+ %%z works like %%s, but takes a non-const (char *) and whprintf()
+ deletes the string (using free()) after appending it to the output.
+
+ %%h (HTML) works like %s but converts certain characters (like '<' and '&' to
+ their HTML escaped equivalents.
+
+ %%t (URL encode) works like %%s but converts certain characters into a representation
+ suitable for use in an HTTP URL. (e.g. ' ' gets converted to %%20)
+
+ %%T (URL decode) does the opposite of %t - it decodes URL-encoded
+ strings.
+
+ %%r requires an int and renders it in "ordinal form". That is,
+ the number 1 converts to "1st" and 398 converts to "398th".
+
+ %%q quotes a string as required for SQL. That is, '\'' characters get
+ doubled.
+
+ %%Q as %%q, but includes the outer '\'' characters and null pointers
+ replaced by SQL NULL.
+
+ (The %%q and %%Q specifiers are options inherited from this printf
+ implementation's sqlite3 genes.)
+
+ These extensions may be disabled by setting certain macros when
+ compiling whprintf.c (see that file for details).
+*/
+long whprintfv(
+  whprintf_appender pfAppend,          /* Accumulate results here */
+  void * pfAppendArg,                /* Passed as first arg to pfAppend. */
+  const char *fmt,                   /* Format string */
+  va_list ap                         /* arguments */
+  );
+
+/**
+   Identical to whprintfv() but takes a (...) ellipses list instead of a
+   va_list.
+*/
+long whprintf(whprintf_appender pfAppend,
+	     void * pfAppendArg,
+	     const char *fmt,
+	     ... );
+
+/**
+   Emulates fprintf() using whprintfv().
+*/
+long whprintf_file( FILE * fp, char const * fmt, ... );
+
+
+/**
+   Works like whprintfv(), but appends all output to a
+   dynamically-allocated string, expanding the string as necessary to
+   collect all formatted data. The returned null-terminated string is
+   owned by the caller and it must be cleaned up using free(). If !fmt
+   or if the expanded string evaluates to empty, null is returned, not
+   a 0-byte string.
+*/
+char * whprintfv_str( char const * fmt, va_list vargs );
+
+/**
+   Equivalent to whprintfv_str(), but takes elipsis arguments instead
+   of a va_list.
+*/
+char * whprintf_str( char const * fmt, ... );
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
-
-#endif /* WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED */
-/* begin file whglob.h */
+#endif /* WANDERINGHORSE_NET_WHPRINTF_H_INCLUDED */
+/* end file include/wh/whprintf.h */
+/* begin file include/wh/whglob.h */
+#line 8 "include/wh/whglob.h"
 #if !defined(WANDERINGHORSE_NET_WHGLOB_H_INCLUDED)
 #define WANDERINGHORSE_NET_WHGLOB_H_INCLUDED 1
 /** @page whglob_page_main whglob Globbing Functions
@@ -2714,7 +3167,9 @@ extern "C" {
 
 
 #endif
-/* begin file whbits.h */
+/* end file include/wh/whglob.h */
+/* begin file src/whbits.h */
+#line 8 "src/whbits.h"
 #ifndef WANDERINGHORSE_NET_WHBITS_H_INCLUDED
 #define WANDERINGHORSE_NET_WHBITS_H_INCLUDED 1
 
@@ -2728,14 +3183,21 @@ typedef unsigned int whbits_count_t;
 */
 typedef struct whbits
 {
+    /** Number of bytes in use by the bitset. */
     whbits_count_t sz_bytes;
+    /** Number of bits in the bitset. */
     whbits_count_t sz_bits;
+    /**
+       Number of bytes allocated.
+    */
+    whbits_count_t sz_alloc;
+    /** the bytes of the bitset. */
     unsigned char * bytes;
 } whbits;
 /**
    Static initializer for whbits objects.
 */
-#define WHBITS_INIT { 0, 0, 0 }
+#define WHBITS_INIT { 0, 0, 0, 0 }
 /**
    Empty initializer for whbits objects.
 */
@@ -2745,8 +3207,16 @@ extern const whbits whbits_init_obj;
    Sets up a new bitset array for the given number of bits. Each byte
    of the array will get the value initialState.
 
+   tgt must be a valid object. If it has not previously been used as a
+   parameter to this function then it must have been initialized by
+   copying the whbits_init_obj over it (or explicitly setting all values
+   to zero). Passing in an object with uninitialized values will lead to
+   Grief.
+
    If tgt contains any bytes and the new bitCount is smaller than the old one,
-   it re-uses the old memory.
+   it re-uses the old memory. If tgt->bytes is not null but is not large
+   enough to hold the new bits, it is expanded and only the new bytes
+   are set to the initialState.
 
    On success, 0 is returned and tgt is populated with a bitset
    (potentially allocated using malloc()). The object may be freely
@@ -2757,7 +3227,7 @@ int whbits_init( whbits * tgt, whbits_count_t bitCount, unsigned char initialSta
 
 /**
    Frees any memory associated with b and clears b's state, but does
-   not free() b.
+   not free() b (which may have been stack-allocated).
 */
 void whbits_free_bits( whbits * b );
 
@@ -2790,7 +3260,9 @@ char whbits_get( whbits const * b, whbits_count_t bitNum );
 
 
 #endif /* WANDERINGHORSE_NET_WHBITS_H_INCLUDED */
-/* begin file whdbg.h */
+/* end file src/whbits.h */
+/* begin file src/whdbg.h */
+#line 8 "src/whdbg.h"
 #ifndef WANDERINGHORSE_NET_WHDBG_H_INCLUDED
 #define WANDERINGHORSE_NET_WHDBG_H_INCLUDED 1
 
@@ -2809,7 +3281,7 @@ whdbg_set_stream( stderr );
 whdbg_set_flags( whdbg_get_flags() | WDBG_INFO );
 
 // ... in an arbitrary function ...
-int x = 4;
+int x = 42;
 WHDBG(WHDBG_INFO)("x=%d", x);
 @endcode
 
@@ -2850,13 +3322,21 @@ extern "C" {
    compiler out altogether.
 */
 #if !defined(WHDBG_CONFIG_ENABLE)
+#if !defined(NDEBUG)
 #  define WHDBG_CONFIG_ENABLE 1
+#else
+#  define WHDBG_CONFIG_ENABLE 0
+#endif
 #endif
 
 /** @enum whdbg_flags
 
 The whdbg_flags enum contains a bitmask of logging/debugging flags,
 for use with whdbg() and friends.
+
+
+FIXME: clearly define message categories and IDs. The current system
+is not at all extendible from client code.
 */
 enum whdbg_flags {
 
@@ -2874,17 +3354,12 @@ WHDBG_ERROR = 0x10000000,
    Log allocation events. This is inherently
    dangerous, as logging can cause an alloc.
 */
-WHDBG_ALLOC_ERR = WHDBG_ERROR | 0x02,
+WHDBG_ALLOC_ERR = WHDBG_ERROR | 0x01,
 
 /**
    Log error messages.
 */
-WHDBG_IO_ERROR = WHDBG_ERROR | 0x0001,
-
-/**
-   FIXME markers
- */
-WHDBG_FIXME =  WHDBG_ERROR | 0x02,
+WHDBG_IO_ERROR = WHDBG_ERROR | 0x02,
 
 /**
    General warning mask.
@@ -2893,6 +3368,7 @@ WHDBG_WARNING = 0x20000000,
 WHDBG_NYI =    WHDBG_WARNING | 0x01,
 
 WHDBG_INFO = 0x40000000,
+
 /**
    "For your information..." or "To whom it may concern..."
 */
@@ -2907,6 +3383,11 @@ WHDBG_ALLOC = WHDBG_INFO | 0x0001,
    Log deallocation events.
 */
 WHDBG_DEALLOC =  WHDBG_INFO | 0x0002,
+
+/**
+   FIXME markers
+ */
+WHDBG_FIXME =  WHDBG_INFO | 0x04,
 
 /**
    For apps with a "verbose" flag.
@@ -2926,12 +3407,12 @@ WHDBG_MEMORY = WHDBG_DEALLOC | WHDBG_ALLOC_ERR | WHDBG_ALLOC,
    This range is reserved for client application use, as are
    variables/enum entries named WHDBG_APP_xxx.
 */
-WHDBG_APP = 0x7F000000,
+WHDBG_LAST = 0x01000000,
 
 /**
    Default debug level.
 */
-WHDBG_DEFAULT = WHDBG_WARNING | WHDBG_ERROR | WHDBG_APP,
+WHDBG_DEFAULT = WHDBG_WARNING | WHDBG_ERROR,
 
 /**
    Log anything except WHDBG_NEVER.
@@ -3116,7 +3597,9 @@ void whdbg( unsigned int condition,
 #endif
 
 #endif /* WANDERINGHORSE_NET_WHDBG_H_INCLUDED */
-/* begin file whefs_config.h */
+/* end file src/whdbg.h */
+/* begin file include/wh/whefs/whefs_config.h */
+#line 8 "include/wh/whefs/whefs_config.h"
 #if !defined(WANDERINGHORSE_NET_WHEFS_CONFIG_H_INCLUDED)
 #define WANDERINGHORSE_NET_WHEFS_CONFIG_H_INCLUDED
 
@@ -3129,6 +3612,12 @@ void whdbg( unsigned int condition,
   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
 
   License: Public Domain
+
+  Maintenance reminders:
+
+  - This file should be included BEFORE any system includes, if possible, because
+  it sets up some #defines which are used to enable, e.g. specific POSIX APIs.
+
 */
 
 #if defined(WHEFS_ID_TYPE_BITS)
@@ -3143,6 +3632,8 @@ void whdbg( unsigned int condition,
 */
 #  define __STDC_FORMAT_MACROS 1
 #endif
+#include <stdint.h> /* standardized fixed-size integer types */
+#include <inttypes.h> /* printf/scanf format specifiers. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -3152,7 +3643,7 @@ extern "C" {
 
    whefs_id_type is the numeric type used to store block and inode IDs
    in a VFS, as well as any count/size values which refer to such
-   items.. The library supports building with different sizes of this
+   items. The library supports building with different sizes of this
    type, largely as a way to conserve memory, and this typedef helps
    support that. See the documentation for WHEFS_ID_TYPE_BITS for full
    details.
@@ -3191,7 +3682,7 @@ realistic limit.
 In theory, 64-bit IDs are also okay, but (A) for this particular use
 case that is way overkill, (B) it's a huge waste of memory (8 bytes
 where we realistically don't need more than 2), and (C) the filesystem
-model itself is not scalable to that level of use (e.g. millions of
+model itself is not scalable to that level of use (e.g. billions of
 files). inode/block IDs are always sequential, starting at 1, and by
 the time we hit that number of blocks or inodes, the computer's memory
 would almost certainly be filled.
@@ -3200,14 +3691,21 @@ i would strongly prefer to have WHEFS_ID_TYPE_BITS as an enum constant
 instead of a macro value, but we unfortunately need some conditional
 compilation based on the bit count.
 
-If this constant is changed, all whefs client code which depends on
-it must be recompiled and all filesystems written using the old value
+If this constant is changed, all whefs client code which depends on it
+must be recompiled and all filesystems written using the old value
 will not be readable. That is the reason it is not set up with an
 ifndef guard, so clients cannot blithely change it. If you are copying
-whefs directly into another project, feel free to change the value
-all you want, but be aware of the compatibility ramifications. Doing so
-may also screw up any printf() (or similar) commands which have a hard-coded
-format specifier which no longer matches after changing this value.
+whefs directly into another project, feel free to change the value all
+you want, but be aware of the compatibility ramifications. Doing so
+may also screw up any printf() (or similar) commands which have a
+hard-coded format specifier which no longer matches after changing
+this value. To work around this, the constant WHEFS_ID_TYPE_PFMT gets
+defined (dependent on the value of WHEFS_ID_TYPE_BITS) and can be used
+in place of hard-coding the printf format specifier.
+
+    @see WHEFS_ID_TYPE_PFMT
+    @see WHEFS_ID_TYPE_SFMT
+
 */
 #define WHEFS_ID_TYPE_BITS 16
 
@@ -3220,6 +3718,7 @@ format specifier which no longer matches after changing this value.
     WHEFS_ID_TYPE_BITS.  The system's inttypes.h will select a
     platform/bitness-dependent value.
 
+    @see WHEFS_ID_TYPE_BITS
     @see WHEFS_ID_TYPE_SFMT
 */
 
@@ -3227,6 +3726,7 @@ format specifier which no longer matches after changing this value.
 
     WHEFS_ID_TYPE_SFMT is the scanf counterpart of WHEFS_ID_TYPE_PFMT.
 
+    @see WHEFS_ID_TYPE_BITS
     @see WHEFS_ID_TYPE_PFMT
 */
 
@@ -3253,7 +3753,7 @@ format specifier which no longer matches after changing this value.
 
     @see WHEFS_MAGIC_STRING_PREFIX WHEFS_MAGIC_STRING
 */
-static const uint32_t whefs_fs_magic_bytes[] = { 2009, 1, 18, WHEFS_ID_TYPE_BITS, 0 };
+static const uint32_t whefs_fs_magic_bytes[] = { 2009, 6, 9, WHEFS_ID_TYPE_BITS, 0 };
 /** @def WHEFS_MAGIC_STRING_PREFIX
 
     WHEFS_MAGIC_STRING_PREFIX is an internal helper macro to avoid
@@ -3264,7 +3764,7 @@ static const uint32_t whefs_fs_magic_bytes[] = { 2009, 1, 18, WHEFS_ID_TYPE_BITS
 
     @see whefs_fs_magic_bytes WHEFS_MAGIC_STRING
 */
-#define WHEFS_MAGIC_STRING_PREFIX "whefs version 20090118 with "
+#define WHEFS_MAGIC_STRING_PREFIX "whefs version 20090609 with "
 
 #if WHEFS_ID_TYPE_BITS == 8
 /* for very, very limited filesystems. There's lots of room for overflows here! */
@@ -3292,6 +3792,10 @@ static const uint32_t whefs_fs_magic_bytes[] = { 2009, 1, 18, WHEFS_ID_TYPE_BITS
 #  error "WHEFS_ID_TYPE_BITS must be one of: 8, 16, 32, 64"
 #endif
 
+#if WHEFS_ID_TYPE_BITS > WHIO_SIZE_T_BITS
+#  error "WHEFS_ID_TYPE_BITS must be <= WHIO_SIZE_T_BITS"
+#endif
+
 /** @def WHEFS_MAGIC_STRING
 
    The default magic cookie string used by the library.
@@ -3305,37 +3809,25 @@ static const uint32_t whefs_fs_magic_bytes[] = { 2009, 1, 18, WHEFS_ID_TYPE_BITS
 enum whefs_constants {
 /**
    WHEFS_MAX_FILENAME_LENGTH defines the hard maximum string length
-   for filenames in a vfs, not including the null terminator. This
-   does not include the names of any parent directories.
+   for filenames in an EFS, not including the null terminator. Since
+   the filesystem namespace is flat, this DOES include the names of
+   any parent "directories" (which aren't really directories, as far
+   as the EFS is concerned).
 
    whefs_fs_options::filename_length must not be greater than this
    number.
 
-   This value plays a big part in the in-memory size of a vfs inode,
-   and should be kept to a reasonable length. While 1024 sounds
+   This value plays a big part in the in-memory size of certain
+   internals, and should be kept to a reasonable length. While 1024 sounds
    reasonable, setting it that high will drastically increase the
    memory costs of certain operations.
  */
 WHEFS_MAX_FILENAME_LENGTH = 128,
 
 /**
-   On-disk encoded size of whefs_id_type objects. This will always be
-   one of 2, 4, or 8, depending on the size of whefs_id_type, plus 1
-   tag byte used by the encoding/decoding bits for consistency
-   checking.
-
-   Maintenance reminder: we use (WHEFS_ID_TYPE_BITS/8) here instead of
-   sizeof(whefs_id_type), because we need a specific guaranteed size
-   for each supported value of WHEFS_ID_TYPE_BITS, and sizeof()
-   doesn't give us that.
+   Newer-style name for WHEFS_MAX_FILENAME_LENGTH.
 */
-whefs_sizeof_encoded_id_type = (WHEFS_ID_TYPE_BITS/8+1),
-
-/**
-   The maximum value of a whefs_id_type object, used for
-   overflow checks.
-*/
-whefs_id_type_max_val = (whefs_id_type)-1,
+whefs_sizeof_max_filename = WHEFS_MAX_FILENAME_LENGTH,
 
 /**
    The length of the whefs_fs_magic_bytes array, not including the
@@ -3346,9 +3838,9 @@ whefs_fs_magic_bytes_len = (sizeof(whefs_fs_magic_bytes)
 
 };
 
-/** @def WHIO_FS_USE_FCNTL
+/** @def WHEFS_CONFIG_ENABLE_FCNTL
 
-If WHIO_FS_USE_FCNTL is true then some features for doing
+If WHEFS_CONFIG_ENABLE_FCNTL is true then some features for doing
 POSIX-style fcntl() advisory locks are added. The locking
 code is far from complete and should not be relied upon
 for concurrency purposes.
@@ -3358,43 +3850,134 @@ base VFSes, not memory-based ones. When it is opened the VFS tries
 to determine if it is using a file and if it is then locks will be
 used for certain operations.
 
-Maintenance reminder: if this is true, add, be sure to include
-fcntl.h in the files which need it.
-
+Maintenance reminder: if this is true be sure to include fcntl.h in
+the files which need it.
 */
-#define WHIO_FS_USE_FCNTL 1
+#if !defined(WHEFS_CONFIG_ENABLE_FCNTL)
+#define WHEFS_CONFIG_ENABLE_FCNTL 0
+#endif
 
-/** @def WHIO_ENABLE_THREADS
+/** @def WHEFS_CONFIG_ENABLE_THREADS
 
-WHIO_ENABLE_THREADS doesn't yet do anything. It is reserved for
+WHEFS_CONFIG_ENABLE_THREADS doesn't yet do anything. It is reserved for
 when some form of thread locking is enabled.
 
 */
-#if !defined(WHIO_ENABLE_THREADS)
-#  define WHIO_ENABLE_THREADS 0
+#if !defined(WHEFS_CONFIG_ENABLE_THREADS)
+#  define WHEFS_CONFIG_ENABLE_THREADS 0
+#endif
+
+/** @def WHEFS_MACROIZE_SMALL_CHECKS
+
+   WHEFS_MACROIZE_SMALL_CHECKS tells the API to swap out certain check
+   functions with macros. Profiling has shown, e.g. whefs_block_id_is_valid()
+   and whefs_inode_id_is_valid() to take about 1% of the runtime in some tests.
+   By converting them to macros we cut out a lot of function calls, or we can
+   remove them altogether if we ensure that consistency checks are put in all
+   entryways.
+*/
+#if defined(DOXYGEN)
+  /* we do this so that doxygen can pick up the non-macroized funcs. */
+#  define WHEFS_MACROIZE_SMALL_CHECKS 0
+#else
+#  define WHEFS_MACROIZE_SMALL_CHECKS 1
+#endif
+
+/** @def WHEFS_CONFIG_ENABLE_STRINGS_HASH_CACHE
+
+If WHEFS_CONFIG_ENABLE_STRINGS_HASH_CACHE is set to false then the
+code for caching the hashcode of inode names is disabled by
+default. The cache costs a small amount (about 8 bytes/cached inode
+entry, more if WHEFS_ID_TYPE_BITS is bigger than 16) but can
+*drastically* speed up searches for inode by name if the operation is
+done more than once (the initial load populates the cache).
+
+The state of this cache can be changed at runtime using
+whefs_fs_set_inode_hash_cache().
+*/
+#if !defined(WHEFS_CONFIG_ENABLE_STRINGS_HASH_CACHE)
+#define WHEFS_CONFIG_ENABLE_STRINGS_HASH_CACHE 1
+#endif
+
+/** @def WHEFS_CONFIG_ENABLE_STATIC_MALLOC
+
+    See WHIO_CONFIG_ENABLE_STATIC_MALLOC, from whio_config.h, for a full
+    description. The only difference is that this option is used
+    only for certain whefs-specific types.
+*/
+#if !defined(WHEFS_CONFIG_ENABLE_STATIC_MALLOC)
+#define WHEFS_CONFIG_ENABLE_STATIC_MALLOC 0
+#endif
+
+
+/** @def WHEFS_CONFIG_ENABLE_MMAP
+
+   If set to true then a whefs which uses a file as backing storage will
+   attempt to use mmap() to provide faster access.
+
+    TODO: make the use (or non-use) of mmap() toggleable if this option
+    is enabled.
+*/
+#if !defined(WHEFS_CONFIG_ENABLE_MMAP)
+#define WHEFS_CONFIG_ENABLE_MMAP 0
+#endif
+
+/** @def WHEFS_CONFIG_ENABLE_MMAP_ASYNC
+
+    If WHEFS_CONFIG_ENABLE_MMAP is false then this macro is ignored,
+    otherwise:
+
+    If WHEFS_CONFIG_ENABLE_MMAP_ASYNC is true then mmap() flushing is
+    done asynchronously, otherwise is is synchronous. Since all writes
+    to pseudofiles trigger a flush (so that the inode info gets
+    updates), running mmap() access in synchronous mode can slow it
+    down. Running asynchronously speeds it up but could also
+    theoretically lead to corruption in more cases than synchronous
+    writes do. e.g. what happens if a SIGINT comes in after the write
+    has returned (looking like success to the caller) but before the
+    commit to disk?
+
+    That said - my simple tests have been inconclusive as to whether
+    async mode provides a huge benefit over synchronous mode, and async
+    is disabled by default.
+
+    TODO: make this option runtime-configurable.
+*/
+#if !defined(WHEFS_CONFIG_ENABLE_MMAP_ASYNC)
+#  define WHEFS_CONFIG_ENABLE_MMAP_ASYNC 0
+#endif
+
+/** @def WHEFS_CONFIG_ENABLE_BITSET_CACHE
+
+If WHEFS_CONFIG_ENABLE_BITSET_CACHE is true then the EFS caches
+(using a bitset) whether or not any given inode or block is marked as
+used.  This speeds up some operations dramatically but costs malloced
+memory: 1 bit per inode plus 1 bit per block plus 1 byte.
+
+This approach to caching is going to Cause Grief (or at least
+Discomfort) when dealing with multi-app concurrency issues, as we
+cannot keep it in sync across multiple applications.
+
+TODO: re-evaluate the real cost of this cache. Memory is very low, but
+profiling has, in some cases, implied that it costs us more
+performance than we lose when it is disabled.
+*/
+#if !defined(WHEFS_CONFIG_ENABLE_BITSET_CACHE)
+#define WHEFS_CONFIG_ENABLE_BITSET_CACHE 1
 #endif
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
-
 #endif /* WANDERINGHORSE_NET_WHEFS_CONFIG_H_INCLUDED */
-/* begin file whefs.h */
+/* end file include/wh/whefs/whefs_config.h */
+/* begin file include/wh/whefs/whefs.h */
+#line 8 "include/wh/whefs/whefs.h"
 #ifndef WANDERINGHORSE_NET_WHEFS_H_INCLUDED
 #define WANDERINGHORSE_NET_WHEFS_H_INCLUDED
 
-#if ! defined __STDC_FORMAT_MACROS
-/* The Linux stdint.h says:
-
-"The ISO C99 standard specifies that these macros must only be
- defined if explicitly requested."
-*/
-#  define __STDC_FORMAT_MACROS 1
-#endif
-#include <inttypes.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 
 //Doxygen won't allow us to have both @page and @mainpage, which is problematic
@@ -3406,12 +3989,12 @@ when some form of thread locking is enabled.
    ACHTUNG: this is beta software!
 
    whefs is a C library implementing an embedded/virtual filesystem
-   (VFS).  It works by creating a so-called container file. This API
+   (EFS or VFS).  It works by creating a so-called container file. This API
    can then treat that container similarly to a filesystem. In essence
    this is similar to conventional archives (e.g. zip files), except
    that this library provides random-access read/write support to the
    fs via an API similar to fopen(), fread(), fwrite() and
-   friends. Also, a VFS container is more like a real filesystem than
+   friends. Also, an EFS container is more like a real filesystem than
    (e.g.) a zip file because the container's size is fixed when it is
    created.
 
@@ -3422,7 +4005,7 @@ when some form of thread locking is enabled.
    You can find MUCH more information about this library on its
    home page:
 
-   http://fossil.wanderinghorse.net/repos/whefs/
+   http://code.google.com/p/whefs
 
 */
 
@@ -3464,7 +4047,7 @@ include all functions or types with the following prefixes:
 
 - whefs_inode
 - whefs_block
-- whefs_fs, UNLESS it is declared in whefs.h (in which case it is public)
+- whefs_file or whefs_fs, UNLESS it is declared in whefs.h (in which case it is public)
 
 The internal API is subject to change at any time, and should never
 be relied upon as a stable interface.
@@ -3515,8 +4098,6 @@ Each inode name is composed of:
 
     - [TAG_BYTE] consistency-checking byte
     - [ID] stored only for consistency/error checking
-    - [HASH] a hash code which will eventually be used to speed up lookups. The
-    hash routine used is unspecified and may change over time.
     - [STRING_SIZE] number of used bytes encoded as a uint16_t.
     - The string data. Encoding is left to the client.
 
@@ -3579,7 +4160,7 @@ machine to play on. Also, we are currently using fseek() in some code,
 and that is restricted to signed long values, so we have got a 2GB
 container size limitation.
 
-- File names are internally (unsigned char const *). Encoding/code
+- File names are internally (char const *). Encoding/code
 page is up to the user.
 
 */
@@ -3626,13 +4207,15 @@ typedef struct whefs_rc_t
     int InternalError;
 
     /**
-       An out-of-range error. e.g. wrong size or value.
+       An out-of-range error. e.g. wrong size or value. Also often
+       used for "no item found", as in "not found in the current range
+       of possibilities."
     */
     int RangeError;
 
     /**
-       Signals that a vfs is filled, either it has run out
-       of inodes or free blocks.
+       Signals that the EFS appears to be filled, either it has run
+       out of inodes or free blocks.
     */
     int FSFull;
 
@@ -3659,10 +4242,21 @@ typedef struct whefs_rc_t
     */
     int UnsupportedError;
     /**
-       This is equivalent to (size_t)-1, and is used by routines which
-       need an error value for a size_t object.
+       This is equivalent to (whio_size_t)-1, and is used by routines which
+       need an error value for a whio_size_t object.
     */
-    size_t SizeTError;
+    whio_size_t SizeTError;
+
+    /**
+       This is equivalent to (whefs_id_type)-1, and is used by routines which
+       need an error value for a whefs_id_type object. Some types/routines
+       can use 0 for an error value, but search routines cannot because 0 might
+       be a valid search result index.
+
+       Remember that -1 is a different binary value depending on the
+       number of bits in whefs_id_type.
+    */
+    whefs_id_type IDTypeEnd;
 } whefs_rc_t;
 /**
    A shared instance of whefs_rc_t which contains the "official"
@@ -3726,7 +4320,9 @@ struct whefs_fs_options
     /**
        The size of each data block in the vfs.
     */
-    uint32_t block_size;
+    whio_size_t block_size;
+    //^^^ maintenance reminder: this cannot be bigger than whio_size_t.
+
     /**
        The number of blocks in the VFS. The implementation
        requires that this number be at least as large as
@@ -3741,7 +4337,9 @@ struct whefs_fs_options
     */
     whefs_id_type inode_count;
     /**
-       Must be greater than 0 and less than or equal to
+       The maximum filename length for pseudofiles in the EFS,
+       including.  This cannot be changed after mkfs. It must be
+       greater than 0 and less than or equal to
        WHEFS_MAX_FILENAME_LENGTH.
     */
     uint16_t filename_length;
@@ -3853,13 +4451,13 @@ typedef struct whefs_file whefs_file;
    that of fopen() (where 'w+' takes that role).
 
    Any other characters are currently ignored. There are no plans
-   to support the various "apppend" options.
+   to support the various "append" options.
 
    To avoid potential "misinteractions", the VFS will not allow any
    given file to be opened in write mode more than once at a
    time. That is, once a file is opened in write mode, all other
    attempts to open it in write mode will fail. Multiple readers are
-   allowed.
+   allowed, even if the file is already opened for writing.
 
    On success, a new file handle is returned. On error, 0 is returned,
    but to discover the nature of the problem you'll have to use a
@@ -3891,8 +4489,9 @@ typedef struct whefs_file whefs_file;
    whefs_fs_options_get(fs)->inode_count.
 
    @see whefs_fdev()
+   @see whefs_dev_open()
 */
-whefs_file * whefs_fopen( whefs_fs * fs, char const * name, char const * mode );
+whefs_file * whefs_fopen( whefs_fs * restrict fs, char const * name, char const * mode );
 
 /**
    Similar to whefs_fopen(), but returns a whio_dev instead of a
@@ -3907,31 +4506,58 @@ whefs_file * whefs_fopen( whefs_fs * fs, char const * name, char const * mode );
    If the filesystem is opened read-only then this operation will fail
    if writeMode is true.
 
-   Peculiarities of the returned whio_dev object include:
+   Peculiarities of the returned whio_dev object, vis-a-vis the whio_dev interface
+   specifications, include:
 
    - write() updates the mtime and size of the associated inode, but
    does not flush that info to disk until flush() is called on the i/o
    device. Closing the device will automatically flush it. A read-only
    device will never update the on-disk state of the inode and shares
    a copy of the inode with all other files/devices opened for that
-   inode.
+   inode (so it will see changes in the inode's size).
 
    - write()ing past EOF will allocate new VFS data blocks, if
    needed. If such an operation fails because it fills the filesystem,
-   the device may need to be manually truncated to free up VFS space.
-   This could convievably be considered to be a bug.
+   the device may have been partially expanded and may need to be
+   manually truncated to free up VFS space.  This could convievably be
+   considered to be a bug.
+
+   - To keep pseudofiles from hammering each other's virtual cursor
+   positions, all seek() requests are deferred until the next read or
+   write. Thus a seek will only fail if the combination of arguments
+   is bogus (e.g. a numeric overflow or a request to move before the
+   start of the file). Because of this behaviour, seek() and tell()
+   are O(1).
 
    @see whefs_fdev()
    @see whefs_fopen()
    @see whefs_dev_close()
 */
-whio_dev * whefs_dev_open( whefs_fs * fs, char const * name, bool writeMode );
+whio_dev * whefs_dev_open( whefs_fs * restrict fs, char const * name, bool writeMode );
+
+/**
+   Similar to whefs_dev_open(), but returns a whio_stream object
+   instead of a whio_object. If writeMode is true and append is true
+   then the pseudofile's cursor is placed at the end of the file. If
+   writeMode is true and append is false then the file is truncated to
+   zero bytes. If writeMode is false then the append argument is
+   ignored.
+
+   Unlike whefs_fopen(), there is no way to get a handle to the
+   underlying random-access i/o device. If you need access to both a
+   streaming and random-access for a given pseudofile, you can open it
+   using whefs_dev_open() or whefs_fopen(), then pass the device
+   object to whio_stream_for_dev(). Note, however, that mixing random
+   and sequential access that way may lead to confusing or incorrect
+   results, as the objects share an underlying file cursor.
+*/
+whio_stream * whefs_stream_open( whefs_fs * fs, char const * name, bool writeMode, bool append );
 
 /**
    Returns the i/o device associated with f, or 0 if !f. 
 
    The returned object is owned by f and will be destroyed when f is
-   closed.
+   closed via whefs_fclose().
 
    Each whefs_file has an associated i/o device to abstract away the
    interaction with the underlying whefs_fs object. This is a
@@ -3940,12 +4566,13 @@ whio_dev * whefs_dev_open( whefs_fs * fs, char const * name, bool writeMode );
    designed to not read or write outside of the bounds of that
    range. In general, reading and writing and such are simpler (IMO)
    via the whio_dev interface, but the whefs_fXXXX() API will be more
-   familiar to long-time C users.
+   familiar to long-time C users. Porting code from the standard FILE
+   API to this API is normally trivial.
 
    @see whefs_dev_open()
    @see whefs_fopen().
 */
-whio_dev * whefs_fdev( whefs_file * f );
+whio_dev * whefs_fdev( whefs_file * restrict f );
 
 
 /**
@@ -3954,16 +4581,18 @@ whio_dev * whefs_fdev( whefs_file * f );
    whio_dev::seek() for the full documentation and possible error
    conditions.
 
-   Note that it is legal to seek past EOF, but the size of the file
-   will not be changed unless a write actually happens past EOF.
+   Note that it is generally legal to seek past EOF, but the size of
+   the file will not be changed unless a write actually happens past
+   EOF. This behaviour is technically device-dependent, but all
+   current device implementations work that way.
 */
-size_t whefs_fseek( whefs_file * f, size_t pos, int whence );
+whio_size_t whefs_fseek( whefs_file * restrict f, size_t pos, int whence );
 
 /**
    "Rewinds" the file pointer back to its starting position.
    Returns whefs_rc.OK on success, else some other value.
 */
-int whefs_frewind( whefs_file * f );
+int whefs_frewind( whefs_file * restrict f );
 
 /**
    Returns the current size of the given file, or whefs_rc.SizeTError
@@ -3973,7 +4602,7 @@ int whefs_frewind( whefs_file * f );
    whio_dev_size(whefs_fdev(f)), but this implementation is different
    in that it respects the constness of f.
 */
-size_t whefs_fsize( whefs_file const * f );
+whio_size_t whefs_fsize( whefs_file const * restrict f );
 
 /**
    Truncates the given pseudofile to the given length.
@@ -3983,26 +4612,27 @@ size_t whefs_fsize( whefs_file const * f );
    whio_rc.AccessError being returned.
 
    If the file grows then all bytes between the file's previous EOF
-   (not it's current position) and the new EOF are zeroed out.
+   (not its current position) and the new EOF are zeroed out.
 
    If the file shrinks then all data after the new EOF, but which
    previously belonged to the file, are also zeroed out.
 */
-int whefs_ftrunc( whefs_file * f, size_t newLen );
+int whefs_ftrunc( whefs_file * restrict f, size_t newLen );
 
 /**
    Closes f, freeing its resources. After calling this, f is an invalid object.
    Returns whefs_rc.OK on success, or whefs_rc.ArgError if (!f).
  */
-int whefs_fclose( whefs_file * f );
+int whefs_fclose( whefs_file * restrict f );
 
 /**
    Similar to whefs_fclose() but closes a device opened with whefs_dev_open().
 
    DO NOT pass this function a device which was fetched using
-   whefs_fdev()! Use whefs_fclose() to close the file instead. Failing to
-   follow this rule may lead to undefined results when the associated file
-   handle dangles around and a double-delete if the file closed afterwards.
+   whefs_fdev()! Use whefs_fclose() to close the file instead. Failing
+   to follow this rule may lead to undefined results when the
+   associated file handle dangles around and a double-delete if the
+   file is closed afterwards.
 
    ONLY use this for devices opened with whefs_dev_open().
 
@@ -4024,7 +4654,7 @@ int whefs_fclose( whefs_file * f );
 
    @see whefs_dev_open()
 */
-int whefs_dev_close( whio_dev * dev );
+int whefs_dev_close( whio_dev * restrict dev );
 
 /**
    Unlinks (deletes) the given file and its associated inode. It there
@@ -4046,9 +4676,10 @@ int whefs_dev_close( whio_dev * dev );
    unlink until all handles are closed. The problem with that is if
    the handles are not properly closed (e.g. due to a crash or the
    client doesn't close them for some reason), the deferred unlink
-   won't ever happen.
+   won't ever happen. (Unless we store it in a journal of some time,
+   but that's a whole other can of worms.)
 */
-int whefs_unlink_filename( whefs_fs * fs, char const * fname );
+int whefs_unlink_filename( whefs_fs * restrict fs, char const * fname );
 
 /**
    Equivalent the fwrite() C function, but works on whefs_file handles.
@@ -4066,20 +4697,20 @@ int whefs_unlink_filename( whefs_fs * fs, char const * fname );
    @see whefs_file_write()
    @see whefs_file_read()
 */
-size_t whefs_fwrite( whefs_file * f, size_t bsize, size_t n, void const * src );
+size_t whefs_fwrite( whefs_file * restrict f, size_t bsize, size_t n, void const * src );
 
 /**
    Writes a printf-style formatted string to f. Returs the number of
    bytes written. It is, in general case, impossible to know if all
    data was written correctly.
 */
-size_t whefs_fwritev( whefs_file * f, char const * fmt, va_list vargs );
+size_t whefs_fwritev( whefs_file * restrict f, char const * fmt, va_list vargs );
 
 /**
    Equivalent to whefs_fwritev() except that it takes elipsis arguments
    instead of a va_list.
  */
-size_t whefs_fwritef( whefs_file * f, char const * fmt, ... );
+size_t whefs_fwritef( whefs_file * restrict f, char const * fmt, ... );
 
 /**
    Reads n objects, each of bsize bytes, from f and writes them to dest.
@@ -4090,7 +4721,7 @@ size_t whefs_fwritef( whefs_file * f, char const * fmt, ... );
    @see whefs_file_write()
    @see whefs_file_read()
 */
-size_t whefs_fread( whefs_file * f, size_t bsize, size_t n, void * dest );
+size_t whefs_fread( whefs_file * restrict f, size_t bsize, size_t n, void * dest );
 
 /**
    Similar to whefs_fwrite(), but takes arguments in the same
@@ -4101,7 +4732,7 @@ size_t whefs_fread( whefs_file * f, size_t bsize, size_t n, void * dest );
    @see whefs_fwrite()
    @see whefs_file_read()
 */
-size_t whefs_file_write( whefs_file * f, void const * src, size_t n  );
+size_t whefs_file_write( whefs_file * restrict f, void const * src, size_t n  );
 
 /**
    Similar to whefs_fread(), but takes arguments in the same convention
@@ -4112,26 +4743,47 @@ size_t whefs_file_write( whefs_file * f, void const * src, size_t n  );
    @see whefs_file_write()
    @see whefs_fread()
 */
-size_t whefs_file_read( whefs_file * f, void * dest, size_t n  );
+size_t whefs_file_read( whefs_file * restrict f, void * dest, size_t n  );
 
 /**
    Returns the vfs associated with the given file, or 0 if !f.
 */
-whefs_fs * whefs_file_fs( whefs_file * f );
+whefs_fs * whefs_file_fs( whefs_file * restrict f );
 
 /**
    Flushes the underlying i/o device. Flushing a whefs_file will also
    flush the VFS, so calling this is normally not needed.
 
-   Returns whefs_rc.ArgError if !fs or fs has no backing store, else
-   the result is the same as calling whio_dev::flush() on the
-   underlying i/o device.
+   Returns whefs_rc.ArgError if !fs or fs has no backing store,
+   whefs_rc.AccessError if fs is read-only, else the result is the
+   same as calling whio_dev::flush() on the underlying i/o device.
 
    If/when the VFS caches any information (e.g. to synchronize inode
    use across multiple open handles) then this function will also
    write that cache out to disk.
 */
-int whefs_fs_flush( whefs_fs * fs );
+int whefs_fs_flush( whefs_fs * restrict fs );
+
+/**
+   Flushes the file's data to disk, if necessary. A read-only
+   file will not flush but a success code is returned in that case.
+
+   Note that the underlying implementation does not buffering, so syncing
+   is not required for the sake of f itself. Instead, the flush will
+   propogate down the i/o device chain until it gets to the underlying
+   storage, which may very well be buffering.
+
+   On success, whefs_rc.OK is returned, otherwise whefs_rc.ArgError
+   (if (!f)) or a device-specific error code from the underlying call
+   to flush().
+
+   In practice, one doesn't normally need to manually flush whefs_file
+   objects.  The underlying i/o process must flush changes made to
+   inodes and data blocks, and that flushing will be going on behing
+   the scenes often enough to not need to use it from client code.
+
+*/
+int whefs_fflush( whefs_file * restrict f );
 
 /**
    Creates a new vfs using the given filename and options. The resulting
@@ -4239,29 +4891,35 @@ int whefs_openfs( char const * filename, whefs_fs ** tgt, bool writeMode );
    objects or otherwise), in particular if more than one have write
    access, the filesystem will in all likelyhood be quickly corrupted.
 */
-int whefs_openfs_dev( whio_dev * dev, whefs_fs ** tgt, bool takeDev );
+int whefs_openfs_dev( whio_dev * restrict dev, whefs_fs ** tgt, bool takeDev );
 
 /**
    Cleans up all resources associated with fs. After calling this,
    fs will be an invalid pointer.
+
+   If file/device handles are opened via whefs_fopen(),
+   whefs_dev_open(), etc. and they are not closed by the time this is
+   called, then they will be closed by this routine. If that happens,
+   the client must NOT close them again after calling this - doing so
+   will lead to stepping on null pointers or otherwise invalid objects.
 */
-void whefs_fs_finalize( whefs_fs * fs );
+void whefs_fs_finalize( whefs_fs * restrict fs );
 
 /**
    Returns the options associated with fs, or 0 if !fs.
 */
-whefs_fs_options const * whefs_fs_options_get( whefs_fs const * fs );
+whefs_fs_options const * whefs_fs_options_get( whefs_fs const * restrict fs );
 
 /**
    A shorter name for whefs_fs_options_get().
 */
-whefs_fs_options const * whefs_fs_opt( whefs_fs const * fs );
+whefs_fs_options const * whefs_fs_opt( whefs_fs const * restrict fs );
 
 /**
    A debug-only function for showing some information about a
    vfs. It's only for my debugging use, not client-side use.
 */
-void whefs_fs_dump_info( whefs_fs const * fs, FILE * out );
+void whefs_fs_dump_info( whefs_fs const * restrict fs, FILE * out );
 
 /**
    Calculates the size of a vfs container based on the given
@@ -4283,7 +4941,7 @@ void whefs_fs_dump_info( whefs_fs const * fs, FILE * out );
 
    If !fs then 0 is returned (0 is never a valid size of a vfs).
 */
-size_t whefs_fs_calculate_size( whefs_fs_options const * opt );
+whio_size_t whefs_fs_calculate_size( whefs_fs_options const * opt );
 
 /**
    A debuggering routine which dumps fs to the given FILE. This is
@@ -4299,7 +4957,7 @@ size_t whefs_fs_calculate_size( whefs_fs_options const * opt );
    Ownership of outstr is not changed, and this routine does not close
    the stream.
 */
-int whefs_fs_dump_to_FILE( whefs_fs * fs, FILE * outstr );
+int whefs_fs_dump_to_FILE( whefs_fs * restrict fs, FILE * outstr );
 
 /**
    Equivalent to whefs_fs_dump_to_FILE() except that it takes a file name
@@ -4307,13 +4965,7 @@ int whefs_fs_dump_to_FILE( whefs_fs * fs, FILE * outstr );
    routine, it may return whefs_rc.AccessError if it cannot open the
    file for writing.
 */
-int whefs_fs_dump_to_filename( whefs_fs * fs, char const * filename );
-
-
-/**
-   Test/debug routine which inserts some entries into the inode table.
-*/
-int whefs_test_insert_dummy_files( whefs_fs * fs );
+int whefs_fs_dump_to_filename( whefs_fs * restrict fs, char const * filename );
 
 
 /**
@@ -4376,11 +5028,11 @@ int whefs_fstat( whefs_file const * f, whefs_file_stats * st );
 
    - Some other error = something weird happened.
 */
-int whefs_file_set_name( whefs_file * f, char const * newName );
+int whefs_file_name_set( whefs_file * restrict f, char const * newName );
 
 /**
    Returns the given file's current name, or 0 if !f or on some weird
-   internal error. The memory for the string is owned by the vfs
+   internal error. The memory for the string is owned by the efs
    internals and will be deallocated when the last handle to the file
    is closed (or possibly before then, if the internals are
    reallocated for some reason). The caller is advised to copy it if
@@ -4389,75 +5041,18 @@ int whefs_file_set_name( whefs_file * f, char const * newName );
    The returned string is guaranteed to be no longer than
    whefs_fs_options_get(whefs_file_fs(f))->filename_length
    characters (not including the trailing null).
+
+
+   Maintenance reminder: f is only non-const for very silly
+   internal reasons (namely whefs_file::name, which needs
+   to go away).
 */
-char const * whefs_file_get_name( whefs_file const * f );
+char const * whefs_file_name_get( whefs_file * restrict f );
 
 /**
-   A type for reporting certain vfs metrics.
-*/
-typedef struct whefs_fs_stats
-{
-    /**
-       Size of the vfs container.
-    */
-    size_t size;
-    /**
-       Number of uses inodes.
-    */
-    size_t used_inodes;
-    /**
-       Number of used blocks.
-    */
-    size_t used_blocks;
-    /**
-       Number of used bytes (not necessarily whole blocks).
-    */
-    size_t used_bytes;
-} whefs_fs_stats;
-
-/**
-   Not yet implemented.
-
-   Calculates some statistics for fs and returns them via
-   the st parameter.
-
-   Returns whefs_rc.OK on success. On error some other value
-   is returned and st's contents are in an undefined state.
-*/
-int whefs_fs_stats_get( whefs_fs * fs, whefs_fs_stats * st );
-
-/**
-   Returns a static string pointing to the whefs home page.
+   Returns a static string with the URL of the whefs home page.
 */
 char const * whefs_home_page_url();
-
-/**
-   Imports all contents from src into the VFS pseudofile named fname.
-   If overwrite is true, any existing entry will be overwritten,
-   otherwise an existing file with that name will cause this function
-   to return whefs_rc.AccessError.
-
-   Ownership of src is not changed. This routine will re-set src's
-   cursor to its pre-call position before returning.
-
-   On success, whefs_rc.OK is returned.
-
-   On error, any number of different codes might be returned, both
-   from whefs_rc and whio_rc (some of which overlap or conflict).
-   If the import fails and the entry did not exist before the import
-   started, it is removed from the filesystem. If it did exist then
-   exactly what happens next depends on a few factors:
-
-   - If the import failed because the existing file could not be
-   expanded to its new size then it is kept intact, with its old
-   size. This step happens first, before any writing is done.
-
-   - If the import failed during the copy process then the destination
-   file is left in an undefined state and it should probably be
-   unlinked.
-
-*/
-int whefs_import( whefs_fs * fs, whio_dev * src, char const * fname, bool overwrite );
 
 /**
    Returns a static string containing the file format version
@@ -4468,8 +5063,450 @@ char const * whefs_data_format_version_string();
 /**
    Sets the library's debugging stream (which may be 0). This only works if
    the lib is compiled with the debugging support enabled.
+
+   Pass a flags val of 0 to disable all debug output, otherwise pass
+   a value used by the internal debugging routines. Pass -1 to use
+   the default debugging flags, wh
 */
-void whefs_setup_debug( FILE * ostream );
+void whefs_setup_debug( FILE * ostream, unsigned int flags );
+
+/**
+   Identical whefs_setup_debug(), but takes the debug flags as a
+   string, for use primarily in main() argument handling. Each letter
+   (case-sensitive) represents one category of debugging message:
+
+    'a' = All messages.
+
+    'c' = Caching messages.
+
+    'd' = Default log level.
+
+    'e' = Error messages.
+
+    'f' = FIXME messages.
+
+    'h' = Hacker-level messages.
+
+    'l' = Locking messages.
+
+    'n' = NYI messages.
+
+    'w' = Warning messages.
+
+
+    Unknown characters are ignored.
+   
+*/
+void whefs_setup_debug_arg( FILE * ostream, char const * arg );
+
+
+/**
+   Returns an array of numbers which represent this library's file
+   format version number. The bytes are conventionally { YYYY, MM, DD,
+   WHEFS_ID_TYPE_BITS }, where YYYY, MM, and DD are the year/month/day
+   of the format change (and WHEFS_ID_TYPE_BITS is documented
+   elsewhere).
+
+   The returned result is guaranteed to not be null and to have a value
+   of 0 as the end-of-array entry.
+*/
+const uint32_t * whefs_get_core_magic();
+
+/**
+   Experimental and only lightly tested.
+
+   Tries to add count blocks to the given fs, appending them to the
+   end of the storage device. On failure, it tries to restore the fs
+   to its previous state, but it may not be able to do so 100%
+   correctly.
+
+   On success whefs_rc.OK is returned and fs is expanded by the given
+   number of blocks.
+
+   If !fs or !count then whefs_rc.ArgError is returned.
+
+   If fs is not opened for read/write whefs_rc.AccessError
+   is returned.
+
+   Other errors may be returned if something goes wrong during the
+   i/o.
+*/
+int whefs_fs_append_blocks( whefs_fs * restrict fs, whefs_id_type count );
+
+/**
+   Returns true if fs was opened in read/write mode, else false.
+*/
+bool whefs_fs_is_rw( whefs_fs const * restrict fs );
+
+/**
+   Removes the least-visited items from the inode names cache,
+   possibly freeing some memory, using a simple heuristic: it sorts by
+   how often the item was searched for, lops off the bottom half, and
+   re-sorts on the internal lookup key.
+
+   This normally isn't needed. This *might* be useful if an EFS has a
+   huge number of *used* inodes (thousands) and only a few of them are
+   actually needed by the application. Some memory *might* be released
+   by shrinking the list, but not enough for most applications to be
+   concerned about (none is leaked, in any case). The search speed
+   improves because the cache shrinks, and new i/o won't be caused due
+   to lookups by name until an item which was removed from the cache
+   is re-added.
+*/
+int whefs_inode_hash_cache_chomp_lv( whefs_fs * fs );
+
+/**
+   This function allows one to toggle the "inode names hash cache".
+   If on is true then the cache is enabled, else it is disabled.  If
+   on is true and loadNow is true then the cache is fully populated
+   immediately. If loadNow is false then the cache is built up
+   incrementally as inodes are searched for by name. If on is false then
+   loadNow is ignored and any current cache is deallocated.
+
+   This cache costs approximately 8 bytes per object, assuming
+   WHEFS_ID_TYPE_BITS==16, so it is not recommended for huge
+   EFSes. For small ones it doesn't cost much.
+
+   When the cache is enabled, searches for inodes by their name
+   will be reduced from O(N) (N=number of inodes) to O(log N)
+   once a given name has been cached (by being traversed once,
+   perhaps during the search for another inode).
+
+   On success whefs_rc.OK is returned. The only error conditions are:
+
+   - If !fs then whefs_rc.ArgError is returned.
+
+   - If the cache is enabled and memory cannot be allocated or population
+   of the cache fails due to an i/o error, that error is propagated back.
+
+   If an error happens then the cache will be disabled, under the assumption
+   that it could not be properly initialized. This is not a fatal error,
+   but may cause a performance hit on inode searches by name.
+
+   If WHEFS_CONFIG_ENABLE_STRINGS_HASH_CACHE (defined in
+   whefs_config.h) is set to true then this cache is enabled by
+   default but not pre-loaded, otherwise it is disabled by default.
+*/
+int whefs_fs_setopt_hash_cache( whefs_fs * fs, bool on, bool loadNow );
+
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+#endif /* WANDERINGHORSE_NET_WHEFS_H_INCLUDED */
+/* end file include/wh/whefs/whefs.h */
+/* begin file src/whefs_hash.h */
+#line 8 "src/whefs_hash.h"
+#ifndef WANDERINGHORSE_NET_WHEFS_HASH_H_INCLUDED
+#define WANDERINGHORSE_NET_WHEFS_HASH_H_INCLUDED 1
+/*
+  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
+
+  License: Public Domain
+
+
+  Hashing-related types and routines for whefs.
+*/
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+   The integral type whefs uses to store hash values.
+
+   Reminder to self: if we'll add support for duplicate hash codes
+   to the inode names hash cache then we can drop this to
+   uint16_t and potentially save significant amounts of memory.
+   The difference is: with uint32_t we can cache 128 inode hashes
+   per 1k of memory. With uint16_t we can cache 170 hashes per
+   1k of memory.
+*/
+typedef uint32_t whefs_hashval_type;
+/**
+   printf format specifier for use with whefs_hashval_type.
+*/
+#define WHEFS_HASHVAL_TYPE_PFMT "08"PRIxLEAST32
+/**
+   scanf format specifier for use with whefs_hashval_type.
+*/
+#define WHEFS_HASHVAL_TYPE_SFMT SCNu32
+
+/**
+   A container for mapping abstract hash values to abstract
+   whefs-related object IDs. The primary intention is a name-hash
+   cache for file name lookups, but in theory it can be used with any
+   whefs types which have a unique ID of whefs_id_type type.
+*/
+struct whefs_hashid
+{
+    /** Client-defined hash code. */
+    whefs_hashval_type hash;
+
+    /** Unique ID of client-defined hashed object. */
+    whefs_id_type id;
+
+    /**
+       Routines which visit this object via search results should increment this number.
+       We may use it later for dropping least-used items from the list.
+
+       Changing this to uint32_t actually costs 6 bytes on my box, as the sizeof()
+       comes out to 12 (if whefs_id_type is uint16_t as well). With uint16_t i
+       get a sizeof(8).
+
+       Note that we can easily overflow with a 16-bit counter, but for
+       the purposes we're using this number for that won't hurt us. The
+       extra bytes for uint32_t aren't worth it here.
+    */
+    uint16_t hits;
+};
+typedef struct whefs_hashid whefs_hashid;
+/**
+   Empty initializer object for whefs_hashid.
+*/
+#define whefs_hashid_init_m {0/*hash*/,0/*id*/,0/*hits*/}
+/**
+   Empty initializer object for whefs_hashid.
+*/
+extern const whefs_hashid whefs_hashid_init;
+
+
+/** @struct whefs_hashid_list
+
+   Holds a list of whefs_hashid objects. It is a special-purpose
+   hashtable with a focus on making as few calls as necessary
+   to malloc() while still keeping memory costs reasonable.
+   It is not a full-fledged hashtable - all items are stored in
+   a contiguous array. Thus inserting, removing, etc., can be
+   expensive, except for appending to the end, which is O(1)
+   as long as the list has fewer items in use than are actually
+   allocated.
+
+   Currently this is used to map inode name hashes to inode IDs
+   to speed up lookups by name.
+ */
+struct whefs_hashid_list
+{
+    /** Number of items allocated. */
+    whefs_id_type alloced;
+    /** Real number of entries. */
+    whefs_id_type count;
+    /** A hint to the allocator to say we'll never need more than this. */
+    whefs_id_type maxAlloc;
+    /** The list of items. */
+    whefs_hashid * list;
+    /** Functions which unsort a list set this to false. whefs_hashid_list_sort() sets it to true. */
+    bool isSorted;
+    /** Internal optimization. */
+    bool skipAutoSort;
+};
+typedef struct whefs_hashid_list whefs_hashid_list;
+/** Empty initializer object. */
+#define whefs_hashid_list_init_m {0U/*alloced*/,0U/*count*/,0U/*maxAlloc*/,0/*list*/,false/*isSorted*/,false/*skipAutoSort*/}
+/** Empty initializer object. */
+extern const whefs_hashid_list whefs_hashid_list_init;
+
+/**
+   Sorts the entries in li by hash value. It is not specified whether
+   the sort is stable in relation to items with the same hash values.
+
+   In this implementation, sorting may actually change the size of the
+   list. whefs_hashid_list_wipe_index() only marks data for erasure. Any items
+   marked as such will be filtered out of the list as part of the sorting
+   process.
+
+   Returns whefs_rc.OK on success. The only error condition is (!li),
+   then it returns whefs_rc.ArgError.
+*/
+int whefs_hashid_list_sort( whefs_hashid_list * li );
+
+/**
+   Allocates the specified number of entries in a whefs_hashid_list.
+
+   If *tgt is 0 then this function allocates a new instance and assigns
+   tgt to it, otherwise it assumes *tgt is a valid object and it re-uses any
+   parts of that object which it can. It reserves toAlloc places in (*tgt)->list.
+
+   On success, whefs_rc.OK is returned and tgt will contain at least
+   the given number of entries, else some other value is returned.
+   On success, tgt will contain at least toAlloc entries, but the exact
+   number is unspecified unless toAlloc is 0, in which case all entries
+   will be freed but tgt will still be valid (but tgt->list will be 0).
+   Newly-created entries will be initialized to empty values.
+ 
+   tgt may not be 0, but *tgt may be 0. If *tgt is not 0 then it must point
+   to an object (specifically, it may not be an uninitialized pointer).
+ 
+   The tgt object must eventually be freed using whefs_hashid_list_free().
+
+   If (*tgt)->count is less than toAlloc then entries will be lopped
+   off and (*tgt)->count will be set to the value of toAlloc.
+   Otherwise (*tgt)->count will not be modified (or will be 0 if this
+   function allocates the object).
+
+   If (*tgt)->alloced is greater than or equal to toAlloc then this
+   function does nothing, has no side-effects, and returns success.
+*/
+int whefs_hashid_list_alloc( whefs_hashid_list ** tgt, whefs_id_type toAlloc );
+
+/**
+   Frees a list created by whefs_hashid_list_alloc(). After calling this,
+   tgt is an invalid object.
+*/
+void whefs_hashid_list_free( whefs_hashid_list * tgt );
+
+/**
+   Appends a copy of val to the end of tgt, expanding tgt if necessary. On success
+   whefs_rc.OK is returned, otherwise:
+
+   - whefs_rc.AllocError if allocation fails.
+   - whefs_rc.ArgError if !tgt or !val.
+
+   If you have removed items from the list, it is more memory-efficient to
+   sort it before adding any new items. This will cost a sort but avoid
+   a re-alloc if at least as many items are removed as were added.
+
+   The current usage of the whefs_hashid_list class does not account
+   for duplicate hash keys, so ensure that you don't add dupes.
+*/
+int whefs_hashid_list_add( whefs_hashid_list * tgt, whefs_hashid const * restrict val );
+
+/**
+   The item at the given index is zeroed out, which is the internal
+   equivalent of erasure. During the next sort(), any zeroed items
+   will be removed from the list. This function, to simplify the
+   implementation and speed up certain fs operations, does not
+   actually modify the structure of the list or change li->count. The
+   change in size is deferred until the next sort. When that happens,
+   the zeroed items get sorted to the start of the list, then then get
+   pruned.
+
+   A side effect of the mark-for-removal approach is that this routine
+   does not invalidate any other indexes by shifting items around.
+
+   On success whefs_rc.OK is returned. On error one of the following is returned:
+
+   If !lf then whefs_rc.ArgError is returned. If ndx is not less than li->count,
+   whefs_rc.RangeError is returned.
+*/
+int whefs_hashid_list_wipe_index( whefs_hashid_list * li, whefs_id_type ndx );
+
+/**
+   Searches src for an item matching the given hash value. On success
+   it returns the index of the left-most item with that hash value. On
+   error, or no result found, it returns whefs_rc.IDTypeEnd.
+
+   Search results are undefined if src is not sorted by ascending hash
+   value.
+
+   Technically speaking, the search algorithm used by this function is
+   unspecified, but the current implementation uses two different
+   approaches to accomodate usage patterns in whefs_fs::cache.nameHashes.
+
+   IFF src->isSorted then a binary search is used, with the addition
+   that it returns the left-most match if the hash key has
+   duplicates. The left-most behaviour is to allow the client to check
+   if each matching item *really* matches the object from which the
+   given hash was derived. e.g. if two different strings have a hash
+   collision, we need to compare the input string with the string
+   referred to by src->list[search_result_index].id in order to ensure
+   that a match has been found. If there is a mismatch we could then
+   check succeeding items in the list until we hit the end of the list
+   or an item with a differing hash value.
+
+   IFF !src->isSorted then we fall back to a linear search. The alternative
+   would be to sort the list here automatically if needed, but that could
+   invalidate data held by loops if this was called in a loop.
+
+
+*/
+whefs_id_type whefs_hashid_list_index_of( whefs_hashid_list const * src, whefs_hashval_type hash );
+
+/**
+   Inserts count empty slots in li before pos, expanding the list if
+   necessary.  Existing entries starting at pos are shifted count
+   items to the right.
+
+   If !li then whefs_rc.ArgError is returned. If pos is greater than
+   li->count, or if !li->count, then whefs_rc.RangeError is returned.
+   On success, whefs_rc.OK is returned and li is updated accordingly.
+   The caller is responsible for populating the new entries and
+   re-sorting the list.
+
+*/
+int whefs_hashid_list_add_slots( whefs_hashid_list * li, whefs_id_type pos, whefs_id_type count );
+
+/**
+   Generates a hash code for the given null-terminated string.
+   If str is null then 0 is returned. The exact hash routine
+   is not specified.
+*/
+whefs_hashval_type whefs_hash_cstring( char const * str );
+
+/**
+   Returns the amount of memory allocated to li, including all
+   items.
+*/
+size_t whefs_hashid_list_sizeof( whefs_hashid_list const * li );
+
+
+/**
+   Removes the least-visited items from li using the simple heuristic of
+   sorting by visit count, lopping off the bottom half, and re-sorting.
+   li need not be sorted before calling this. The returned list will be
+   sorted and will likely have fewer items in it.
+*/
+int whefs_hashid_list_chomp_lv( whefs_hashid_list * li );
+
+#if 0
+
+/**
+   UNTESTED/EXPERIMENTAL!
+*/
+typedef int (*whefs_hashid_list_search_cmp)( whefs_hashval_type, whefs_id_type id, void const * );
+/**
+   UNTESTED/EXPERIMENTAL!
+
+   Searches for an item, as for whefs_hashid_list_index_of(). The hash
+   argument is the hash to search for. If a match is found, it calls
+   cmp(hash,search_result.id,cmdData). If that function returns 0,
+   search_result.id is returned. If cmp returns non-0 then the next
+   item in the list with the same hash key is checked. If it has the same
+   hashcode, cmp() is called. This process is repeated until the list
+   is exhausted or it encounters an item where (hash!=item.hash).
+
+   If no item is found, whefs_rc.IDTypeEnd is returned.
+*/
+whefs_id_type whefs_hashid_list_search( whefs_hashid_list const * src,
+                                        whefs_hashval_type hash,
+                                        whefs_hashid_list_search_cmp cmp,
+                                        void const * cmpData
+                                        );
+#endif
+
+#ifdef __cplusplus
+} /* extern "C"*/
+#endif
+
+#endif // WANDERINGHORSE_NET_WHEFS_HASH_H_INCLUDED
+/* end file src/whefs_hash.h */
+/* begin file include/wh/whefs/whefs_string.h */
+#line 8 "include/wh/whefs/whefs_string.h"
+#if !defined(WANDERINGHORSE_NET_WHEFS_STRING_H_INCLUDED)
+#define WANDERINGHORSE_NET_WHEFS_STRING_H_INCLUDED 1
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*
+  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/
+
+  License: Public Domain
+*/
 
 /** @typedef uint16_t whefs_string_size_t
    
@@ -4480,15 +5517,39 @@ support for directories, longer strings may sometimes be needed.
 typedef uint16_t whefs_string_size_t;
 
 /** @struct whefs_string
+
    whefs_string is a type for storing strings. Routines in the whefs
    library which perform string operations may use this type, as
-   opposed to a simple string, so because it allows us to re-use the
-   string's bytes at times instead of using malloc for every string.
+   opposed to a simple string, because it allows us to re-use the
+   string's bytes at certain times instead of using malloc for every
+   string.
 
    One way to free the memory owned by these objects is
    whefs_string_clear(). Alternately, one may pass the string member
-   to free(), then set the length and alloced members to 0. If the object
-   is part of a chain, the caller must free each object in the chain.
+   to free() (assuming it was created using malloc()), then set the
+   length and alloced members to 0. If the object is part of a chain,
+   the caller must free each object in the chain.
+
+   If the maximum size of a set of strings is known in advance it is
+   possible to avoid any allocation by using this approach:
+
+   @code
+   enum { bufSize = MaxPossibleSizeOfStrings + 1 }; // +1 for the trailing NULL
+   char buf[bufSize];
+   memset( buf, 0, bufSize );
+   whefs_string s = whefs_string_init;
+   s.string = buf;
+   s.alloced = bufSize;
+   whefs_string_copy_cstring( &s, sourceString );
+   assert( (s.string == buf) );
+   @endcode
+
+   Use this approach ONLY when working with strings with a known fixed
+   upper length, or else the whefs_string API might try to realloc()
+   the static buffer and will likely segfault in doing so. e.g. in
+   whefs we know the maximum length of filenames at compile time, and
+   can optimize out some calls to malloc() by using stack-allocated
+   buffers.
 */
 struct whefs_string
 {
@@ -4540,9 +5601,9 @@ extern const whefs_string whefs_string_init;
 
    @code
    whefs_string str = whefs_string_init; // Important! See below!
-   whefs_string_copy_cstring( "Hi, world!!", &str );
+   whefs_string_copy_cstring( &str, "Hi, world!!" );
    ...
-   whefs_string_copy_cstring( "Bye, world!", &str );
+   whefs_string_copy_cstring( &str, "Bye, world!" );
    // ^^^^ Re-uses str->string's memory
    ...
    whefs_string_clear( &str, false );
@@ -4580,63 +5641,21 @@ int whefs_string_clear( whefs_string * tgt, bool clearChain );
 */
 int whefs_string_finalize( whefs_string * tgt, bool clearChain );
 
-/**
-   Like the 'ls' Unix program, this function fetches a list of
-   filenames matching the given pattern. If no matches are found, null
-   is returned, otherwise a string list is returned and count (if it
-   is not null) is set to the number of items in the list.
-
-   A pattern of null or an empty string is equivalent to a pattern of
-   "*" (but much faster, since it doesn't need to be compared).
-
-   The returned list must be freed by calling whefs_string_finalize()
-   and passing true as the second parameter.
-
-   Example usage:
-
-   @code
-    whefs_string * ls = whefs_ls( myFS, "*.c", 0 );
-    whefs_string * head = ls;
-    while( ls )
-    {
-        printf("%s\n", ls->string );
-        ls = ls->next;
-    }
-    whefs_string_finalize( head, true );
-   @endcode
-
-   BUG:
-
-   This routine has no way of reporting an error. If some sort of I/O
-   error happens after an entry has been fetched, the entries matched
-   so far are returned but there is no way of knowing how many entries
-   would have been returned if all could have been read. That said, if
-   the first entry is read successfully, it is "reasonable to assume"
-   that the remaining entries could be read as well. In fact, since
-   only "used" entries are considered for matching, any entries
-   returned here must have been read previously (to build the
-   used-items cache), and only a true I/O error (or corruption of the
-   VFS container) should cause a failure here.
-*/
-whefs_string * whefs_ls( whefs_fs * fs, char const * pattern, whefs_id_type * count );
 
 /**
-   Returns an array of numbers which represent this library's file
-   format version number. The bytes are conventionally { YYYY, MM, DD,
-   WHEFS_ID_TYPE_BITS }, where YYYY, MM, and DD are the date of the
-   format change (and WHEFS_ID_TYPE_BITS is documented elsewhere).
-
-   The returned result is guaranteed to not be null and to have a value
-   of 0 as the end-of-array entry.
+   Allocates and zero-initializes a whefs_string. It must eventually be
+   passed to whefs_string_finalize() to free the memory.
 */
-const uint32_t * whefs_get_core_magic();
+whefs_string * whefs_string_alloc();
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
-#endif /* WANDERINGHORSE_NET_WHEFS_H_INCLUDED */
-/* begin file whefs_encode.h */
+#endif // WANDERINGHORSE_NET_WHEFS_STRING_H_INCLUDED
+/* end file include/wh/whefs/whefs_string.h */
+/* begin file src/whefs_encode.h */
+#line 8 "src/whefs_encode.h"
 #if !defined(WANDERINGHORSE_NET_WHEFS_ENCODE_H_INCLUDED)
 #define WANDERINGHORSE_NET_WHEFS_ENCODE_H_INCLUDED 1
 /*
@@ -4645,10 +5664,10 @@ const uint32_t * whefs_get_core_magic();
   License: Public Domain
 */
 
-#include <stdint.h>
 #include <stddef.h> /* size_t on my box */
-/**
-   This file contains the whefs_inode parts of the whefs
+/** @file whefs_encode.h
+
+   This file contains the encoding/decoding parts of the whefs
    private/internal API.
 */
 
@@ -4662,45 +5681,18 @@ extern "C" {
 */
 enum whefs_sizeof_encoded {
 
-/** @var whefs_sizeof_encoded_uint64
+/** @var whefs_sizeof_encoded_id_type
+   On-disk encoded size of whefs_id_type objects. This will always be
+   one of 1, 2, 4, or 4, depending on the size of whefs_id_type, plus 1
+   tag byte used by the encoding/decoding bits for consistency
+   checking.
 
-   whefs_sizeof_encoded_uint64 is the length (in bytes) of an encoded uint64 value.
-   It is 9: 1 tag byte + 8 data bytes.
-
-   @see whefs_uint64_decode()
-   @see whefs_uint64_encode()
+   Maintenance reminder: we use (WHEFS_ID_TYPE_BITS/8) here instead of
+   sizeof(whefs_id_type), because we need a specific guaranteed size
+   for each supported value of WHEFS_ID_TYPE_BITS, and sizeof()
+   doesn't give us that.
 */
-whefs_sizeof_encoded_uint64 = 9,
-/** @var whefs_sizeof_encoded_uint32
-
-   whefs_sizeof_encoded_uint32 is the length (in bytes) of an encoded uint32 value.
-   It is 5: 1 tag byte + 4 data bytes.
-
-   @see whefs_uint32_decode()
-   @see whefs_uint32_encode()
-*/
-whefs_sizeof_encoded_uint32 = 5,
-
-/** @var whefs_sizeof_encoded_uint16
-
-   whefs_sizeof_encoded_uint16 is the length (in bytes) of an encoded uint16 value.
-   It is 3: 1 tag byte + 2 data bytes.
-
-   @see whefs_uint16_decode()
-   @see whefs_uint16_encode()
-*/
-whefs_sizeof_encoded_uint16 = 3,
-
-/** @var whefs_size_cstring
-
-   whefs_size_cstring is the encoded length of a C-style string,
-   NOT INCLUDING the actual string bytes. i.e. this is the header
-   size.
-
-   @see whefs_cstring_decode()
-   @see whefs_cstring_encode()
-*/
-whefs_sizeof_encoded_cstring = 1 + whefs_sizeof_encoded_uint32,
+whefs_sizeof_encoded_id_type = ((WHEFS_ID_TYPE_BITS/8)+1),
 
 /**
    The on-disk size of an inode record, not including the
@@ -4708,9 +5700,9 @@ whefs_sizeof_encoded_cstring = 1 + whefs_sizeof_encoded_uint32,
 */
 whefs_sizeof_encoded_inode = 1 /* tag byte */
         + whefs_sizeof_encoded_id_type /* id */
-        + whefs_sizeof_encoded_uint32 /* flags */
-	+ whefs_sizeof_encoded_uint32 /* mtime */
-	+ whefs_sizeof_encoded_uint32 /* data_size */
+        + whio_sizeof_encoded_uint8 /* flags */
+	+ whio_sizeof_encoded_uint32 /* mtime */
+	+ whio_sizeof_encoded_uint32 /* data_size */
         + whefs_sizeof_encoded_id_type /* first_block */,
 
 /**
@@ -4719,176 +5711,32 @@ whefs_sizeof_encoded_inode = 1 /* tag byte */
    whefs_fs_options::filename_length.
 */
 whefs_sizeof_encoded_inode_name_header = 1 /* tag byte */
-        + whefs_sizeof_encoded_id_type /* id */
-        + whefs_sizeof_encoded_uint64 /* hash */
-        + whefs_sizeof_encoded_uint16 /* length */
+    + whefs_sizeof_encoded_id_type /* id */
+    + whio_sizeof_encoded_uint16 /* length */,
+
+/**
+   The size of the internal stack-alloced buffers needed for encoding
+   inode name strings, including their metadata.
+
+
+   Hacker's note: the on-disk size of an encoded inode name for a
+   given whefs_fs object can be fetched with whefs_fs_sizeof_name().
+*/
+whefs_sizeof_encoded_inode_name = 1 /* tag bytes */
++ whefs_sizeof_encoded_inode_name_header
++ WHEFS_MAX_FILENAME_LENGTH
++ 1 /* trailing null */,
+
+/**
+   The on-disk size of the metadata parts of a block, which preceeds
+   the data area of the block.
+*/
+whefs_sizeof_encoded_block = 1 /* tag char */
+    + whefs_sizeof_encoded_id_type /* bl->id */
+    + whio_sizeof_encoded_uint16 /* bl->flags */
+    + whefs_sizeof_encoded_id_type /* bl->next_block */
 
 };
-
-/**
-   Encodes a 32-bit integer value into 5 bytes - a leading tag/check
-   byte, then the 4 bytes of the number, in big-endian format. Returns
-   the number of bytes written, which will be equal to
-   whefs_sizeof_encoded_uint32 on success.
-
-   dest must be valid memory at least whefs_sizeof_encoded_uint32 bytes long.
-
-   @see whefs_uint32_decode()
-*/
-size_t whefs_uint32_encode( unsigned char * dest, uint32_t i );
-
-/**
-   The converse of whefs_uint32_encode(), this tries to read an
-   encoded 32-bit value from the given memory. On success it returns
-   whefs_rc.OK and sets tgt (if not null) to that value. On error it
-   returns some other value from whefs_rc and does not modify tgt.
-
-   src must be valid memory at least whefs_sizeof_encoded_uint32 bytes
-   long.
-
-   Error values include:
-
-   - whefs_rc.ArgError = !src
-
-   - whefs_rc.ConsistencyError = the bytes at the current location
-   were not encoded with whefs_uint32_encode().
-
-   @see whefs_uint32_encode()
-
-*/
-int whefs_uint32_decode( unsigned char const * src, uint32_t * tgt );
-
-/**
-   Similar to whefs_uint32_encode(), with the same conventions, but
-   works on 16-bit numbers. Returns the number of bytes written, which
-   will be equal to whefs_sizeof_encoded_uint16 on success.
-
-   dest must be valid memory at least whefs_sizeof_encoded_uint16
-   bytes long.
-
-   @see whefs_uint16_decode()
-*/
-size_t whefs_uint16_encode( unsigned char * dest, uint16_t i );
-
-/**
-   Similar to whefs_uint32_decode(), with the same conventions and
-   error codes, but works on 16-bit numbers.  On success it returns
-   whefs_rc.OK and sets target to that value. On error it returns some
-   other value from whefs_rc and does not modify tgt.
-
-   src must be valid memory at least whefs_sizeof_encoded_uint16 bytes
-   long.
-
-
-   @see whefs_uint16_encode()
-*/
-
-int whefs_uint16_decode( unsigned char const * src, uint16_t * tgt );
-
-
-/**
-   The 64-bit variant of whefs_uint32_encode(). Follows the same
-   conventions as that function but handles a uint64_t value instead
-   of uint32_t.
-
-   @see whefs_uint16_encode()
-   whefs_uint32_encode()
-   whefs_uint64_decode()
-*/
-size_t whefs_uint64_encode( unsigned char * dest, uint64_t i );
-
-/**
-   The 64-bit variant of whefs_uint32_decode(). Follows the same
-   conventions as that function but handles a uint64_t value instead
-   of uint32_t.
-
-   @see whefs_uint16_decode()
-   whefs_uint32_decode()
-   whefs_uint64_encode()
-*/
-int whefs_uint64_decode( unsigned char const * src, uint64_t * tgt );
-
-/**
-   Uses whefs_uint32_encode() to write n elements from the given
-   array to dev.  Returns whefs_rc.OK on success. Returns the number of
-   items written.
-
-   @see whefs_uint32_encode()
-*/
-size_t whefs_uint32_array_encode( unsigned char * dest, size_t n, uint32_t const * list );
-
-/**
-   Reads n consecutive numbers from src, populating list (which must
-   point to at least n uint32_t objects) with the results. Returns the
-   number of items read, which will be less than n on error.
-
-   @see whefs_uint32_decode()
-*/
-size_t whefs_uint32_array_decode( unsigned char const * src, size_t n, uint32_t * list );
-
-/**
-   Encodes a C string into the destination by writing a tag byte, the length of
-   the string, and then the string bytes. If n is 0 then n is equivalent to
-   strlen(s). Zero is also legal string length.
-
-   Returns the number of bytes written, which will be (n +
-   whefs_sizeof_encoded_cstring) on success, 0 if !dev or !s.
-
-   dest must be at least (n + whefs_sizeof_encoded_cstring) bytes long,
-   and on success exactly that many bytes will be written. The null
-   terminator (if any) is not stored and not counted in the length.
-   s may contain null characters.
-
-   @see whefs_cstring_decode()
-*/
-size_t whefs_cstring_encode( unsigned char * dest, char const * s, uint32_t n );
-
-/**
-   The converse of whefs_cstring_encode(), this routine tries to
-   decode a string from the current location in the device.
-
-   src must contain at least (whefs_sizeof_encoded_cstring + N) bytes,
-   where N is the number which is encoded in the first part of the data.
-   On success exactly that many bytes will be read from src. The null
-   terminator (if any) is not stored and not counted in the length.
-   s may contain null characters.
-
-
-
-   On success, tgt is assigned to the new (null-terminated) string
-   (allocated via calloc()) and length (if it is not null) is set to
-   the length of the string (not counting the terminating null). The
-   caller must free the string using free(). If the string has a
-   length of 0 then tgt is set to 0, not "", and no memory is
-   allocated.
-
-   Neither dev nor tgt may be 0, but length may be 0.
-
-   Returns whefs_rc.OK on success.
-
-   On error, neither tgt nor length are modified and some non-OK value
-   is returned:
-
-   - whefs_rc.ArgError = dev or tgt are 0.
-
-   - whefs_rc.ConsistencyError = src does not contain a string written
-   by whefs_cstring_encode().
-
-   Example:
-
-@code
-char * str = 0;
-size_t len = 0;
-int rc = whefs_cstring_decode( mySource, &str, &len );
-if( whio_rc.OK != rc ) ... error ...
-... use str ...
-free(str);
-@endcode
-
-
-   @see whefs_cstring_encode()
-*/
-int whefs_cstring_decode( unsigned char const * src, char ** tgt, size_t * length );
 
 /**
    Generates a hash code for the first n bytes of the given memory,
@@ -4907,18 +5755,18 @@ uint64_t whefs_bytes_hash( void const * data, uint32_t n );
 
 
 #endif /* WANDERINGHORSE_NET_WHEFS_ENCODE_H_INCLUDED */
-/* begin file whefs_inode.h */
+/* end file src/whefs_encode.h */
+/* begin file src/whefs_inode.h */
+#line 8 "src/whefs_inode.h"
 #if !defined(WANDERINGHORSE_NET_WHEFS_INODE_H_INCLUDED)
 #define WANDERINGHORSE_NET_WHEFS_INODE_H_INCLUDED 1
 /*
   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/
 
   License: Public Domain
-*/
 
-/**
-   This file contains the whefs_inode parts of the whefs
-   private/internal API.
+  This file contains the whefs_inode parts of the whefs
+  private/internal API.
 */
 
 #ifdef __cplusplus
@@ -4928,8 +5776,8 @@ extern "C" {
 
 /** @struct whefs_block
 
-whefs_block holds the metadata for the data blocks of a VFS, but do
-not actually hold the data.
+whefs_block holds the metadata for the data blocks of an EFS, but does
+not actually hold the client data.
 */
 struct whefs_block
 {
@@ -4937,12 +5785,16 @@ struct whefs_block
        Sequential id number. Value of 0 is reserved for "invalid block".
     */
     whefs_id_type id;
+    /** id of next block */
+    whefs_id_type next_block;
     /**
        Internal flags.
+
+       An interesting note - i went through the trouble of reducing
+       this to a uint8 to save a byte and it turns out it doesn't save
+       any memory because sizeof() will still be the next multiple of two.
     */
-    uint32_t flags;
-    /* id of next block */
-    whefs_id_type next_block;
+    uint8_t flags;
 };
 typedef struct whefs_block whefs_block;
 
@@ -4952,9 +5804,9 @@ typedef struct whefs_block whefs_block;
  */
 #define whefs_block_init_m  \
     { \
-    0, /* id */ \
-    0, /* flags */ \
-    0 /* next_block */ \
+    0U, /* id */ \
+    0U, /* next_block */                     \
+    0U /* flags */ \
     }
 
 /** Empty initialization object for whefs_block objects. */
@@ -4971,17 +5823,24 @@ layout and the in-memory size of inode entries.
 */
 #define WHEFS_INODE_RELATIVES 0
 
+/** @struct whefs_block_list
 
+Holds the list of blocks for opened inodes.
+
+*/
 typedef struct whefs_block_list
 {
+    /** Array of objects. */
     whefs_block * list;
+    /** Number of items allocated. */
     whefs_id_type alloced;
+    /** Number of items used. */
     whefs_id_type count;
 } whefs_block_list;
 
 /**
-   Convenience macro for places where a whefs_block_list
-   object must be statically initialized.
+   Empty initialization object. Convenience macro for places where a
+   whefs_block_list object must be statically initialized.
 */
 #define whefs_block_list_init_m {0,0,0}
 /**
@@ -4991,21 +5850,28 @@ extern const whefs_block_list whefs_block_list_init;
 
 /** @struct whefs_inode
 
+This type is for internal API use only. Higher-level abstractions
+will someday be provided for client-side use.
+
 For most intents and purposes, a whefs_inode object can be considered
-to be a file entry in a VFS.
+to be a file entry in an EFS.
+
+Members documented as being "persistant" are saved in an EFS. Those
+marked as "transient" are only used in-memory.
 */
 typedef struct whefs_inode
 {
     /**
        Sequential id number. Value of 0 is reserved for "invalid
-       inode" and ID 1 is reserved for the root node entry of a VFS.
+       inode" and ID 1 is reserved for the root node entry of an EFS.
+       Persistant.
     */
     whefs_id_type id;
 
     /**
        Flags from the whefs_flags enum. Persistant.
     */
-    uint32_t flags;
+    uint8_t flags;
 
     /**
        ID of first block. Persistant.
@@ -5013,7 +5879,7 @@ typedef struct whefs_inode
     whefs_id_type first_block;
 
     /**
-       EOF position (i.e. size of the associated data)
+       EOF position (i.e. size of the associated data). Persistant.
     */
     uint32_t data_size;
 
@@ -5035,9 +5901,10 @@ typedef struct whefs_inode
     */
     whefs_block_list blocks;
     /** Transient string used only by opened nodes. */
-    whefs_string name;
+    //whefs_string name;
 } whefs_inode;
 
+/** Empty inode initialization object. */
 #define whefs_inode_init_m { \
 	0, /* id */ \
 	WHEFS_FLAG_Unused, /* flags */ \
@@ -5046,13 +5913,9 @@ typedef struct whefs_inode
         0, /* mtime */ \
         0, /* open_count */ \
         0, /* writer */ \
-	whefs_block_list_init_m /*blocks */, \
-        whefs_string_init_m /* name */ \
+	whefs_block_list_init_m /*blocks */ \
     }
-
-
-//static const whefs_inode whefs_inode_init = whefs_inode_init_m;
-/** Empty initialization object. */
+/** Empty inode initialization object. */
 extern const whefs_inode whefs_inode_init;
 
 /** @struct whefs_inode_list
@@ -5066,37 +5929,56 @@ typedef struct whefs_inode_list
     struct whefs_inode_list * next;
     struct whefs_inode_list * prev;
 } whefs_inode_list;
+/** Empty inode_list initialization object. */
 #define whefs_inode_list_init_m { whefs_inode_init_m, 0, 0 }
+/** Empty inode_list initialization object. */
 extern const whefs_inode_list whefs_inode_list_init;
 
 
 /**
    Reads a whefs_inode's metadata, except for its name, from
-   disk. Neither n nor n->id may be 0, but the remaining contents of n
-   are irrelevant (they will be overwritten). On success, whefs_rc.OK
-   is returned and n is updated to the on-disk state, otherwise some
-   other value is returned and n is left in an undefined state (that
-   is, possibly partially populated).
+   disk. Neither nid nor tgt may be 0. tgt must point to a valid
+   object but its contents are irrelevant (they will be
+   overwritten). On success, whefs_rc.OK is returned and tgt is
+   updated to the on-disk state, otherwise some other value is
+   returned and tgt is left in an undefined state (that is, possibly
+   partially populated).
 
-   Ownership of n is not changed by calling this function.
+   Ownership of tgt is not changed by calling this function.
 
    Typical usage:
 
    @code
    whefs_inode ino = whefs_inode_init;
-   ino.id = 42;
-   whefs_inode_read( fs, &ino );
+   whefs_inode_id_read( fs, 42, &ino );
    @endcode
 
-   WARNING: if n->id is already opened, then ino is overwritten with a
-   copy of that object. This means that updates to n->open_count and
-   n->name will not be accurately synced between n and the original
-   copy, which can lead to bugs.
+   WARNING: if nid is already opened, then tgt is overwritten with a
+   copy of that object (possibly getting older data if the inode
+   hasn't been flushed recently). This means that updates to
+   tgt->open_count, tgt->blocks (which is NOT copied), etc. will not
+   be accurately synced between tgt and the original copy, which can
+   lead to bugs if updates are made directly to tgt. If you want to
+   update an opened inode, use whefs_inode_search_opened() to see if
+   the node is opened.
+
+   The name of the inode is not fetched because it would require (A) a
+   malloc() and (B) that the client clean it up (and most callers of
+   this routine do not use the name). To fetch the name, use
+   whefs_inode_name_get().
+
+   @see whefs_inode_name_get()
+*/
+int whefs_inode_id_read( whefs_fs * fs, whefs_id_type nid, whefs_inode * tgt );
+
+/**
+   Equivalent to whefs_inode_id_read( fs, n->id, n );
 */
 int whefs_inode_read( whefs_fs * fs, whefs_inode * n );
 
-
 /**
+    Don't use this function - it's probably going away.
+
    Reads the flags field of the given inode and assigns the flags
    argument to their value. fs may not be null and nid must be a valid
    inode id for fs or the routine will fail. flags may be 0, in which
@@ -5116,12 +5998,13 @@ int whefs_inode_read( whefs_fs * fs, whefs_inode * n );
    If the given inode ID is currently opened, the flags are taken
    from the opened copy and no i/o is necessary.
 */
-int whefs_inode_read_flags( whefs_fs * fs, whefs_id_type nid, uint32_t * flags );
+//int whefs_inode_read_flags( whefs_fs * fs, whefs_id_type nid, uint32_t * flags );
 
 /**
-   Opens an inode for concurrent (but NOT multi-threaded!) access
+   "Opens" an inode for concurrent (but NOT multi-threaded!) access
    WITHIN ONE PROCESS, such that the node will be shared by open file
-   and devive handles.
+   and device handles. That is, two calls to open the same inode will
+   both return a handle pointing to the same copy of the inode.
 
    This should be the only function the remaining API uses to "open
    up" an inode.
@@ -5168,7 +6051,6 @@ int whefs_inode_open( whefs_fs * fs, whefs_id_type nodeID, whefs_inode ** tgt, v
 */
 int whefs_inode_close( whefs_fs * fs, whefs_inode * src, void const * writer );
 
-
 /**
    Writes n to disk. If any arguments are 0 then whefs_rc.ArgError
    is returned. If n->id is 0 or more than fs->options.inode_count then
@@ -5178,23 +6060,30 @@ int whefs_inode_close( whefs_fs * fs, whefs_inode * src, void const * writer );
 
    Note that this does not flush the inode's name, as that is handled
    separately. See whefs_inode_name_set().
+
+   WARNING: if n was obtained as a COPY of an opened inode (via
+   whefs_inode_read()) then the opened copy will overwrite these
+   changes when it is next flushed.
+
+   @see whefs_inode_name_set()
 */
 int whefs_inode_flush( whefs_fs * fs, whefs_inode const * n );
 
 /**
    Searches for the next free inode and assigns tgt to that value. If markUsed
-   is true then the inode is also marked as used, otherwise a susequent call
+   is true then the inode is also marked as used, otherwise a subsequent call
    to this function might return the same inode.
 
    On success it updates tgt and returns whefs_rc.OK. On error it
-   returns some other value and does not update tgt.
+   returns some other value and does not update tgt. If it traverses the whole
+   list and cannot find a free node it returns whefs_rc.FSFull.
 */
-int whefs_inode_next_free( whefs_fs * fs, whefs_inode * tgt, bool markUsed );
+int whefs_inode_next_free( whefs_fs * restrict fs, whefs_inode * restrict tgt, bool markUsed );
 
 /**
-   Searches fs for an inode with the given name. On success, tgt is updated to
-   that inode's state and whefs_rc.OK is returned, otherwise some other value
-   is returned.
+   Searches fs for an inode with the given name. On success, tgt is
+   updated to (a copy of) that inode's state and whefs_rc.OK is
+   returned, otherwise some other value is returned.
 
    Bugs:
 
@@ -5203,17 +6092,46 @@ int whefs_inode_next_free( whefs_fs * fs, whefs_inode * tgt, bool markUsed );
 int whefs_inode_by_name( whefs_fs * fs, char const * name, whefs_inode * tgt );
 
 
-/**
+/** @def whefs_inode_id_is_valid_m
+
+   Internal implementation of the more public whefs_inode_id_is_valid().
+
+   Evaluates to true if inode id NID is valid for the given fs. That
+   is, it has a non-zero id in a range legal for the given fs object.
+ */
+#define whefs_inode_id_is_valid_m( FS,NID ) ( \
+    ( (FS) && (NID) && \
+      ((NID) <= (FS)->options.inode_count)     \
+      ) ? true : false)
+
+/** @def whefs_inode_is_valid_m
+
+   Internal implementation of the more public whefs_inode_is_valid().
+
+   Evaluates to true if inode INO (a const pointer to a whefs_inode)
+   is valid for the given fs (a const whefs_fs pointer). That is, it
+   has a non-zero id in a range legal for the given fs object.
+ */
+#define whefs_inode_is_valid_m(FS,INO) ((INO) ? (whefs_inode_id_is_valid(FS,(INO)->id)) : false)
+
+#if WHEFS_MACROIZE_SMALL_CHECKS
+#define whefs_inode_id_is_valid(FS,NID) whefs_inode_id_is_valid_m(FS,NID)
+#define whefs_inode_is_valid(FS,INO) whefs_inode_is_valid_m(FS,INO)
+#else
+/** @fn bool whefs_inode_id_is_valid( whefs_fs const * restrict fs, whefs_id_type nid )
+
+   Returns true if nid is a valid inode for the given fs. That is, it
+   has a non-zero id in a range legal for the given fs object.
+*/
+bool whefs_inode_id_is_valid( whefs_fs const * restrict fs, whefs_id_type nid );
+
+/** @fn bool whefs_inode_is_valid( whefs_fs const * restrict fs, whefs_inode const * n )
+
    Returns true if n is "valid" - has a non-zero id in a range legal
    for the given fs object.
 */
-bool whefs_inode_is_valid( whefs_fs const * fs, whefs_inode const * n );
-
-/**
-   Equivalent to whefs_inode_is_valid(), but takes an inode ID instead
-   of an inode object.
-*/
-bool whefs_inode_id_is_valid( whefs_fs const * fs, whefs_id_type nid );
+bool whefs_inode_is_valid( whefs_fs const * restrict fs, whefs_inode const * n );
+#endif
 
 /**
    Creates a new i/o device associated with the given inode (which
@@ -5239,17 +6157,11 @@ bool whefs_inode_id_is_valid( whefs_fs const * fs, whefs_id_type nid );
    whio_dev::ioctl(): the returned object supports the
    whio_dev_ioctl_GENERAL_size ictl to return the current size of the
    device.
+
+   whio_dev::iomode() will return a positive value if writeMode is
+   true, 0 if it is false, or -1 if its argument is invalid.
 */
 whio_dev * whefs_dev_for_inode( whefs_fs * fs, whefs_id_type nodeID, bool writeMode );
-
-#if 0 // no longer needed
-/**
-   Returns the on-disk size of an inode INCLUDING opt->filename_length.
-   Semantics of the library will soon (as of 20090115) change to remove
-   the string length from the inode itself.
-*/
-size_t whefs_fs_sizeof_inode( whefs_fs_options const * opt );
-#endif
 
 /**
    Returns the on-disk position of the given inode, which must be a
@@ -5257,7 +6169,7 @@ size_t whefs_fs_sizeof_inode( whefs_fs_options const * opt );
    (!fs or !nid, or nid is out of range), 0 is returned. Does not require
    any i/o.
 */
-whio_size_t whefs_inode_pos( whefs_fs const * fs, whefs_id_type nid );
+whio_size_t whefs_inode_id_pos( whefs_fs const * restrict fs, whefs_id_type nid );
 
 /**
    Seeks to the given inode's on-disk position. Returns whefs_rc.OK
@@ -5281,6 +6193,9 @@ int whefs_inode_id_seek( whefs_fs * fs, whefs_id_type id );
    This function does NOT change the inode's mtime but does update the on-disk
    name record. If the inode is currently opened (via whefs_inode_open())
    then its in-memory record (whefs_inode::name) is also updated.
+
+   If node_id is opened then this routine will update the opened
+   object's copy of the name.
 */
 //int whefs_inode_name_set( whefs_fs * fs, whefs_inode const * n, char const * name );
 int whefs_inode_name_set( whefs_fs * fs, whefs_id_type node_id, char const * name );
@@ -5289,12 +6204,32 @@ int whefs_inode_name_set( whefs_fs * fs, whefs_id_type node_id, char const * nam
    Loads the name for the given inode id into the given target string
    (which may not be null). If tgt has memory allocated to it, it may
    be re-used (or realloc()'d) by this function, so the caller must
-   copy it beforehand if it will be needed later. If the read-in
+   copy it beforehand if the existing value will be needed later. If the read-in
    string has a length of 0 and tgt->alloced is not 0 (i.e. tgt
    already has content), then the string's memory is kept but is
    zeroed out and tgt->length will be set to 0.
 
    Returns whefs_rc.OK on success.
+
+   If you want to ensure that no call to malloc() or realloc() is made
+   to expand tgt, yet still be assured of having enough memory available
+   to store the string, here's a trick:
+
+   @code
+   enum { bufSize = WHEFS_MAX_FILENAME_LENGTH + 1 };
+   char buf[bufSize] = {0};
+   whefs_string str = whefs_string_init;
+   str.string = buf;
+   str.alloced = bufSize;
+   int rc = whefs_inode_name_get( fs, id, &str );
+   assert( (str.string == buf) && "Illegal (re)alloc!" );
+   ...
+   @endcode
+
+   The internals of the lib won't allow an inode name longer than
+   fs->options.filename_length, which must be less than or equal to
+   WHEFS_MAX_FILENAME_LENGTH. We add one to the maximum buffer size in
+   the above code to accommodate the trailing null.
 */
 int whefs_inode_name_get( whefs_fs * fs, whefs_id_type id, whefs_string * tgt );
 
@@ -5346,8 +6281,8 @@ int whefs_inode_id_unlink( whefs_fs * fs, whefs_id_type nid );
 
    This routine allows the caller to bypass the single-writer
    restriction on inodes, and should be used with care. It is in the
-   semi-public API only to support whefs_file_rename().
-
+   semi-public API only to support whefs_file_rename() and
+   whefs_fsize().
 */
 int whefs_inode_search_opened( whefs_fs * fs, whefs_id_type nodeID, whefs_inode ** tgt );
 
@@ -5359,7 +6294,7 @@ int whefs_inode_search_opened( whefs_fs * fs, whefs_id_type nodeID, whefs_inode 
    you are certain you're passing non-nulls then you can ignore the error
    check.
 */
-int whefs_inode_encode( unsigned char * dest, whefs_inode const * src );
+int whefs_inode_encode( whefs_inode const * src, unsigned char * dest );
 
 /**
    Encodes dest (which may not be null) from src, which must be valid memory
@@ -5373,7 +6308,47 @@ int whefs_inode_encode( unsigned char * dest, whefs_inode const * src );
    If src or dest are null then whefs_rc.ArgError is returned. If
    decoding fails then whefs_rc.ConsistencyError is returned.
 */
-int whefs_inode_decode( unsigned char const * src, whefs_inode * dest );
+int whefs_inode_decode( whefs_inode * dest, unsigned char const * src );
+
+/**
+   whefs_inode_foreach_f describes a functor for use with
+   whefs_inode_foreach().  n is the current inode being iterated
+   over. clientData is the client-determined argument passed to
+   whefs_inode_foreach().
+*/
+typedef int (*whefs_inode_foreach_f)( whefs_fs * fs, whefs_inode const * n, void * clientData );
+/**
+   whefs_inode_predicate_f describes a predicate functor for use with
+   whefs_inode_foreach(). n is the current inode being iterated
+   over. clientData is the client-determined argument passed to
+   whefs_inode_foreach().
+*/
+typedef bool (*whefs_inode_predicate_f)( whefs_fs * fs, whefs_inode const * n, void * clientData );
+
+/**
+   Walks each inode in fs, starting at inode #2 (#1 is reserved for
+   internal use as the root node). For each node, whereFunc(node,whereData) is called.
+   If it returns true then forEach(fs,n,forEachData) is called. If forEach() returns
+   any value other than whefs_rc.OK then looping stops and that code is returned.
+
+   The whereFunc function may be null but forEach may not. If whereFunc is
+   null then it is treated as always returning true. The whereData and
+   forEachData pointers may be anything - they are passed as-is to the
+   whereFunc/forEach functions.
+
+   On success, whefs_rc.OK is returned. The other failure cases are:
+
+   - fs or forEach are null: whefs_rc.ArgError
+
+   - reading an inode fails: some propagated error code.
+
+   ACHTUNG: this bypasses the opened-inodes cache (because lookup time
+   would grow exponentially as the number of opened inodes grew). Thus
+   care must be taken with the nodes passed on to forEach, lest any
+   changes made to them get overwritten by the opened node when it
+   flushes.
+*/
+int whefs_inode_foreach( whefs_fs * fs, whefs_inode_predicate_f whereFunc, void * whereData, whefs_inode_foreach_f forEach, void * forEachData );
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -5381,3 +6356,302 @@ int whefs_inode_decode( unsigned char const * src, whefs_inode * dest );
 
 
 #endif /* WANDERINGHORSE_NET_WHEFS_INODE_H_INCLUDED */
+/* end file src/whefs_inode.h */
+/* begin file src/whefs_cache.h */
+#line 8 "src/whefs_cache.h"
+#if !defined(WANDERINGHORSE_NET_WHEFS_CACHE_H_INCLUDED)
+#define WANDERINGHORSE_NET_WHEFS_CACHE_H_INCLUDED 1
+/*
+  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/
+
+  License: Public Domain
+*/
+
+/**
+   This file contains declarations for some of the whefs
+   private/internal caching API.
+
+*/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+/**
+   Generates a hashcode for the given name and identifies the inode
+   with the given id with that hashcode. On success it returns whefs_rc.OK.
+
+   Error cases:
+
+   - If fs or name are null, or !*name: whefs_rc.ArgError
+
+   - Allocation of the cache fails: whefs_rc.AllocError
+
+   - An entry already exists for the same hash code: whefs_rc.InternalError. If
+   this ever actually happens, i'll try other hashes or build a better hashtable.
+
+
+   This routine is much faster if the cache is sorted before calling
+   this.  If you're going to add lots of items at once, do so with the
+   lower-level cache list API, then sort it, then mark is as unsorted (or sort it).
+*/
+int whefs_inode_hash_cache( whefs_fs * fs, whefs_id_type id, char const * name );
+
+/**
+   If a cached entry is found with the same hashcode as name, the id
+   of that inode is returned, else 0.
+*/
+whefs_id_type whefs_inode_hash_cache_search_id(whefs_fs * fs, char const * name );
+/**
+   If a cached entry is found with the same hashcode as name, the index
+   of that entry in the cache is returned, else whefs_rc.IDTypeEnd.
+*/
+whefs_id_type whefs_inode_hash_cache_search_ndx(whefs_fs * fs, char const * name );
+
+/**
+   Searches for a cache entry with the same hash as name. If it finds
+   it, it removes it. The cache becomes unsorted by this.
+*/
+void whefs_inode_name_uncache(whefs_fs * fs, char const * name );
+
+/**
+   Iterates over all inodes and caches the name entries for all
+   in-used inodes. This is normally automatically called when an FS is
+   opened (unless an internal compile-time flag disables that).
+*/
+int whefs_inode_hash_cache_load( whefs_fs * fs );
+
+/**
+   Sorts the name cache, if it is loaded. It shouldn't strictly be
+   in the public API, but it may need to be.
+*/
+void whefs_inode_hash_cache_sort(whefs_fs * fs );
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+
+#endif /* WANDERINGHORSE_NET_WHEFS_CACHE_H_INCLUDED */
+/* end file src/whefs_cache.h */
+/* begin file include/wh/whefs/whefs_client_util.h */
+#line 8 "include/wh/whefs/whefs_client_util.h"
+#if !defined(WANDERINGHORSE_NET_WHEFS_CLIENT_UTIL_INCLUDED)
+#define WANDERINGHORSE_NET_WHEFS_CLIENT_UTIL_INCLUDED 1
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+   Like the 'ls' Unix program, this function fetches a list of
+   filenames matching the given pattern. If no matches are found, null
+   is returned, otherwise a string list is returned and count (if it
+   is not null) is set to the number of items in the list.
+
+   A pattern of null or an empty string is equivalent to a pattern of
+   "*" (but much faster, since it doesn't need to be compared).
+
+   The returned list must be freed by calling whefs_string_finalize()
+   and passing true as the second parameter.
+
+   Example usage:
+
+   @code
+    whefs_string * ls = whefs_ls( myFS, "*.c", 0 );
+    whefs_string * head = ls;
+    while( ls )
+    {
+        printf("%s\n", ls->string );
+        ls = ls->next;
+    }
+    whefs_string_finalize( head, true );
+   @endcode
+
+   BUG:
+
+   This routine has no way of reporting an error. If some sort of I/O
+   error happens after an entry has been fetched, the entries matched
+   so far are returned but there is no way of knowing how many entries
+   would have been returned if all could have been read. That said, if
+   the first entry is read successfully, it is "reasonable to assume"
+   that the remaining entries could be read as well. In fact, since
+   only "used" entries are considered for matching, any entries
+   returned here must have been read previously (to build the
+   used-items cache), and only a true I/O error (or corruption of the
+   VFS container) should cause a failure here.
+*/
+whefs_string * whefs_ls( struct whefs_fs * fs, char const * pattern, whefs_id_type * count );
+
+
+/**
+   Imports all contents from src into the VFS pseudofile named fname.
+   If overwrite is true, any existing entry will be overwritten,
+   otherwise an existing file with that name will cause this function
+   to return whefs_rc.AccessError.
+
+   Ownership of src is not changed. On success, this routine will
+   re-set src's cursor to its pre-call position before returning.
+
+   On success, whefs_rc.OK is returned.
+
+   On error, any number of different codes might be returned, both
+   from whefs_rc and whio_rc (some of which overlap or conflict).
+   If the import fails and the entry did not exist before the import
+   started, it is removed from the filesystem. If it did exist then
+   exactly what happens next depends on a few factors:
+
+   - If the import failed because the existing file could not be
+   expanded to its new size then it is kept intact, with its old
+   size. This step happens first, before any writing is done.
+
+   - If the import failed during the copy process then the destination
+   file is left in an undefined state and it should probably be
+   unlinked.
+
+*/
+int whefs_import_dev( whefs_fs * fs, whio_dev * src, char const * fname, bool overwrite );
+
+
+/**
+   A type for reporting certain vfs metrics.
+*/
+typedef struct whefs_fs_stats
+{
+    /**
+       Size of the vfs container.
+    */
+    size_t size;
+    /**
+       Number of uses inodes.
+    */
+    size_t used_inodes;
+    /**
+       Number of used blocks.
+    */
+    size_t used_blocks;
+    /**
+       Number of used bytes (not necessarily whole blocks).
+    */
+    size_t used_bytes;
+} whefs_fs_stats;
+
+/**
+   Not yet implemented.
+
+   Calculates some statistics for fs and returns them via
+   the st parameter.
+
+   Returns whefs_rc.OK on success. On error some other value
+   is returned and st's contents are in an undefined state.
+*/
+int whefs_fs_stats_get( whefs_fs * fs, whefs_fs_stats * st );
+
+/**
+   Test/debug routine which inserts some entries into the inode table.
+*/
+int whefs_test_insert_dummy_files( whefs_fs * fs );
+
+/** @struct whefs_fs_entry
+
+   Experimental!
+
+   whefs_fs_entry is the public interface into filesystem entries.
+   They are intended to be fetched and interated over using
+   whefs_fs_entry_foreach().
+*/
+struct whefs_fs_entry
+{
+    /** I-node ID of the entry. */
+    whefs_id_type inode_id;
+
+    /** ID of the first data block used by this entry. */
+    whefs_id_type block_id;
+
+    /** Last modification time. */
+    uint32_t mtime;
+
+    /** The size of the pseudofile, in bytes. */
+    whio_size_t size;
+    /**
+       Entry's name. Be careful with deallocation! When objects of
+       this type are passed to a callback function from
+       whefs_fs_entry_foreach() the bytes used by this member are
+       owned by whefs_fs_entry_foreach() and become
+       invalidated/overwritten on each iteration. Thus if client code
+       needs this name it must be copied in the foreach callback
+       function. the third argument to whefs_fs_entry_foreach() may
+       contain a client-side object for storing such copies.
+
+       Also note that objects of this type MUST be initialized to 0
+       values if they are to be used properly. Failing to do so can
+       result in attempts to allocate huge amounts of memory or
+       reallocate/re-use memory which doesn't belong to the string
+       object. To avoid such problems, always initialize
+       whefs_fs_entry objects using the whefs_fs_entry_init object or
+       whefs_fs_entry_init_m macro.
+     */
+    whefs_string name;
+};
+typedef struct whefs_fs_entry whefs_fs_entry;
+
+/** Empty initialization object for whefs_fs_entry. */
+#define whefs_fs_entry_init_m { 0U/*inode_id*/, 0U/*block_id*/, 0U/*mtime*/, 0U/*size*/, whefs_string_init_m }
+
+/** Empty initialization object for whefs_fs_entry. */
+extern const whefs_fs_entry whefs_fs_entry_init;
+
+/**
+   whefs_fs_entry_foreach_f describes a callback for use with
+   whefs_fs_entry_foreach().  It is called from whefs_fs_entry_foreach(),
+   passing:
+
+   - fs is the whefs_fs object to which the entry belongs.
+
+   - ent is the current entry being iterated over.
+
+   - clientData is the client-determined argument passed to
+   whefs_fs_entry_foreach().
+
+   The string bytes belonging to ent->name will become invalid after
+   this function returns (and control returns to
+   whefs_fs_entry_foreach()), so they must be copied if they are
+   needed for later.
+*/
+
+typedef int (*whefs_fs_entry_foreach_f)( whefs_fs * fs, whefs_fs_entry const * ent, void * clientData );
+
+/**
+   Walks each inode entry in fs, starting at inode #2 (#1 is reserved
+   for internal use as the root node). For each in-use inode entry
+   forEach(fs,entry,forEachData) is called. If forEach() returns any
+   value other than whefs_rc.OK then looping stops and that return
+   code is returned. Note that forEach() is NOT called for unused
+   inodes.
+
+   The forEach function may not be null. The forEachData pointer may
+   be anything - it is passed on as-is to the forEach function.
+
+   On success, whefs_rc.OK is returned. The other failure cases are:
+
+   - fs or forEach are null: whefs_rc.ArgError
+
+   - reading an inode fails: some propagated error code.
+
+   - If forEach() returns non-OK, then that result is returned.
+
+   ACHTUNG: this bypasses the opened-inodes cache (because lookup time
+   would grow exponentially as the number of opened inodes grew). Thus
+   the data passed to forEach() may not reflect unflushed state of
+   inodes which are currently opened for write access.
+*/
+int whefs_fs_entry_foreach( whefs_fs * fs, whefs_fs_entry_foreach_f forEach, void * forEachData );
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+#endif // WANDERINGHORSE_NET_WHEFS_CLIENT_UTIL_INCLUDED
+/* end file include/wh/whefs/whefs_client_util.h */

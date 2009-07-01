@@ -1,9 +1,13 @@
-/* auto-generated on Sun Mar  8 07:54:04 CET 2009. Do not edit! */
-#define WHEFS_AMALGAMATION_BUILD 1
+/* auto-generated on Wed Jul  1 15:56:14 CEST 2009. Do not edit! */
+#define WHIO_AMALGAMATION_BUILD 1
 #if ! defined __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS 1
 #endif
-/* begin file whio_config.h */
+#if defined(__cplusplus) && !defined(restrict)
+#define restrict
+#endif
+/* begin file include/wh/whio/whio_config.h */
+#line 8 "include/wh/whio/whio_config.h"
 #ifndef WANDERINGHORSE_NET_WHIO_CONFIG_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_CONFIG_H_INCLUDED 1
 /*
@@ -17,7 +21,8 @@
 
 #include <stdint.h> /* uintXX_t */
 #include <inttypes.h> /* PRIuXX macros */
-
+//#include <unistd.h> /* ONLY for off_t. We need a better way to do this. */
+#include <sys/types.h> /* off_t on Linux */
 
 #ifndef __cplusplus
 /* Try to find a usable bool, or make one up ... */
@@ -63,12 +68,12 @@ extern "C" {
 #endif
 
 
-/** @def WHIO_USE_STATIC_MALLOC
+/** @def WHIO_CONFIG_ENABLE_STATIC_MALLOC
    Changing this only has an effect when building this library
    or when building extensions which want to follow these
    conventions...
 
-   If WHIO_USE_STATIC_MALLOC is true then certain operations
+   If WHIO_CONFIG_ENABLE_STATIC_MALLOC is true then certain operations
    which are normally done via malloc() and free() are instead
    done first via a static list of pre-allocated objects and then
    (if the list is all used up) fall back malloc()/free().
@@ -92,8 +97,8 @@ extern "C" {
    this option can potentially save many calls to malloc() (and should
    perform much better).
 */
-#if !defined(WHIO_USE_STATIC_MALLOC)
-#  define WHIO_USE_STATIC_MALLOC 0
+#if !defined(WHIO_CONFIG_ENABLE_STATIC_MALLOC)
+#  define WHIO_CONFIG_ENABLE_STATIC_MALLOC 0
 #endif
 
 #if defined(WHIO_SIZE_T_BITS)
@@ -107,7 +112,7 @@ extern "C" {
     client code (*cough* libwhefs *cough*) can use whio without having
     to fudge certain numeric types.
 */
-#define WHIO_SIZE_T_BITS 64
+#define WHIO_SIZE_T_BITS 32
 
 /** @def WHIO_SIZE_T_PFMT
 
@@ -165,12 +170,26 @@ porting to machines with different size_t sizes.
 #  error "WHIO_SIZE_T_BITS must be one of: 8, 16, 32, 64"
 #endif
 
+/** @def WHIO_VOID_PTR_ADD()
+   WHIO_VOID_PTR_ADD() is a workaround for gcc's -pedantic mode
+   and other compilers which warn when void pointers are used
+   in addition.
+*/
+#  define WHIO_VOID_PTR_ADD(VP,PLUS) ((void*)((unsigned char *)(VP)+(PLUS)))
+/** @def WHIO_VOID_CPTR_ADD()
+   Equivalent to WHIO_VOID_PTR_ADD() but applies to a const void
+   pointer.
+*/
+#  define WHIO_VOID_CPTR_ADD(VP,PLUS) ((void const*)((unsigned char const *)(VP)+(PLUS)))
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif /* WANDERINGHORSE_NET_WHIO_CONFIG_H_INCLUDED */
-/* begin file whio_common.h */
+/* end file include/wh/whio/whio_config.h */
+/* begin file include/wh/whio/whio_common.h */
+#line 8 "include/wh/whio/whio_common.h"
 #ifndef WANDERINGHORSE_NET_WHIO_COMMON_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_COMMON_H_INCLUDED
 /*
@@ -183,6 +202,8 @@ porting to machines with different size_t sizes.
 
 //#include <stdio.h>
 //#include <unistd.h> /* off_t on Linux? */
+//#include <sys/types.h> /* off_t on Linux? */
+
 #include <stdint.h> /* uint32_t */
 #include <stdarg.h> /* va_list */
 
@@ -274,19 +295,144 @@ typedef struct whio_rc_t
 */
 extern const whio_rc_t whio_rc;
 
+/** @struct whio_client_data
+
+whio_client_data is an abstraction for tying client-specific data to a
+whio_dev object. The data is not used by the public whio_dev API with
+one exception: when whio_dev_api::close() or whio_stream_api::close()
+is called, the implementation must clean up this data IFF the dtor
+member is not 0. For example:
+
+  @code
+  if( my->client.dtor ) {
+    my->client.dtor( my->client.data );
+    my->client = whio_client_data_init; // zero it out
+  }
+  @endcode
+   
+*/
+struct whio_client_data
+{
+    /**
+       Arbitrary data associated with an i/o device or stream.
+
+       This data is for sole use by whio_dev clients, with one
+       important exception: if dtor is not 0 then device implementations
+       take that as a hint to destroy this object using that
+       function.
+
+       The object pointed to by client.data should not do any i/o on
+       this stream or any stream/device during its destructor. Since
+       client.data can point to arbitrary objects, it is impossible
+       for this API to ensure that they are destroyed in a kosher
+       order.  Thus it is the client's responsibility to use
+       client.data wisely and carefully. A good use would be for a
+       client-side buffer, e.g.  to implement buffered readahead. A
+       bad use would be using it to store links to other i/o devices,
+       as the destructor would presumably then close or flush them and
+       they might not be live at that point. Device implementors should
+       use whio_impl_data to store "more private" data.
+    */
+    void * data;
+    /**
+       If this function is not 0 then whio_dev implementations
+       MUST call this function, passing the data member to it,
+       in their cleanup routines. If it is 0 then they must
+       ignore the data member.
+    */
+    void (*dtor)( void * );
+};
+typedef struct whio_client_data whio_client_data;
+/**
+   Static initializer for whio_client_data objects.
+*/
+#define whio_client_data_init_m {0/*data*/,0/*dtor*/}
+
+/**
+   An empty whio_client_data object for use in initialization
+   of whio_client_data objects.
+*/
+extern const whio_client_data whio_client_data_init;
+
+/**
+   Holds private implementation details for whio_dev instances. Each
+   instance may (and in practice always does) store instance-specific
+   data here. These data are for use only by the functions related to
+   this implementation and must be cleaned up via
+   dev->api->close(dev).
+*/
+struct whio_impl_data
+{
+    /**
+       data is SOLELY for use by concrete implementations of
+       whio_stream.
+       
+       data can be used to store private data required by the
+       implementation functions. Each instance may have its own
+       information (which should be cleaned up via the finalize()
+       member function, assuming the stream owns the data).
+
+       This data should be freed in the owning object's finalize() or
+       close() routine.
+    */
+    void * data;
+
+    /**
+       A type identifier for use solely by whio_dev implementations,
+       not client code. If the implementation uses this (it is an
+       optional component), it must be set by the whio_dev
+       initialization routine (typically a factory function).
+
+       This mechanism works by assigning some arbitrary opaque value
+       to all instances of a specific whio_dev implementation. The
+       implementation funcs can then use that to ensure that they are
+       passed the correct type. The typeID need not be public, but may
+       be so. e.g. the author of the impl may provide a non-member
+       whio_dev-related function which requires a specific type (or
+       types), and in that case the types would possibly need to be
+       known by the caller.
+    */
+    void const * typeID;
+};
+/**
+   Static initializer for whio_impl_data objects.
+*/
+#define whio_impl_data_init_m {0/*data*/,0/*dtor*/}
+typedef struct whio_impl_data whio_impl_data;
+/**
+   Empty initializer object for whio_impl_data.
+*/
+extern const whio_impl_data whio_impl_data_init;
+
+/**
+   Tries to convert an fopen()-compatible mode string to a number
+   compatible with whio_dev::iomode() and whio_stream::iomode().
+
+   Returns a positive number of mode appears to be writeable,
+   0 if it appears to be read-only, and a negative value if it
+   cannot determine the mode.
+
+   This function is intended for use with whio_dev/whio_stream
+   factories which use an fopen()-like mode string.
+*/
+short whio_mode_to_iomode( char const * mode );
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif /* WANDERINGHORSE_NET_WHIO_COMMON_H_INCLUDED */
-/* begin file whprintf.h */
-#ifndef WHPRINTF_H_INCLUDED_
-#define WHPRINTF_H_INCLUDED_ 1
+/* end file include/wh/whio/whio_common.h */
+/* begin file include/wh/whprintf.h */
+#line 8 "include/wh/whprintf.h"
+#ifndef WANDERINGHORSE_NET_WHPRINTF_H_INCLUDED
+#define WANDERINGHORSE_NET_WHPRINTF_H_INCLUDED 1
 #include <stdarg.h>
+#include <stdio.h> /* FILE handle */
 #ifdef __cplusplus
 extern "C" {
 #endif
-/**@page whprintf_page_main whprintf: generic printf-like utilities
+/** @page whprintf_page_main whprintf printf-like API
 
    This API contains a printf-like implementation which supports
    aribtrary data destinations.
@@ -316,7 +462,7 @@ extern "C" {
    The policies which implementations need to follow are:
 
    - arg is an implementation-specific pointer (may be 0) which is
-   passed to vappendf. whprintfv() doesn't know what this argument is
+   passed to whprintf(). whprintfv() doesn't know what this argument is
    but passes it to its whprintf_appender. Typically it will be an
    object or resource handle to which string data is pushed or output.
 
@@ -377,7 +523,7 @@ typedef long (*whprintf_appender)( void * arg,
 
  CURRENT (documented) PRINTF EXTENSIONS:
 
- %%z works like %%s, but takes a non-const (char *) and vappendf
+ %%z works like %%s, but takes a non-const (char *) and whprintf()
  deletes the string (using free()) after appending it to the output.
 
  %%h (HTML) works like %s but converts certain characters (like '<' and '&' to
@@ -402,7 +548,7 @@ typedef long (*whprintf_appender)( void * arg,
  implementation's sqlite3 genes.)
 
  These extensions may be disabled by setting certain macros when
- compiling vappendf.c (see that file for details).
+ compiling whprintf.c (see that file for details).
 */
 long whprintfv(
   whprintf_appender pfAppend,          /* Accumulate results here */
@@ -423,7 +569,7 @@ long whprintf(whprintf_appender pfAppend,
 /**
    Emulates fprintf() using whprintfv().
 */
-//long whprintf_file( FILE * fp, char const * fmt, ... );
+long whprintf_file( FILE * fp, char const * fmt, ... );
 
 
 /**
@@ -445,18 +591,19 @@ char * whprintf_str( char const * fmt, ... );
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-#endif /* WHPRINTF_H_INCLUDED_ */
-/* begin file whio_dev.h */
+#endif /* WANDERINGHORSE_NET_WHPRINTF_H_INCLUDED */
+/* end file include/wh/whprintf.h */
+/* begin file include/wh/whio/whio_dev.h */
+#line 8 "include/wh/whio/whio_dev.h"
 #ifndef WANDERINGHORSE_NET_WHIO_DEV_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_DEV_H_INCLUDED
+
 
 #include <stdio.h> /* FILE */
 #include <stdint.h> /* uint32_t */
 #include <stdarg.h> /* va_list */
 #include <stddef.h> /* ??? */
 #include <stdarg.h> /* va_list */
-
-#include <sys/types.h> /* off_t on Linux */
 
 /*
    This file contains declarations and documentation for the generic
@@ -471,7 +618,7 @@ char * whprintf_str( char const * fmt, ... );
    License: Public Domain
 
    whio encapsulates an i/o device API. It originally developed as
-   parts of two another library, but the parts were found to be generic
+   parts of two other libraries, but the parts were found to be generic
    enough (and complementary enough) to fork out into a single library.
 
    The API provides interfaces for working with random-access devices
@@ -527,11 +674,14 @@ char buf[bufSize]; // input buffer
 whio_size_t n = 0;
 while( 0 != (n = dev->api->read( dev, buf, bufSize ) ) )
 {
-    printf("Read %u bytes\n", n );
+    printf("Read %"WHIO_SIZE_T_PFMT" bytes\n", n );
 }
 dev->api->finalize(dev);
 @endcode
 
+Note the use of WHIO_SIZE_T_PFMT instead of "%%u", in the printf call,
+so that the code will work correctly with varying sizes of
+whio_size_t.
 */
 
 #ifdef __cplusplus
@@ -729,87 +879,22 @@ struct whio_dev_api
        that function's docs for why this one takes a va_list).
     */
     int (*ioctl)( struct whio_dev * dev, int operation, va_list args );
+
+    /**
+       This function must return a positive number if dev is writable,
+       0 if it is read-only, and a negative number if the device
+       cannot report this information or if the given argument is null
+       or otherwise invalid.
+    */
+    short (*iomode)( struct whio_dev * dev );
 };
 typedef struct whio_dev_api whio_dev_api;
 
-/**
-   Implementation details for whio_dev instances. Each instance may
-   (and in practice always does does) store instance-specific data
-   here. These data are for use only by the functions related to this
-   implementation and must be cleaned up via dev->api->finalize(dev).
-*/
-struct whio_dev_impl
-{
-    /**
-       For use only by concrete implementations, to store any data
-       they need for the member function implementations. This data
-       should be freed in the owning object's finalize() or close()
-       routine.
-    */
-    void * data;
 
-    /**
-       A type identifier for use solely by whio_dev implementations,
-       not client code. If the implementation uses this (it is an
-       optional component), it must be set by the whio_dev
-       initialization routine (typically a factory function).
-
-       This mechanism works by assigning some arbitrary opaque value
-       to all instances of a specific whio_dev implementation. The
-       implementation funcs can then use that to ensure that they are
-       passed the correct type. The typeID need not be public, but may
-       be so. e.g. the author of the impl may provide a non-member
-       whio_dev-related function which requires a specific type (or
-       types), and in that case the types would possibly need to be
-       known by the caller.
-    */
-    void const * typeID;
-};
-typedef struct whio_dev_impl whio_dev_impl;
-
-/** @struct whio_dev_client
-
-whio_dev_client is an abstraction for tying client-specific
-data to a whio_dev object. The data is not used by the public
-whio_dev API with one exception: when whio_dev_api::close()
-is called, the implementation must clean up this data IFF
-the dtor member is not 0. For example:
-
-  @code
-  if( my->client.dtor ) my->client.dtor( my->client.data );
-  @endcode
-   
-*/
-struct whio_dev_client
-{
-    /**
-       Arbitrary data associated with the device.
-    */
-    void * data;
-    /**
-       If this function is not 0 then whio_dev implementations
-       MUST call this function, passing the data member to it,
-       in their cleanup routines. If it is 0 then they may
-       ignore the data member.
-    */
-    void (*dtor)( void * );
-};
-typedef struct whio_dev_client whio_dev_client;
-
-/**
-   An empty whio_dev_client object for use in initialization
-   of whio_dev_client objects.
-*/
-extern const whio_dev_client whio_dev_client_init;
-
-/**
-   Static initializer for whio_dev_client objects.
-*/
-#define whio_dev_client_init_m {0/*data*/,0/*dtor*/}
 
 /**
    whio_dev is an interface for communicating with an underlying
-   random access data store via. It is modelled after the
+   random access data store. It is modelled after the
    POSIX-standard FILE API, and it "should" be able to act as a
    wrapper for any stream type for which we can implement the
    appropriate operations. The most significant limitation is that the
@@ -825,8 +910,8 @@ extern const whio_dev_client whio_dev_client_init;
    primary reason for this is because all instances of a certain class
    of whio_devices, in practice, share a single set of implementation
    functions. By referencing the functions this way we save
-   (sizeof(whio_dev_api) - sizeof(whefs_api*)) bytes on each instance
-   of whio_dev, and it its place we have a single shared (and static)
+   (sizeof(whio_dev_api) - sizeof(whio_dev_api*)) bytes on each instance
+   of whio_dev, and in its place we have a single shared (and static)
    instance of the implementation's API object.
 
    Thread safety: it is never legal to use any given whio_dev instance
@@ -836,7 +921,8 @@ extern const whio_dev_client whio_dev_client_init;
    or write to go somewhere other than desired. It is in theory not
    problematic for multiple threads to share one whio_dev instance as
    long as access to the device is strictly serialized via a
-   marshaller.
+   marshaller and device positioning operations are implemented taking
+   that into account.
 */
 typedef struct whio_dev
 {
@@ -854,14 +940,14 @@ typedef struct whio_dev
        implementation-specific close() method should free up this
        memory.
     */
-    whio_dev_impl impl;
+    whio_impl_data impl;
 
     /**
        This data is for sole use by whio_dev clients, with one
-       important exception: see the docs for whio_dev_client for
+       important exception: see the docs for whio_client_data for
        details.
     */
-    whio_dev_client client;
+    whio_client_data client;
 } whio_dev;
 
 
@@ -942,12 +1028,12 @@ void whio_dev_free( whio_dev * dev );
 int whio_dev_ioctl( whio_dev * dev, int operation, ... );
 
 /**
-   Returns the size of the given device, or whio_rc.SizeTError if
-   !dev or if the device returns that code to signify that it is not
-   seekable. The size is calculated by seek()ing to the
-   end of the device and using that offset. Thus the device must of
-   course support seeking. The original position before the function
-   returons.
+   Returns the size of the given device, or whio_rc.SizeTError if !dev
+   or if the device returns that code to signify that it is not
+   seekable. The size is calculated by seek()ing to the end of the
+   device and using that offset. Thus the device must of course
+   support seeking. The device is positioned to its pre-call position
+   before the function returns.
 */
 whio_size_t whio_dev_size( whio_dev * dev );
 
@@ -976,198 +1062,6 @@ whio_size_t whio_dev_writeat( whio_dev * dev, whio_size_t pos, void const * data
 int whio_dev_copy( whio_dev * src, whio_dev * dest );
 
 /**
-   This enum defines some on-disk sizes for the utility routines
-   which encode/decode data to/from whio_dev objects.
-*/
-enum whio_dev_encoded_sizes {
-
-/** @var whio_dev_sizeof_uint64
-
-   whio_dev_sizeof_uint64 is the length (in bytes) of an encoded uint64 value.
-   It is 9: 1 tag byte + 8 data bytes.
-
-   @see whio_dev_uint64_decode()
-   @see whio_dev_uint64_encode()
-*/
-whio_dev_sizeof_uint64 = 9,
-/** @var whio_dev_sizeof_uint32
-
-   whio_dev_sizeof_uint32 is the length (in bytes) of an encoded uint32 value.
-   It is 5: 1 tag byte + 4 data bytes.
-
-   @see whio_dev_uint32_decode()
-   @see whio_dev_uint32_encode()
-*/
-whio_dev_sizeof_uint32 = 5,
-
-/** @var whio_dev_sizeof_uint16
-
-   whio_dev_sizeof_uint16 is the length (in bytes) of an encoded uint16 value.
-   It is 3: 1 tag byte + 2 data bytes.
-
-   @see whio_dev_uint16_decode()
-   @see whio_dev_uint16_encode()
-*/
-whio_dev_sizeof_uint16 = 3,
-
-/** @var whio_dev_sizeof_cstring
-
-   whio_dev_size_cstring is the encoded length of a C-style string,
-   NOT INCLUDING the actual string bytes. i.e. this is the header
-   size.
-
-   @see whio_dev_cstring_decode()
-   @see whio_dev_cstring_encode()
-*/
-whio_dev_sizeof_cstring = whio_dev_sizeof_uint32 + 1
-};
-
-/**
-   Encodes a 32-bit integer value into 5 bytes - a leading tag/check
-   byte, then the 4 bytes of the number, in big-endian format. Returns
-   the number of bytes written, which will be equal to
-   whio_dev_sizeof_uint32 on success.
-
-   @see whio_dev_uint32_decode()
-*/
-size_t whio_dev_uint32_encode( whio_dev * dev, uint32_t i );
-
-/**
-   The converse of whio_dev_uint32_encode(), this tries to read an encoded
-   32-bit value from the current position of dev. On success it returns
-   whio_rc.OK and sets target to that value. On error it returns some
-   other value from whio_rc and does not modify tgt.
-
-   Error values include:
-
-   - whio_rc.ArgError = !dev or !tgt
-
-   - whio_rc.IOError = an error while reading the value (couldn't read enough bytes)
-
-   - whio_rc.ConsistencyError = the bytes at the current location were not encoded
-   with whio_dev_uint32_encode().
-
-   @see whio_dev_uint32_encode()
-
-*/
-int whio_dev_uint32_decode( whio_dev * dev, uint32_t * tgt );
-
-/**
-   Similar to whio_dev_uint32_encode(), with the same conventions, but
-   works on 16-bit numbers. Returns the number of bytes written, which
-   will be equal to whio_dev_sizeof_uint16 on success.
-
-   @see whio_dev_uint16_decode()
-*/
-size_t whio_dev_uint16_encode( whio_dev * dev, uint16_t i );
-
-/**
-   Similar to whio_dev_uint32_decode(), with the same conventions and
-   error codes, but works on 16-bit numbers.  On success it returns
-   whio_rc.OK and sets target to that value. On error it returns some
-   other value from whio_rc and does not modify tgt.
-
-   @see whio_dev_uint16_encode()
-*/
-
-int whio_dev_uint16_decode( whio_dev * dev, uint16_t * tgt );
-
-
-/**
-   The 64-bit variant of whio_dev_uint32_encode(). Follows the same
-   conventions as that function but handles a uint64_t value instead
-   of uint32_t.
-
-   @see whio_dev_uint16_encode()
-   @see whio_dev_uint32_encode()
-   @see whio_dev_uint64_decode()
-*/
-size_t whio_dev_uint64_encode( whio_dev * fs, uint64_t i );
-
-/**
-   The 64-bit variant of whio_dev_uint32_decode(). Follows the same
-   conventions as that function but handles a uint64_t value instead
-   of uint32_t.
-
-   @see whio_dev_uint16_decode()
-   @see whio_dev_uint32_decode()
-   @see whio_dev_uint64_encode()
-*/
-int whio_dev_uint64_decode( whio_dev * dev, uint64_t * tgt );
-
-/**
-   Uses whio_dev_uint32_encode() to write n elements from the given
-   array to dev.  Returns whio_rc.OK on success. Returns the number of
-   items written.
-
-   @see whio_dev_uint32_encode()
-*/
-size_t whio_dev_uint32_array_encode( whio_dev * dev, size_t n, uint32_t const * list );
-
-/**
-   Reads n consecutive numbers from dev, populating list (which must
-   point to at least n uint32_t objects) with the results. Returns the
-   number of items read, which will be less than n on error.
-
-   @see whio_dev_uint32_decode()
-*/
-size_t whio_dev_uint32_array_decode( whio_dev * dev, size_t n, uint32_t * list );
-
-/**
-   Encodes a C string into the device by writing a tag byte, the length of
-   the string, and then the string bytes. If n is 0 then n is equivalent to
-   strlen(s). Zero is also legal string length.
-
-   Returns the number of bytes written, which will be (n +
-   whio_dev_size_cstring) on success, 0 if !dev or !s.
-
-   @see whio_dev_cstring_decode()
-*/
-size_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n );
-
-/**
-   The converse of whio_dev_cstring_encode(), this routine tries to
-   decode a string from the current location in the device.
-
-   On success, tgt is assigned to the new (null-terminated) string
-   (allocated via calloc()) and length (if it is not null) is set to
-   the length of the string (not counting the terminating null). The
-   caller must free the string using free(). If the string has a
-   length of 0 then tgt is set to 0, not "", and no memory is
-   allocated.
-
-   Neither dev nor tgt may be 0, but length may be 0.
-
-   Returns whio_rc.OK on success.
-
-   On error, neither tgt nor length are modified and some non-OK value
-   is returned:
-
-   - whio_rc.ArgError = dev or tgt are 0.
-
-   - whio_rc.ConsistencyError = current position of the device does not
-   appear to be an encoded string written by whio_dev_cstring_encode().
-
-   - whio_rc.IOError = some form of IO error.
-
-
-   Example:
-
-@code
-char * str = 0;
-size_t len = 0;
-int rc = whio_dev_cstring_decode( myDevice, &str, &len );
-if( whio_rc.OK != rc ) ... error ...
-... use str ...
-free(str);
-@endcode
-
-
-   @see whio_dev_cstring_encode()
-*/
-int whio_dev_cstring_decode( whio_dev * dev, char ** tgt, size_t * length );
-
-/**
    Similar to printf() and friends, this writes a formatted string
    to the given output device. Returns the number of bytes written.
    In the general case it is not possible to know if a given conversion
@@ -1192,9 +1086,9 @@ size_t whio_dev_writef( whio_dev * dev, const char *fmt, ... );
    This enum holds masks for general categories of whio_dev ioctl
    operations.  By convention, the top byte (of 4 bytes) of ioctl
    operation values is reserved for these masks. ioctl values should
-   not use the type byte and should instead mask their value against
-   one these (this assists in documentation, by making it clear which
-   category an ioctl command belongs to).
+   not use the top byte and should instead mask their value against
+   one of these (this assists in documentation, by making it clear
+   which category an ioctl command belongs to).
 */
 enum whio_dev_ioctl_categories {
 
@@ -1482,6 +1376,27 @@ whio_dev_ioctl_GENERAL_name = whio_dev_ioctl_mask_GENERAL | 0x02,
 */
 whio_dev_ioctl_BUFFER_size = whio_dev_ioctl_mask_BUFFER | 0x01,
 
+/**
+   Devices which store an internal memory buffer *might* want to expose it,
+   for performance/access reasons, to the client. The argument to this ioctl
+   must be a (unsigned char const **), which will be set to the start of the
+   buffer's address. However, a memory buffer might be reallocated and the
+   address invalidated, so it should not be stored.
+
+   Example:
+
+   @code
+   unsigned char const * buf = 0;
+   int rc = whio_dev_ioctl( dev, whio_dev_ioctl_BUFFER_uchar_ptr, &buf );
+   if( whio_rc.OK == rc )
+   {
+       ... Use buf. It is valid until the next write() or truncate() on dev...
+       ... It MIGHT be valid longer but it might be moved through reallocation...
+   }
+   @endcode
+*/
+whio_dev_ioctl_BUFFER_uchar_ptr = whio_dev_ioctl_mask_BUFFER | 0x02,
+
 /** @var whio_dev_ioctl_FILE_fd
 
    A FILE-based whio_dev can use this ioctl to return the underlying
@@ -1547,7 +1462,9 @@ whio_dev_ioctl_FCNTL_lock_get = whio_dev_ioctl_mask_FCNTL | 0x04
 #endif
 
 #endif /* WANDERINGHORSE_NET_WHIO_DEV_H_INCLUDED */
-/* begin file whio_devs.h */
+/* end file include/wh/whio/whio_dev.h */
+/* begin file include/wh/whio/whio_devs.h */
+#line 8 "include/wh/whio/whio_devs.h"
 #ifndef WANDERINGHORSE_NET_WHIO_DEVS_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_DEVS_H_INCLUDED
 
@@ -1567,10 +1484,9 @@ extern "C" {
 
 /**
    Creates a whio_dev object which will use the underlying FILE
-   handle. On success, ownership of f is passed to the returned
-   object and the returned object must eventually be finalized with
-   dev->api->finalize(dev). Doing so will close f and free the returned
-   object.
+   handle. On success, ownership of f is defined by the takeOwnership
+   argument (see below) and the returned object must eventually be finalized with
+   dev->api->finalize(dev).
 
    For purposes of the whio_dev interface, any parts which have
    implementation-specified behaviour will behave as they do
@@ -1581,7 +1497,9 @@ extern "C" {
    The takeOwnership argument determines the ownerhsip of f: if the
    function succeeds and takeOwnership is true then f's ownership is
    transfered to the returned object. In all other cases ownership is
-   not changed.
+   not changed. If the device owns f then closing the device
+   will also close f. If the device does not own f then f must
+   outlive the returned device.
 
    Peculiarities of this whio_dev implementation:
 
@@ -1591,6 +1509,9 @@ extern "C" {
 
    - See the docs for whio_dev_ioctl_FILE_fd for how to fetch the
    underlying file descriptor.
+
+   - The iomode() member will always return -1 because it cannot know
+   (without trying to write) if f is writeable.
 
    @see whio_dev_for_filename()
 */
@@ -1632,9 +1553,49 @@ whio_dev * whio_dev_for_FILE( FILE * f, bool takeOwnership );
    whio_dev_ioctl_FCNTL_lock_nowait, and whio_dev_ioctl_FCNTL_lock_get
    ioctls (from the whio_dev_ioctls enum).
 
+   - The iomode() member will return 0 or 1 depending on mode: If mode
+   contains "w" or "+" then it is write mode (iomode() returns a
+   positive value). If mode contains "r" and does not have a "+" then
+   iomode() returns 0.
+
+
    @see whio_dev_for_FILE()
 */
 whio_dev * whio_dev_for_filename( char const * fname, char const * mode );
+
+/**
+   Equivalent to whio_dev_for_filename(), but takes an opened file
+   descriptor and calls fdopen() on it.
+
+   PLEASE read your local man pages for fdopen() regarding caveats in
+   the setting of the mode parameter and the close()
+   handling. e.g. destroying the returned device will close it, so the
+   descriptor should not be used by client code after that. Likewise,
+   client code should not close the descriptor as long as the returned
+   device is alive. Thus ownership of the handle is effectively passed
+   to the returned object, and there is no way to relinquish it.
+
+   My local man pages say:
+
+   @code
+   The fdopen() function associates a stream with the existing file
+   descriptor, fd.  The mode of the stream (one of the values "r",
+   "r+", "w", "w+", "a", "a+") must be compatible with the mode of the
+   file descriptor.  The file position indicator of the new stream is
+   set to that belonging to fd, and the error and end-of-file
+   indicators are cleared.  Modes "w" or "w+" do not cause truncation
+   of the file.  The file descriptor is not dup’ed, and will be
+   closed when the stream created by fdopen() is closed.  The result
+   of applying fdopen() to a shared memory object is undefined.
+   @endcode
+
+
+   The returned device is identical to one returned by
+   whio_dev_for_filename(), except that the ioctl()
+   whio_dev_ioctl_GENERAL_name will return NULL (but will succeed
+   without an error).
+*/
+whio_dev * whio_dev_for_fileno( int filedescriptor, char const * mode );
 
 
 /**
@@ -1644,21 +1605,23 @@ whio_dev * whio_dev_for_filename( char const * fname, char const * mode );
    seek() operations is defined by the remaining parameters.
 
    The expFactor specifies a growth expansion value, as follows. If
-   expFactor is 1.0 or less then the buffer will never be allowed to
-   expand more than the original size. If it is greater than 1.0, then
-   it will be made expandable (that is, write() may cause it to
-   grow). Every time its size grows, it will grow by a factor of
-   expFactor. e.g. 1.5 means grow by 1.5 times (a common growth factor
-   for dynamic memory allocation). Likewise, when a buffer shrinks
-   (via truncate()), it will be reallocated if (currentSize/expFactor)
-   is greater than the number of bytes being used. For example, if a
-   buffer of 1024 bytes with an expFactor of 1.5 is being shrunk, it
-   will not release the allocated memory unless doing so will drop it
-   below ((1024/1.5)=682) bytes. A very large expFactor (more than
-   2.0) is not disallowed, but may not be good for your sanity.
+   expFactor is less than 1.0 then the buffer will never be allowed to
+   expand more than the original size. If it is equal to or greater
+   than 1.0, then it will be made expandable (that is, write() may
+   cause it to grow). Every time its size grows, it will grow by a
+   factor of expFactor (or to exactly the requested amount, for a
+   factor of 1.0). e.g. 1.5 means grow by 1.5 times (a common growth
+   factor for dynamic memory allocation). Likewise, when a buffer
+   shrinks (via truncate()), it will be reallocated if
+   (currentSize/expFactor) is greater than the number of bytes being
+   used. For example, if a buffer of 1024 bytes with an expFactor of
+   1.5 is being shrunk, it will not release the allocated memory
+   unless doing so will drop it below ((1024/1.5)=682) bytes. A very
+   large expFactor (more than 2.0) is not disallowed, but may not be
+   good for your sanity.
 
    For purposes of the following text, a membuf device with an
-   expFactor of greater than 1.0 is said to be "growable".
+   expFactor of equal to or greater than 1.0 is said to be "growable".
 
    If the buffer is growable then calling write() when we are at (or
    past) EOF will cause the buffer to try to expand to accommodate.
@@ -1666,9 +1629,10 @@ whio_dev * whio_dev_for_filename( char const * fname, char const * mode );
    will write as much as it can fit in existing memory, then return a
    short write result.
 
-   It not enough memory can be allocated then 0 is returned. The
-   caller owns the returned object and must eventually destroy it by
-   calling dev->api->finalize(dev).
+   It not enough memory can be allocated for the intitial buffer then
+   this function returns 0. On success, the caller owns the returned
+   object and must eventually destroy it by calling
+   dev->api->finalize(dev).
 
    The returned object supports all of the whio_dev interface, with
    the caveat that write() calls will not be allowed to expand out of
@@ -1716,20 +1680,28 @@ whio_dev * whio_dev_for_filename( char const * fname, char const * mode );
    - ioctl(): all of the ictl operations listed in the whio_dev_ioctls
    enum and marked with whio_dev_ioctl_mask_BUFFER are supported, as
    documented in that enum. The whio_dev_ioctl_GENERAL_size ioctl
-   is also supported (from the whio_dev_ioctls enum).
+   is also supported (from the whio_dev_ioctls enum), but it returns
+   the size to the virtual EOF, whereas whio_dev_ioctl_BUFFER_size
+   returns the allocated size of the buffer.
+
+   - iomode() always returns a positive value as long as its "this"
+   argument is valid.
 */
 whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor );
 
 /**
    Creates a new read/write whio_dev wrapper for an existing memory
-   range.  For read-only access, use whio_dev_for_memmap_ro() instead.
+   range. For read-only access, use whio_dev_for_memmap_ro() instead.
 
    The arguments:
 
    - mem = the read/write memory the device will wrap. Ownership is
    not changed.  May not be 0. If mem's address changes during the
    lifetime of the returned object (e.g. via a realloc), results are
-   undefined an almost certainly ruinous.
+   undefined an almost certainly ruinous. If you want this device to
+   free the memory when it is destroyed, set dev->client.data to the
+   mem parameter and set dev->client.dtor to an appropriate destructor
+   function (free() would suffice for memory allocated via alloc()).
 
    - size = the size of the mem buffer. It may not be 0. It is the
    caller's responsibility to ensure that the buffer is at least that
@@ -1750,10 +1722,19 @@ whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor );
    whio_rc.SizeTError on a numeric over/underflow. Writing past EOF
    range will of course not be allowed.
 
-   - write() on a read-only device returns 0, as opposed to whio_rc.SizeTError.
+   - write() on a read-only memory buffer returns 0, as opposed to
+   whio_rc.SizeTError.
 
-   - Supports the same ioctl() arguments as described for
-   whio_dev_for_membuf().
+   - Supports the ioctl()s whio_dev_ioctl_BUFFER_size, which returns
+   the allocated size of the buffer (as passed to the factory
+   function), and whio_dev_ioctl_GENERAL_size, which returns the
+   position of the virtual EOF. It is not yet clear if we can support
+   whio_dev_ioctl_BUFFER_uchar_ptr without violating constness of
+   read-only buffers.
+
+   - iomode() always returns a positive value as long as its "this"
+   argument is valid.
+
 
    @see whio_dev_for_memmap_ro()
    @see whio_dev_for_membuf()
@@ -1761,14 +1742,44 @@ whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor );
 whio_dev * whio_dev_for_memmap_rw( void * mem, whio_size_t size );
 
 /**
-   This is equivalent to whio_dev_for_memmap_rw() except that it
+   This is nearly identical to whio_dev_for_memmap_rw() except that it
    creates a read-only device and ownership of mem is not changed by
    calling this function.
+
+   In addition to the description for whio_dev objects returned from
+   whio_dev_for_memmap_rw(), these notes apply:
+
+   - iomode() always returns 0 unless its "this" argument is invalid,
+   in which case it returns a negative value.
+
 
    @see whio_dev_for_memmap_rw()
    @see whio_dev_for_membuf()
 */
 whio_dev * whio_dev_for_memmap_ro( const void * mem, whio_size_t size );
+
+/**
+   This object is the api member used by whio_dev instances returned by
+   whio_dev_for_memmap_rw() and whio_dev_for_memmap_ro(). It is in the public
+   interface because there are some interesting use-cases where we want
+   to override parts of the API to do custom handling.
+
+   The address of this object is also used as the whio_dev::typeID value
+   for memmap devices.
+*/
+extern const whio_dev_api whio_dev_api_memmap;
+
+/**
+   This object is the api member used by whio_dev instances returned
+   by whio_dev_for_membuf() . It is in the public interface because
+   there are some interesting use-cases where we want to override
+   parts of the API to do custom handling.
+
+   The address of this object is also used as the whio_dev::typeID value
+   for membuf devices.
+*/
+extern const whio_dev_api whio_dev_api_membuf;
+
 
 /**
    Creates a new whio_dev object which acts as a proxy for a specified
@@ -1800,12 +1811,12 @@ whio_dev * whio_dev_for_memmap_ro( const void * mem, whio_size_t size );
 
    Subdevices can be used to partition a larger underlying device into
    smaller pieces. By writing to/reading from the subdevices, one can
-   assure that each logical block remains separate and that any
+   be assured that each logical block remains separate and that any
    operation in one block will not affect any other subdevices which
-   have their own blocks (barring any bugs in this code). Results are
-   of course unpredictable if multiple devices map overlapping ranges
-   in the parent device (then again, maybe that's what you want, e.g. as
-   a communication channel).
+   have their own blocks (barring any bugs in this code or overlapping
+   byte rangees). Results are of course unpredictable if multiple
+   devices map overlapping ranges in the parent device (then again,
+   maybe that's what you want, e.g. as a communication channel).
 
    Most operations are proxied directly through the parent device,
    with some offsets added to accomodate for the bounds defined, so
@@ -1849,9 +1860,10 @@ whio_dev * whio_dev_for_memmap_ro( const void * mem, whio_size_t size );
    whio_dev_ioctls enum having the name prefix
    whio_dev_ioctl_SUBDEV_. See those docs for details.
 
+   - iomode() returns the same as the parent device does.
+
    - It is theoretically possible to nest subdevices, and it may be
    even useful in some cases, but i haven't tried it.
-
 
    Example:
 
@@ -1907,17 +1919,6 @@ whio_dev * whio_dev_subdev_create( whio_dev * parent, whio_size_t lowerBound, wh
 */
 int whio_dev_subdev_rebound( whio_dev * dev, whio_size_t lowerBound, whio_size_t upperBound );
 
-
-/**
-   A type used to represent sequential block IDs for the whio_blockdev API.
-   It is not hard-coded because for my intended uses it will changed to
-   other types depending on compilation options.
-
-   FIXME: make this type macro-configurable, so it can play nice with
-   whefs's configurable sizes. It'll work as-is for <=32 bit whefs.
-*/
-typedef uint32_t whio_blockdev_id;
-
 /** @struct whio_blockdev
 
    whio_blockdev is a helper intended to assist in
@@ -1930,8 +1931,8 @@ typedef uint32_t whio_blockdev_id;
    is initialized.
 
    whio_blockdev objects are initialized via whio_blockdev_setup()
-   and clean up (depending on how they were created) using
-   whio_blockdev_clean() or whio_blockdev_finalize().
+   and cleaned up (depending on how they were created) using
+   whio_blockdev_cleanup() or whio_blockdev_finalize().
 
    Though this type's internals are publically viewable,
    they should not be used by client code. Use the
@@ -1962,7 +1963,7 @@ typedef struct whio_blockdev
 	   Number of blocks. MUST NOT be changed after setting up
 	   this object, and doing so may lead to errors.
 	*/
-	whio_blockdev_id count;
+	whio_size_t count;
 	/**
 	   Must be null or valid memory at least 'size' bytes
 	   long. When a block is "wiped", this memory is copied over
@@ -1976,14 +1977,14 @@ typedef struct whio_blockdev
     } blocks;
     /**
        Implementation details which the client should neither touch
-       not look at.
+       nor look at.
     */
     struct impl
     {
 	/**
 	   This object's i/o device. It is created via
 	   whio_blockdev_setup() and cleaned up by
-	   whio_blockdev_clean(). It is a whio_dev subdevice
+	   whio_blockdev_cleanup(). It is a whio_dev subdevice
 	   which fences i/o operations on the parent device
 	   to the range defined by whio_blockdev_setup().
 	*/
@@ -2047,7 +2048,7 @@ whio_blockdev * whio_blockdev_alloc();
    Returns whio_rc.OK on success, some other value on error.
 */
 int whio_blockdev_setup( whio_blockdev * bdev, whio_dev * parent_store, whio_size_t parent_offset,
-			 whio_size_t block_size, whio_blockdev_id block_count, void const * prototype );
+			 whio_size_t block_size, whio_size_t block_count, void const * prototype );
 /**
    Cleans up internal memory owned by bdev but does not free bdev
    itself. After this, bdev may be passed to whio_blockdev_setup() to
@@ -2068,8 +2069,8 @@ bool whio_blockdev_cleanup( whio_blockdev * bdev );
    Destroys bdev and any internal memory it owns. ONLY pass this
    object created using whio_blockdev_alloc() or malloc(). DO NOT pass
    this an object which was created on the stack, as that will lead to
-   a segfault. For stack-allocated objects using
-   whio_blockdev_cleanup() instead.
+   a segfault. For stack-allocated objects use whio_blockdev_cleanup()
+   instead.
 
    @see whio_blockdev_cleanup()
    @see whio_blockdev_alloc()
@@ -2079,7 +2080,7 @@ void whio_blockdev_free( whio_blockdev * bdev );
 /**
    Returns true if id is a valid block ID for bdev, else false.
 */
-bool whio_blockdev_in_range( whio_blockdev * bdev, whio_blockdev_id id );
+bool whio_blockdev_in_range( whio_blockdev const * bdev, whio_size_t id );
 
 /**
    Writes the contents of src to bdev at the underlying device
@@ -2088,27 +2089,29 @@ bool whio_blockdev_in_range( whio_blockdev * bdev, whio_blockdev_id id );
    null, id is not in bounds, or on an i/o error. src must be valid
    memory at least bdev->blocks.size bytes long.
 */
-int whio_blockdev_write( whio_blockdev * bdev, whio_blockdev_id id, void const * src );
+int whio_blockdev_write( whio_blockdev * bdev, whio_size_t id, void const * src );
 /**
    Reads bdev->blocks.size bytes of memory from the block with the
    given id from bdev and copies it to dest. dest must be valid memory
    at least bdev->blocks.size bytes long. Returns whio_rc.OK on success.
 */
-int whio_blockdev_read( whio_blockdev * bdev, whio_blockdev_id id, void * dest );
+int whio_blockdev_read( whio_blockdev * bdev, whio_size_t id, void * dest );
 
 /**
    If a block prototype object was passed to whio_blockdev_setuo()
    then that object is written to the given block of bdev, otherwise
    whio_rc.ArgError is returned. Returns whio_rc.OK on success.
 */
-int whio_blockdev_wipe( whio_blockdev * bdev, whio_blockdev_id id );
+int whio_blockdev_wipe( whio_blockdev * bdev, whio_size_t id );
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif /* WANDERINGHORSE_NET_WHIO_DEVS_H_INCLUDED */
-/* begin file whio_stream.h */
+/* end file include/wh/whio/whio_devs.h */
+/* begin file include/wh/whio/whio_stream.h */
+#line 8 "include/wh/whio/whio_stream.h"
 #ifndef WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED 1
 
@@ -2176,6 +2179,11 @@ struct whio_stream_api
        for stack-allocated stream objects which otherwise could not
        be cleaned up uniformly.
 
+       If dev->client.dtor is not null then this routine must call
+       that function and pass it dev->client.data. If it is null then
+       dev->client.data must not be modified (the lack of a destructor
+       function is a signal that the client owns the object).
+
        This function should returned false if !self or if the stream is
        not opened.
     */
@@ -2215,48 +2223,17 @@ struct whio_stream_api
        implementation.
     */
     bool (*isgood)( struct whio_stream * self );
+
+    /**
+       This function must return a positive number if self is writable,
+       0 if it is read-only, and a negative number if the device
+       cannot report this information or if the given argument is null
+       or otherwise invalid.
+    */
+    short (*iomode)( struct whio_stream * dev );
 };
 
 typedef struct whio_stream_api whio_stream_api;
-
-/**
-   Hold implementation details for whio_stream instances. These are
-   for use only by the functions related to a specific implementation
-   of whio_stream implementation, and not client use.
-*/
-struct whio_stream_impl
-{
-    /**
-       data is SOLELY for use by concrete implementations of
-       whio_stream.
-       
-       data can be used to store private data required by the
-       implementation functions. Each instance may have its own
-       information (which should be cleaned up via the finalize()
-       member function, assuming the stream owns the data).
-    */
-    void * data;
-
-    /**
-       A type identifier for use solely by whio_stream implementations,
-       not client code. If the implementation uses this (it is an
-       optional component), it must be set by the whio_stream
-       initialization routine (typically a factory function).
-
-       This mechanism works by assigning some arbitrary opaque
-       value (unique per class) to all instances of a specific
-       whio_stream implementation. The implementation funcs can
-       then use that to ensure that they are passed the correct
-       type. The typeID need not be public, but may be so. e.g.
-       the author of the impl may provide a non-member
-       whio_stream-related function which requires a specific type
-       (or types), and in that case the typeID would possibly need
-       to be known by the caller.
-    */
-    void const * typeID;
-};
-typedef struct whio_stream_impl whio_stream_impl;
-
 
 /** @struct whio_stream
 
@@ -2302,8 +2279,26 @@ typedef struct whio_stream_impl whio_stream_impl;
 */
 struct whio_stream
 {
+    /**
+       Holds all "member functions" of this interface.  It is never
+       legal for api to be NULL, and if a device with a NULL api
+       member is used with the whio API then a segfault will certainly
+       quickly result.
+    */
     const whio_stream_api * api;
-    whio_stream_impl impl;
+    /**
+       Holds instance-specific, implementation-dependent
+       information. Not for use by client code. The
+       implementation-specific close() method should free up this
+       memory.
+    */
+    whio_impl_data impl;
+    /**
+       This data is for sole use by whio_dev clients, with one
+       important exception: see the docs for whio_client_data for
+       details.
+    */
+    whio_client_data client;
 };
 /**
    Convenience typedef.
@@ -2352,6 +2347,17 @@ whio_size_t whio_stream_writef( whio_stream * stream, char const * fmt, ... );
 */
 bool whio_stream_getchar( whio_stream * stream, char * tgt );
 
+/**
+   Copies all data from istr to ostr, stopping only when
+   istr->api->read() returns fewer bytes than requested. On success
+   whio_rc.OK is returned, on error some other value.  On error this
+   function unfortunately cannot report whether the failure was at the
+   read or write level.
+
+   The data is copied in chunks of some unspecified static size (hint: a few kb).
+*/
+int whio_stream_copy( whio_stream * restrict istr, whio_stream * restrict ostr );
+
 
 /**
    Consumes stream to the first \\n character.  It appends that data, minus the newline,
@@ -2375,7 +2381,9 @@ bool whio_stream_getchar( whio_stream * stream, char * tgt );
 #endif
 
 #endif // WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED
-/* begin file whio_streams.h */
+/* end file include/wh/whio/whio_stream.h */
+/* begin file include/wh/whio/whio_streams.h */
+#line 8 "include/wh/whio/whio_streams.h"
 #ifndef WANDERINGHORSE_NET_WHIO_STREAMS_H_INCLUDED
 #define WANDERINGHORSE_NET_WHIO_STREAMS_H_INCLUDED 1
 /*
@@ -2477,7 +2485,9 @@ whio_stream * whio_stream_for_fileno( int fileno, bool writeMode );
 #endif
 
 #endif // WANDERINGHORSE_NET_WHIO_STREAMS_H_INCLUDED
-/* begin file whio_zlib.h */
+/* end file include/wh/whio/whio_streams.h */
+/* begin file include/wh/whio/whio_zlib.h */
+#line 8 "include/wh/whio/whio_zlib.h"
 #if !defined(WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED)
 #define WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED 1
 
@@ -2525,7 +2535,7 @@ extern "C" {
    @see whio_stream_gunzip()
    @see whio_stream_for_dev()
  */
-int whio_stream_gzip( whio_stream * src, whio_stream * dest, int level );
+int whio_stream_gzip( whio_stream * restrict src, whio_stream * restrict dest, int level );
 
 /**
    Assumes src contains gzipped data and decompresses it to dest.
@@ -2546,7 +2556,7 @@ int whio_stream_gzip( whio_stream * src, whio_stream * dest, int level );
    @see whio_stream_gzip()
    @see whio_stream_for_dev()
 */
-int whio_stream_gunzip( whio_stream * src, whio_stream * dest );
+int whio_stream_gunzip( whio_stream * restrict src, whio_stream * restrict dest );
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -2554,3 +2564,467 @@ int whio_stream_gunzip( whio_stream * src, whio_stream * dest );
 
 
 #endif /* WANDERINGHORSE_NET_WHIO_ZLIB_H_INCLUDED */
+/* end file include/wh/whio/whio_zlib.h */
+/* begin file include/wh/whio/whio_encode.h */
+#line 8 "include/wh/whio/whio_encode.h"
+#if !defined(WANDERINGHORSE_NET_WHIO_ENCODE_H_INCLUDED)
+#define WANDERINGHORSE_NET_WHIO_ENCODE_H_INCLUDED 1
+/*
+  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/
+
+  License: Public Domain
+*/
+
+#include <stddef.h> /* size_t on my box */
+/** @file whio_encode.h
+
+   This file contains an API for encoding/decoding binary data to/from
+   memory buffers and i/o devices.
+*/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+   This enum defines some on-disk sizes for the utility routines
+   which encode/decode data to/from whio_dev objects.
+*/
+enum whio_sizeof_encoded {
+
+/** @var whio_sizeof_encoded_uint64
+
+   whio_sizeof_encoded_uint64 is the length (in bytes) of an encoded uint64 value.
+   It is 9: 1 tag byte + 8 data bytes.
+
+   @see whio_uint64_decode()
+   @see whio_uint64_encode()
+*/
+whio_sizeof_encoded_uint64 = 9,
+/** @var whio_sizeof_encoded_uint32
+
+   whio_sizeof_encoded_uint32 is the length (in bytes) of an encoded uint32 value.
+   It is 5: 1 tag byte + 4 data bytes.
+
+   @see whio_uint32_decode()
+   @see whio_uint32_encode()
+*/
+whio_sizeof_encoded_uint32 = 5,
+
+/** @var whio_sizeof_encoded_uint16
+
+   whio_sizeof_encoded_uint16 is the length (in bytes) of an encoded uint16 value.
+   It is 3: 1 tag byte + 2 data bytes.
+
+   @see whio_uint16_decode()
+   @see whio_uint16_encode()
+*/
+whio_sizeof_encoded_uint16 = 3,
+
+/** @var whio_sizeof_encoded_uint8
+
+   whio_sizeof_encoded_uint8 is the length (in bytes) of an encoded uint8 value.
+   It is 2: 1 tag byte + 1 data byte.
+
+   @see whio_uint8_decode()
+   @see whio_uint8_encode()
+*/
+whio_sizeof_encoded_uint8 = 2,
+
+/** @var whio_size_cstring
+
+   whio_size_cstring is the encoded length of a C-style string,
+   NOT INCLUDING the actual string bytes. i.e. this is the header
+   size.
+
+   @see whio_cstring_decode()
+   @see whio_cstring_encode()
+*/
+whio_sizeof_encoded_cstring = 1 + whio_sizeof_encoded_uint32,
+
+/**
+   The encoded size of a whio_size_t object. Its size depends
+   on the value of WHIO_SIZE_T_BITS.
+*/
+whio_sizeof_encoded_size_t =
+#if WHIO_SIZE_T_BITS == 64
+    whio_sizeof_encoded_uint64
+#elif WHIO_SIZE_T_BITS == 32
+    whio_sizeof_encoded_uint32
+#elif WHIO_SIZE_T_BITS == 16
+    whio_sizeof_encoded_uint16
+#elif WHIO_SIZE_T_BITS == 8
+    whio_sizeof_encoded_uint8
+#else
+#error "whio_size_t is not a supported type!"
+#endif
+
+};
+
+
+/**
+   Encodes a 32-bit integer value into 5 bytes - a leading tag/check
+   byte, then the 4 bytes of the number, in big-endian format. Returns
+   the number of bytes written, which will be equal to
+   whio_sizeof_encoded_uint32 on success.
+
+   dest must be valid memory at least whio_sizeof_encoded_uint32 bytes long.
+
+   @see whio_uint32_decode()
+*/
+size_t whio_uint32_encode( unsigned char * dest, uint32_t i );
+
+/**
+   The converse of whio_uint32_encode(), this tries to read an
+   encoded 32-bit value from the given memory. On success it returns
+   whio_rc.OK and sets tgt (if not null) to that value. On error it
+   returns some other value from whio_rc and does not modify tgt.
+
+   src must be valid memory at least whio_sizeof_encoded_uint32 bytes
+   long.
+
+   Error values include:
+
+   - whio_rc.ArgError = !src
+
+   - whio_rc.ConsistencyError = the bytes at the current location
+   were not encoded with whio_uint32_encode().
+
+   @see whio_uint32_encode()
+
+*/
+int whio_uint32_decode( unsigned char const * src, uint32_t * tgt );
+
+/**
+   Similar to whio_uint32_encode(), with the same conventions, but
+   works on 16-bit numbers. Returns the number of bytes written, which
+   will be equal to whio_sizeof_encoded_uint16 on success.
+
+   dest must be valid memory at least whio_sizeof_encoded_uint16
+   bytes long.
+
+   @see whio_uint16_decode()
+*/
+size_t whio_uint16_encode( unsigned char * dest, uint16_t i );
+
+/**
+   Similar to whio_uint32_decode(), with the same conventions and
+   error codes, but works on 16-bit numbers.  On success it returns
+   whio_rc.OK and sets target to that value. On error it returns some
+   other value from whio_rc and does not modify tgt.
+
+   src must be valid memory at least whio_sizeof_encoded_uint16 bytes
+   long.
+
+
+   @see whio_uint16_encode()
+*/
+
+int whio_uint16_decode( unsigned char const * src, uint16_t * tgt );
+
+/**
+   The uint8 counterpart of whio_uint16_encode(). Returns
+   whio_sizeof_encoded_uint8 on success and 0 on error. The only
+   error condition is that dest is null.
+*/
+size_t whio_uint8_encode( unsigned char * dest, uint8_t i );
+
+/**
+   The uint8 counterpart of whio_uint16_decode(). Returns whio_rc.OK
+   on success. If !src then whio_rc.ArgError is returned. If src
+   does not appear to be an encoded value then whio_rc.ConsistencyError
+   is returned.
+*/
+int whio_uint8_decode( unsigned char const * src, uint8_t * tgt );
+
+
+/**
+   Encodes v to dest. This is just a proxy for one of:
+   whio_uint8_encode(), whio_uint16_encode(), whio_uint32_encode() or
+   whio_uint64_encode(), depending on the value of WHIO_SIZE_T_BITS.
+*/
+whio_size_t whio_size_t_encode( unsigned char * dest, whio_size_t v );
+
+/**
+   Decodes v from src. This is just a proxy for one of:
+   whio_uint8_decode(), whio_uint16_decode(), whio_uint32_decode() or
+   whio_uint64_decode(), depending on the value of WHIO_SIZE_T_BITS.
+*/
+int whio_size_t_decode( unsigned char const * src, whio_size_t * v );
+
+/**
+   Encodes v to dev using whio_size_t_encode().
+*/
+whio_size_t whio_dev_size_t_encode( whio_dev * dev, whio_size_t v );
+
+/**
+   Decodes v from dev using whio_size_t_decode().
+*/
+int whio_dev_size_t_decode( whio_dev * dev, whio_size_t * v );
+
+/**
+   The 64-bit variant of whio_uint32_encode(). Follows the same
+   conventions as that function but handles a uint64_t value instead
+   of uint32_t.
+
+   @see whio_uint16_encode()
+   whio_uint32_encode()
+   whio_uint64_decode()
+*/
+size_t whio_uint64_encode( unsigned char * dest, uint64_t i );
+
+/**
+   The 64-bit variant of whio_uint32_decode(). Follows the same
+   conventions as that function but handles a uint64_t value instead
+   of uint32_t.
+
+   @see whio_uint16_decode()
+   whio_uint32_decode()
+   whio_uint64_encode()
+*/
+int whio_uint64_decode( unsigned char const * src, uint64_t * tgt );
+
+/**
+   Uses whio_uint32_encode() to write n elements from the given
+   array to dev.  Returns whio_rc.OK on success. Returns the number of
+   items written.
+
+   @see whio_uint32_encode()
+*/
+size_t whio_uint32_array_encode( unsigned char * dest, size_t n, uint32_t const * list );
+
+/**
+   Reads n consecutive numbers from src, populating list (which must
+   point to at least n uint32_t objects) with the results. Returns the
+   number of items read, which will be less than n on error.
+
+   @see whio_uint32_decode()
+*/
+size_t whio_uint32_array_decode( unsigned char const * src, size_t n, uint32_t * list );
+
+/**
+   Encodes a C string into the destination by writing a tag byte, the length of
+   the string, and then the string bytes. If n is 0 then n is equivalent to
+   strlen(s). Zero is also legal string length.
+
+   Returns the number of bytes written, which will be (n +
+   whio_sizeof_encoded_cstring) on success, 0 if !dev or !s.
+
+   dest must be at least (n + whio_sizeof_encoded_cstring) bytes long,
+   and on success exactly that many bytes will be written. The null
+   terminator (if any) is not stored and not counted in the length.
+   s may contain null characters.
+
+   @see whio_cstring_decode()
+*/
+size_t whio_cstring_encode( unsigned char * dest, char const * s, uint32_t n );
+
+/**
+   The converse of whio_cstring_encode(), this routine tries to
+   decode a string from the given source memory.
+
+   src must contain at least (whio_sizeof_encoded_cstring + N) bytes,
+   where N is the number which is encoded in the first part of the data.
+   On success exactly that many bytes will be read from src. The null
+   terminator (if any) is not stored and not counted in the length.
+   s may contain null characters.
+
+   On success, tgt is assigned to the new (null-terminated) string
+   (allocated via calloc()) and length (if it is not null) is set to
+   the length of the string (not counting the terminating null). The
+   caller must free the string using free(). If the string has a
+   length of 0 then tgt is set to 0, not "", and no memory is
+   allocated.
+
+   Neither dev nor tgt may be 0, but length may be 0.
+
+   Returns whio_rc.OK on success.
+
+   On error, neither tgt nor length are modified and some non-OK value
+   is returned:
+
+   - whio_rc.ArgError = dev or tgt are 0.
+
+   - whio_rc.ConsistencyError = src does not contain a string written
+   by whio_cstring_encode().
+
+   Example:
+
+@code
+char * str = 0;
+size_t len = 0;
+int rc = whio_cstring_decode( mySource, &str, &len );
+if( whio_rc.OK != rc ) ... error ...
+... use str ...
+free(str);
+@endcode
+
+   @see whio_cstring_encode()
+*/
+int whio_cstring_decode( unsigned char const * src, char ** tgt, size_t * length );
+
+
+/**
+   Encodes a 32-bit integer value into 5 bytes - a leading tag/check
+   byte, then the 4 bytes of the number, in big-endian format. Returns
+   the number of bytes written, which will be equal to
+   whio_dev_sizeof_uint32 on success.
+
+   @see whio_dev_uint32_decode()
+*/
+size_t whio_dev_uint32_encode( whio_dev * dev, uint32_t i );
+
+/**
+   The converse of whio_dev_uint32_encode(), this tries to read an encoded
+   32-bit value from the current position of dev. On success it returns
+   whio_rc.OK and sets target to that value. On error it returns some
+   other value from whio_rc and does not modify tgt.
+
+   Error values include:
+
+   - whio_rc.ArgError = !dev or !tgt
+
+   - whio_rc.IOError = an error while reading the value (couldn't read enough bytes)
+
+   - whio_rc.ConsistencyError = the bytes at the current location were not encoded
+   with whio_dev_uint32_encode().
+
+   @see whio_dev_uint32_encode()
+
+*/
+int whio_dev_uint32_decode( whio_dev * dev, uint32_t * tgt );
+
+/**
+   Similar to whio_dev_uint32_encode(), with the same conventions, but
+   works on 16-bit numbers. Returns the number of bytes written, which
+   will be equal to whio_dev_sizeof_uint16 on success.
+
+   @see whio_dev_uint16_decode()
+*/
+size_t whio_dev_uint16_encode( whio_dev * dev, uint16_t i );
+
+/**
+   Similar to whio_dev_uint32_decode(), with the same conventions and
+   error codes, but works on 16-bit numbers.  On success it returns
+   whio_rc.OK and sets target to that value. On error it returns some
+   other value from whio_rc and does not modify tgt.
+
+   @see whio_dev_uint16_encode()
+*/
+
+int whio_dev_uint16_decode( whio_dev * dev, uint16_t * tgt );
+
+
+/**
+   The 64-bit variant of whio_dev_uint32_encode(). Follows the same
+   conventions as that function but handles a uint64_t value instead
+   of uint32_t.
+
+   @see whio_dev_uint16_encode()
+   @see whio_dev_uint32_encode()
+   @see whio_dev_uint64_decode()
+*/
+size_t whio_dev_uint64_encode( whio_dev * fs, uint64_t i );
+
+/**
+   The 64-bit variant of whio_dev_uint32_decode(). Follows the same
+   conventions as that function but handles a uint64_t value instead
+   of uint32_t.
+
+   @see whio_dev_uint16_decode()
+   @see whio_dev_uint32_decode()
+   @see whio_dev_uint64_encode()
+*/
+int whio_dev_uint64_decode( whio_dev * dev, uint64_t * tgt );
+
+/**
+   Uses whio_dev_uint32_encode() to write n elements from the given
+   array to dev.  Returns whio_rc.OK on success. Returns the number of
+   items written.
+
+   @see whio_dev_uint32_encode()
+*/
+size_t whio_dev_uint32_array_encode( whio_dev * dev, size_t n, uint32_t const * list );
+
+/**
+   Reads n consecutive numbers from dev, populating list (which must
+   point to at least n uint32_t objects) with the results. Returns the
+   number of items read, which will be less than n on error.
+
+   @see whio_dev_uint32_decode()
+*/
+size_t whio_dev_uint32_array_decode( whio_dev * dev, size_t n, uint32_t * list );
+
+/**
+   Decodes a whio_size_t object from dev. On success whio_rc.OK is returned
+   and tgt (if not null) is modified, otherwise tgt is not modified.
+*/
+int whio_dev_size_t_decode( whio_dev * dev, whio_size_t * tgt );
+
+/**
+   Encodes i using whio_size_t_encode(). Returns
+   whio_sizeof_encoded_size_t on success.
+*/
+size_t whio_dev_size_t_encode( whio_dev * fs, whio_size_t i );
+
+/**
+   Encodes a C string into the device by writing a tag byte, the length of
+   the string, and then the string bytes. If n is 0 then n is equivalent to
+   strlen(s). Zero is also legal string length.
+
+   Returns the number of bytes written, which will be (n +
+   whio_dev_size_cstring) on success, 0 if !dev or !s.
+
+   @see whio_dev_cstring_decode()
+*/
+uint32_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n );
+
+/**
+   The converse of whio_dev_cstring_encode(), this routine tries to
+   decode a string from the current location in the device.
+
+   On success, tgt is assigned to the new (null-terminated) string
+   (allocated via calloc()) and length (if it is not null) is set to
+   the length of the string (not counting the terminating null). The
+   caller must free the string using free(). If the string has a
+   length of 0 then tgt is set to 0, not "", and no memory is
+   allocated.
+
+   Neither dev nor tgt may be 0, but length may be 0.
+
+   Returns whio_rc.OK on success.
+
+   On error, neither tgt nor length are modified and some non-OK value
+   is returned:
+
+   - whio_rc.ArgError = dev or tgt are 0.
+
+   - whio_rc.ConsistencyError = current position of the device does not
+   appear to be an encoded string written by whio_dev_cstring_encode().
+
+   - whio_rc.IOError = some form of IO error.
+
+
+   Example:
+
+@code
+char * str = 0;
+size_t len = 0;
+int rc = whio_dev_cstring_decode( myDevice, &str, &len );
+if( whio_rc.OK != rc ) ... error ...
+... use str ...
+free(str);
+@endcode
+
+
+   @see whio_dev_cstring_encode()
+*/
+int whio_dev_cstring_decode( whio_dev * dev, char ** tgt, uint32_t * length );
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+
+#endif /* WANDERINGHORSE_NET_WHIO_ENCODE_H_INCLUDED */
+/* end file include/wh/whio/whio_encode.h */

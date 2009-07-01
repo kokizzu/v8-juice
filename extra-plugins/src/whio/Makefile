@@ -10,8 +10,10 @@ PLUGIN_NAME := whio
 PLUGIN_OBJECTS := v8-whio.o
 ifeq (1,$(WHIO_USE_WHEFS))
   PLUGIN_OBJECTS += v8-whefs.o whefs_amalgamation.o
+  whefs_amalgamation.o: CFLAGS+=-std=c99
 else
   PLUGIN_OBJECTS += whio_amalgamation.o
+  whio_amalgamation.o: CFLAGS+=-std=c99
 endif
 
 ifeq (1,1)
