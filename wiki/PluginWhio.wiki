@@ -134,6 +134,7 @@ The API for this class includes any routines which are common amongst the `InStr
 || `void` || `close()` || Closes the stream. Do not use the object after calling this. ||
 || `int` || `flush()` || May (or may not) flush any device-specific cache. Returns 0 on success. ||
 || `bool` || `isGood()`  || Returns true if the object is in a usable state (i.e. there have been no i/o errors). ||
+|| `int` || `ioMode()` || (Versions 20090701 and newer.) Returns 0 if the object is read-only, a positive value if it is writeable, and a negative value if the object does not know (proxy objects sometimes have no way of confirming the i/o mode) ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `bool` || `canWrite` and `canRead`|| Specify whether the object is capable of reading or writing. These are static - set when the device is opened and never changed, so don't use them for error checking. ||
 
@@ -205,7 +206,7 @@ In addition to the interface defined by IOBase, it has:
   * `whio.IOBase.SEEK_CUR` means to move relative to the current position.
   * `whio.IOBase.SEEK_END` means to move relative to the end of the device.
 
-they are analogous to the C-standard constants of the same names, and are described in the man pages for `fseek()`.
+they are analogous to the C-standard constants of the same names, and are described in the `man` pages for `fseek()`.
 
 ===Subdevices===
 
@@ -295,7 +296,7 @@ The `InStream` class has minimal support for gzip compression and
 decompression. It does not support incremental de/compression, but
 does support compressing a whole input stream at once.  While the JS
 API does not allow us to safely pass binary around, this support
-happens at a lower level, transfering bytes directly between the two
+happens at a lower level, transferring bytes directly between the two
 native-level streams.
 
 Here's an example:
@@ -368,8 +369,6 @@ function print()
 }
 print.stream = new whio.OutStream('/dev/stdout'); // or whatever
 }}}
-
-This allows one to easily swap out the destination while leaving client code which depends on `print()` to stay intact.
 
 ==Don't forget to flush==
 
