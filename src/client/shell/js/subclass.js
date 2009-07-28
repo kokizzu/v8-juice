@@ -8,13 +8,17 @@
 
    http://groups.google.com/group/v8-users/browse_thread/thread/adfc2978ee519b42
 
+   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
+   License: Public Domain
+
 */
-Object.prototype._extends_ = function( ChildClass, ParentClass )
+if(0) Object.prototype._extends_ = function( ChildClass, ParentClass )
 {
     if( 1 == arguments.length )
     {
-	ParentClass = ChildClass;
-	ChildClass = this;
+	//ParentClass = ChildClass;
+	//ChildClass = this;
+	return this._extends_( this, ChildClass );
     }
     function TempClass() {}
     TempClass.prototype = ParentClass.prototype;
@@ -23,16 +27,22 @@ Object.prototype._extends_ = function( ChildClass, ParentClass )
     ChildClass.prototype.constructor = ChildClass;
     ChildClass.prototype._superConstructor_ = ParentClass;
     ChildClass.prototype._superClass_ = ParentClass.prototype;
-}
-Object.prototype._extends_ = function( ChildClass, ParentClass )
+};
+if(1) Object.prototype._extends_ = function( ChildClass, ParentClass )
 {
-  function TempClass() {}
-  TempClass.prototype = ParentClass.prototype;
+    if( 1 == arguments.length )
+    {
+	//ParentClass = ChildClass;
+	//ChildClass = this;
+	return this._extends_( this, ChildClass );
+    }
+    function TempClass() {};
+    TempClass.prototype = ParentClass.prototype;
 
-  ChildClass.prototype = new TempClass();
-  ChildClass.prototype.constructor = ChildClass;
-  ChildClass._superConstructor_ = ParentClass;
-  ChildClass._superClass_ = ParentClass.prototype;
+    ChildClass.prototype = new TempClass();
+    ChildClass.prototype.constructor = ChildClass;
+    ChildClass._superConstructor_ = ParentClass;
+    ChildClass._superClass_ = ParentClass.prototype;
 };
 var MyType = function()
 {
@@ -50,7 +60,8 @@ var MySubType = function()
 };
 
 
-Object._extends_( MySubType, MyType );
+//Object._extends_( MySubType, MyType );
+MySubType._extends_( MyType );
 
 var x = new MySubType(7,3,11);
 
