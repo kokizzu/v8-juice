@@ -6,7 +6,8 @@ source tree (i document here as changes are made). If you are using an "older" v
 i recommend [http://code.google.com/p/v8-juice/source/browse/wiki/PluginWhio.wiki searching through the subversion repo] for a version of this page which is
 closer to the version you're working with (follow that link, and there are options to browse all versions).
 
-*Achtung #2:* It has [http://groups.google.com/group/v8-users/browse_thread/thread/1621beb71d65e6fa/2883be6ddd10cddd come to my attention] that using this API to read and write non-ASCII data may (and eventually will) produce undefined results (due to how v8 internally stores and translates strings). *You Have Been Warned.*
+*Achtung #2:* It has [http://groups.google.com/group/v8-users/browse_thread/thread/1621beb71d65e6fa/2883be6ddd10cddd come to my attention] that using this API to read and write non-ASCII data may (and eventually will) produce undefined results (due to how v8 internally stores and translates strings).
+*Do not try to read/write binary data via the JS interface! You Have Been Warned.*
 
 =The whio I/O plugin=
 
@@ -63,7 +64,7 @@ See below for the complete class and function list.
   * Make the vals from whio_rc.XXX available via whio.rc.XXX. whio_rc.SizeTError needs special handling due to (potentially) different sizes in the underlying numeric types.
   * Either overload read/write() to take an Array of integers or add readBytes()/writeBytes(Array) to allow the safe reading/writing of non-ASCII data.
   * Maybe create a !ByteArray class, which is just an in-memory IODevice. An implementation exists but it's real value is in doubt, so it's not published yet.
-  * Added `writeBytes(Array-of-int)` and `Array readBytes(int)` so that we can safely pass around non-ascii data.
+  * Maybe add `writeBytes(Array-of-int)` and `Array readBytes(int)` so that we can safely pass around non-ascii data.
 
 =Error reporting=
 
@@ -91,7 +92,7 @@ equivalents:
 || `IOError` || Signals a real I/O error. ||
 || `AllocError` || Signals an out-of-memory error. ||
 || `InternalError` || Signals an error internal to libwhio. ||
-|| `RangeError` || Signals that some argument is out of range or would cause an overflow/underflow. ||
+|| `RangeError` || Signals that some argument is out of range or would (or did) cause an overflow/underflow. ||
 || `AccessError` || Signals that access was denied for the operation, e.g. trying to open a read-only file in write mode. ||
 || `ConsistencyError` || A data consistency error. Not used by the core library, but might be used by certain i/o device implementations. ||
 || `NYIError` || User has called a function which is "Not Yet Implemented." ||
