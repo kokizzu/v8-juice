@@ -75,7 +75,7 @@ Lastly, you can get more out of whefs by making use of the whefs-specific tools 
 
 http://code.google.com/p/whefs/wiki/WhefsTools
 
-For example, they allow one to easily create VFS containers and import/export files into/out of them.
+For example, they allow one to easily create EFS containers and import/export files into/out of them.
 
 =C++ usage=
 
@@ -107,12 +107,12 @@ fs.close(); // close the whefs container
 }}}
 
 The majority of the functionality is provided by the [PluginWhio IODevice class]. The so-called _pseudofiles_ (files inside a whefs
-container (also known as a _VFS_ or _embedded filesystem_)) use the
+container (also known as an _EFS_ or _embedded filesystem_)) use the
 exact same i/o interface as `whio.IODevice`, and inherit all usage
 conventions from that interface. The most significant of these is that
 the `close()` member must be called when the client is done with the
 object, to ensure that all handles are closed and memory is
-released. Closing a device handle after the VFS instance has been
+released. Closing a device handle after the EFS instance has been
 closed, or allowing the object's destruction to depend on the garbage
 collector, will lead to undefined results.
 
@@ -132,11 +132,11 @@ error codes used by whefs is:
 || `InternalError` || Signals an error internal to libwhefs. ||
 || `RangeError` || Signals that some argument is out of range or would cause an overflow/underflow. ||
 || `AccessError` || Signals that access was denied for the operation, e.g. trying to open a read-only file in write mode. ||
-|| `BadMagicError` || This may be triggered when attempting to open a VFS file which is not formatted as a VFS. ||
-|| `ConsistencyError` || A data consistency error in the VFS. The FS should not be used any more if this error occurs. ||
+|| `BadMagicError` || This may be triggered when attempting to open an EFS file which is not formatted as an EFS. ||
+|| `ConsistencyError` || A data consistency error in the EFS. The FS should not be used any more if this error occurs. ||
 || `NYIError` || User has called a function which is "Not Yet Implemented." ||
 || `UnsupportedError` || Signals that this device type does not support the requested operation. ||
-|| `FSFull` || Signifies that the VFS seems to be full (out of inodes or blocks). ||
+|| `FSFull` || Signifies that the EFS seems to be full (out of inodes or blocks). ||
 || `TypeError` || Signals that an argument is of an incorrect type. ||
 || `SizeTError` || Used by a few i/o operations which fail miserably. Always equal to -1. ||
 
@@ -161,12 +161,12 @@ whefs home page. All other features are inherited from the `IODevice` class.
 
 
 || *Return type* || *Name/Signature* || *Notes* ||
-|| `WhEfs` || `new WhEfs(String filename,bool writeMode)` || Tries to read the given file as a whefs filesystem. Throws on error. If `writeMode` is false, access to the VFS will be read-only. Prefer this constructor over the next form...||
-|| `WhEfs` || `new WhEfs(IODevice)` || Tries to read the given device as a whefs filesystem. Throws on error. If the device is read-only, no write operations can succeed on the VFS. The device _must not_ be manipulated by any means from outside the !WhEfs instance. Doing so likely corrupt it or cause it to fail with a consistency error. The device must also out-live the VFS, and must not be closed before the VFS is closed. ||
-|| `void` || `close()` || Closes the VFS. All pseudofiles/devices opened from this object must have been closed by the time this is called. ||
-|| `int` || `dumpToFile(string filename)` || Dumps the VFS's binary image to the given file. Results are undefined if it is told to overwrite itself. ||
+|| `WhEfs` || `new WhEfs(String filename,bool writeMode)` || Tries to read the given file as a whefs filesystem. Throws on error. If `writeMode` is false, access to the EFS will be read-only. Prefer this constructor over the next form...||
+|| `WhEfs` || `new WhEfs(IODevice)` || Tries to read the given device as a whefs filesystem. Throws on error. If the device is read-only, no write operations can succeed on the EFS. The device _must not_ be manipulated by any means from outside the !WhEfs instance. Doing so likely corrupt it or cause it to fail with a consistency error. The device must also out-live the EFS, and must not be closed before the EFS is closed. ||
+|| `void` || `close()` || Closes the EFS. All pseudofiles/devices opened from this object must have been closed by the time this is called. ||
+|| `int` || `dumpToFile(string filename)` || Dumps the EFS's binary image to the given file. Results are undefined if it is told to overwrite itself. ||
 || `Array` || `ls(string pattern)` || Returns a list (or null) of all pseudofiles matching the given glob-like pattern. Most common glob patterns are accepted, but only one pattern per call. e.g. `print(fs.ls('*.js'))`. ||
-|| `IODevice` || `openPseudofile(string filename, bool writeMode)` || Opens up a pseudofile within the VFS and returns it as a `whio.IODevice`. If `writeMode` is true then the file is created if it does not exist. Throws on error. The returned IODevice must `close()`ed before the VFS is closed. ||
+|| `IODevice` || `openPseudofile(string filename, bool writeMode)` || Opens up a pseudofile within the EFS and returns it as a `whio.IODevice`. If `writeMode` is true then the file is created if it does not exist. Throws on error. The returned IODevice must `close()`ed before the EFS is closed. ||
 || `int` || `size()` || Returns the size of the underlying pseudofilesystem. ||
 || `int` || `unlink(string filename)` || Unlinks (deletes) the given pseudofile name. It will fail if the given file is currently opened. ||
 || *Type* || *Properties* (read-only) || *Notes* ||
@@ -176,7 +176,7 @@ whefs home page. All other features are inherited from the `IODevice` class.
 TODOs:
 
   * `ls()` should be able to take more than one pattern. It should also accept a callback function to check for a match. We unfortunately have no C++ client-side access to the JS RegExp, so we can't easily support that.
-  * Think about how we might integrate [PathFinderClass PathFinder] with whefs, such that !PathFinder would be able to search through a VFS.
+  * Think about how we might integrate [PathFinderClass PathFinder] with whefs, such that !PathFinder would be able to search through an EFS.
 
 ==whefs shared/static functions==
 
@@ -189,7 +189,7 @@ TODOs:
 ===mkfs in more detail===
 
 The `whefs.mkfs()` function works exactly like the
-[http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs tool],
+[http://code.google.com/p/whefs/wiki/WhefsMkfs whefs-mkfs tool],
 creating a so-called "container file" for a virtual filesystem. The
 second parameter to the function is an Object which may have these
 optional properties, along with sensible (or required) ranges for their values:
@@ -197,9 +197,10 @@ optional properties, along with sensible (or required) ranges for their values:
   * `inodeCount` = the number of inodes. Must be at least two. More than 1000-2000 is probably not suitable for the current whefs engine.
   * `blockCount` = the number of data blocks. Must be at least inodeCount, but may be greater (up to 64k).
   * `blockSize` = the size of each data block. 4k-32k is normally good.
-  * `filenameLength` = maximum length of filenames. Default is 64 and there is a hard-coded limit explained [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tweaking-VFS on the whefs site].
+  * `filenameLength` = maximum length of filenames. Default is 64 and there is a hard-coded limit explained [http://code.google.com/p/whefs/wiki/WhefsTweakingEFS on the whefs site].
 
-Each parameter is described on the [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-mkfs whefs-mkfs page], and in even more detail on [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tweaking-VFS the whefs-tweaks page].
+Each parameter is described on the [http://code.google.com/p/whefs/wiki/WhefsMkfs whefs-mkfs page],
+and in even more detail on [http://code.google.com/p/whefs/wiki/WhefsTweakingEFS the whefs-tweaks page].
 
 If the options object is null or any given parameter is missing then some
 arbitrarily chosen defaults are used, and they are almost certainly
@@ -209,7 +210,7 @@ not suitable for your particular case (see `whefs_amalgamation.h`,
 not met.
 
 As a special service to our dear users, `mkfs()` supports the
-pseudofilename `":memory:"`, which means to build the VFS in memory. When
+pseudofilename `":memory:"`, which means to build the EFS in memory. When
 the returned `WhEfs` object is closed (or garbage collected), the
 filesystem will be lost. The in-memory FS can be copied to disk using
 `dumpToFile()`.
@@ -217,21 +218,21 @@ filesystem will be lost. The in-memory FS can be copied to disk using
 =Some things to keep in mind=
 
   * See the Caveats section, above, for important notes, especially about concurrency.
-  * A VFS container cannot be resized dynamically. To resize it, the data must be exported, the container re-created, and the data re-imported.
-  * The original whefs source tree comes with [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools several tools for manipulating whefs filesystems].
-  * There are _lots_ more docs available via the whefs source code (API docs) and [http://fossil.wanderinghorse.net/repos/whefs/index.cgi/wiki/whefs-tools the whefs home page].
+  * An EFS container cannot be resized dynamically. To resize it, the data must be exported, the container re-created, and the data re-imported.
+  * The original whefs source tree comes with [http://code.google.com/p/whefs/wiki/WhefsTools tools several tools for manipulating whefs filesystems].
+  * There are _lots_ more docs available via the whefs source code (API docs) and [http://code.google.com/p/whefs/wiki/WhefsTools the whefs home page].
   * whefs doesn't support true directories. Pseudofiles can be named `/path/to/file.txt`, but they're all currently stored in one big directory. This makes searching by name (e.g. using `ls()` or `openPseudofile()`) relatively slow.
   * whefs' engine is not scalable (in terms of performance) to large data stores. Keep them small (a few hundred inodes or so) or suffer dearly from the underlying linear algorithms.
-  * whefs is fairly minimalistic - do not expect all the features of a normal filesystem. It does what i need it to do.
-  * If you're running in a server environment, sharing a whefs filesystem across client processes (not threads!), be sure to keep the VFS open for only as long as needed, to avoid locking other clients out of it.
+  * whefs is fairly minimalistic - do not expect all the features of a normal filesystem. It does only what i need it to do.
+  * If you're running in a server environment, sharing a whefs filesystem across client processes (not threads!), be sure to keep the EFS open for only as long as needed, to avoid locking other clients out of it.
 
 =Tips and Tricks=
 
-==GZipping/Unzipping VFS Content==
+==GZipping/Unzipping EFS Content==
 
-You can use the `whio.InStream` methods `gzipTo()` and `ungzipTo()` to (de)compress an arbitrary stream from/to the VFS.
+You can use the `whio.InStream` methods `gzipTo()` and `ungzipTo()` to (de)compress an arbitrary stream from/to the EFS.
 
-For example, let's compress a copy of `/etc/hosts` into a VFS:
+For example, let's compress a copy of `/etc/hosts` into a EFS:
 
 {{{
 // Assume fs is an opened WhEfs object
@@ -257,12 +258,12 @@ ostr.close();
 fz.close();
 }}}
 
-And on my system the VFS file looks like:
+And on my system the EFS file looks like:
 
 {{{
 stephan@jareth:~/cvs/v8-juice/trunk/src/lib/plugins/whio$ whefs-ls -b -v memory.whefs 
-whefs-ls [No VFS opened]: Verbose mode activated.
-whefs-ls [memory.whefs]: Opening VFS [memory.whefs]
+whefs-ls [No EFS opened]: Verbose mode activated.
+whefs-ls [memory.whefs]: Opening EFS [memory.whefs]
 List of used blocks per file:
 
 [/etc/hosts.gz]:	1 = 1 block(s), 211 of 8192 bytes used
