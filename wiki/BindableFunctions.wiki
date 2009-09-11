@@ -13,10 +13,10 @@ myGlobal->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(v8::juice::sle
 
 The functions include:
 
-|| *Native Function* || *Header file* || *JS Signature* || *Description* ||
-|| `v8::juice::IncludeScript` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/juice.h `juice.h`] || `include(file)` || Includes external JS files. See [PathFinderClass]. ||
-|| `v8::juice::plugin::LoadPlugin` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/plugin.h `plugin.h`] || `loadPlugin(pluginName)` || Loads an external plugin from a DLL. See [Plugins]. ||
-|| `v8::juice::sleep` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h `time.h`] || `sleep(seconds)` || Added 20090912. Sleeps for a given number of seconds, unlocking the v8 VM for use by other threads during that time. ||
-|| `v8::juice::setTimeout` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h `time.h`] || `setTimeout(Function,milliseconds)` || Added 20090912. Like the browser-standard function, but currently requires a function (not a string) as the first argument. ||
-|| `v8::juice::cancelTimeout` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h `time.h`] || `cancelTimeout(timerID)` || Added 20090912. Removes a scheduled `setTimeout()` callback. ||
-|| `v8::juice::sprintf` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/sprintf.h `sprintf.h`] || `sprintf(fmt,args...)` || Similar to conventional `sprintf()` implementations. ||
+|| *Native Function* || *Header file* (`<v8/juice/XXX.h>`) || *JS Signature* || *Description* ||
+|| `v8::juice::IncludeScript` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/juice.h juice.h] || `include(file)` || Includes external JS files. See [PathFinderClass]. ||
+|| `v8::juice::plugin::LoadPlugin` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/plugin.h plugin.h] || `loadPlugin(pluginName)` || Loads an external plugin from a DLL. See [Plugins]. ||
+|| `v8::juice::sleep` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h time.h] || `sleep(seconds)` || Added 20090912. Sleeps for a given number of seconds, unlocking the v8 VM for use by other threads during that time. ||
+|| `v8::juice::setTimeout` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h time.h] || `setTimeout(Function,milliseconds)` || Added 20090912. Like the browser-standard function, but currently requires a function (not a string) as the first argument. ||
+|| `v8::juice::cancelTimeout` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h time.h] || `cancelTimeout(timerID)` || Added 20090912. Removes a scheduled `setTimeout()` callback. ||
+|| `v8::juice::sprintf` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/sprintf.h sprintf.h] || `sprintf(fmt,args...)` || Similar to conventional `sprintf()` implementations. ||
