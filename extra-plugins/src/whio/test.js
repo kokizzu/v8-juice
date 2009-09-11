@@ -22,12 +22,16 @@ function tryOne() {
 	dev.write( "Line #"+(i+1)+"\n" );
     }
     //dev.truncate( 16 );
-    print('dev.isGood() ==',dev.isGood());
+    print('dev.isGood() ==',dev.isGood(), "iomode =",dev.ioMode());
     dev.close();
 
     dev = new whio.IODevice(fname,false);
     dev.seek( 5, whio.IOBase.SEEK_CUR );
-    dev.seek( 10, whio.IODevice.SEEK_CUR );
+    //dev.seek( 10, whio.IODevice.SEEK_CUR ); // doesn't work via whio.IODevice :/
+    dev.seek( 10, whio.IOBase.SEEK_CUR );
+    if( dev.tell() != 15 ) {
+        throw new Error("I/O device is not at its intended position:",dev.tell());
+    }
     var rdSize = 13;
     var rdRC = 0;
     while( 0 != (rdRC = dev.read(rdSize)) ) {
@@ -151,7 +155,7 @@ function tryBadStream()
     try {
 	a = new whio.IODevice(fn,false);
 	print(fn,'=',a,a.fileName);
-	print(fn+'.canWrite =',a.canWrite);
+	print(fn+'.canWrite =',a.canWrite,"iomode =",dev.ioMode());
 	var o = new whio.OutStream(a); // should throw
 	var i = new whio.InStream(a);
 	print(i,'=',i);

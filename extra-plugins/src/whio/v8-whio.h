@@ -51,9 +51,11 @@ namespace v8 { namespace juice { namespace whio {
 	static char const * fileName;
 	static char const * flush;
 	static char const * isGood;
+	static char const * ioMode;
 	static char const * read;
 	static char const * toString;
 	static char const * write;
+
 
 	// IODevice:
 	static char const * eof;

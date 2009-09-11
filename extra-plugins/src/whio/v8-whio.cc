@@ -54,6 +54,7 @@ namespace v8 { namespace juice { namespace whio {
     char const * WhioStrings::gunzip = "gunzipTo";
     char const * WhioStrings::homePage = "homePage";
     char const * WhioStrings::ioDevice = "ioDevice";
+    char const * WhioStrings::ioMode = "ioMode";
     char const * WhioStrings::isGood = "isGood";
     char const * WhioStrings::read = "read";
     char const * WhioStrings::rebound = "rebound";
@@ -64,6 +65,7 @@ namespace v8 { namespace juice { namespace whio {
     char const * WhioStrings::toString = "toString";
     char const * WhioStrings::truncate = "truncate";
     char const * WhioStrings::write = "write";
+
 
     Persistent<Function> IODevice::js_ctor;
 
@@ -583,6 +585,23 @@ namespace v8 { namespace juice { namespace whio {
 	return BoolToJS( dev->api->isgood(dev) );
     }
 
+    /** IOBase isMode() impl for whio_dev. */
+    static Handle<Value> dev_iomode(const Arguments& argv)
+    {
+	ARGS((0==argc));
+	DEVTHIS(IODevice);
+	return Int32ToJS( dev->api->iomode(dev) );
+    }
+
+    /** IOBase isMode() impl for whio_stream. */
+    static Handle<Value> stream_iomode(const Arguments& argv)
+    {
+	ARGS((0==argc));
+	DEVTHIS(StreamBase);
+	return Int32ToJS( dev->api->iomode(dev) );
+    }
+
+
 #ifndef Z_DEFAULT_COMPRESSION
 #define Z_DEFAULT_COMPRESSION (-1)
 #endif
@@ -646,7 +665,6 @@ namespace v8 { namespace juice { namespace whio {
 	os << ' ' << WhioStrings::canWrite <<':'<< (JSToStdString(self->Get(key))) << ',';
 	key = JSTR(WhioStrings::canRead);
 	os << ' ' << WhioStrings::canRead << ':'<< (JSToStdString(self->Get(key)));
-
 	os <<"]";
 	return CastToJS( os.str() );
     }
@@ -700,11 +718,21 @@ namespace v8 { namespace juice { namespace whio {
 		.Set(WhioStrings::isGood,func_noop)
 		.Set(WhioStrings::close,func_noop)
 		.Set(WhioStrings::flush,func_noop)
+		.Set(WhioStrings::ioMode,func_noop)
 		.Set(WhioStrings::toString, devT_tostring<WhioStrings::IOBase> );
+#if 1
             Handle<Function> ctor = bindAbs.Seal();
             ctor->Set(JSTR(WhioStrings::SEEK_SET_),Integer::New(SEEK_SET) );
             ctor->Set(JSTR(WhioStrings::SEEK_END_), Integer::New(SEEK_END));
             ctor->Set(JSTR(WhioStrings::SEEK_CUR_),Integer::New(SEEK_CUR) );
+#else
+            bindAbs
+                .Set(WhioStrings::SEEK_SET_,Integer::New(SEEK_SET) )
+                .Set(WhioStrings::SEEK_END_, Integer::New(SEEK_END))
+                .Set(WhioStrings::SEEK_CUR_,Integer::New(SEEK_CUR) )
+                ;
+            Handle<Function> ctor = bindAbs.Seal();
+#endif
 	}
 
 	////////////////////////////////////////////////////////////
@@ -722,6 +750,7 @@ namespace v8 { namespace juice { namespace whio {
 		.Set(WhioStrings::clearError,dev_clear_error)
 		.Set(WhioStrings::eof,dev_eof)
 		.Set(WhioStrings::tell,dev_tell)
+		.Set(WhioStrings::ioMode,dev_iomode)
 		.Set(WhioStrings::seek,dev_seek)
 		.Set(WhioStrings::truncate,dev_truncate)
 		.Set(WhioStrings::size,dev_size)
@@ -753,6 +782,7 @@ namespace v8 { namespace juice { namespace whio {
  		.Set(WhioStrings::close, stream_close )
  		.Set(WhioStrings::flush, stream_flush )
  		.Set(WhioStrings::isGood,stream_isgood)
+		.Set(WhioStrings::ioMode,stream_iomode)
  		.Set(WhioStrings::toString, devT_tostring<WhioStrings::StreamBase> )
 		.Seal();
         }
