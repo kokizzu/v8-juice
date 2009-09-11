@@ -1,7 +1,10 @@
 /**
    Time/delay-related functions for v8-juice.
 
-   Requires pthreads, sleep(3), and usleep(3)
+   Requires pthreads, sleep(3), and usleep(3). The mutex-locking code
+   required for a proper implementation of cancelTimeout() requires
+   some accompanying mutex code, but those bits can easily be replaced
+   with a mutex of your choice.
 
    This code is intentionally kept free of v8-juice-specific APIs
    so that it can easily be ported to other v8-based projects.
@@ -10,6 +13,9 @@
 
    License: Public Domain
 
+
+   TODOs: remove the hard-coded pthread dep and instead use Marc Duerner's
+   thread class.
 */
 #include <v8/juice/time.h>
 #include <pthread.h>
@@ -22,10 +28,10 @@
     a dummy/no-op mutex, which the client can replace with
     his own if he likes.
 */
-#define USE_WHNET_MUTEX 1
+#define USE_WHNET_MUTEX 0
 
 #if USE_WHNET_MUTEX
-#include "mutex.hpp"
+#  include "mutex.hpp"
 #endif
 
 #include <iostream> // only for debuggering
@@ -45,7 +51,9 @@ namespace v8 { namespace juice {
     {
         struct js_thread_info;
         /**
-           MutexType can be any type compatible with MutexSentry.
+           MutexType can be any type compatible with the MutexSentry
+           interface (see below).
+           
            Conventionally has lock() and unlock() methods which lock a
            specific mutex.
 
@@ -61,13 +69,13 @@ namespace v8 { namespace juice {
         };           
 #endif
         /**
-           Can be any type with the interface:
+           MutexSentry can be any type with the interface:
 
            MutextSentry::MutextSentry( MutextType & );
 
            Must lock the mutex as construction and unlock it
-           at destruction.
-
+           at destruction. Or it may be a no-op which does
+           nothing.
         */
 #if USE_WHNET_MUTEX
         typedef v8::juice::mutex_sentry MutexSentry;
@@ -105,6 +113,7 @@ namespace v8 { namespace juice {
         public:
             /**
                Locks a mutex shared by all instances of this class.
+               Does not return until the lock is acquired.
             */
             TimerLock() : MutexSentry(timeMutex())
             {
@@ -195,6 +204,12 @@ namespace v8 { namespace juice {
         {
             v8::Unlocker ul;
             /**
+               FIXME: wake up periodically and see if we should still be
+               waiting, otherwise this might keep the app from exiting
+               from an arbitrarily long time after the main thread has
+               gone. But how to know that?
+            */
+            /**
                FIXME: posix has obsoleted usleep() and recommends
                nanonosleep(), with it's much more complicated
                interface. OTOH, according to APUE, nanosleep() is only
@@ -255,6 +270,7 @@ namespace v8 { namespace juice {
         pthread_attr_init( &tattr );
         pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED);
         ::pthread_create( &tid, &tattr, thread_setTimeout, ji );
+        pthread_attr_destroy(&tattr);
         return hsc.Close( id ); // fixme: return a timer ID
     }
 
