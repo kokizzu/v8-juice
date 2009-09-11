@@ -111,6 +111,7 @@ namespace v8 { namespace juice {
                 return bob;
             }
         public:
+            typedef uint32_t TimerIDType;
             /**
                Locks a mutex shared by all instances of this class.
                Does not return until the lock is acquired.
@@ -124,7 +125,7 @@ namespace v8 { namespace juice {
             virtual ~TimerLock()
             {
             }
-            typedef std::set<uint32_t> SetType;
+            typedef std::set<TimerIDType> SetType;
             /** Returns the shared timer set. */
             SetType & set()
             {
@@ -132,13 +133,26 @@ namespace v8 { namespace juice {
                 return bob;
             }
             /**
-               Removes the given timer id. Returns 0 if no
-               timer was found, else some other value.
+               Removes the given timer id from the internal
+               list. Returns 0 if no timer was found, else some other
+               value.
              */
-            size_t take(uint32_t id)
+            size_t take(TimerIDType id)
             {
                 return set().erase(id);
 
+            }
+            /**
+               Generates a unique timer ID and inserts it into
+               the internal list.
+            */
+            TimerIDType next_id()
+            {
+                static TimerIDType x = 0;
+                // Generate unique timer ID, avoiding collisions after overflow:
+                while( ! this->set().insert( ++x ).second )
+                { (void)1; }
+                return x;
             }
         };
 
@@ -147,13 +161,6 @@ namespace v8 { namespace juice {
         */
         struct js_thread_info
         {
-        private:
-            static uint32_t next_id()
-            {
-                static uint32_t x = 0;
-                // FIXME: check for dupes after overflow. First we need the timer id map.
-                return ++x;
-            }
         public:
             /** Timeout delay, in miliseconds. */
             uint32_t delay;
@@ -163,25 +170,27 @@ namespace v8 { namespace juice {
                 callback. If we don't store this here we get segfaults when we
                 Call() the callback. */
             v8::Persistent<v8::Object> jself;
-
             /** Set by the ctor. */
-            uint32_t id;
+            TimerLock::TimerIDType id;
+            /**
+               Creates an empty (except for this->id) holder object
+               for setTimeout() metadata. After calling this,
+               this->id is guaranteed to be unique within the current
+               set of timeout timers.
+            */
             js_thread_info()
                 : delay(0),
-                  id(0),
+                  id(TimerLock().next_id()),
                   jv(),
                   jself()
             {
-                TimerLock lock;
-                // Generate unique timer ID:
-                while( ! lock.set().insert( this->id = next_id() ).second )
-                { (void)1; }
             }
         };        
     } // namespace Detail
 
     /**
-       pthread_create() callback for implementing JS setTimeout().
+       pthread_create() callback for implementing the delayed start of
+       JS code via setTimeout().
 
        arg must be-a pointer to a fully-populated Detail::js_thread_info
        object. This function will free that object.
@@ -190,14 +199,14 @@ namespace v8 { namespace juice {
     */
     static void * thread_setTimeout( void * arg )
     {
-#define THREAD_RETURN pthread_exit( (void *)0 )
+#define THREAD_RETURN ::pthread_exit( (void *)0 )
         if( v8::V8::IsDead() ) THREAD_RETURN;
         v8::Locker locker;
         v8::HandleScope hsc;
         Detail::js_thread_info * jio = reinterpret_cast<Detail::js_thread_info*>( arg );
         /** reminder: copy jio to the stack so we can free it up immediately
             and not worry about a leak via an exception propagating below... */
-        Detail::js_thread_info ji(*jio);
+        const Detail::js_thread_info ji(*jio);
         delete jio;
         unsigned int d = ji.delay * 1000;
         int src = 0;
@@ -241,7 +250,7 @@ namespace v8 { namespace juice {
         v8::Handle<v8::Value> arg = argv[0];
         if( arg.IsEmpty() || ! arg->IsNumber() ) return v8::False();
         // do we need this: v8::Locker locker;
-        uint32_t id = static_cast<uint32_t>( arg->ToInteger()->Value() );
+        Detail::TimerLock::TimerIDType id = static_cast<Detail::TimerLock::TimerIDType>( arg->ToInteger()->Value() );
         Detail::TimerLock lock;
         return v8::Boolean::New( lock.take(id) ? true : false );
     }
@@ -259,7 +268,7 @@ namespace v8 { namespace juice {
         {
             return v8::ThrowException( v8::String::New("setTimeout() requires a function [FIXME: or string] as its first argument!") );
         }
-        uint32_t tm = static_cast<uint32_t>( argv[1]->ToNumber()->Value() );
+        Detail::TimerLock::TimerIDType tm = static_cast<Detail::TimerLock::TimerIDType>( argv[1]->ToNumber()->Value() );
         Detail::js_thread_info * ji = new Detail::js_thread_info;
         ji->delay = tm;
         ji->jv = v8::Persistent<v8::Value>::New( fh );
