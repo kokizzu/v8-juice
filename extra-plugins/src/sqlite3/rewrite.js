@@ -30,7 +30,7 @@ function tryOne(){
             var curs = st.getCursor(); //new sqlite3.Cursor(st);
             var rc = curs.step();
             curs.finalize();
-            print("step() rc=",rc,'errmsg=',my.db.errorMessage());
+            print("step() rc =",rc,'errmsg =',my.db.errorMessage());
         }
         if(1){
             st.prepare("insert into t values(?,?)");
@@ -152,10 +152,10 @@ function tryExec()
 }
 
 
-// tryOne();
-// tryTwo();
-// tryThree();
-// tryFour();
+tryOne();
+tryTwo();
+tryThree();
+tryFour();
 tryExec();
 
 print("Shuting down...");

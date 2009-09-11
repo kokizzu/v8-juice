@@ -65,16 +65,16 @@ class DBWrapper;
 class StmtWrapper;
 class CursorWrapper;
 class CallbackWrapper;
-namespace v8 { namespace juice {
-        template <>
-        struct WeakJSClassCreatorOps< DBWrapper >;
-        template <>
-        struct WeakJSClassCreatorOps< StmtWrapper >;
-        template <>
-        struct WeakJSClassCreatorOps< CursorWrapper >;
-        template <>
-        struct WeakJSClassCreatorOps< CallbackWrapper >;
-}}
+// namespace v8 { namespace juice {
+//         template <>
+//         struct WeakJSClassCreatorOps< DBWrapper >;
+//         template <>
+//         struct WeakJSClassCreatorOps< StmtWrapper >;
+//         template <>
+//         struct WeakJSClassCreatorOps< CursorWrapper >;
+//         template <>
+//         struct WeakJSClassCreatorOps< CallbackWrapper >;
+// }}
 /**
    Convenience macro for marking wrapper functions.
 */
@@ -350,7 +350,7 @@ struct BaseWeakOps
     static void Dtor( WrappedType * obj )
     {
         cleanup::RemoveFromCleanup( obj );
-        CERR << "Destroying wrapped "<<ClassName()<<" object @"<<obj<<'\n';
+        //CERR << "Destroying wrapped "<<ClassName()<<" object @"<<obj<<'\n';
         delete obj;
     }
     static void cleanup_callback( void * obj )
@@ -373,7 +373,7 @@ namespace v8 { namespace juice {
                                    std::string & exceptionText )
         {
             CallbackWrapper * cb = new CallbackWrapper;
-            CERR << "Created "<<ClassName()<<" object @"<<cb<<'\n';
+            //CERR << "Created "<<ClassName()<<" object @"<<cb<<'\n';
             AddToCleanup( cb );
             return cb;
         }
@@ -403,7 +403,7 @@ namespace v8 { namespace juice {
             }
             DBWrapper * db = new DBWrapper(dbh);
             //db->jsobj = argv.This();
-            CERR << "Created "<<ClassName()<<" object @"<<db<<'\n';
+            //CERR << "Created "<<ClassName()<<" object @"<<db<<'\n';
             AddToCleanup( db );
             return db;
         }
@@ -450,7 +450,7 @@ namespace v8 { namespace juice {
                 st = new StmtWrapper( db );
             }
             gcList().insert(st);
-            CERR << "Created "<<ClassName()<<" object @"<<st<<'\n';
+            //CERR << "Created "<<ClassName()<<" object @"<<st<<'\n';
             AddToCleanup( st );
             return st;
         }
@@ -458,7 +458,7 @@ namespace v8 { namespace juice {
         {
             cleanup::RemoveFromCleanup( obj );
             gcList().erase(obj);
-            CERR << "Destroying wrapped "<<ClassName()<<" object @"<<obj<<'\n';
+            //CERR << "Destroying wrapped "<<ClassName()<<" object @"<<obj<<'\n';
             delete obj;
         }
     };
@@ -483,7 +483,7 @@ namespace v8 { namespace juice {
                 return 0;
             }
             CursorWrapper * cur = new CursorWrapper( st );
-            CERR << "Created "<<ClassName()<<" object @"<<st<<'\n';
+            //CERR << "Created "<<ClassName()<<" object @"<<st<<'\n';
             AddToCleanup( cur );
             return cur;
         }
