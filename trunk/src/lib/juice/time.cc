@@ -5,6 +5,11 @@
 
    This code is intentionally kept free of v8-juice-specific APIs
    so that it can easily be ported to other v8-based projects.
+
+   Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
+
+   License: Public Domain
+
 */
 #include <v8/juice/time.h>
 #include <pthread.h>
