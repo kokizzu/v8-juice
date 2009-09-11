@@ -12,12 +12,38 @@ v8 conventions, e.g.:
 myGlobal->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(v8::juice::sleep));
 }}}
 
-The functions include:
+The supported "extra" functions are listed below, grouped by the header file they are declared in. They are documented in their header files.
 
-|| *Native Function* (of type `v8::InvocationCallback`) || *Header file* (`<v8/juice/XXX.h>`) || *JS Signature* || *Description* ||
-|| `v8::juice::IncludeScript` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/juice.h juice.h] || `include(filename)` || Includes external JS files. See [PathFinderClass]. ||
-|| `v8::juice::plugin::LoadPlugin` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/plugin.h plugin.h] || `loadPlugin(pluginName)` || Loads an external plugin from a DLL. See [Plugins]. ||
-|| `v8::juice::sleep` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h time.h] || `sleep(seconds)` || Added 20090912. Sleeps for a given number of seconds, unlocking the v8 VM for use by other threads during that time. ||
-|| `v8::juice::setTimeout` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h time.h] || `setTimeout(Function,milliseconds)` || Added 20090912. Like the browser-standard function, but currently requires a function (not a string) as the first argument. ||
-|| `v8::juice::cancelTimeout` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h time.h] || `cancelTimeout(timerID)` || Added 20090912. Removes a scheduled `setTimeout()` callback. ||
-|| `v8::juice::sprintf` || [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/sprintf.h sprintf.h] || `sprintf(fmt,args...)` || Similar to conventional `sprintf()` implementations. ||
+==juice.h==
+
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/juice.h juice.h]
+
+|| *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
+|| `v8::juice::IncludeScript` || `include(filename)` || Includes external JS files. See [PathFinderClass]. ||
+
+==!PathFinder.h==
+
+See [PathFinderClass].
+
+==plugin.h==
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/plugin.h plugin.h]
+
+|| *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
+|| `v8::juice::plugin::LoadPlugin` || `loadPlugin(pluginName)` || Loads an external plugin from a DLL. See [Plugins]. ||
+
+
+==sprintf.h==
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/sprintf.h sprintf.h]
+
+|| *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
+|| `v8::juice::sprintf` || `sprintf(fmt,args...)` || Similar to conventional `sprintf()` implementations, plus some extensions. ||
+
+==time.h==
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h time.h]
+
+Added to the API on 20090912.
+
+|| *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
+|| `v8::juice::setTimeout` || `setTimeout(Function,milliseconds)` || Like the browser-standard function, but currently requires a function (not a string) as the first argument. ||
+|| `v8::juice::cancelTimeout` || `cancelTimeout(timerID)` || Removes a scheduled `setTimeout()` callback. ||
+|| `v8::juice::sleep` || `sleep(seconds)` || Sleeps for a given number of seconds, unlocking the v8 VM for use by other threads during that time. ||
