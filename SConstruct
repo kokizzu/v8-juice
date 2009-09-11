@@ -37,6 +37,7 @@ if( True ):
         'PathFinder.cc',
         'PathFinder-js.cc',
         'plugin.cc',
+        'time.cc',
         'whprintf.c'
         ]]
     print("Creating static juice lib...");
