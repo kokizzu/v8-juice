@@ -72,9 +72,133 @@ typedef v8::Local<v8::Object> V8LObject;
 typedef v8::Handle<v8::Context> V8CxH;
 
 
+#include <pthread.h>
+/**
+   Internal holder for setTimeout() callback data.
+*/
+struct js_thread_info
+{
+    /** Timeout delay, in miliseconds. */
+    uint32_t delay;
+    /** The Function/String handle passed as argv[0] to setTimeout(). */
+    v8::Persistent<v8::Value> jv;
+    /** The 'this' object (the global object) for making the
+        callback. If we don't store this here we get segfaults when we
+        Call() the callback. */
+    v8::Persistent<v8::Object> jself;
+
+    /** Set by the ctor. */
+    uint32_t id;
+
+    js_thread_info()
+        : delay(0),
+          id( next_id() ),
+          jv(),
+          jself()
+    {}
+    static uint32_t next_id()
+    {
+        static uint32_t x = 0;
+        // FIXME: check for dupes after overflow. First we need the timer id map.
+        return ++x;
+    }
+};
+
+/**
+   pthread_create() callback for implementing JS setTimeout().
+
+   arg must be-a pointer to a fully-populated js_thread_info
+   object. This function will free that object.
+
+   Uses v8::Unlocker to unlock v8 for the duration of the timeout.
+*/
+static void * thread_setTimeout( void * arg )
+{
+    if( v8::V8::IsDead() ) return NULL;
+    v8::Locker locker;
+    v8::HandleScope hsc;
+    js_thread_info * jio = reinterpret_cast<js_thread_info*>( arg );
+    /** reminder: copy jio to the stack so we can free it up immediately
+        and not worry about a leake via an exception propagating below... */
+    js_thread_info ji(*jio);
+    delete jio;
+    unsigned int d = ji.delay * 1000;
+    int src = 0;
+    {
+        v8::Unlocker ul;
+        /**
+           FIXME: posix has obsoleted usleep() and recommends
+           nanonosleep(), with it's much more complicated
+           interface. OTOH, according to APUE, nanosleep() is only
+           required to be defined on platforms which implement "the
+           real-time extensions". What to do?
+        */
+        src = ::usleep( d );
+    }
+    if( ji.jv->IsFunction() )
+    {
+        v8::Handle<v8::Function> fh( v8::Function::Cast( *(ji.jv) ) );
+        fh->Call( ji.jself, 0, 0 );
+    }
+    return NULL;
+}
+
+
+/**
+   JS usage: setTimeout( Function, when ), where 'when' is a number of
+   miliseconds.
+
+   FIXME: a string should be allowed as the first parameter.
+*/
+v8::Handle<v8::Value> js_setTimeout(const v8::Arguments& argv)
+{
+    if( argv.Length() < 2 )
+    {
+        return v8::ThrowException( v8::String::New("setTimeout() requires two arguments!") );
+    }
+    v8::Locker locker;
+    v8::HandleScope hsc; // this must exist to avoid a weird error
+    v8::Handle<v8::Value> fh( argv[0] );
+    if( ! fh->IsFunction() )
+    {
+        return v8::ThrowException( v8::String::New("setTimeout() requires a function [FIXME: or string] as its first argument!") );
+    }
+    uint32_t tm = static_cast<uint32_t>( argv[1]->ToNumber()->Value() );
+    pthread_t tid;
+    js_thread_info * ji = new js_thread_info;
+    ji->delay = tm;
+    ji->jv = v8::Persistent<v8::Value>::New( fh );
+    ji->jself = v8::Persistent<v8::Object>::New( argv.This() );
+    ::pthread_create( &tid, NULL, thread_setTimeout, ji );
+    return hsc.Close( v8::Undefined() ); // fixme: return a timer ID
+}
+
+#include <unistd.h> // sleep()
+/**
+   JS usage: sleep(seconds)
+
+   Behaves identically to the POSIX-standard sleep(), but returns -1 if
+   argv[0] is not a positive integer.
+
+   This routine calls v8::Unlocker to unlock the v8 engine for other
+   threads.
+*/
+v8::Handle<v8::Value> js_sleep(const v8::Arguments& argv)
+{
+    int st = argv.Length() ? static_cast<uint32_t>( argv[0]->ToInteger()->Value() ) : 0;
+    int rc = -1;
+    if(st)
+    {
+        v8::Unlocker ul;
+        rc = ::sleep( st );
+    }
+    return v8::Integer::New(rc);
+}
+
 
 using namespace v8;
 using namespace ::v8::juice;
+
 
 struct my_native
 {
@@ -363,6 +487,7 @@ static bool PrintUsesStdErr = false;
 int main(int argc, char* argv[]) {
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
     {
+        v8::Locker tlocker;
         v8::HandleScope handle_scope;
         v8::juice::cleanup::CleanupSentry cleaner;
         // Create a template for the global object.
@@ -379,6 +504,9 @@ int main(int argc, char* argv[]) {
         global->Set(v8::String::New("include"), v8::FunctionTemplate::New(v8::juice::IncludeScript) );
         global->Set(v8::String::New("load_plugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));
         global->Set(v8::String::New("toSource"), v8::FunctionTemplate::New(v8::juice::convert::ToSource));
+
+        global->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(js_sleep));
+        global->Set(v8::String::New("setTimeout"), v8::FunctionTemplate::New(js_setTimeout));
 
         // Create a new execution environment containing the built-in
         // functions
