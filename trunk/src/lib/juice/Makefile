@@ -12,6 +12,7 @@ OBJECTS = $(addsuffix .o,\
 	JSClassCreator \
 	whprintf \
 	jssprintf \
+	time \
 	)
 
 ########################################################################
