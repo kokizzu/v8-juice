@@ -13,6 +13,7 @@ OBJECTS = $(addsuffix .o,\
 	whprintf \
 	jssprintf \
 	time \
+	mutex \
 	)
 
 ########################################################################
