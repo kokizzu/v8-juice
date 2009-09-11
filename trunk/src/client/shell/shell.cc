@@ -384,6 +384,7 @@ int main(int argc, char* argv[]) {
 
         global->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(v8::juice::sleep));
         global->Set(v8::String::New("setTimeout"), v8::FunctionTemplate::New(v8::juice::setTimeout));
+        global->Set(v8::String::New("cancelTimeout"), v8::FunctionTemplate::New(v8::juice::cancelTimeout));
 
         // Create a new execution environment containing the built-in
         // functions
