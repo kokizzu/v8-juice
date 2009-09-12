@@ -12,7 +12,7 @@ are at the top. Dates written extra large are release dates. This contains only 
 ----
 
 *2009 Sept 12*
-  * Added (experimental) `setTimeout()`, `cancelTimeout()`, and `sleep()` (which relinquishes control to other threads). The first two work mostly like their browser equivalents, but need more testing in order to determine if their multi-threaded use of v8 is kosher. See [BindableFunctions].
+  * Added `setTimeout()`, `clearTimeout()`,  `setInterval()`, `clearInterval()` and several variants of `sleep()` (which relinquishes control to other threads while it sleeps). The timeout/interval functions work like their browser-side equivalents. See [BindableFunctions].
   * Other minor touchups i've been collecting over the summer.
 
 *2009 May 27*
