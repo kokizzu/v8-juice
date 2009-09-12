@@ -6,6 +6,8 @@ package.clean_files += $(wildcard *.o *~)
 
 # Debian policy requires that DLLs be built with -fPIC:
 CXXFLAGS += -fPIC
+CFLAGS += -fPIC # won't link on AMD64 w/o this.
+
 
 package.install.package_headers.dest := $(prefix)/include/v8/juice
 package.install.headers.dest = $(package.install.package_headers.dest)
