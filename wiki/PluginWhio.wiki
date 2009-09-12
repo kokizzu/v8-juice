@@ -240,7 +240,7 @@ Note that the upper bound is equivalent to EOF, or "one past the end", and is no
 Subdevices have some obscure uses, but probably not many which JS
 applications can make use of. They were originally designed to
 partition off access to various internal areas of
-[http://fossil.wanderinghorse.net/repos/whefs/ an embedded filesystem library].
+[PluginWhefs an embedded filesystem library].
 
 Subdevices get an extra function compared to other IODevices:
 
