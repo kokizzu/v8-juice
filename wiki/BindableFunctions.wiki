@@ -36,7 +36,7 @@ See [PathFinderClass].
 
 ==sprintf.h==
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/sprintf.h sprintf.h]
-[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/sprintf.cc sprintf.cc]
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/jssprintf.cc jssprintf.cc]
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
 || `v8::juice::sprintf` || `sprintf(fmt,args...)` || Similar to conventional `sprintf()` implementations, plus some extensions. ||
