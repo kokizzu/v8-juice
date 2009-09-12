@@ -45,7 +45,7 @@ between the '*' and the type name.
 - Only types supported by v8::juice::convert will work.
 
 ************************************************************************/
-load_plugin('v8-juice-whio');
+loadPlugin('v8-juice-whio');
 
 var App = {
 In:new whio.InStream('/dev/stdin'),
