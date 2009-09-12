@@ -45,5 +45,10 @@ Added to the API on 20090912.
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
 || `v8::juice::setTimeout` || `setTimeout(Function,milliseconds)` || Like the browser-standard function, but currently requires a function (not a string) as the first argument. ||
-|| `v8::juice::cancelTimeout` || `cancelTimeout(timerID)` || Removes a scheduled `setTimeout()` callback. ||
+|| `v8::juice::setInterval` || `setInterval(Function,milliseconds)` || Like the browser-standard function, but currently requires a function (not a string) as the first argument. ||
+|| `v8::juice::clearTimeout` || `clearTimeout(timerID)` || Removes a scheduled `setTimeout()` callback. ||
+|| `v8::juice::clearInterval` || `clearInterval(timerID)` || Removes a scheduled `setInterval()` callback. ||
 || `v8::juice::sleep` || `sleep(seconds)` || Sleeps for a given number of seconds, unlocking the v8 VM for use by other threads during that time. ||
+
+Due to internal details, `clearTimeout()` and `clearInterval()` are interchangeable, and either can be used
+to clear IDs returned from `setTimeout()` or `setInterval()`.
