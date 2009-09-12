@@ -22,7 +22,7 @@ function doTest()
         setTimeout(tmout,tm/2);
         setTimeout(tmout,tm*2);
         print("Launcher sleeping...");
-        sleep(1);
+        mssleep(500);
     }
     print("Launcher napping...");
     sleep(3);

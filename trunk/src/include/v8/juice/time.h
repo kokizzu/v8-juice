@@ -55,13 +55,31 @@ namespace v8 { namespace juice {
     
        JS usage: sleep(seconds)
 
-       Behaves identically to the POSIX-standard sleep(), but returns -1 if
-       argv[0] is not a positive integer.
+       Behaves identically to the POSIX-standard sleep(), but returns
+       -1 if argv[0] is not a positive integer.
 
        This routine uses v8::Unlocker to unlock the v8 engine for
        other threads.
     */
     v8::Handle<v8::Value> sleep(const v8::Arguments & argv);
+    /**
+       Like sleep(), but naps for the given number of milliseconds
+       (thousandths of a second).
+       
+       JS Usage: msleep( milliseconds )
+    */
+    v8::Handle<v8::Value> mssleep(const v8::Arguments & argv);
+    /**
+       Like sleep(), but naps for the given number of microseconds
+       (millionths of a second).
+    
+       JS Usage: usleep( nanoseconds )
+
+       but be aware that you won't get really high resolution via JS
+       when sleeping for very small intervals, due to the overhead involved
+       in passing around JS params and locking/unlocking the engine.
+    */
+    v8::Handle<v8::Value> usleep(const v8::Arguments & argv);
 
 }} // namespace
 
