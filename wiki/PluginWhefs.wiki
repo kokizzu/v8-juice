@@ -218,7 +218,7 @@ filesystem will be lost. The in-memory FS can be copied to disk using
 =Some things to keep in mind=
 
   * See the Caveats section, above, for important notes, especially about concurrency.
-  * _Do not_ use whefs from multiple threads via [BindableFunctions setTimeout()]! Doing so _will_ eventually corrupt a read/write EFS or produce incorrect output on a read-only EFS.
+  * _Do not_ use a whefs instance from multiple threads (e.g. via [BindableFunctions setTimeout()])! Doing so _will_ eventually corrupt a read/write EFS or produce incorrect output on a read-only EFS.
   * An EFS container cannot be resized dynamically. To resize it, the data must be exported, the container re-created, and the data re-imported.
   * The original whefs source tree comes with [http://code.google.com/p/whefs/wiki/WhefsTools tools several tools for manipulating whefs filesystems].
   * There are _lots_ more docs available via the whefs source code (API docs) and [http://code.google.com/p/whefs the whefs home page].
