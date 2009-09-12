@@ -17,6 +17,7 @@ The supported "extra" functions are listed below, grouped by the header file the
 ==juice.h==
 
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/juice.h juice.h]
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/juice.cc juice.cc]
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
 || `v8::juice::IncludeScript` || `include(filename)` || Includes external JS files. See [PathFinderClass]. ||
@@ -27,6 +28,7 @@ See [PathFinderClass].
 
 ==plugin.h==
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/plugin.h plugin.h]
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/plugin.cc plugin.cc]
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
 || `v8::juice::plugin::LoadPlugin` || `loadPlugin(pluginName)` || Loads an external plugin from a DLL. See [Plugins]. ||
@@ -34,12 +36,15 @@ See [PathFinderClass].
 
 ==sprintf.h==
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/sprintf.h sprintf.h]
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/sprintf.cc sprintf.cc]
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
 || `v8::juice::sprintf` || `sprintf(fmt,args...)` || Similar to conventional `sprintf()` implementations, plus some extensions. ||
 
 ==time.h==
+
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/time.h time.h]
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/time.cc time.cc]
 
 Added to the API on 20090912.
 
