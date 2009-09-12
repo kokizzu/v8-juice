@@ -364,7 +364,6 @@ static bool PrintUsesStdErr = false;
 int main(int argc, char* argv[]) {
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
     {
-        v8::Locker tlocker;
         v8::HandleScope handle_scope;
         v8::juice::cleanup::CleanupSentry cleaner;
         // Create a template for the global object.
@@ -415,6 +414,7 @@ int main(int argc, char* argv[]) {
             //my_bind_test( context );
         }
         bool run_shell = (argc == 1);
+        v8::Locker tlocker;
         for (int i = 1; i < argc; i++) {
             const char* str = argv[i];
             if( 0 == strcmp(str,"--print-cerr"))
