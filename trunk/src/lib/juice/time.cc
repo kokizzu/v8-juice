@@ -2,7 +2,7 @@
    Time/delay-related functions for v8-juice.
 
    Requires pthreads, sleep(3), and usleep(3). The mutex-locking code
-   required for a proper implementation of cancelTimeout() requires
+   required for a proper implementation of clearTimeout() requires
    some accompanying mutex code, but those bits can easily be replaced
    with a mutex of your choice.
 
@@ -58,15 +58,21 @@ namespace v8 { namespace juice {
            specific mutex.
 
            Must be allocable as a static variable.
+
+           Note that this mutex has NOTHING to do with v8 mutexes.
+           It is for fencing off internal access to cross-thread
+           data.
         */
 #if USE_WHNET_MUTEX
         typedef v8::juice::mutex MutexType;
 #else
         struct MutexType
         {
+            /** Must lock the mutex, not returning until it can lock. */
             void lock(){}
+            /** Must unlock the mutex, not returning until it can unlock. */
             void unlock(){}
-        };           
+        };
 #endif
         /**
            MutexSentry can be any type with the interface:
@@ -100,18 +106,26 @@ namespace v8 { namespace juice {
 #endif
         /**
            Internal utility type to lock access to internal
-           set of setTimeout()/cancelTimeout() timer IDs.
+           set of setTimeout()/clearTimeout() timer IDs.
         */
         class TimerLock : public MutexSentry
         {
+        public:
+            typedef uint32_t TimerIDType;
+            typedef std::set<TimerIDType> SetType;
+        private:
             /** This class' shared mutex. */
             static MutexType & timeMutex()
             {
                 static MutexType bob;
                 return bob;
             }
+            static SetType & _set()
+            {
+                static SetType bob;
+                return bob;
+            }
         public:
-            typedef uint32_t TimerIDType;
             /**
                Locks a mutex shared by all instances of this class.
                Does not return until the lock is acquired.
@@ -125,12 +139,14 @@ namespace v8 { namespace juice {
             virtual ~TimerLock()
             {
             }
-            typedef std::set<TimerIDType> SetType;
             /** Returns the shared timer set. */
             SetType & set()
             {
-                static SetType bob;
-                return bob;
+                return _set();
+            }
+            const SetType & set() const
+            {
+                return _set();
             }
             /**
                Removes the given timer id from the internal
@@ -141,6 +157,11 @@ namespace v8 { namespace juice {
             {
                 return set().erase(id);
 
+            }
+            bool has(TimerIDType id) const
+            {
+                const SetType & s( set() );
+                return s.find(id) != s.end();
             }
             /**
                Generates a unique timer ID and inserts it into
@@ -172,6 +193,7 @@ namespace v8 { namespace juice {
             v8::Persistent<v8::Object> jself;
             /** Set by the ctor. */
             TimerLock::TimerIDType id;
+            bool isInterval;
             /**
                Creates an empty (except for this->id) holder object
                for setTimeout() metadata. After calling this,
@@ -182,7 +204,8 @@ namespace v8 { namespace juice {
                 : delay(0),
                   id(TimerLock().next_id()),
                   jv(),
-                  jself()
+                  jself(),
+                  isInterval(false)
             {
             }
         };        
@@ -199,49 +222,55 @@ namespace v8 { namespace juice {
     */
     static void * thread_setTimeout( void * arg )
     {
-#define THREAD_RETURN ::pthread_exit( (void *)0 )
-        if( v8::V8::IsDead() ) THREAD_RETURN;
-        v8::Locker locker;
-        v8::HandleScope hsc;
-        Detail::js_thread_info * jio = reinterpret_cast<Detail::js_thread_info*>( arg );
-        /** reminder: copy jio to the stack so we can free it up immediately
-            and not worry about a leak via an exception propagating below... */
-        const Detail::js_thread_info ji(*jio);
-        delete jio;
-        unsigned int d = ji.delay * 1000;
-        int src = 0;
+#define THREAD_RETURN return NULL; //::pthread_exit( (void *)0 )
+        if( ! v8::V8::IsDead() )
         {
-            v8::Unlocker ul;
-            /**
-               FIXME: wake up periodically and see if we should still be
-               waiting, otherwise this might keep the app from exiting
-               from an arbitrarily long time after the main thread has
-               gone. But how to know that?
-            */
-            /**
-               FIXME: posix has obsoleted usleep() and recommends
-               nanonosleep(), with it's much more complicated
-               interface. OTOH, according to APUE, nanosleep() is only
-               required to be defined on platforms which implement "the
-               real-time extensions". What to do?
-            */
-            src = ::usleep( d );
-        }
-        {
-            // Check for cancellation:
-            Detail::TimerLock lock;
-            if( ! lock.take(ji.id) ) THREAD_RETURN;
-        }
-        if( ji.jv->IsFunction() )
-        {
-            v8::Handle<v8::Function> fh( v8::Function::Cast( *(ji.jv) ) );
-            fh->Call( ji.jself, 0, 0 );
+            Detail::js_thread_info * jio = reinterpret_cast<Detail::js_thread_info*>( arg );
+            /** reminder: copy jio to the stack so we can free it up immediately
+                and not worry about a leak via an exception propagating below... */
+            const Detail::js_thread_info ji(*jio);
+            const unsigned int udelay = ji.delay * 1000;
+            delete jio;
+            v8::Locker locker;
+            v8::HandleScope hsc;
+            do
+            {
+                int src = 0;
+                {
+                    v8::Unlocker ul;
+                    /**
+                   FIXME: for long waits, wake up periodically and see if
+                   we should still be waiting, otherwise this might keep
+                   the app from exiting from an arbitrarily long time
+                   after the main thread has gone. But how to know that?
+                    */
+                    /**
+                       FIXME: posix has obsoleted usleep() and recommends
+                       nanonosleep(), with it's much more complicated
+                       interface. OTOH, according to APUE, nanosleep() is only
+                       required to be defined on platforms which implement "the
+                       real-time extensions". What to do?
+                    */
+                    src = ::usleep( udelay );
+                }
+                {
+                    // Check for cancellation:
+                    Detail::TimerLock lock;
+                    if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) THREAD_RETURN;
+                }
+                if( ji.jv->IsFunction() )
+                {
+                    v8::Handle<v8::Function> fh( v8::Function::Cast( *(ji.jv) ) );
+                    fh->Call( ji.jself, 0, 0 );
+                }
+            } while( ji.isInterval );
         }
         THREAD_RETURN;
         return NULL; // can't happen
 #undef THREAD_RETURN
     }
-    v8::Handle<v8::Value> cancelTimeout(const v8::Arguments& argv )
+
+    v8::Handle<v8::Value> clearTimeout(const v8::Arguments& argv )
     {
         if( argv.Length() != 1 )
         {
@@ -251,38 +280,59 @@ namespace v8 { namespace juice {
         if( arg.IsEmpty() || ! arg->IsNumber() ) return v8::False();
         // do we need this: v8::Locker locker;
         Detail::TimerLock::TimerIDType id = static_cast<Detail::TimerLock::TimerIDType>( arg->ToInteger()->Value() );
-        Detail::TimerLock lock;
-        return v8::Boolean::New( lock.take(id) ? true : false );
+        return v8::Boolean::New( Detail::TimerLock().take(id) ? true : false );
+    }
+    v8::Handle<v8::Value> clearInterval(const v8::Arguments& argv )
+    {
+        return clearTimeout(argv);
     }
 
-    v8::Handle<v8::Value> setTimeout(const v8::Arguments& argv )
+    /**
+       If isInterval, this behaves like setInterval(), otherwise as
+       setTimeout().
+    */
+    template <bool isInterval>
+    static v8::Handle<v8::Value> setTimeoutImpl(const v8::Arguments& argv )
     {
         if( argv.Length() < 2 )
         {
             return v8::ThrowException( v8::String::New("setTimeout() requires two arguments!") );
         }
-        v8::Locker locker;
-        v8::HandleScope hsc; // this must exist to avoid a weird error
         v8::Handle<v8::Value> fh( argv[0] );
         if( ! fh->IsFunction() )
         {
             return v8::ThrowException( v8::String::New("setTimeout() requires a function [FIXME: or string] as its first argument!") );
         }
-        Detail::TimerLock::TimerIDType tm = static_cast<Detail::TimerLock::TimerIDType>( argv[1]->ToNumber()->Value() );
+        v8::Locker locker;
+        v8::HandleScope hsc; // this must exist to avoid a weird error
         Detail::js_thread_info * ji = new Detail::js_thread_info;
-        ji->delay = tm;
+        ji->delay = static_cast<uint32_t>( argv[1]->ToNumber()->Value() );
         ji->jv = v8::Persistent<v8::Value>::New( fh );
         ji->jself = v8::Persistent<v8::Object>::New( argv.This() );
+        ji->isInterval = isInterval;
         v8::Handle<v8::Value> id = v8::Integer::New( ji->id );
         pthread_t tid;
         pthread_attr_t tattr;
         pthread_attr_init( &tattr );
         pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED);
+        // Reminder: transfer ownership of ji to thread_setTimeout,
+        // and ji might be invalidated by the time pthread_create()
+        // returns.
         ::pthread_create( &tid, &tattr, thread_setTimeout, ji );
         pthread_attr_destroy(&tattr);
-        return hsc.Close( id ); // fixme: return a timer ID
+        return hsc.Close( id );
     }
 
+    v8::Handle<v8::Value> setTimeout(const v8::Arguments& argv )
+    {
+        return setTimeoutImpl<false>( argv );
+    }
+    
+    v8::Handle<v8::Value> setInterval(const v8::Arguments& argv )
+    {
+        return setTimeoutImpl<true>( argv );
+    }
+    
     v8::Handle<v8::Value> sleep(const v8::Arguments& argv)
     {
         int st = argv.Length() ? static_cast<uint32_t>( argv[0]->ToInteger()->Value() ) : -1;
