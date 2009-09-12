@@ -54,3 +54,5 @@ Added to the API on 20090912.
 
 Due to internal details, `clearTimeout()` and `clearInterval()` are interchangeable, and either can be used
 to clear IDs returned from `setTimeout()` or `setInterval()`. Passing 0 to any of the `sleep` variants will briefly unlock the v8 engine for other threads, and this can be used to implement a `yield` operation.
+
+For the timeout functions to work, a `v8::Locker` instance must have been instantiated before the JS code which uses them starts executing. Don't as me why. If you're using `v8-juice-shell` then this is done for you, but if you're writing your own app, you'll need to add that.
