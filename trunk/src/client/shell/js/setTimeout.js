@@ -19,8 +19,8 @@ function doTest()
     for( var i = loops; i > 0; --i )
     {
         setTimeout(tmout,tm);
+        setTimeout("print('timeout from eval');",tm*2);
         setTimeout(tmout,tm/2);
-        setTimeout(tmout,tm*2);
         print("Launcher sleeping...");
         mssleep(500);
     }

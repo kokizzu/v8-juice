@@ -8,21 +8,22 @@ namespace v8 { namespace juice {
     /**
        A setTimeout() implementation which can be bound to v8.
     
-       JS usage: setTimeout( Function, when ), where 'when' is a number of
-       milliseconds. Returns a unique timer ID.
+       JS usage: setTimeout( Function|string, when ), where 'when' is
+       a number of milliseconds, after which the given function will
+       be called or the given string will be eval()'d. Returns a
+       unique timer ID which can be passed to clearTimeout() before
+       the interval expires in order to cancel the queued function.
 
        This starts up a separate thread (using an unspecified
        threading technique). That thread will briefly lock v8, then
        will unlock it to sleep for argv[1] milliseconds.  When it
        wakes up, it waits for the v8 lock and then runs the function
-       defined by argv[0]. If clearTimeout() has been called while
-       the timewas was sleeping, the function will not be executed.
+       defined by argv[0]. If clearTimeout() has been called while the
+       timer was sleeping, the function will not be executed.
        
        During the countdown this routine uses v8::Unlocker to unlock
        the v8 engine for other threads.
        
-       FIXME: a string should be allowed as the first parameter.
-
        FIXME: add clearTimeout().
     */
     v8::Handle<v8::Value> setTimeout(const v8::Arguments& argv );

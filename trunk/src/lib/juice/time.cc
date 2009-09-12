@@ -13,9 +13,8 @@
 
    License: Public Domain
 
-
-   TODOs: remove the hard-coded pthread dep and instead use Marc Duerner's
-   thread class.
+   TODOs: remove the hard-coded pthread dep and instead use Marc
+   Duerner's thread class, or similar.
 */
 #include <v8/juice/time.h>
 #include <pthread.h>
@@ -34,24 +33,15 @@
     a dummy/no-op mutex, which the client can replace with
     his own if he likes.
 */
-#define USE_WHNET_MUTEX 0
-
+#define USE_WHNET_MUTEX 1
 #if USE_WHNET_MUTEX
 #  include "mutex.hpp"
 #endif
 
-#include <iostream> // only for debuggering
-// #ifndef CERR
-#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
-// #endif
-// #ifndef COUT
-// #define COUT std::cout << __FILE__ << ":" << std::dec << __LINE__ << " : "
-// #endif
+// #include <iostream> // only for debuggering
+// #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 
 namespace v8 { namespace juice {
-
-    using namespace v8;
-
 
     namespace Detail
     {
@@ -65,9 +55,9 @@ namespace v8 { namespace juice {
 
            Must be allocable as a static variable.
 
-           Note that this mutex has NOTHING to do with v8 mutexes.
-           It is for fencing off internal access to cross-thread
-           data.
+           Note that this mutex has NOTHING to do with v8 mutexes.  It
+           is for fencing off internal access to our internal
+           cross-thread data.
         */
 #if USE_WHNET_MUTEX
         typedef v8::juice::mutex MutexType;
@@ -85,9 +75,11 @@ namespace v8 { namespace juice {
 
            MutextSentry::MutextSentry( MutextType & );
 
-           Must lock the mutex as construction and unlock it
-           at destruction. Or it may be a no-op which does
-           nothing.
+           Must lock the given mutex as construction and unlock it at
+           destruction. Or it may be a no-op which does nothing,
+           which opens up the code to very minor race conditions
+           involving setTimeout()/clearTimeout(), but "should" be
+           harmless other than a very rare failed clearTimeout().
         */
 #if USE_WHNET_MUTEX
         typedef v8::juice::mutex_sentry MutexSentry;
@@ -113,6 +105,14 @@ namespace v8 { namespace juice {
         /**
            Internal utility type to lock access to internal
            set of setTimeout()/clearTimeout() timer IDs.
+
+           Only one may exist at a time per thread. Results are
+           undefined (but probably a deadlock) if this is violated.
+
+           All data published by this class use cross-thread
+           shared data. Instantiating this class locks a mutex
+           to allow locked access to the data. When this object
+           is destroyed, the lock is freed.
         */
         class TimerLock : public MutexSentry
         {
@@ -142,7 +142,7 @@ namespace v8 { namespace juice {
             /**
                Unlocks this class's mutex.
              */
-            virtual ~TimerLock()
+            ~TimerLock()
             {
             }
             /** Returns the shared timer set. */
@@ -150,6 +150,7 @@ namespace v8 { namespace juice {
             {
                 return _set();
             }
+            /** Returns the shared timer set. */
             const SetType & set() const
             {
                 return _set();
@@ -164,6 +165,7 @@ namespace v8 { namespace juice {
                 return set().erase(id);
 
             }
+            /** Returns true if id is a registered timer ID. */
             bool has(TimerIDType id) const
             {
                 const SetType & s( set() );
@@ -191,15 +193,26 @@ namespace v8 { namespace juice {
         public:
             /** Timeout delay, in miliseconds. */
             uint32_t delay;
+            /** Set only by the ctor or copy ops. */
+            TimerLock::TimerIDType id;
+            /**
+               If true, the object is running via setInterval(),
+               else setTimeout().
+            */
+            bool isInterval;
             /** The Function/String handle passed as argv[0] to setTimeout(). */
             v8::Persistent<v8::Value> jv;
             /** The 'this' object (the global object) for making the
                 callback. If we don't store this here we get segfaults when we
                 Call() the callback. */
             v8::Persistent<v8::Object> jself;
-            /** Set by the ctor. */
-            TimerLock::TimerIDType id;
-            bool isInterval;
+            /**
+               This is the eval() Function of the global object. We
+               have to store it in setTimeout() because in the pthread
+               callback we often get a null context when using
+               Context::GetCurrent() and friends.
+            */
+            v8::Persistent<v8::Function> evalfunc;
             /**
                Creates an empty (except for this->id) holder object
                for setTimeout() metadata. After calling this,
@@ -208,10 +221,11 @@ namespace v8 { namespace juice {
             */
             js_thread_info()
                 : delay(0),
+                  isInterval(false),
                   id(TimerLock().next_id()),
                   jv(),
                   jself(),
-                  isInterval(false)
+                  evalfunc()
             {
             }
         };        
@@ -238,9 +252,9 @@ namespace v8 { namespace juice {
             const unsigned int udelay = ji.delay * 1000;
             delete jio;
             v8::Locker locker;
-            v8::HandleScope hsc;
             do
             {
+                v8::HandleScope hsc;
                 int src = 0;
                 {
                     v8::Unlocker ul;
@@ -268,6 +282,11 @@ namespace v8 { namespace juice {
                 {
                     v8::Handle<v8::Function> fh( v8::Function::Cast( *(ji.jv) ) );
                     fh->Call( ji.jself, 0, 0 );
+                }
+                else// assume string
+                {
+                    v8::Local<v8::Value> argc( *(ji.jv) );
+                    ji.evalfunc->Call( ji.jself, 1, &argc );
                 }
             } while( ji.isInterval );
         }
@@ -304,15 +323,21 @@ namespace v8 { namespace juice {
         {
             return v8::ThrowException( v8::String::New("setTimeout() requires two arguments!") );
         }
-        v8::Handle<v8::Value> fh( argv[0] );
-        if( ! fh->IsFunction() )
+        v8::Local<v8::Value> fh( argv[0] );
+        if( fh.IsEmpty() || (! fh->IsFunction() && ! fh->IsString()) )
         {
-            return v8::ThrowException( v8::String::New("setTimeout() requires a function [FIXME: or string] as its first argument!") );
+            return v8::ThrowException( v8::String::New("setTimeout() requires a Function or evalable string as its first argument!") );
         }
         v8::Locker locker;
         v8::HandleScope hsc; // this must exist to avoid a weird error
         Detail::js_thread_info * ji = new Detail::js_thread_info;
         ji->delay = static_cast<uint32_t>( argv[1]->ToNumber()->Value() );
+        if( fh->IsString() )
+        {
+            Local<Object> evalObj = v8::Context::GetCurrent()->Global();
+            Local<Function> eval = v8::Function::Cast( *(evalObj->Get(v8::String::New("eval"))) );
+            ji->evalfunc = v8::Persistent<v8::Function>::New( eval );
+        }
         ji->jv = v8::Persistent<v8::Value>::New( fh );
         ji->jself = v8::Persistent<v8::Object>::New( argv.This() );
         ji->isInterval = isInterval;
@@ -339,6 +364,14 @@ namespace v8 { namespace juice {
         return setTimeoutImpl<true>( argv );
     }
 
+    /**
+       Internal impl of sleep()/mssleep()/usleep(). DelayMult
+       must be:
+
+       sleep(): 1000*1000
+       mssleep(): 1000
+       usleep(): 1
+    */
     template <uint32_t DelayMult>
     static v8::Handle<v8::Value> sleepImpl(const v8::Arguments& argv)
     {
@@ -351,7 +384,7 @@ namespace v8 { namespace juice {
         }
         return v8::Integer::New(rc);
     }
-    
+
     v8::Handle<v8::Value> sleep(const v8::Arguments& argv)
     {
         return sleepImpl<1000*1000>( argv );
