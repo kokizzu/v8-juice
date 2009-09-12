@@ -15,7 +15,7 @@ namespace v8 { namespace juice {
        threading technique). That thread will briefly lock v8, then
        will unlock it to sleep for argv[1] milliseconds.  When it
        wakes up, it waits for the v8 lock and then runs the function
-       defined by argv[0]. If cancelTimeout() has been called while
+       defined by argv[0]. If clearTimeout() has been called while
        the timewas was sleeping, the function will not be executed.
        
        During the countdown this routine uses v8::Unlocker to unlock
@@ -23,18 +23,32 @@ namespace v8 { namespace juice {
        
        FIXME: a string should be allowed as the first parameter.
 
-       FIXME: add cancelTimeout().
+       FIXME: add clearTimeout().
     */
     v8::Handle<v8::Value> setTimeout(const v8::Arguments& argv );
+    /**
+       Identical to setTimeout() except that the client-supplied
+       callback is executed in a loop, ending only when the
+       client passes the return value from this function to
+       clearInterval() (or setTimeout(), which is the same in this
+       implementation).
+    */
+    v8::Handle<v8::Value> setInterval(const v8::Arguments& argv );
 
     /**
-       A cancelTimeout() implementation which can be bound to v8.
+       A clearTimeout() implementation which can be bound to v8.
 
        Requires argv[0] to be a timer ID returned from setTimeout().
        If such a timer is found and can be cancelled (has not yet been
        fired) then true is returned, else false.
     */
-    v8::Handle<v8::Value> cancelTimeout(const v8::Arguments& argv );
+    v8::Handle<v8::Value> clearTimeout(const v8::Arguments& argv );
+
+    /**
+       Identical to clearTimeout(), but intended for cancelling
+       timeouts set via setInterval().
+    */
+    v8::Handle<v8::Value> clearInterval(const v8::Arguments& argv );
 
     /**
        A sleep() implementation which can be bound to v8.

@@ -1,7 +1,8 @@
-var sleeptime = 10; // time to sleep while waiting for loops
-var dms = 900; // delay between setTimeout() loops
+// quick test of setTimeout(), clearTimeout(), and sleep()
+var sleeptime = 5; // time to sleep while waiting for loops
+var dms = 650; // delay between setTimeout() loops
 var count = 0; // loops count
-var reps = 6; // max number of loops to run.
+var reps = 20; // max number of loops to run.
 function foofunc()
 {
     if( ++count <= reps )
@@ -10,7 +11,7 @@ function foofunc()
         print("Scheduling foofunc() in",dms," miliseconds. timer ID =",id);
         if(0 && (0 === (id%3)) )
         {
-            print('cancel timer',id,' ==',cancelTimeout(id));
+            print('cancel timer',id,' ==',clearTimeout(id));
         }
     }
     else
