@@ -49,6 +49,8 @@ Added to the API on 20090912.
 || `v8::juice::clearTimeout` || `clearTimeout(timerID)` || Removes a scheduled `setTimeout()` callback. ||
 || `v8::juice::clearInterval` || `clearInterval(timerID)` || Removes a scheduled `setInterval()` callback. ||
 || `v8::juice::sleep` || `sleep(seconds)` || Sleeps for a given number of seconds, unlocking the v8 VM for use by other threads during that time. ||
+|| `v8::juice::mssleep` || `mssleep(milliseconds)` || Sleeps for a given number of milliseconds, unlocking the v8 VM for use by other threads during that time. ||
+|| `v8::juice::usleep` || `usleep(microseconds)` || Sleeps for a given number of microseconds, unlocking the v8 VM for use by other threads during that time. ||
 
 Due to internal details, `clearTimeout()` and `clearInterval()` are interchangeable, and either can be used
 to clear IDs returned from `setTimeout()` or `setInterval()`.
