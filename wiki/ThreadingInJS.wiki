@@ -1,0 +1,65 @@
+#summary Basic multi-threading in JavaScript
+#labels Phase-UserDocs,Topic-JS-API
+
+<wiki:toc max_depth=4/>
+
+= Basic multi-threading in !JavaScript =
+
+Version 20090912 added the `setTimeout()` family of functions (see [BindableFunctions]). which can be used to implement the most basic multi-threaded features.
+
+
+==setTimeout() and friends==
+
+They are used like this:
+
+{{{
+function timeout()
+{
+   print("Timeout reached!");
+}
+
+setTimeout(timeout,1500);
+sleep(3);
+}}}
+
+That will schedule the function `timeout()` to be called one time in 1500 milliseconds (1.5 seconds). The call to `sleep()` there is only to give the timeout function time to fire. Using sleep this way is _not_ a reliable way of ensuring that a certain timeout has been run, and is only used here for demonstration purposes.
+
+To call a function at intervals, use `setInterval()` instead of `setTimeout()`, or have your timeout handler call `setTimeout()` when it is finished processing.
+
+The `setTimeout()` and `setInterval()` functions returns a unique ID which can be passed to `clearTimeout()` or `clearInterval()` in order to cancel the calling of the callback function (assuming the clear routine is called before the timeout expires).
+
+In this implementation (though apparently not per the client-side JS specification), `clearTimeout()` is equivalent to `clearInterval()`, and either can be used for both types of timeout IDs.
+
+=Major Limitations=
+
+The !JavaScript language specification does not define any sort of locking behaviour in the face of multiple threads. It is _impossible_, using JS-only constructs, to write 100% thread-safe code in !JavaScript. Keep that in mind when making use of `setTimeout()`.
+
+==Timing is Everything (and undefined)==
+
+The addition of multiple threads in a process always adds some level of uncertainty in the timing of execution of the various threads. High-level languages which use unpredictable GC (and/or lack destructors) add even more uncertainty (destructors are a great way to simplify locking in languages which support them). Threads created via `setTimeout()` cannot be reliably used for high-resolution threading (that is, where threads are meant to interact at small, fixed intervals).
+
+In the following code it is impossible to know with certainty which of the operations, running or cancelling the timeout, will happen first, due to the imprecision introduced via multi-threading and system-level timing issues:
+
+{{{
+var delay = 1;
+var tid = setTimeout(function(){}, delay);
+clearTimeout(tid);
+}}}
+
+Do not rely on JS code for this type of precision. If you need that level of thread control, do it in native code and (if needed) add a higher-level JS wrapper around that.
+
+=Future possibilities=
+
+"It would be nice" to have a JS-side Thread class, which could be called like:
+
+{{{
+var t = new Thread( callbackfunc );
+t.start();
+while( t.isRunning() )
+{
+   print("Waiting on thread...");
+   mssleep(500);
+}
+}}}
+
+however, i'm not yet up to that task, and currently can see little benefit over using `setTimeout()`, given all of the JS-implied limitations of the hypothetical Thread class. It's also not clear whether such a class should run in a detached or joinable mode (`setTimeout()` is detached).
