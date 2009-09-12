@@ -139,7 +139,7 @@ function printWrapperInfo() {
     for( var k in wr.funcs )
     {
 	var f = wr.funcs[k];
-	print("FUNCITON["+k+"] =",f.returnType,f.name.cpp,'(',f.args.join(','),')');
+	print("FUNCTION["+k+"] =",f.returnType,f.name.cpp,'(',f.args.join(','),')');
     }
 }
 
