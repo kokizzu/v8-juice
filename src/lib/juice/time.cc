@@ -19,6 +19,12 @@
 */
 #include <v8/juice/time.h>
 #include <pthread.h>
+
+#if ! defined(_XOPEN_SOURCE)
+   /** on Linux, required for usleep(). */
+#  define _XOPEN_SOURCE 500
+#endif
+
 #include <unistd.h> // sleep(), usleep()
 #include <map>
 #include <set>
@@ -332,17 +338,33 @@ namespace v8 { namespace juice {
     {
         return setTimeoutImpl<true>( argv );
     }
-    
-    v8::Handle<v8::Value> sleep(const v8::Arguments& argv)
+
+    template <uint32_t DelayMult>
+    static v8::Handle<v8::Value> sleepImpl(const v8::Arguments& argv)
     {
-        int st = argv.Length() ? static_cast<uint32_t>( argv[0]->ToInteger()->Value() ) : -1;
+        int32_t st = argv.Length() ? static_cast<int32_t>( argv[0]->ToInteger()->Value() ) : -1;
         int rc = -1;
         if(0 <= st)
         {
             v8::Unlocker ul;
-            rc = ::sleep( st );
+            rc = ::usleep( static_cast<uint32_t>(st) * DelayMult );
         }
         return v8::Integer::New(rc);
     }
+    
+    v8::Handle<v8::Value> sleep(const v8::Arguments& argv)
+    {
+        return sleepImpl<1000*1000>( argv );
+    }
 
+    v8::Handle<v8::Value> mssleep(const v8::Arguments& argv)
+    {
+        return sleepImpl<1000>( argv );
+    }
+
+    v8::Handle<v8::Value> usleep(const v8::Arguments& argv)
+    {
+        return sleepImpl<1>( argv );
+    }
+    
 }}
