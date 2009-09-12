@@ -12,7 +12,7 @@ v8 conventions, e.g.:
 myGlobal->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(v8::juice::sleep));
 }}}
 
-The supported "extra" functions are listed below, grouped by the header file they are declared in. They are documented in their header files.
+The supported "extra" functions are listed below, grouped by the header file they are declared in. They are documented in their header files. Most of them are enabled in the v8-juice-shell app.
 
 ==juice.h==
 
