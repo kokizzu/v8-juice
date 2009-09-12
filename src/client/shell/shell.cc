@@ -378,7 +378,8 @@ int main(int argc, char* argv[]) {
         global->Set(v8::String::New("version"), v8::FunctionTemplate::New(Version));
 
         global->Set(v8::String::New("include"), v8::FunctionTemplate::New(v8::juice::IncludeScript) );
-        global->Set(v8::String::New("load_plugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));
+        global->Set(v8::String::New("load_plugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));//deprecated name for loadPlugin()
+        global->Set(v8::String::New("loadPlugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));
         global->Set(v8::String::New("toSource"), v8::FunctionTemplate::New(v8::juice::convert::ToSource));
 
         global->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(v8::juice::sleep));
