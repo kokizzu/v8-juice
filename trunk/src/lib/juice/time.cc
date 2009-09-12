@@ -252,9 +252,14 @@ namespace v8 { namespace juice {
             const unsigned int udelay = ji.delay * 1000;
             delete jio;
             v8::Locker locker;
+            v8::HandleScope hsc;
+            bool isFunc = ji.jv->IsFunction();
+            typedef v8::Local<v8::Function> LoF;
+            LoF fh( ( isFunc ) ? LoF( v8::Function::Cast( *(ji.jv) ) ) : LoF() );
+            typedef v8::Local<v8::Value> LoS;
+            LoS jscode( (isFunc) ? LoS() : *(ji.jv) );
             do
             {
-                v8::HandleScope hsc;
                 int src = 0;
                 {
                     v8::Unlocker ul;
@@ -274,19 +279,17 @@ namespace v8 { namespace juice {
                     src = ::usleep( udelay );
                 }
                 {
-                    // Check for cancellation:
+                    // Check for cancellation resp. unregister the timer ID:
                     Detail::TimerLock lock;
                     if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) THREAD_RETURN;
                 }
-                if( ji.jv->IsFunction() )
+                if( isFunc )
                 {
-                    v8::Handle<v8::Function> fh( v8::Function::Cast( *(ji.jv) ) );
                     fh->Call( ji.jself, 0, 0 );
                 }
                 else// assume string
                 {
-                    v8::Local<v8::Value> argc( *(ji.jv) );
-                    ji.evalfunc->Call( ji.jself, 1, &argc );
+                    ji.evalfunc->Call( ji.jself, 1, &jscode );
                 }
             } while( ji.isInterval );
         }
@@ -305,7 +308,7 @@ namespace v8 { namespace juice {
         if( arg.IsEmpty() || ! arg->IsNumber() ) return v8::False();
         // do we need this: v8::Locker locker;
         Detail::TimerLock::TimerIDType id = static_cast<Detail::TimerLock::TimerIDType>( arg->ToInteger()->Value() );
-        return v8::Boolean::New( Detail::TimerLock().take(id) ? true : false );
+        return Detail::TimerLock().take(id) ? v8::True() : v8::False();
     }
     v8::Handle<v8::Value> clearInterval(const v8::Arguments& argv )
     {
