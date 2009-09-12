@@ -34,6 +34,12 @@ In this implementation (though apparently not per the client-side JS specificati
 
 The !JavaScript language specification does not define any sort of locking behaviour in the face of multiple threads. It is _impossible_, using JS-only constructs, to write 100% thread-safe code in !JavaScript. Keep that in mind when making use of `setTimeout()`.
 
+==There is no Preemtion==
+
+The v8 engine is internally single-threaded. At certain points during JS execution it checks to see if a thread is waiting to make use of of the engine (via constructing a `v8::Locker` object in native code). If you have a JS thread which is sitting in a tight loop and never triggers one of the v8-internal thread-preemtion checks (e.g. it never calls a function) then other threads might never get to run.
+
+The `sleep()` family of functions will unlock the v8 engine while they are sleeping, and can be used in a thread to give v8 a chance to allow other threads to run. v8 _might_ do that anyway, but will only do so at certain points in its execution (namely function calls). Calling `sleep(0)` is one way to emulate a "yield" operation, as that unlocks the engine, allowing v8 to pass control to other threads, and then locks it again when control is given back to the original thread.
+
 ==Timing is Everything (and undefined)==
 
 The addition of multiple threads in a process always adds some level of uncertainty in the timing of execution of the various threads. High-level languages which use unpredictable GC (and/or lack destructors) add even more uncertainty (destructors are a great way to simplify locking in languages which support them). Threads created via `setTimeout()` cannot be reliably used for high-resolution threading (that is, where threads are meant to interact at small, fixed intervals).
