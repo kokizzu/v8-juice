@@ -245,14 +245,14 @@ namespace v8 { namespace juice {
 #define THREAD_RETURN return NULL; //::pthread_exit( (void *)0 )
         if( ! v8::V8::IsDead() )
         {
+            v8::Locker locker;
+            v8::HandleScope hsc;
             Detail::js_thread_info * jio = reinterpret_cast<Detail::js_thread_info*>( arg );
             /** reminder: copy jio to the stack so we can free it up immediately
                 and not worry about a leak via an exception propagating below... */
             const Detail::js_thread_info ji(*jio);
-            const unsigned int udelay = ji.delay * 1000;
+            const uint32_t udelay = ji.delay * 1000;
             delete jio;
-            v8::Locker locker;
-            v8::HandleScope hsc;
             bool isFunc = ji.jv->IsFunction();
             typedef v8::Local<v8::Function> LoF;
             LoF fh( ( isFunc ) ? LoF( v8::Function::Cast( *(ji.jv) ) ) : LoF() );
@@ -277,24 +277,21 @@ namespace v8 { namespace juice {
                        real-time extensions". What to do?
                     */
                     src = ::usleep( udelay );
-                }
-                {
                     // Check for cancellation resp. unregister the timer ID:
                     Detail::TimerLock lock;
-                    if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) THREAD_RETURN;
+                    if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) break;
                 }
                 if( isFunc )
                 {
                     fh->Call( ji.jself, 0, 0 );
                 }
-                else// assume string
+                else
                 {
                     ji.evalfunc->Call( ji.jself, 1, &jscode );
                 }
             } while( ji.isInterval );
         }
         THREAD_RETURN;
-        return NULL; // can't happen
 #undef THREAD_RETURN
     }
 
