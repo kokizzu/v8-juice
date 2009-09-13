@@ -396,7 +396,6 @@ int main(int argc, char* argv[])
         for( ; i < argc; ++i )
         {
             scrargs.push_back( argv[i] );
-            CERR << "Pushed argument: "<<argv[i]<<'\n';
         }
     }
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
