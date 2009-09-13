@@ -188,7 +188,7 @@ namespace v8 { namespace juice {
         {
             if( 1 != argv.Length() )
                 return v8::ThrowException(String::New("toSource requires exactly 1 argument"));
-            return convert::CastToJS( convert::ToSource( argv[0] ) );
+            return CastToJS( ToSource( argv[0] ) );
         }
     }
 
