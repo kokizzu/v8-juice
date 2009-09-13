@@ -28,6 +28,22 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/************************************************************************
+This code is based off of the shell.cc sample application in the v8
+source tree. It has been mangled to become the default shell for the
+v8-juice project.
+
+Some changes from the original shell:
+
+- Binds most of the v8-juice add-on functions by default.
+
+- If the argv list contains "--", all arguments after that are ignored
+by the shell but passed on to each script which it runs. Each script
+gets a global arguments object, where arguments[0] is the name of the
+shell (it SHOULD be the name of the script, but it's not), and arguments
+1..N are those after the "--"
+
+ ************************************************************************/
 
 #include <v8.h>
 #include <cstring>
@@ -44,9 +60,9 @@
 #endif
 
 #include <v8/juice/juice.h>
-#include <v8/juice/time.h>
 #include <v8/juice/convert.h>
-#include <v8/juice/bind.h>
+#include <v8/juice/time.h>
+#include <v8/juice/sprintf.h>
 #include <v8/juice/plugin.h>
 #include <v8/juice/PathFinder.h>
 #include <v8/juice/cleanup.h>
@@ -361,41 +377,67 @@ int my_class_test( V8CxH & cx )
 
 static bool PrintUsesStdErr = false;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
+#define JSTR(X) v8::String::New(X)
+    typedef std::vector<std::string>  StrVec;
+    std::string const endofargs("--");
+    StrVec scrargs(1,argv[0]);
+    {
+        int i = 1;
+        for( ; i < argc; ++i )
+        {
+            if( endofargs == argv[i] )
+            {
+                ++i;
+                break;
+            }
+        }
+        for( ; i < argc; ++i )
+        {
+            scrargs.push_back( argv[i] );
+            CERR << "Pushed argument: "<<argv[i]<<'\n';
+        }
+    }
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
     {
         v8::HandleScope handle_scope;
         v8::juice::cleanup::CleanupSentry cleaner;
         // Create a template for the global object.
-        v8::Handle<v8::ObjectTemplate> global = v8::ObjectTemplate::New();
-        // Bind the global 'print' function to the C++ Print callback.
-        global->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
-        // Bind the global 'load' function to the C++ Load callback.
-        global->Set(v8::String::New("load"), v8::FunctionTemplate::New(Load));
-        // Bind the 'quit' function
-        global->Set(v8::String::New("quit"), v8::FunctionTemplate::New(Quit));
-        // Bind the 'version' function
-        global->Set(v8::String::New("version"), v8::FunctionTemplate::New(Version));
+        v8::Handle<v8::ObjectTemplate> globt = v8::ObjectTemplate::New();
+#define FT v8::FunctionTemplate::New
+#define BIND(K,V) globt->Set( JSTR(K), FT(V) )
+        BIND("print", Print);
+        BIND("load", Load);
+        BIND("quit", Quit);
+        BIND("version", Version);
+        BIND("include", v8::juice::IncludeScript );
+        BIND("load_plugin", v8::juice::plugin::LoadPlugin);//deprecated name for loadPlugin()
+        BIND("loadPlugin", v8::juice::plugin::LoadPlugin);
+        //BIND("toSource", v8::juice::convert::ToSource);
 
-        global->Set(v8::String::New("include"), v8::FunctionTemplate::New(v8::juice::IncludeScript) );
-        global->Set(v8::String::New("load_plugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));//deprecated name for loadPlugin()
-        global->Set(v8::String::New("loadPlugin"), v8::FunctionTemplate::New(v8::juice::plugin::LoadPlugin));
-        global->Set(v8::String::New("toSource"), v8::FunctionTemplate::New(v8::juice::convert::ToSource));
+        BIND("sprintf", v8::juice::sprintf);
 
-        global->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(v8::juice::sleep));
-        global->Set(v8::String::New("mssleep"), v8::FunctionTemplate::New(v8::juice::mssleep));
-        global->Set(v8::String::New("usleep"), v8::FunctionTemplate::New(v8::juice::usleep));
-        global->Set(v8::String::New("setTimeout"), v8::FunctionTemplate::New(v8::juice::setTimeout));
-        global->Set(v8::String::New("setInterval"), v8::FunctionTemplate::New(v8::juice::setInterval));
-        global->Set(v8::String::New("clearTimeout"), v8::FunctionTemplate::New(v8::juice::clearTimeout));
-        global->Set(v8::String::New("clearInterval"), v8::FunctionTemplate::New(v8::juice::clearInterval));
+        BIND("sleep", v8::juice::sleep);
+        BIND("mssleep", v8::juice::mssleep);
+        BIND("usleep", v8::juice::usleep);
+        BIND("setTimeout", v8::juice::setTimeout);
+        BIND("setInterval", v8::juice::setInterval);
+        BIND("clearTimeout", v8::juice::clearTimeout);
+        BIND("clearInterval", v8::juice::clearInterval);
+#undef BIND
+#undef FT
 
+        
         // Create a new execution environment containing the built-in
         // functions
-        v8::Handle<v8::Context> context = v8::Context::New(NULL, global);
+        v8::Handle<v8::Context> context = v8::Context::New(NULL, globt);
         // Enter the newly created execution environment.
         v8::Context::Scope context_scope(context);
 
+        v8::Local<v8::Object> global( context->Global() );
+        global->Set(JSTR("arguments"), v8::juice::convert::CastToJS( scrargs ) );
+       
         if(1)
         {
             //v8::Handle<v8::Value> iv = v8::juice::sq3::SetupAddon( context->Global() );
@@ -423,7 +465,11 @@ int main(int argc, char* argv[]) {
                 PrintUsesStdErr = true;
                 continue;
             }
-            if (strcmp(str, "--shell") == 0) {
+            else if( endofargs == str )
+            {
+                break;
+            }
+            else if (strcmp(str, "--shell") == 0) {
                 run_shell = true;
             } else if (strcmp(str, "-f") == 0) {
                 // Ignore any -f flags for compatibility with the other stand-
@@ -434,8 +480,8 @@ int main(int argc, char* argv[]) {
             } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
                 // Execute argument given to -e option directly
                 v8::HandleScope handle_scope;
-                v8::Handle<v8::String> file_name = v8::String::New("unnamed");
-                v8::Handle<v8::String> source = v8::String::New(argv[i + 1]);
+                v8::Handle<v8::String> file_name = JSTR("unnamed");
+                v8::Handle<v8::String> source = JSTR(argv[i + 1]);
                 if (!ExecuteString(source, file_name, false, true))
                 {
                     return 1;
@@ -444,7 +490,7 @@ int main(int argc, char* argv[]) {
             } else {
                 // Use all other arguments as names of files to load and run.
                 v8::HandleScope handle_scope;
-                v8::Handle<v8::String> file_name = v8::String::New(str);
+                v8::Handle<v8::String> file_name = JSTR(str);
                 v8::Handle<v8::String> source = ReadFile(str);
                 if (source.IsEmpty()) {
                     printf("Error reading '%s'\n", str);
@@ -474,8 +520,8 @@ int main(int argc, char* argv[]) {
     }
 
     return 0;
+#undef JSTR
 }
-
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
   return *value ? *value : "<string conversion failed>";
