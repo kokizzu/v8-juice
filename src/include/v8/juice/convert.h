@@ -595,6 +595,10 @@ namespace convert {
 
 	/**
 	   Adds an arbtirary property to the target object.
+
+           WTF did i add the tmpl args here for? They DO make
+           a difference, but i can't for the life of me remember
+           why.          
 	*/
 	template <typename T1, typename T2>
 	ObjectPropSetter & operator()( Handle<Value> key, Handle<Value> v )
@@ -624,7 +628,7 @@ namespace convert {
 	    typedef typename ListT::const_iterator IT;
 	    IT it = li.begin();
 	    const size_t sz = li.size();
-#if 0
+#if 1
 	    Handle<Array> rv( Array::New( static_cast<int>(sz) ) );
 	    for( int i = 0; li.end() != it; ++it, ++i )
 	    {
