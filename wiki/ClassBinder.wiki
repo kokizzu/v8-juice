@@ -29,7 +29,7 @@ bit odd, but there's a reason for it which we'll explain after we demonstrate:
 int MyClass::func( double ); // function we want to wrap
 
 
-ClassBinder<MyClass> bin;
+ClassBinder<MyClass> binder;
 binder.AddMemFunc< int /* return value type */,
 		double /* first arg type*/,
 		&MyClass::func /* member func */
