@@ -15,7 +15,7 @@ are at the top. Dates written extra large are release dates. This contains only 
   * v8-juice-shell now passes all arguments after "--" to the executed script(s), where arguments[0]==argv[0] and arguments[1..N] are the arguments passed after "--".
 
 *2009 Sept 12*
-  * Added `setTimeout()`, `clearTimeout()`,  `setInterval()`, `clearInterval()` and several variants of `sleep()` (which relinquishes control to other threads while it sleeps). The timeout/interval functions work like their browser-side equivalents. See [BindableFunctions].
+  * Added `setTimeout()`, `clearTimeout()`,  `setInterval()`, `clearInterval()` and several variants of `sleep()` (which relinquishes control to other threads while it sleeps). The timeout/interval functions work similarly to their browser-side cousins. See [BindableFunctions].
   * Other minor touchups i've been collecting over the summer.
 
 *2009 May 27*
