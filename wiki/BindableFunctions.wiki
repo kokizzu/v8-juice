@@ -49,7 +49,7 @@ See [PathFinderClass].
 Added to the API on 20090912.
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
-|| `v8::juice::setTimeout` || `setTimeout(Function | string, milliseconds)` || Like the browser-standard function, but currently requires a function (not a string) as the first argument. ||
+|| `v8::juice::setTimeout` || `setTimeout(Function | string, milliseconds)` || Like the browser-standard function, but runs in a separate thread. ||
 || `v8::juice::clearTimeout` || `clearTimeout(timerID)` || Removes a scheduled `setTimeout()` callback. ||
 || `v8::juice::setInterval` || `setInterval(Function | string, milliseconds)` || Like `setTimeout()`, but runs the given callback at the given interval. ||
 || `v8::juice::clearInterval` || `clearInterval(timerID)` || Removes a scheduled `setInterval()` callback. ||
@@ -61,3 +61,5 @@ Due to internal details, `clearTimeout()` and `clearInterval()` are interchangea
 to clear IDs returned from `setTimeout()` or `setInterval()`. Passing 0 to any of the `sleep` variants will briefly unlock the v8 engine for other threads, and this can be used to implement a `yield` operation.
 
 For the timeout functions to work, a `v8::Locker` instance must have been instantiated before the JS code which uses them starts executing. Don't as me why. If you're using `v8-juice-shell` then this is done for you, but if you're writing your own app, you'll need to add that.
+
+*ACHTUNG:* these functions do not work _identically_ to their browser-side counterparts. These actually run in a different thread, whereas browsers use a single thread and once the timeout function is called it will run until finished before returning control to the main code (or another timeout function, or whatever). In practice, however, i don't believe that this will make a big difference in how these functions are used, compared to the same-named browser-side functions. These functions are likely to be renamed at some point, in any case (just waiting on some good names).
