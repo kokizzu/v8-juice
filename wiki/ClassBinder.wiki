@@ -462,7 +462,7 @@ of steps.
 First, when we bind the native class we must call:
 
 {{{
-WeakJSClassCreator<MyNative>::SearchPrototypeForNative(true);
+WeakJSClassCreator<MyNative>::SearchPrototypesForNative(true);
 }}}
 
 This will tell the binding engine that if it cannot find the native
