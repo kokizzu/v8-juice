@@ -710,21 +710,21 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// IOBase class:
 	v8::juice::JSClassCreator bindAbs( WhioStrings::IOBase, whio, abstract_ctor );
-	Local<Function> func_noop = FunctionTemplate::New(abstract_reimplement)->GetFunction();
+	Local<Function> func_reimpl = FunctionTemplate::New(abstract_reimplement)->GetFunction();
 	{
 	    bindAbs
-		.Set(WhioStrings::read, func_noop )
-		.Set(WhioStrings::write ,func_noop)
-		.Set(WhioStrings::isGood,func_noop)
-		.Set(WhioStrings::close,func_noop)
-		.Set(WhioStrings::flush,func_noop)
-		.Set(WhioStrings::ioMode,func_noop)
+		.Set(WhioStrings::read, func_reimpl)
+		.Set(WhioStrings::write ,func_reimpl)
+		.Set(WhioStrings::isGood,func_reimpl)
+		.Set(WhioStrings::close,func_reimpl)
+		.Set(WhioStrings::flush,func_reimpl)
+		.Set(WhioStrings::ioMode,func_reimpl)
 		.Set(WhioStrings::toString, devT_tostring<WhioStrings::IOBase> );
 #if 1
             Handle<Function> ctor = bindAbs.Seal();
-            ctor->Set(JSTR(WhioStrings::SEEK_SET_),Integer::New(SEEK_SET) );
-            ctor->Set(JSTR(WhioStrings::SEEK_END_), Integer::New(SEEK_END));
-            ctor->Set(JSTR(WhioStrings::SEEK_CUR_),Integer::New(SEEK_CUR) );
+            ctor->Set( JSTR(WhioStrings::SEEK_SET_), Integer::New(SEEK_SET) );
+            ctor->Set( JSTR(WhioStrings::SEEK_END_), Integer::New(SEEK_END) );
+            ctor->Set( JSTR(WhioStrings::SEEK_CUR_), Integer::New(SEEK_CUR) );
 #else
             bindAbs
                 .Set(WhioStrings::SEEK_SET_,Integer::New(SEEK_SET) )
@@ -738,6 +738,7 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// IODevice class:
 	WeakJSClassCreator<IODevice> bindIOD( whio );
+        WeakJSClassCreator<IODevice>::SearchPrototypesForNative(true);
 	{
 	    bindIOD
 		.Inherit( bindAbs )
@@ -768,7 +769,10 @@ namespace v8 { namespace juice { namespace whio {
         {
 	    WeakJSClassCreator<ByteArray>
 		bindBA( whio );
-            bindBA.Inherit( bindIOD )
+            WeakJSClassCreator<ByteArray>::SearchPrototypesForNative(true);
+            bindBA
+		//.Inherit( bindAbs )
+                .Inherit( bindIOD )
  		.Set(WhioStrings::toString, devT_tostring<WhioStrings::ByteArray> )
 		.Seal();
 	}
@@ -776,6 +780,7 @@ namespace v8 { namespace juice { namespace whio {
 	////////////////////////////////////////////////////////////
 	// StreamBase class:
 	WeakJSClassCreator<StreamBase> bindSB( whio );
+        WeakJSClassCreator<StreamBase>::SearchPrototypesForNative(true);
 	{
 	    bindSB
 		.Inherit( bindAbs )
@@ -791,7 +796,10 @@ namespace v8 { namespace juice { namespace whio {
 	// InStream class:
 	{
 	    WeakJSClassCreator<InStream> bindIS( whio );
-	    bindIS.Inherit( bindSB )
+            WeakJSClassCreator<InStream>::SearchPrototypesForNative(true);
+	    bindIS
+		//.Inherit( bindAbs )
+                .Inherit( bindSB )
  		.Set(WhioStrings::read, stream_read )
  		.Set(WhioStrings::gzip, stream_gzip )
  		.Set(WhioStrings::gunzip, stream_gunzip )
@@ -803,7 +811,10 @@ namespace v8 { namespace juice { namespace whio {
 	// OutStream class:
 	{
 	    WeakJSClassCreator<OutStream> bindOS( whio );
-            bindOS.Inherit( bindSB )
+            WeakJSClassCreator<OutStream>::SearchPrototypesForNative(true);
+            bindOS
+		//.Inherit( bindAbs )
+                .Inherit( bindSB )
  		.Set(WhioStrings::write, stream_write )
  		.Set(WhioStrings::toString, devT_tostring<WhioStrings::OutStream> )
 		.Seal();

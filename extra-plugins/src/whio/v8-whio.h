@@ -161,8 +161,22 @@ namespace v8 { namespace juice { namespace whio {
 	      typename DevT::type * (*ctor)( Arguments const &, std::string & ) >
     struct DevClassOps
     {
+    private:
+	/** Callback for use with juice::cleanup::AddToCleanup(). */
+	static void cleanup_callback( void * obj )
+	{
+	    Dtor( static_cast<WrappedType*>(obj) );
+	}
+    public:
+        /** Required by WeakJSClassCreatorOps<> interface. */
 	enum { ExtraInternalFieldCount = 0 };
 	typedef typename DevT::type WrappedType;
+        /** Tries to construct a new WrappedType object by calling the
+            ctor template argument. On success, the object is bound to
+            the "supplemental garbage collector" and returned.  On
+            error, null is returned and exceptionText is expected to
+            contain the text of the error.
+        */
 	static WrappedType * Ctor( Arguments const & argv,
 			    std::string & exceptionText)
 	{
@@ -174,7 +188,7 @@ namespace v8 { namespace juice { namespace whio {
 	    }
 	    return d;
 	}
-
+        /** Destroys obj. */
 	static void Dtor( WrappedType * obj )
 	{
 	    if( obj )
@@ -184,12 +198,6 @@ namespace v8 { namespace juice { namespace whio {
                 //CERR << "dtor passing on @"<<obj<<'\n';
                 obj->api->finalize(obj);
 	    }
-	}
-    private:
-	/** Callback for use with juice::cleanup::AddToCleanup(). */
-	static void cleanup_callback( void * obj )
-	{
-	    Dtor( static_cast<WrappedType*>(obj) );
 	}
     };
 
