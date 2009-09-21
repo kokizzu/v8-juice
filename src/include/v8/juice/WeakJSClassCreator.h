@@ -450,7 +450,7 @@ namespace juice {
 	   as demonstrated here:
 
 	   \code
-	   target->Set( String::New("ClassName"), myCreator.Seal() );
+	   target->Set( v8::String::New("ClassName"), myCreator.Seal() );
 	   \endcode
 
 	   That will "close off" the class creation process and add the new class
@@ -500,6 +500,10 @@ namespace juice {
             if( static_cast<int>(SubOpsT::ExtraInternalFieldCount)
                 != static_cast<int>(ClassOpsType::ExtraInternalFieldCount) )
             {
+                /** reminder to self: the reason this cannot currently
+                    work is because of how we stuff the native object
+                    in the last-available internal field.
+                 */
                 throw std::runtime_error("WeakJSClassCreatorOps<WrappedT>::ExtraInternalFieldCount != WeakJSClassCreatorOps<SubT>::ExtraInternalFieldCount");
             }
             subclassGettersN().insert( GetInheritedNative<SubT> );
@@ -668,11 +672,11 @@ namespace juice {
            (checkSubclasses==false) to ensure that
            WeakJSClassCreator<WrappedType> will not try to pass a
            pointer of type WrappedSubType to
-           WeakJSClassCreatorOps<WrappedType::Dtor().
+           WeakJSClassCreatorOps<WrappedType>::Dtor().
 	*/
 	static bool DestroyObject( Handle<Object> const & jo, bool checkSubclasses = false )
 	{
-	    WrappedType * t = GetSelf(jo,false); // sanity check
+	    WrappedType * t = GetSelf(jo,checkSubclasses); // sanity check
 	    if( ! t ) return false;
 	    Persistent<Object> p( Persistent<Object>::New( jo ) );
 	    weak_callback( p, t );
