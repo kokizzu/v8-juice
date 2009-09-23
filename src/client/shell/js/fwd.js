@@ -17,17 +17,30 @@ m.other = new MyNative();
 m.other.str = "i am the other!";
 print('m.other.str =',m.other.str,m.other.me());
 print('forwarder() =',m.other.forwarder(12,-13,8));
-print('someref() =',m.someref(m.other));
+print('someref1() =',m.someref1(m.other));
 var ex = null;
 try
 {
-    print('someref(non-MyNative) =',m.someref(m.other.str));
+    print('m.someref1(non-MyNative) =',m.someref1(undefined));
 }catch(e)
 {
     ex = e;
     print("Caught expected exception:",e);
 }
 if( null === ex ) throw("The last test should have thrown but didn't!");
+
+ex = null;
+print("my.other.destroy() ==",m.other.destroy());
+try
+{
+    print('undefined.someref1(non-MyNative) =',m.other.str);
+}catch(e)
+{
+    ex = e;
+    print("Caught expected exception:",e);
+}
+if( null === ex ) throw("The last test should have thrown but didn't!");
+
 print("Done!");
 
 if(0)
