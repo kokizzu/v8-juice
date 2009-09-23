@@ -45,6 +45,15 @@ shell (it SHOULD be the name of the script, but it's not), and arguments
 
  ************************************************************************/
 
+/**
+
+BUG_NUMBER() is a marker which should be interpreted as:
+
+http://code.google.com/p/v8-juice/issues/detail?id=N
+
+*/
+#define BUG_NUMBER(N)
+
 #include <v8.h>
 #include <cstring>
 #include <cstdio>
@@ -116,9 +125,22 @@ struct my_native
 
     Handle<Value> forwarder( Arguments const & );
 
-    void someref( my_native & x )
+    void someref1( my_native & x )
     {
-        CERR << "someref("<<&x<<")\n";
+        CERR << "someref1("<<&x<<")\n";
+        return;
+    }
+    BUG_NUMBER(11)
+    my_native & someref2( my_native & x )
+    {
+        CERR << "someref2("<<&x<<")\n";
+        return x;
+    }
+    BUG_NUMBER(11)
+    my_native const & someref3( my_native const & x )
+    {
+        CERR << "someref3("<<&x<<")\n";
+        return x;
     }
 
     my_native * other;
@@ -187,8 +209,24 @@ void my_void_forwarded_func(int x)
 Handle<Value> my_native::forwarder( Arguments const & argv )
 {
     v8::juice::convert::FwdToFunc( my_forwarded_func3, argv );
-    return v8::juice::convert::FwdToFunc3<int,int,int,int>( my_forwarded_func3, argv )
-        ;
+    return v8::juice::convert::FwdToFunc3<int,int,int,int>( my_forwarded_func3, argv );
+}
+/**
+   Demonstration of adding a close() or destroy() member to
+   a bound class.
+*/
+Handle<Value> my_native_destroy( Arguments const & argv )
+{
+    if(1)
+    { // informational only: has no real effect:
+        int argc = argv.Length();
+        my_native * N = v8::juice::convert::CastFromJS<my_native>( argv.This() );
+        if( ! N ) return ThrowException(String::New("This object is not (or is no longer) a my_native!"));
+        CERR << "my_native_destroy( @"<<(void const *)N<<" )\n";
+    }
+    typedef v8::juice::ClassBinder<my_native> BinderType;
+    BinderType::DestroyObject(argv.This());
+    return Undefined();
 }
 
 int my_fwd( V8CxH & cx )
@@ -215,7 +253,11 @@ int my_fwd( V8CxH & cx )
         .BindMemVar<std::string, &MY::str>( "str" )
         .BindMemVar<my_native *, &MY::other>("other")
         .BindMemFunc< &MY::forwarder >( "forwarder" )
-        .BindMemFunc< void, MY &, &MY::someref >( "someref" )
+        .BindMemFunc< void, MY &, &MY::someref1 >( "someref1" )
+        BUG_NUMBER(11)
+        //.BindMemFunc< MY &, MY &, &MY::someref2 >( "someref2" )
+        //.BindMemFunc< MY const &, MY const &, &MY::someref3 >( "someref3" )
+        .Set( "destroy", my_native_destroy )
         .Seal();
     w.AddClassTo( cx->Global() );
     return 0;
