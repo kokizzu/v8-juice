@@ -340,7 +340,7 @@ namespace juice {
        \code
        wrapper.Set( "str",
                     MemberVarGetter<Foo,std::string, &Foo::str>,
-                    MemberVarGStter<Foo,std::string, &Foo::str> );
+                    MemberVarSetter<Foo,std::string, &Foo::str> );
        \endcode
 
        In almost 10 years of C++ coding, this is the first time i've ever had
