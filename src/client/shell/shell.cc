@@ -105,6 +105,19 @@ using namespace ::v8::juice;
 struct my_native
 {
     std::string str;
+private:
+    int proxied;
+public:
+    int propGetter() const
+    {
+        CERR << "my_native::propGetter()\n";
+        return this->proxied;
+    }
+    int propSetter(int v)
+    {
+        CERR << "my_native::propSetter("<<v<<")\n";
+        return this->proxied = v;
+    }
     int func1() { return 42; }
     int func2(int x) { return x*2; }
     double func3(int x,int y)
@@ -144,7 +157,9 @@ struct my_native
     }
 
     my_native * other;
-    my_native() : str(),other(0)
+    my_native() : str(),
+                  proxied(19),
+                  other(0)
     {}
 };
 
@@ -254,6 +269,7 @@ int my_fwd( V8CxH & cx )
         .BindMemVar<my_native *, &MY::other>("other")
         .BindMemFunc< &MY::forwarder >( "forwarder" )
         .BindMemFunc< void, MY &, &MY::someref1 >( "someref1" )
+        .BindPropToMemFuncs< int, &MY::propGetter, int, int, &MY::propSetter >( "proxiedProp" )
         BUG_NUMBER(11)
         //.BindMemFunc< MY &, MY &, &MY::someref2 >( "someref2" )
         //.BindMemFunc< MY const &, MY const &, &MY::someref3 >( "someref3" )
@@ -469,14 +485,13 @@ int main(int argc, char* argv[])
 #undef BIND
 #undef FT
 
-        
         // Create a new execution environment containing the built-in
         // functions
         v8::Handle<v8::Context> context = v8::Context::New(NULL, globt);
         // Enter the newly created execution environment.
         v8::Context::Scope context_scope(context);
 
-        v8::Local<v8::Object> global( context->Global() );
+        v8::Handle<v8::Object> global( context->Global() );
         global->Set(JSTR("arguments"), v8::juice::convert::CastToJS( scrargs ) );
        
         if(1)
