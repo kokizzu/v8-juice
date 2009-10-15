@@ -118,6 +118,12 @@ public:
         CERR << "my_native::propSetter("<<v<<")\n";
         return this->proxied = v;
     }
+    void propSetterVoid(int v)
+    {
+        CERR << "my_native::propSetterVoid("<<v<<")\n";
+        this->proxied = v;
+        return;
+    }
     int func1() { return 42; }
     int func2(int x) { return x*2; }
     double func3(int x,int y)
@@ -269,7 +275,10 @@ int my_fwd( V8CxH & cx )
         .BindMemVar<my_native *, &MY::other>("other")
         .BindMemFunc< &MY::forwarder >( "forwarder" )
         .BindMemFunc< void, MY &, &MY::someref1 >( "someref1" )
-        .BindPropToMemFuncs< int, &MY::propGetter, int, int, &MY::propSetter >( "proxiedProp" )
+        .BindPropToAccessors< int, &MY::propGetter, int, int, &MY::propSetter >( "proxiedProp" )
+        //.BindPropToAccessors< int, &MY::propGetter, void, int, &MY::propSetterVoid >( "proxiedProp" )
+        //.BindPropToGetter< int, &MY::propGetter >( "proxiedProp" )
+        //.BindPropToSetter< void, int, &MY::propSetterVoid >( "proxiedProp" )
         BUG_NUMBER(11)
         //.BindMemFunc< MY &, MY &, &MY::someref2 >( "someref2" )
         //.BindMemFunc< MY const &, MY const &, &MY::someref3 >( "someref3" )

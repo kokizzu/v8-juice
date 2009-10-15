@@ -529,8 +529,15 @@ namespace juice {
 	}
 
     private:
-        /** EXPERIMENTAL! */
-        // implements v8::AccessorGetter interface
+        /** EXPERIMENTAL!
+
+            Internal implementation helper for BindPropToAccessors() and
+            BindPropToGetter().
+
+            Implements v8::AccessorGetter interface to proxy a given
+            property through a WrappedType member function.
+        */
+        // 
 	template <typename RV, RV (WrappedType::*Func)() const>
         static Handle<Value> propGetter( Local< String > /*ignored*/, const AccessorInfo & info )
         {
@@ -538,8 +545,9 @@ namespace juice {
             if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
             return convert::CastToJS( (self->*Func)() );
         }
-        /** EXPERIMENTAL! */
-        // implements v8::AccessorGetter interface
+        /**
+           Overload to allow a non-const getter.
+        */
 	template <typename RV, RV (WrappedType::*Func)()>
         static Handle<Value> propGetter( Local< String > /*ignored*/, const AccessorInfo & info )
         {
@@ -547,8 +555,14 @@ namespace juice {
             if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
             return convert::CastToJS( (self->*Func)() );
         }
-        /** EXPERIMENTAL! */
-        //typedef void(* v8::AccessorSetter)(Local< String > property, Local< Value > value, const AccessorInfo &info)
+
+        /**
+            Internal implementation helper for BindPropToAccessors() and
+            BindPropToGetter().
+
+            Implements v8::AccessorSetter interface to proxy a given
+            property through a WrappedType member function.
+        */
         template <typename RV, typename ArgT, RV (WrappedType::*Func)(ArgT)>
         static void propSetter(v8::Local< v8::String > property, v8::Local< v8::Value > value, const v8::AccessorInfo &info)
         {
@@ -561,18 +575,29 @@ namespace juice {
             (self->*Func)( convert::CastFromJS<ArgT>( value ) );
             return;
         }
+
     public:
         /**
-           EXPERIMENTAL! NOT YET FINISHED.
+           EXPERIMENTAL!
 
-           Binds the given JS property to a pair of member functions, which
-           will be called in place of get/set operations for the property.
+           Binds the given JS property to a pair of WrappedType member
+           functions, such that these functions will be called in
+           place of get/set operations for the property.
            
+           The native member functions must follow conventional
+           accessor signatures:
+
+           - Getter: T getter() const
+           - Setter: [T1 or void] setter( T2 )
+
+           For the setter, T1 may differ from T2 and T1 may be
+           void. However, any return value is ignored by the JS engine
+           for purposes of setting the value.
+
+           For the getter, an overload of this function is provided which
+           supports a non-const getter.
+
            TODOs:
-
-           - Add Setter arg.
-
-           - Add unfortunate overloads for various constnesses.
 
            - Various convenience overloads for the case that the
            getter/setter deal strictly with the same arg types.
@@ -583,15 +608,78 @@ namespace juice {
                   typename ArgV,
                   SetRV (WrappedType::*Setter)(ArgV)
             >
-	ClassBinder & BindPropToMemFuncs( char const * propName )
+	ClassBinder & BindPropToAccessors( char const * propName )
 	{
-	    //typedef Detail::MemFuncCallOp0< const WrappedType, RV, Func > Caller;
 	    this->Prototype()->SetAccessor( v8::String::New( propName ),
                                             propGetter<RV,Getter>,
                                             propSetter<SetRV,ArgV,Setter>
                                            );
 	    return *this;
 	}
+
+        /**
+           Overload to allow a non-const getter.
+        */
+	template <typename RV,
+                  RV (WrappedType::*Getter)(),
+                  typename SetRV,
+                  typename ArgV,
+                  SetRV (WrappedType::*Setter)(ArgV)
+            >
+	ClassBinder & BindPropToAccessors( char const * propName )
+	{
+	    this->Prototype()->SetAccessor( v8::String::New( propName ),
+                                            propGetter<RV,Getter>,
+                                            propSetter<SetRV,ArgV,Setter>
+                                           );
+	    return *this;
+	}
+
+        /**
+           This is like BindPropToAccessors(), but MUST NOT be used in
+           conjunction with that function: use EITHER this function
+           (to only set a getter), OR BindPropToAccessors() to set
+           both a getter and a setter. It is not possible to apply
+           only a setter because v8 craps out on read access to the
+           property if we do that.
+        */
+	template <typename RV, RV (WrappedType::*Getter)() const >
+	ClassBinder & BindPropToGetter( char const * propName )
+	{
+	    this->Prototype()->SetAccessor( v8::String::New( propName ),
+                                            propGetter<RV,Getter>,
+                                            0
+                                           );
+	    return *this;
+	}
+        /**
+           Overload to allow non-const getter.
+        */
+	template <typename RV, RV (WrappedType::*Getter)() >
+	ClassBinder & BindPropToGetter( char const * propName )
+	{
+	    this->Prototype()->SetAccessor( v8::String::New( propName ),
+                                            propGetter<RV,Getter>,
+                                            0
+                                           );
+	    return *this;
+	}
+
+#if 0
+#error "This cannot work because we MUST have a getter to bind to or get a crash in v8 on read access to the property."
+        template <typename RV,
+                  typename ArgT,
+                  RV (WrappedType::*Setter)(ArgT)
+            >
+	ClassBinder & BindPropToSetter( char const * propName )
+	{
+	    this->Prototype()->SetAccessor( v8::String::New( propName ),
+                                            0,
+                                            propSetter<RV,ArgT,Setter>
+                                           );
+	    return *this;
+	}
+#endif
 
 #include "ClassBinder-BindMemFunc.h" // generated code
 
