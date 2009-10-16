@@ -173,8 +173,20 @@ struct my_native
     double takes3(int x, int y, int z) { return x * y * z; }
     std::string str;
     my_native * other;
-    my_native() : str(),other(0)
+private:
+    int proxied;
+public:
+    my_native() : str(), other(0), proxied(19)
     {}
+    int propGetter() const
+    {
+        return this->proxied;
+    }
+    void propSetter(int v)
+    {
+        this->proxied = v;
+        return;
+    }
 };
 }}}
 
@@ -288,6 +300,8 @@ And now what we originally set out to to: bind `my_native` with JS:
      .BindMemFunc< double,int,int,int,&MY::takes3 >( "takes3" )
      .BindMemVar< std::string, &MY::str >("str")
      .BindMemVar< MY *, &MY::other >("other")
+     // Bind 'proxiedProp' property to native getter/setter methods: (requires version r726+)
+     .BindPropToAccessors< int, &MY::propGetter, void, int, &MY::propSetter >( "proxiedProp" )
     w.Seal();
 }}}
 
@@ -312,6 +326,9 @@ print('m.other =',m.other);
 m.other = new MyNative();
 m.other.str = "i am the other!";
 print('m.other.str =',m.other.str);
+print('proxiedProp =', m.proxiedProp );
+m.proxiedProp += 23;
+print('proxiedProp =', m.proxiedProp );
 }}}
 
 The output:
@@ -327,6 +344,8 @@ true
 m.str = bye, world!
 m.other = null
 m.other.str = i am the other!
+proxiedProp = 19
+proxiedProp = 42
 }}}
 
 =Dual JS/C++ Inheritance=
