@@ -39,6 +39,14 @@
 #include <map>
 #include <set>
 #include <sstream>
+
+#if 0
+#ifndef CERR
+#include <iostream> /* only for debuggering */
+#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#endif
+#endif
+
 namespace v8 {
 namespace juice {
 
@@ -209,7 +217,27 @@ namespace juice {
 	    return 0;
 	}
     };
+    template <bool Val>
+    struct WeakJSClassCreator_Opt_Bool
+    {
+        static const bool value = Val;
+    };
+    /**
+       HIGHLY EXPERIMENTAL!
 
+       Specializations may be defined for any type supported by
+       WeakClassCreatorOps<T>.  If they define their "value" member to
+       true then certain WeakJSClassCreator conversion operations will
+       bypass the type-safe lookup table and will use static_cast<>()
+       for the conversion, using the (void *) taken from
+       External::Value() as the source. This is faster but cause
+       certain problems in conjunction with inheritance (he says, very
+       vaguely).
+    */
+    template <typename T>
+    struct WeakJSClassCreator_Opt_ShallowBind : WeakJSClassCreator_Opt_Bool<false>
+    {};
+    
     /**
        WeakJSClassCreator is a tool to simplify the creation of new
        wrapped classes, including addition of automatic cleanup handling
@@ -426,6 +454,8 @@ namespace juice {
             }
         }
 
+        static const bool shallowBind = WeakJSClassCreator_Opt_ShallowBind<WrappedT>::value;
+
     public:
 
 	/**
@@ -585,16 +615,24 @@ namespace juice {
 	    Local<Value> lv( h->GetInternalField(NativeFieldIndex) );
             if( lv.IsEmpty() || !lv->IsExternal() ) return GetSelfFromPrototype(h,checkSubtypes);
 	    Local<External> ex( External::Cast(*lv) );
-            WrappedType * obj = TypeCheck::GetNative( ex->Value() );
-            if( obj ) return obj;
-            if( !checkSubtypes ) return GetSelfFromPrototype(h,checkSubtypes);
-            typename SubclassGetNatives::iterator it = subclassGettersN().begin();
-            typename SubclassGetNatives::iterator et = subclassGettersN().end();
-            for( ; (!obj) && (et != it); ++it )
+            if( shallowBind )
             {
-                obj = (*it)( ex->Value() );
+                //CERR << "SHALLOW-CASTING GetSelf()!\n";
+                return static_cast<WrappedType*>( ex->Value() );
             }
-            return obj ? obj : GetSelfFromPrototype(h,checkSubtypes);
+            else
+            {
+                WrappedType * obj = TypeCheck::GetNative( ex->Value() );
+                if( obj ) return obj;
+                if( !checkSubtypes ) return GetSelfFromPrototype(h,checkSubtypes);
+                typename SubclassGetNatives::iterator it = subclassGettersN().begin();
+                typename SubclassGetNatives::iterator et = subclassGettersN().end();
+                for( ; (!obj) && (et != it); ++it )
+                {
+                    obj = (*it)( ex->Value() );
+                }
+                return obj ? obj : GetSelfFromPrototype(h,checkSubtypes);
+            }
 	}
 
 	/**
@@ -799,14 +837,22 @@ namespace juice {
 	    jobj->SetInternalField(NativeFieldIndex,Null());
 	    pv.Dispose();
 	    pv.Clear();
-	    TypeCheckIter it = typeCheck().find( nobj );
-	    if( typeCheck().end() == it ) // serious error
-	    {
-		return;
-	    }
-            WrappedType * victim = (*it).second.first;
-            typeCheck().erase(it);
-            ClassOpsType::Dtor( victim );
+            if( ! shallowBind )
+            {
+                TypeCheckIter it = typeCheck().find( nobj );
+                if( typeCheck().end() == it ) // serious error
+                {
+                    return;
+                }
+                WrappedType * victim = (*it).second.first;
+                typeCheck().erase(it);
+                ClassOpsType::Dtor( victim );
+            }
+            else
+            {
+                //CERR << "SHALLOW-CAST DTOR!!!\n";
+                ClassOpsType::Dtor( static_cast<WrappedType*>(nobj) );
+            }
 	}
 
 	/**
@@ -821,7 +867,10 @@ namespace juice {
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
 	    self->SetInternalField( NativeFieldIndex, External::New(obj) );
-	    typeCheck().insert( std::make_pair( obj, std::make_pair( obj, self ) ) );
+            if( ! shallowBind )
+            {
+                typeCheck().insert( std::make_pair( obj, std::make_pair( obj, self ) ) );
+            }
 	    return self;
 	}
 
