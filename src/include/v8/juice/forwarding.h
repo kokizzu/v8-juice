@@ -1,8 +1,9 @@
 #if !defined(CODE_GOOGLE_COM_P_V8_V8_FORWARDING_H_INCLUDED)
 #define CODE_GOOGLE_COM_P_V8_V8_FORWARDING_H_INCLUDED 1
 /*
-   A min-framework to simplify casting between v8 JavaScript and
-   C++ native objects. Requires the v8-bind.h header.
+   A mini-framework to simplify casting between v8 JavaScript and
+   C++ native objects. Requires the v8-juice bind.h and convert.h
+   parts.
 
    v8: http://code.google.com/p/v8/
 
