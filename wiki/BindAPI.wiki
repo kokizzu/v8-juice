@@ -1,4 +1,4 @@
-#summary Into do the v8::juice::bind API
+#summary Inro do the v8::juice::bind API
 #labels Topic-CPlusPlus,Phase-UserDocs
 
 <wiki:toc max_depth="3" />
