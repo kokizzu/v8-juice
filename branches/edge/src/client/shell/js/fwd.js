@@ -18,6 +18,9 @@ m.other.str = "i am the other!";
 print('m.other.str =',m.other.str,m.other.me());
 print('forwarder() =',m.other.forwarder(12,-13,8));
 print('someref1() =',m.someref1(m.other));
+print('proxiedProp =', m.proxiedProp );
+m.proxiedProp += 23;
+print('proxiedProp =', m.proxiedProp );
 var ex = null;
 try
 {
