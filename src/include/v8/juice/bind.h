@@ -44,6 +44,32 @@
 #include <v8.h>
 #include <string>
 #include <map>
+#include <set>
+
+/** @def v8_juice_BIND_ENABLE_DEBUG
+
+    If v8_juice_BIND_ENABLE_DEBUG is true then certain debugging
+    features are enabled in the v8::juice::bind API (taking up more
+    memory per binding), otherwise the become no-ops.
+
+    Maintenance reminders:
+
+    - We define this here instead of in juice-config.h because
+    (A) to keep this code usable outside of v8-juice, (B)
+    because it's possible that client code includes this without
+    including juice-config.h, which could lead to inconsistent
+    values across compilation units.
+
+    - To force a recompile of client code if it changes (assuming
+    their dependencies are set up correctly), to avoid inconsistent
+    values across compilation units.
+
+    - The debugging features enabled by this were implemented at the
+    request of a specific user, and can be left disabled for most
+    purposes.
+*/
+#define v8_juice_BIND_ENABLE_DEBUG false
+
 /**
    The v8 namespace is the primary namespace of Google's v8 engine.
 */
@@ -106,28 +132,152 @@ namespace bind {
 	    typedef T type;
 	};
         /**
+           Internal helper for the JS/Native bindings, to keep the
+           "untyped" data separate from the "typed" (templatized)
+           data, so that we can access an overall list/map of bindings
+           via debugging interfaces.
+        */
+        class BinderMetaUntyped
+        {
+        protected:
+            BindKeyType key;
+            /**
+               Initializes an empty binding.
+            */
+            explicit BinderMetaUntyped( BindKeyType k ) : key(k)
+            {}
+
+        public:
+            /**
+               Initializes a binding with the given key.
+               Does NOT insert that binding anywhere.
+            */
+            BinderMetaUntyped() : key(0)
+            {}
+
+            /**
+               For use with std::map, returns true if (this->key < rhs.key).
+            */
+            bool operator<( BinderMetaUntyped const & rhs )
+            {
+                return this->key < rhs.key;
+            }
+
+            /** Returns this binding's opaque. */
+            BindKeyType Key() const { return this->key; }
+
+            /**
+               A type for storing a central listing of all JS/Native bindings.
+               It only exists for debugging purposes.
+            */
+            typedef std::map<BindKeyType, BinderMetaUntyped const *> BindMap;
+
+            /**
+               Returns a mapping of all bindings, to be used only for
+               introspection/debugging purposes.
+
+               If v8_juice_BIND_ENABLE_DEBUG is defined to a false
+               then this map will be empty.
+            */
+            static const BindMap & AllBindings()
+            {
+                return BindingMap();
+            }
+
+        protected:
+            /**
+               Returns a mapping of all bindings.
+            */
+            static BindMap & BindingMap()
+            {
+                static BindMap bob;
+                return bob;
+            }
+
+            /**
+               Registers the binding for the given binding, entering b
+               into the AllBindings() list.
+
+               If v8_juice_BIND_ENABLE_DEBUG is defined to a false
+               then this function does nothing.
+
+            */
+            static void RegisterBinding( BinderMetaUntyped const * b )
+            {
+                if( v8_juice_BIND_ENABLE_DEBUG && b )
+                {
+                    BindingMap()[b->key] = b;
+                }
+            }
+
+            /**
+               Unregisters the binding for the given key, removing it
+               from the AllBindings() list.  Returns false if no such
+               key is registered, else true.
+
+               If v8_juice_BIND_ENABLE_DEBUG is defined to a false
+               then this function does nothing and returns false.
+            */
+            static bool UnregisterBinding( BindKeyType k )
+            {
+                if( v8_juice_BIND_ENABLE_DEBUG )
+                {
+                    BindMap & map = BindingMap();
+                    BindMap::iterator it = map.find(k);
+                    return ( it == map.end() )
+                        ? false
+                        : (map.erase(it),true);;
+                }
+                else return false;
+            }
+        };
+        /**
            A type for holding metadata for
            JS-to-Native bindings.
 
            NativeType_ is a non-cv-qualified type.
            It may be pointer-qualified, and internally
            this type maps only to pointers.
+
+           Potential TODOs:
+
+           - Consider adding a bind count, essentially a reference
+           count for the bindings, and don't unbind until the count
+           goes to 0.  This would simplify some binding operations
+           which we currently can't do because we end up with multiple
+           unbind operations happening at unpredictable (or
+           "predictable but unfortunate") times. e.g. with that we
+           could make ScopedBinder() copyable.  So far there has been
+           no need for that, though.
         */
         template <typename NativeType_>
-        struct BinderMetadata
+        class BinderMeta : public BinderMetaUntyped
         {
-            /** Binder key type. */
-            typedef void const * KeyType;
+        public:
             /** Binder "raw" native type. */
             typedef NativeType_ NativeType;
             /**
                Bound native type - always pointer-qualified NativeType.
              */
             typedef typename Detail::type_stripper<NativeType>::type * NativePtr;
+            typedef typename Detail::type_stripper<NativeType>::type const * NativePtrConst;
+        private:
             /**
-               This object's key.
+               Initializes a binding with the given key/value pair.
+               Does NOT insert that binding anywhere.
             */
-            KeyType key;
+            BinderMeta( BindKeyType k, NativePtr v ) : BinderMetaUntyped(k), value(v)
+            {}
+
+            typedef std::map< void const *, BinderMeta > MapType;
+            /**
+               Shared map for storing bindings.
+            */
+            static MapType & Map()
+            {
+                static MapType bob;
+                return bob;
+            }
             /**
                This object's value.
              */
@@ -135,29 +285,65 @@ namespace bind {
             /**
                Initializes an empty binding.
             */
-            BinderMetadata() : key(0), value(0)
+        public:
+            BinderMeta() : BinderMetaUntyped(0), value(0)
             {}
-            /**
-               Initializes a binding with the given key/value pair.
-               Does NOT insert that binding anywhere.
-            */
-            BinderMetadata( KeyType k, NativePtr v ) : key(k), value(v)
-            {}
-            typedef std::map< void const *, BinderMetadata > MapType;
-            /**
-               For use with std::map, returns true if (this->key < rhs.key).
-            */
-            bool operator<( BinderMetadata const & rhs )
+            BinderMeta & operator=( BinderMeta const & rhs )
             {
-                return this->key < rhs.key;
+                if( this != &rhs )
+                {
+                    this->BinderMetaUntyped::operator=( rhs );
+                    this->value = rhs.value;
+                }
+                return *this;
+            }
+            BinderMeta( BinderMeta const & rhs )
+            {
+                *this = rhs;
+            }
+            /** Returns this binding's value (native object). */
+            BindKeyType Value() const { return this->value; }
+            /**
+               Internal impl of v8::juice::bind::BindNative(). See
+               that function for the docs.
+            */
+            static bool Bind( BindKeyType key, NativePtr obj )
+            {
+                if( 0 == key ) return false;
+                MapType & map = Map();
+                typename MapType::iterator it = map.find( key );
+                if( it != map.end() ) return false;
+                RegisterBinding( &(map[key] = BinderMeta( key, obj )) );
+                return true;
             }
             /**
-               Shared map for storing bindings.
+               Internal impl of v8::juice::bind::UnbindNative(). See
+               that function for the docs.
             */
-            static MapType & map()
+            static bool Unbind( BindKeyType key, NativePtrConst obj )
             {
-                static MapType bob;
-                return bob;
+                if( 0 == key ) return false;
+                MapType & map = Map();
+                typename MapType::iterator it = map.find( key );
+                if( map.end() == it ) return false;
+                if( (*it).second.value != obj ) return false;
+                map.erase( it );
+                UnregisterBinding( key );
+                return true;
+            }
+
+            /**
+               Internal impl of v8::juice::bind::GetBoundNative(). See
+               that function for the docs.
+            */
+            static NativePtr GetBound( BindKeyType key )
+            {
+                if( 0 == key ) return false;
+                MapType & map = Map();
+                typename MapType::iterator it = map.find( key );
+                return (it == map.end() )
+                    ? 0
+                    : (*it).second.value;
             }
         };
     }
@@ -200,31 +386,16 @@ namespace bind {
        (and also makes heavy use of static functions to access shared
        data). Since the binding API is only intended to be used from
        v8 client code, we inherit the property that only one thread at
-       a time will access the shared data.
-
-
-       Potential TODOs:
-
-       - Consider adding a bind count, essentially a reference count
-       for the bindings, and don't unbind until the count goes to 0.
-       This would simplify some binding operations which we currently
-       can't do because we end up with multiple unbind operations
-       happening at unpredictable (or "predictable but unfortunate")
-       times. e.g. with that we could make ScopedBinder() copyable.
+       a time will access the shared data. Any other use would be in
+       violation of v8's threading rules, so don't be surprised if
+       doing so causes problems in this code.
     */
     template <typename NT>
     bool BindNative( void const * key,  NT * obj )
     {
 	if( 0 == key ) return false;
-	//typedef typename Detail::type_stripper<NT>::type * PT;
-	//typedef std::map< void const *, PT > MT;
-        typedef Detail::BinderMetadata<NT> BI;
-        typedef typename BI::MapType MT;
-	MT & map = BI::map();
-	typename MT::iterator it = map.find( key );
-	if( it != map.end() ) return false;
-	map[key] = BI( key, obj );
-	return true;
+        typedef Detail::BinderMeta<NT> BI;
+        return BI::Bind(key, obj);
     }
 
     /** Equivalent to BindNative(obj,obj). */
@@ -263,16 +434,8 @@ namespace bind {
     template <typename NT>
     NT * GetBoundNative( BindKeyType key )
     {
-	if( 0 == key ) return false;
-        typedef Detail::BinderMetadata<NT> BI;
-	//typedef typename Detail::type_stripper<NT>::type * PT;
-	//typedef std::map< void const *, PT > MT;
-	typedef typename BI::MapType MT;
-        MT & map = BI::map();
-	typename MT::iterator it = map.find( key );
-	return (it == map.end() )
-	    ? 0
-	    : (*it).second.value;
+        typedef Detail::BinderMeta<NT> BI;
+        return BI::GetBound( key );
     }
 
     /**
@@ -299,15 +462,8 @@ namespace bind {
     template <typename NT>
     bool UnbindNative( BindKeyType key, NT const * obj )
     {
-	if( 0 == key ) return false;
-        typedef Detail::BinderMetadata<NT> BI;
-        typedef typename BI::MapType MT;
-	MT & map = BI::map();
-	typename MT::iterator it = map.find( key );
-	if( map.end() == it ) return false;
-	if( (*it).second.value != obj ) return false;
-	map.erase( it );
-	return true;
+        typedef Detail::BinderMeta<NT> BI;
+        return BI::Unbind( key, obj );
     }
 
     /** Equivalent to UnbindNative(obj,obj). */
