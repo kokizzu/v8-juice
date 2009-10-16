@@ -74,18 +74,6 @@ namespace bind {
     namespace Detail
     {
 	/**
-	   Shared map for binding native data to JS handles.
-	*/
-	template <typename T>
-	std::map<void const *,T> &
-	native_data()
-	{
-	    typedef std::map<void const *,T> MT;
-	    static MT bob;
-	    return bob;
-	}
-
-	/**
 	   Utility type for stripping qualifications from types for
 	   some template algos.
 	   
@@ -117,6 +105,61 @@ namespace bind {
 	{
 	    typedef T type;
 	};
+        /**
+           A type for holding metadata for
+           JS-to-Native bindings.
+
+           NativeType_ is a non-cv-qualified type.
+           It may be pointer-qualified, and internally
+           this type maps only to pointers.
+        */
+        template <typename NativeType_>
+        struct BinderMetadata
+        {
+            /** Binder key type. */
+            typedef void const * KeyType;
+            /** Binder "raw" native type. */
+            typedef NativeType_ NativeType;
+            /**
+               Bound native type - always pointer-qualified NativeType.
+             */
+            typedef typename Detail::type_stripper<NativeType>::type * NativePtr;
+            /**
+               This object's key.
+            */
+            KeyType key;
+            /**
+               This object's value.
+             */
+            NativePtr value;
+            /**
+               Initializes an empty binding.
+            */
+            BinderMetadata() : key(0), value(0)
+            {}
+            /**
+               Initializes a binding with the given key/value pair.
+               Does NOT insert that binding anywhere.
+            */
+            BinderMetadata( KeyType k, NativePtr v ) : key(k), value(v)
+            {}
+            typedef std::map< void const *, BinderMetadata > MapType;
+            /**
+               For use with std::map, returns true if (this->key < rhs.key).
+            */
+            bool operator<( BinderMetadata const & rhs )
+            {
+                return this->key < rhs.key;
+            }
+            /**
+               Shared map for storing bindings.
+            */
+            static MapType & map()
+            {
+                static MapType bob;
+                return bob;
+            }
+        };
     }
 #endif // !DOXYGEN
 
@@ -173,12 +216,14 @@ namespace bind {
     bool BindNative( void const * key,  NT * obj )
     {
 	if( 0 == key ) return false;
-	typedef typename Detail::type_stripper<NT>::type * PT;
-	typedef std::map< void const *, PT > MT;
-	MT & map = Detail::native_data<PT>();
+	//typedef typename Detail::type_stripper<NT>::type * PT;
+	//typedef std::map< void const *, PT > MT;
+        typedef Detail::BinderMetadata<NT> BI;
+        typedef typename BI::MapType MT;
+	MT & map = BI::map();
 	typename MT::iterator it = map.find( key );
 	if( it != map.end() ) return false;
-	map[key] = obj;
+	map[key] = BI( key, obj );
 	return true;
     }
 
@@ -219,13 +264,15 @@ namespace bind {
     NT * GetBoundNative( BindKeyType key )
     {
 	if( 0 == key ) return false;
-	typedef typename Detail::type_stripper<NT>::type * PT;
-	typedef std::map< void const *, PT > MT;
-	MT & map = Detail::native_data<PT>();
+        typedef Detail::BinderMetadata<NT> BI;
+	//typedef typename Detail::type_stripper<NT>::type * PT;
+	//typedef std::map< void const *, PT > MT;
+	typedef typename BI::MapType MT;
+        MT & map = BI::map();
 	typename MT::iterator it = map.find( key );
 	return (it == map.end() )
 	    ? 0
-	    : (*it).second;
+	    : (*it).second.value;
     }
 
     /**
@@ -253,13 +300,12 @@ namespace bind {
     bool UnbindNative( BindKeyType key, NT const * obj )
     {
 	if( 0 == key ) return false;
-	typedef typename Detail::type_stripper<NT>::type BT;
-	typedef BT * PT;
-	typedef std::map< void const *, PT > MT;
-	MT & map = Detail::native_data<PT>();
+        typedef Detail::BinderMetadata<NT> BI;
+        typedef typename BI::MapType MT;
+	MT & map = BI::map();
 	typename MT::iterator it = map.find( key );
 	if( map.end() == it ) return false;
-	if( (*it).second != obj ) return false;
+	if( (*it).second.value != obj ) return false;
 	map.erase( it );
 	return true;
     }
