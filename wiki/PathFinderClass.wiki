@@ -12,17 +12,19 @@ The class can be added to a JS engine by calling `v8::juice::SetupPathFinderClas
 
 = JS API =
 
+*ACHTUNG: the API changed significantly on 2009 Oct 16 (r722),* to take advantage of the new feature allowing us to bind JS properties to native getter/setter functions. All of the getter functions are now prefixed with "get", and the older names now refer to read/write properties which behave identically to the getter/setter functions.
+
 || *Return type* || *Name/Signature* || *Notes* ||
 || `PathFinder` || `new PathFinder( [string path=''], [string extensions=''], [string delimiter=':'])` || Creates a new !PathFinder with the given search path, extensions, and delimiter. ||
-|| `String` || `pathString()` || Search path as a delimited string. ||
+|| `String` || `getPathString()` || Search path as a delimited string. ||
 || `int` || `setPathString( String )`  || Sets the search path. May be delimited. e.g. `setPathString("/lib:/usr/lib")`||
-|| `Array` || `pathArray()` || Search path as an array. ||
+|| `Array` || `getPathArray()` || Search path as an array. ||
 || `int` || `setPathArray( Array )`  || Sets search path to the given list of dirs. ||
-|| `String` || `pathSeparator()` || The delimiter used to split/join path lists. ||
+|| `String` || `getPathSeparator()` || The delimiter used to split/join path lists. ||
 || `void` || `setPathSeparator( character )`  || Sets path delimiter used to split/join paths. Functions denoted as using a "delimited list" use this delimiter. ||
-|| `Array` || `extensionsArray()` || List of search extensions, as an array. ||
+|| `Array` || `getExtensionsArray()` || List of search extensions, as an array. ||
 || `int` || `setExtensionsArray( Array )`  || Sets list of search extensions. ||
-|| `String` || `extensionsString()` || List of search extensions as a delimited string. ||
+|| `String` || `getExtensionsString()` || List of search extensions as a delimited string. ||
 || `int` || `setExtensionsString( String )`  || Set list of search extensions as a delimited string. e.g. `setExtensionsString(".exe:.bat:.com")` ||
 || `void` || `addPathString( String )`  || Adds a dir (or delimited list) to the search path. e.g. `addPathString("/usr/local/bin:/home/me/bin")` ||
 || `void` || `addExtensionString( String )`  || Adds an extension (or delimited list) to the extensions search list. ||
@@ -30,10 +32,30 @@ The class can be added to a JS engine by calling `v8::juice::SetupPathFinderClas
 || `void` || `clearCache()` || Clears the internal file lookup cache which is used by `find()`. ||
 || `bool` || `isEmpty()` || Returns true only if this object has no path/search information. ||
 || `bool` || `isAccessible(string)` || Returns true if the given filename is accessible (readable). This is both a static and per-instance function. ||
+|| *Type* || *Properties* (read-write) || *Notes* ||
+|| `Array-of-strings` || `pathArray` || See `get/setPathArray()` ||
+|| `Array-of-strings` || `extensionsArray` || See `get/setExtensionsArray()` ||
+|| `Strings` || `extensionsString` || See `get/setExtensionsString()` ||
+|| `string` || `pathSeparator` || See `get/setPathSeparator()` ||
+|| `string` || `pathString` || See `get/setPathString()` ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `string` || `dirSeparator` (read-only) || The platform-specific character used to separate directory names in a path. This is `\` on Windows and `/` everywhere else. ||
 
-Note that because the values in a !PathFinder object are internally native types, it is not possible to directly change them via JS objects. e.g. `obj.pathArray()[3]='/home'` will have no effect, as the object returned from `pathArray()` is necessarily a copy of the native data. All of the accessors are functions, as opposed to properties, to try to help avoid any confusion on that point.
+*ACHTUNG:* Note that because the values in a !PathFinder object are internally native types, it is not possible to directly change them via JS objects. e.g. `obj.pathArray.push('/home')` _will have no effect_, as the object returned from `pathArray` is necessarily a _copy_ of the native data. Thus holding references to them will not work as expected.
+
+The various properties and functions with the suffixes `Array` and `String` (e.g. `pathArray` and `pathString`) can be used like so:
+
+{{{
+obj.pathString = "/usr/local/bin:/usr/bin";
+// Is equivalent to:
+obj.setPathString( "/usr/local/bin:/usr/bin" );
+// Is equivalent to:
+obj.pathArray = ["/usr/local/bin", "/usr/bin"];
+// Is equivalent to:
+obj.setPathArray( '/usr/local/bin', '/usr/bin' );
+}}}
+
+And setting one property will change the value of the other (but see the caveat above about not holding references to these members).
 
 =Shared !PathFinder Instances=
 
