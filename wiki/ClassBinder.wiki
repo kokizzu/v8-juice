@@ -177,6 +177,77 @@ setting it will have no effect unless the native accessor is specifically
 coded to look up the JS-assigned value of the property (which kind of
 defeats the purpose of the to-native binding).
 
+==Achtung: Beware of Copies!==
+
+Consider the following members:
+
+{{{
+typedef std::list<std::string> StringList;
+StringList MyClass::getList() const;
+void MyClass::setList( StringList const & );
+}}}
+
+These can be bound to a member, such that getting the member via JS
+would return an Array of String object, and setting it would convert
+the value to an Array of Strings. That's all fine and good, but
+be very aware that that particular conversion _requires copying list_.
+The two main implications are that (1) such access may not be cheap,
+depending on the conversion necessary for the getter/setter,
+and (2) the following _will not work in an intuive manner_:
+
+{{{
+var ar = ["hi", "world" ];
+myobj.list = ar; // COPIES ar!
+ar.push("!"); // does NOT modify myobj.list
+// myobj.list.length == 2
+// ar.length == 2
+}}}
+
+Thus it is not generically possible to update JS references
+via this approach.
+
+That said, the following is kosher:
+
+{{{
+MyClass * MyClass::getBuddy();
+void MyClass::setBuddy( MyClass * );
+...
+binder.BindPropToAccessors< MyClass *, &MyClass::getBuddy, void, MyClass *, &MyClass::setBuddy >( "buddy" );
+
+// JS:
+var o1 = new MyClass();
+o1.buddy = new MyClass(); // calls MyClass::setBuddy(new object)
+...
+print( o1.buddy ) // will act on that same MyClass instance.
+}}}
+
+Getting/setting such a property via these bindings will work
+as expected as long as the property refers to another
+bound `MyClass` object.
+
+_HOWEVER_, there is another caveat: in the above specific case, we "should"
+give JS an explicit handle to the newly-created object or we risk it getting
+garbage collected because the native member conversions to not store a
+reference to the new object in JS space (only in native space). Thus it is
+possible, in the above example, that calling `o1.buddy` in a "get" context
+would return null or an empty object if GC is called between the assignment
+and the call to `print()`.
+
+The general workaround for this problem is to stuff a reference to the
+new object somewhere:
+
+{{{
+o1._refs = [];
+o1.buddy = (o1._refs[o1._refs.length] = new MyClass());
+...
+print( o1.buddy ); // this is now safe
+}}}
+
+That is somewhat lame, but it is a generic problem for many types of
+JS-to-Native bindings. (When i first encountered it, it took me an hour
+to figure out why my new objects kept disappearing.)
+
+
 ==Return values of native setter members==
 
 Be aware that the return value of a native setter function is
