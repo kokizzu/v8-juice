@@ -647,8 +647,7 @@ namespace juice {
 	ClassBinder & BindPropToGetter( char const * propName )
 	{
 	    this->Prototype()->SetAccessor( v8::String::New( propName ),
-                                            propGetter<RV,Getter>,
-                                            0
+                                            propGetter<RV,Getter>
                                            );
 	    return *this;
 	}
@@ -659,8 +658,7 @@ namespace juice {
 	ClassBinder & BindPropToGetter( char const * propName )
 	{
 	    this->Prototype()->SetAccessor( v8::String::New( propName ),
-                                            propGetter<RV,Getter>,
-                                            0
+                                            propGetter<RV,Getter>
                                            );
 	    return *this;
 	}
