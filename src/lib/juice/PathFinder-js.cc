@@ -124,16 +124,32 @@ namespace v8 { namespace juice {
 	typedef ClassBinder<PathFinder> PW;
 	PW pw(target);
 	typedef PW::WrappedType PF;
-	pw.BindMemFunc< std::string, &PF::PathString >( "pathString" );
+	pw.BindMemFunc< std::string, &PF::PathString >( "getPathString" );
 	pw.BindMemFunc< size_t, std::string const &, &PF::Path >( "setPathString" );
-	pw.BindMemFunc< PathFinder::StringList, &PF::Path >( "pathArray" );
+        pw.BindPropToAccessors< std::string, &PF::PathString,
+            size_t, std::string const &, &PF::Path>("pathString");
+
+	pw.BindMemFunc< PathFinder::StringList, &PF::Path >( "getPathArray" );
 	pw.BindMemFunc< size_t, PathFinder::StringList const &, &PF::Path >( "setPathArray" );
-	pw.BindMemFunc< std::string, &PF::PathSeparator >( "pathSeparator" );
+        pw.BindPropToAccessors< PathFinder::StringList, &PF::Path,
+            size_t, PathFinder::StringList const &, &PF::Path >("pathArray");
+
+        pw.BindMemFunc< std::string, &PF::PathSeparator >( "getPathSeparator" );
 	pw.BindMemFunc< void, std::string const &, &PF::PathSeparator >( "setPathSeparator" );
-	pw.BindMemFunc< PathFinder::StringList, &PF::Extensions >( "extensionsArray" );
+        pw.BindPropToAccessors< std::string, &PF::PathSeparator,
+            void, std::string const &, &PF::PathSeparator >( "pathSeparator" );
+
+	pw.BindMemFunc< PathFinder::StringList, &PF::Extensions >( "getExtensionsArray" );
 	pw.BindMemFunc< size_t, PathFinder::StringList const &, &PF::Extensions >( "setExtensionsArray" );
-	pw.BindMemFunc< std::string, &PF::ExtensionsString >( "extensionsString" );
+        pw.BindPropToAccessors< PathFinder::StringList, &PF::Extensions,
+            size_t, PathFinder::StringList const &, &PF::Extensions >( "extensionsArray" );
+
+        pw.BindMemFunc< std::string, &PF::ExtensionsString >( "getExtensionsString" );
 	pw.BindMemFunc< size_t, const std::string &, &PF::Extensions >( "setExtensionsString" );
+        pw.BindPropToAccessors< std::string, &PF::ExtensionsString,
+            size_t, const std::string &, &PF::Extensions >( "extensionsString" );
+
+        
 	pw.BindMemFunc< void, std::string const &, &PF::AddPath >( "addPathString" );
 	pw.BindMemFunc< void, std::string const &, &PF::AddExtension >( "addExtensionString" );
 	pw.BindMemFunc< std::string, std::string const &, &PF::Find >( "find" );
