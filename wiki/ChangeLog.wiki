@@ -13,6 +13,7 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 *2009 Oct 15*
   * Created a new branch called [http://code.google.com/p/v8-juice/source/browse/#svn/branches/edge edge] for trying out some up-coming changes/additions.
+  * Added to ClassBinder: ability to bind JS member propertes to native accessor/mutator functions. See the [PathFinder] API for an example which uses this.
 
 *2009 Sept 13*
   * v8-juice-shell now passes all arguments after "--" to the executed script(s), where arguments[0]==argv[0] and arguments[1..N] are the arguments passed after "--".
