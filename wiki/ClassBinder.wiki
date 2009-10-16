@@ -123,6 +123,86 @@ Though whether or not such an automatic conversion makes sense for your case is 
 
 We can of course choose to apply only the getter or the setter if we like, to allow conversions in only one direction.
 
+=Binding JS member properties to native get/set methods=
+
+(Feature added 20091015.)
+
+It is also possible to bind JS member properties to native accessor/mutator functions (i.e. "get" and "set" functions),
+such that JS-side access to the properties will be marshalled via the native members. e.g.:
+
+{{{
+// Accessor:
+int MyClass::getProp() const;
+// Mutator:
+void MyClass::setProp(int);
+
+// Binding code:
+binder.BindPropToAccessors< int, &MyClass::getProp, void, int, &MyClass::setProp>( "prop" );
+
+// JS-side:
+myobj.prop = 17; // calls MyClass::setProp(17)
+print( myobj.prop ); // calls MyClass::getProp()
+}}}
+
+However, one must be careful to pass the propert type to the getter, or else the automatic
+converion from JS to C++ may contain an incorrect or invalid value. e.g.:
+
+{{{
+myobj.prop = "17";
+// calls MyClass::setProp(0) because of the String-to-Integer conversion
+}}}
+
+It is also possible to bind only a getter:
+
+{{{
+binder.BindPropToGetter< int, &MyClass::getProp >( "prop" );
+}}}
+
+However, it appears to be impossible to properly bind only a setter,
+as v8 will crash on read-access to the bound member if we do that.
+(This could theoretically be corrected by splitting `v8::ObjectTemplate::SetAccessor()`
+into two functions, one each for getter and setter.) In this case,
+the setter would use the default setter behaviour but access to the getter
+would use the native method, which is likely to return a different value
+than is set via JS. For example, assuming that the native value
+proxied by `MyClass::getProp()` is 19:
+
+{{{
+myobj.prop = 27; // uses JS-internal property storage
+print( myobj.prop ); // calls MyClass::getProp(), returning 19!
+}}}
+
+In effect, this makes the property read-only from the native side, as
+setting it will have no effect unless the native accessor is specifically
+coded to look up the JS-assigned value of the property (which kind of
+defeats the purpose of the to-native binding).
+
+==Return values of native setter members==
+
+Be aware that the return value of a native setter function is
+_ignored_ for binding purposes because that's how the JS API works in
+regards to assignment.  This example should clarify:
+
+{{{
+myobj.prop = 12; // MyClass::setProp(12)
+print( myobj.prop += 3 ); // is essentially (but not exactly) equivalent to:
+// print(
+//      ( MyClass::setProp( MyClass::getProp() + 3 ),
+//        MyClass::getProp() )
+// );
+// (Recall that (a,b,c...) evaluates to the last expression in the list)
+}}}
+
+In actuality `getProp()` is not called a second time in the `print()`
+expression (though i'm honestly not entirely sure why not), but the
+effect is essentially as if it is called (assuming the getter has no
+side effects which would affect the second call).
+
+Thus the assignment operation returns the JS-internal value of the
+assignment, and _not_ the return value of `MyClass::setProp()`. This
+is a property (feature or limitation?) of the v8 property accessor
+binding API.
+
 =Object Construction with or without `new`=
 
 Consider this code:
