@@ -12,3 +12,7 @@ func void avoid()
 func void avoid1(int)
 func void avoid2(int,double )
 func double takes3(int, int, int)
+func int getFoo()
+func void setFoo(int)
+getset foo getFoo setFoo
+getset fu getFoo
