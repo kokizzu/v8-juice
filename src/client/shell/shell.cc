@@ -448,7 +448,24 @@ static bool PrintUsesStdErr = false;
 int main(int argc, char * argv[])
 {
 #define JSTR(X) v8::String::New(X)
-    v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
+    if(0)
+    { /** fuck - SetFlagsFromCommandLine() changes argv such that the
+          "--" arg and those following it are stripped!
+       */
+        typedef std::vector<char *> AV;
+        AV vargv(static_cast<size_t>(argc), 0);
+        int i;
+        for( i = 0; i < argc; ++i )
+        {
+            vargv[(unsigned int)i] = argv[i];
+        }
+        v8::V8::SetFlagsFromCommandLine(&i, &vargv[0], true);
+    }
+    else
+    {
+        // or we could use the undocumented 3rd arg:
+        v8::V8::SetFlagsFromCommandLine(&argc, argv, false);
+    }
     {
         v8::HandleScope handle_scope;
         v8::juice::cleanup::CleanupSentry cleaner;
