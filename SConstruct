@@ -34,6 +34,7 @@ if( True ):
         'JSClassCreator.cc',
         'jssprintf.cc',
         'juice.cc',
+        'JuiceShell.cc',
         'PathFinder.cc',
         'PathFinder-js.cc',
         'plugin.cc',
