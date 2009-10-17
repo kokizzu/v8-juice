@@ -11,6 +11,10 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2009 Oct 17*
+  * Started factoring out the functionality of `v8-juice-shell` into the `JuiceShell` class, to make it more reusable.
+  * Added an optional (and experimental) optimization for `WeakJSClassCreator`, to speed up conversion to/from JS/Native when cross-JS/Native inheritance is not required.
+
 *2009 Oct 15*
   * Created a new branch called [http://code.google.com/p/v8-juice/source/browse/#svn/branches/edge edge] for trying out some up-coming changes/additions.
   * Added to ClassBinder: ability to bind JS member propertes to native accessor/mutator functions. See [PathFinderClass] for an example which uses this.
