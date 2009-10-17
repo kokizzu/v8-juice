@@ -5,7 +5,7 @@
 */
 try
 {
-    load_plugin('v8-juice-ncurses-oo');
+    loadPlugin('v8-juice-ncurses-oo');
     ncurses.App = {};
     var app = ncurses.App;
     app.panels = {};

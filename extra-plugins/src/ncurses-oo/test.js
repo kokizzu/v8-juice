@@ -1,4 +1,4 @@
-load_plugin('v8-juice-ncurses-oo');
+loadPlugin('v8-juice-ncurses-oo');
 var nc = ncurses;
 nc.riplines = 5;
 if(1) for( var i = 0; i < nc.riplines; ++i )

@@ -5,7 +5,7 @@
    A ticker widget displays a string of text, scrolling it sideways
    across the window.
 */
-//load_plugin('v8-juice-ncurses-oo');
+//loadPlugin('v8-juice-ncurses-oo');
 include('setup-ncurses-app.js');
 var nc = ncurses;
 var root = nc.App.panels.root;

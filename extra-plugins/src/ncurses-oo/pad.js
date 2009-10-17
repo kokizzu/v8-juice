@@ -1,4 +1,4 @@
-load_plugin('v8-juice-ncurses-oo');
+loadPlugin('v8-juice-ncurses-oo');
 var nc = ncurses;
 //nc.ripoffline(true);nc.ripoffline(true);nc.ripoffline(false);nc.ripoffline(false);
 var root = new nc.NCPanel();
