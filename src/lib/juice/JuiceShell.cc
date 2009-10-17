@@ -7,6 +7,14 @@
 
 #include <vector>
 #include <string>
+
+#if 0
+#ifndef CERR
+#include <iostream>
+#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#endif
+#endif
+
 namespace v8 {
 namespace juice {
 
@@ -55,20 +63,18 @@ namespace juice {
         std::string const endofargs("--");
         typedef std::vector<std::string> ArgvList;
         ArgvList argv;
+        int i = (int)offset;
+        for( ; i < argc; ++i )
         {
-            int i = 1;
-            for( ; i < argc; ++i )
+            if( endofargs == _argv[i] )
             {
-                if( endofargs == _argv[i] )
-                {
-                    ++i;
-                    break;
-                }
+                ++i;
+                break;
             }
-            for( ; i < argc; ++i )
-            {
-                argv.push_back( _argv[i] );
-            }
+        }
+        for( ; i < argc; ++i )
+        {
+            argv.push_back( _argv[i] );
         }
         impl->global->Set( v8::String::New("arguments"), v8::juice::convert::CastToJS( argv ) );
     }
