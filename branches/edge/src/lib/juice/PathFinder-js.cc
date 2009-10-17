@@ -28,6 +28,10 @@ namespace v8 { namespace juice {
     enum {
     MagicExternalArgc = 1 // must be 1 or else crash
     };
+    template <>
+    struct WeakJSClassCreator_Opt_ShallowBind<PathFinder> : WeakJSClassCreator_Opt_Bool<true>
+    {
+    };
     /** Required specialization of WeakJSClassCreatorOps<> for use
 	with WeakJSClassCreator<PathFinder>. */
     template <>
