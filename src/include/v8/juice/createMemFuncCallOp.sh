@@ -232,7 +232,7 @@ template <typename ReturnT, ${aTDecl}, typename Func>
     return FunctorForwarder<${count},ReturnT>::template Call< ${aTParam} >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc${count}(), but the return type can
+   Functionally identical to FwdToFunc${count}(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT, ${aTDecl}>
