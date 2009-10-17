@@ -10,6 +10,7 @@ OBJECTS = $(addsuffix .o,\
 	plugin \
 	juice \
 	JSClassCreator \
+	JuiceShell \
 	whprintf \
 	jssprintf \
 	time \

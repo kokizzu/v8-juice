@@ -78,6 +78,7 @@ http://code.google.com/p/v8-juice/issues/detail?id=N
 #include <v8/juice/forwarding.h>
 #include <v8/juice/WeakJSClassCreator.h>
 #include <v8/juice/ToSource.h>
+#include <v8/juice/JuiceShell.h>
 
 namespace bind = ::v8::juice::bind;
 
@@ -250,7 +251,7 @@ Handle<Value> my_native_destroy( Arguments const & argv )
     return Undefined();
 }
 
-int my_fwd( V8CxH & cx )
+int my_fwd( V8CxH const & cx )
 {
     //typedef WeakJSClassCreator<my_native> WT;
     typedef ClassBinder<my_native> WT;
@@ -444,72 +445,30 @@ int my_class_test( V8CxH & cx )
 
 static bool PrintUsesStdErr = false;
 
-int main(int argc, char* argv[])
+int main(int argc, char * argv[])
 {
 #define JSTR(X) v8::String::New(X)
-    typedef std::vector<std::string>  StrVec;
-    std::string const endofargs("--");
-    StrVec scrargs(1,argv[0]);
-    {
-        int i = 1;
-        for( ; i < argc; ++i )
-        {
-            if( endofargs == argv[i] )
-            {
-                ++i;
-                break;
-            }
-        }
-        for( ; i < argc; ++i )
-        {
-            scrargs.push_back( argv[i] );
-        }
-    }
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
     {
         v8::HandleScope handle_scope;
         v8::juice::cleanup::CleanupSentry cleaner;
-        // Create a template for the global object.
-        v8::Handle<v8::ObjectTemplate> globt = v8::ObjectTemplate::New();
+        v8::juice::JuiceShell shell("v8juice");
+        shell.ProcessMainArgv(argc,argv,1);
+        shell.SetupJuiceEnvironment();
 #define FT v8::FunctionTemplate::New
-#define BIND(K,V) globt->Set( JSTR(K), FT(V) )
+#define BIND(K,V) shell.AddGlobalFunc( K, V )
         BIND("print", Print);
         BIND("load", Load);
         BIND("quit", Quit);
         BIND("version", Version);
-        BIND("include", v8::juice::IncludeScript );
-        BIND("load_plugin", v8::juice::plugin::LoadPlugin);//deprecated name for loadPlugin()
-        BIND("loadPlugin", v8::juice::plugin::LoadPlugin);
-        //BIND("toSource", v8::juice::convert::ToSource);
-
-        BIND("sprintf", v8::juice::sprintf);
-
-        BIND("sleep", v8::juice::sleep);
-        BIND("mssleep", v8::juice::mssleep);
-        BIND("usleep", v8::juice::usleep);
-        BIND("setTimeout", v8::juice::setTimeout);
-        BIND("setInterval", v8::juice::setInterval);
-        BIND("clearTimeout", v8::juice::clearTimeout);
-        BIND("clearInterval", v8::juice::clearInterval);
 #undef BIND
 #undef FT
-
-        // Create a new execution environment containing the built-in
-        // functions
-        v8::Handle<v8::Context> context = v8::Context::New(NULL, globt);
-        // Enter the newly created execution environment.
-        v8::Context::Scope context_scope(context);
-
-        v8::Handle<v8::Object> global( context->Global() );
-        global->Set(JSTR("arguments"), v8::juice::convert::CastToJS( scrargs ) );
-       
+        
         if(1)
         {
             //v8::Handle<v8::Value> iv = v8::juice::sq3::SetupAddon( context->Global() );
             v8::Handle<v8::Value> iv;
-            //iv = v8::juice::sq3::SetupAddon( context->Global() );
-            //iv = v8::juice::nc::SetupAddon( context->Global(), false );
-            iv = v8::juice::SetupPathFinderClass( context->Global() );
+            iv = v8::juice::SetupPathFinderClass( shell.Context()->Global() );
             //iv = v8::juice::convert::SetupAddon( context->Global() );
             //COUT << "SetupAddon() == " << v8::convert::CastFromJS<std::string>( iv ) << '\n';
         }
@@ -517,12 +476,13 @@ int main(int argc, char* argv[])
         {
             // my_test( context );
             //my_class_test( context );
-            my_fwd(context);
+            my_fwd(shell.Context());
             //my_tosource(context);
             //my_bind_test( context );
         }
         bool run_shell = (argc == 1);
         v8::Locker tlocker;
+        std::string const endofargs("--");
         for (int i = 1; i < argc; i++) {
             const char* str = argv[i];
             if( 0 == strcmp(str,"--print-cerr"))
@@ -536,6 +496,7 @@ int main(int argc, char* argv[])
             }
             else if (strcmp(str, "--shell") == 0) {
                 run_shell = true;
+                continue;
             } else if (strcmp(str, "-f") == 0) {
                 // Ignore any -f flags for compatibility with the other stand-
                 // alone JavaScript engines.
@@ -565,25 +526,8 @@ int main(int argc, char* argv[])
                     return 1;
             }
         }
-        if (run_shell) RunShell(context);
+        if (run_shell) RunShell( shell.Context() );
     }
-    if(0)
-    {
-        /**
-           Kludge mentioned here:
-
-           http://groups.google.com/group/v8-users/browse_thread/thread/a5503120233b48cc/8ea95d5ca4e8b758
-
-           to try to force GC so weak pointer callbacks get called before we exit.
-
-           Doesn't seem to work, though.
-        */
-        v8::HandleScope kscope;
-        v8::Handle<v8::ObjectTemplate> kglobal = v8::ObjectTemplate::New();
-        v8::Handle<v8::Context> kcontext( v8::Context::New(NULL, kglobal) );
-        v8::Context::Scope kcontext_scope(kcontext);
-    }
-
     return 0;
 #undef JSTR
 }
