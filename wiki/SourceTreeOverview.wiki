@@ -15,10 +15,7 @@ src/              All source code is under here...
                   (private headers are normally in the source dir)
   +-- lib/
     +-- juice/    The core library
-    +-- plugins/  Plugins go under here
-      +-- whio/
-      +-- stringstuff/
-      ...
+
   +-- client/     Library client apps go under here
     +-- shell/    JS shell with juice functionality added on
     +-- sample/   Sample applications
@@ -26,12 +23,11 @@ src/              All source code is under here...
 doc/              Docs go here
   +-- doxygen/    Doxygen-generated docs
   +-- manual/     Library manual
-  +-- plugins/    Non-API docs for individual plugins
 }}}
 
 Any directories not listed there are probably part of the build process, or tools used by that process, and are not considered part of the library.
 
-Dependencies between directories always run in one direction only. That is, circular dependencies between two directories are not allowed. Circular deps only cause Grief and Frustration at some point. Implementation files which directly depend on each other are always put in the same directory.
+Dependencies between directories always run in one direction only. That is, circular dependencies between two modules or directories are not allowed. Circular deps only cause Grief and Frustration at some point. Implementation files which directly depend on each other are always put in the same module/directory.
 
 =Header files=
 
