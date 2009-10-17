@@ -14,6 +14,7 @@ are at the top. Dates written extra large are release dates. This contains only 
 *2009 Oct 17*
   * Started factoring out the functionality of `v8-juice-shell` into the `JuiceShell` class, to make it more reusable.
   * Added an optional (and experimental) optimization for `WeakJSClassCreator`, to speed up conversion to/from JS/Native when cross-JS/Native inheritance is not required.
+  * `v8-juice-shell` now gives the global object a name (`v8juice`). The bound function `load_plugin()` has been renamed to `loadPlugin()`, for naming consistency.
 
 *2009 Oct 15*
   * Created a new branch called [http://code.google.com/p/v8-juice/source/browse/#svn/branches/edge edge] for trying out some up-coming changes/additions.
