@@ -19,14 +19,13 @@ namespace juice {
        @code
        int main(int argc, char * argv[])
        {
-       v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
-       v8::HandleScope handle_scope;
-       // OPTIONAL: v8::juice::cleanup::CleanupSentry cleaner;
-       v8::juice::JuiceShell shell;
-       shell.ProcessMainArgv(argc,argv,1);
-       // OPTIONAL: shell.SetupJuiceEnvironment();
-
-       ... use v8 ...
+           v8::V8::SetFlagsFromCommandLine(&argc,argv,false);
+           v8::HandleScope handle_scope;
+           // OPTIONAL: v8::juice::cleanup::CleanupSentry cleaner;
+           v8::juice::JuiceShell shell;
+           shell.ProcessMainArgv(argc,argv,1);
+           // OPTIONAL: shell.SetupJuiceEnvironment();
+           ... use v8 ...
        }
        @endcode
 
@@ -39,6 +38,13 @@ namespace juice {
        These objects should not be created on the heap, as this can
        theoretically play havok with handle scoping/lifetime rules.
 
+       Warning: v8::V8::SetFlagsFromCommandLine(), if used, should be called before
+       v8 is set up, but it may change the argument list. e.g. it strips out
+       all args at or after "--". Thus it cannot be used directly with this
+       class unless the arguments vector is first copied (e.g. into a vector<char*>)
+       for use with this class or SetFlagsFromCommandLine().
+
+       
        TODOs:
 
        - Functions for running arbitrary script code or executing
