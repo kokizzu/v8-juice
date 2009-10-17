@@ -26,7 +26,7 @@ My default build options is `make -j2` for parallel building, so the tree is bel
 The following configuration options are often helpful or necessary:
 
   * `--prefix=/dir` is the installation prefix and the default place under which it will look for v8 and any additional libraries (e.g. those needed by plugins). Using `--prefix=$HOME` is often a good choice, and it allows a non-root user to run the installation.
-  * `--v8-prefix=/top/install/dir/of/v8` tells configure to look for v8 under the given dir. It expects to find `include/v8.h` and `lib/libv8(_g).(a|so)`.
+  * `--v8-prefix=/top/install/dir/of/v8` tells configure to look for v8 under the given dir. It expects to find `include/v8.h` and `lib/libv8(_g).(a|so)`. Tip: use `--prefix=$HOME` if you are a non-root user or do not want to install it globally.
   * `--enable-debug` turns on debugging options and tries to link against `libv8_g` instead of `libv8` (but will use the latter if it can't find the former).
   * `--help` shows many more options which you'll never need.
   * `--disable-plugins` makes the plugin loading features no-ops and disables the build of the core plugins. Plugins are automatically disabled if neither `-ldl` or `-lltdl` are found. Specific plugins might not get compiled because their plugin-specific prerequisites are not met (e.g. libsqlite3 or libncurses).
@@ -42,7 +42,6 @@ If you need to do a custom installation, here's what you'll need to copy (and to
   * `src/lib/juice/libv8-juice.*` should go somewhere in your linker path.
   * `src/include/v8` should be copied (recursively) to some top-level includes dir of your choice.
   * `src/client/shell/v8-juice-shell` can optionally be installed somewhere in your PATH.
-  * `src/lib/plugins/.../*.so` should be put in the directory `PREFIX/lib/v8/juice` (that's the compile-time default search path), or change the library search path in your application by using v8::juice::plugin::PluginsPath(). See [Plugins] for more information about that.
 
 The makefile also supports `make uninstall`.
 
