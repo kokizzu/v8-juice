@@ -2,7 +2,7 @@
 #define CODE_GOOGLE_COM_V8_JUICE_PLUGIN_WHEFS_H_INCLUDED 1
 
 /************************************************************************
-Some of the implementation details for the whio plugin which might
+Some of the implementation details for the whio/whefs plugin which might
 be useful in some cross-plugin contexts.
 ************************************************************************/
 
@@ -13,10 +13,16 @@ be useful in some cross-plugin contexts.
 #include <v8/juice/cleanup.h>
 #include <v8/juice/WeakJSClassCreator.h>
 
-#include "whefs_amalgamation.h" // this is the i/o lib we're uses as a basis.
+#include "whefs_amalgamation.h" // the core whefs library.
 
 namespace v8 { namespace juice { namespace whio {
 
+    /**
+       Static/shared strings, some of which are used as template
+       parameters (where we can't use string literals but can,
+       curiously enough, use references to pointers to shared
+       strings)...
+    */
     struct WhefsStrings
     {
         static const char * openDevice;
@@ -30,12 +36,8 @@ namespace v8 { namespace juice { namespace whio {
     /**
        Adds to target object:
 
-       - whio (generic holder object)
-       - whio.IOBase abstract class
-       - whio.IODevice class, inherits IOBase
-       - whio.StreamBase abstract class
-       - whio.InStream class, inherits StreamBase
-       - whio.OutStream class, inherits StreamBase
+       - whefs (generic holder object)
+       - whefs.WhEFS class
 
        See full docs at:
 
@@ -43,12 +45,19 @@ namespace v8 { namespace juice { namespace whio {
     */
     Handle<Value> SetupWhefsClasses(const Handle<Object> target );
 
+    /**
+       Internal JS wrapper/helper for C-level whefs objects.
+    */
     struct WHEFS
     {
         typedef whefs_fs type;
+        /** Is not valid until SetupWhefsClasses() is called. */
         static Persistent<Function> js_ctor;
     };
 
+    /**
+       For use as a base class for WeakJSClassCreatorOps<WHEFS>.
+    */
     struct WHEFSOps
     {
 	enum { ExtraInternalFieldCount = 0 };
