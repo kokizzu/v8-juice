@@ -14,7 +14,7 @@
 
 /* only for debuggering */
 #ifndef CERR
-#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#define CERR if(0) std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
 
 #include <v8/juice/forwarding.h>
@@ -497,8 +497,8 @@ namespace v8 { namespace juice { namespace whio {
 	  case SEEK_END:
 	      break;
 	  default:
-              CERR << "Got seek arg of "<<whence << '\n';
-              if(argc>1) CERR<<"argv[1]="<<JSToStdString(argv[1])<<'\n';
+              //CERR << "Got seek arg of "<<whence << '\n';
+              //if(argc>1) CERR<<"argv[1]="<<JSToStdString(argv[1])<<'\n';
 	      TOSS("The second argument to seek() must be one of SEEK_SET, SEEK_CUR, or SEEK_END!");
 	      break;
 	};
@@ -653,6 +653,7 @@ namespace v8 { namespace juice { namespace whio {
     {
 	ARGS(0==argc);
 	std::ostringstream os;
+        //v8::HandleScope sentry; // segfault!
 	Local<Object> self = argv.This();
 	os << "[object "<<N;
 

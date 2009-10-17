@@ -14,7 +14,7 @@
 
 /* only for debuggering */
 #ifndef CERR
-#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#define CERR if(0) std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
 
 #include <v8/juice/forwarding.h>
@@ -62,7 +62,7 @@ namespace v8 { namespace juice { namespace whio {
         const int argc = argv.Length();
         whefs_fs * fs = 0;
         if( (1 == argc) && argv[0]->IsExternal() )
-        { // Internal use: passing a whio_dev instance from a factory function.
+        { // Internal use: passing a whefs instance from a factory function.
             Local< External > ex( External::Cast(*argv[0]) );
             fs = bind::GetBoundNative<whefs_fs>( ex->Value() );
             if( ! fs )
@@ -161,6 +161,8 @@ namespace v8 { namespace juice { namespace whio {
             os << WhefsStrings::openDevice<<"("<<fname<<", "<<rw<<") failed for unknown reasons!";
             TOSS(os.str().c_str());
         }
+        // Maintenance reminder: we do this binding to support the special-case
+        // passing of an External to the JS ctor:
         bind::BindNative( dev, dev );
         Local<External> a0( External::New(dev) );
         Handle<Value> av[] = { a0 };
