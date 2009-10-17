@@ -1,14 +1,14 @@
 print("Starting up...");
 
-load_plugin('v8-juice-sqlite3');
+v8juice.loadPlugin('v8-juice-sqlite3');
 var my = {db:0,
           stmt:0,
           sep:'\t',
           file:"my.db"
 };
 
-my.db = new sqlite3.DB(my.file);
-//my.db = sqlite3_open(my.file);
+//my.db = new sqlite3.DB(my.file);
+my.db = sqlite3_open(my.file);
 //print("Using sqlite3 version",sqlite3_libversion());
 print('db =',my.db);
 
@@ -159,6 +159,6 @@ tryFour();
 tryExec();
 
 print("Shuting down...");
-//sqlite3_close( my.db );
-my.db.close();
+sqlite3_close( my.db );
+//my.db.close();
 print("Done!");

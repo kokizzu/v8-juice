@@ -1,4 +1,4 @@
-load_plugin('v8-juice-whio');
+v8juice.loadPlugin('v8-juice-whio');
 print("whefs file format:",whefs.fsFormatVersion);
 print("whefs home page:",whefs.homePage);
 print("whio home page:",whio.homePage);

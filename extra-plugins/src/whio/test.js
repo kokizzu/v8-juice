@@ -1,4 +1,4 @@
-load_plugin('v8-juice-whio');
+v8juice.loadPlugin('v8-juice-whio');
 
 function showErrCodes()
 {
@@ -193,7 +193,7 @@ function tryTypeInfo()
     for( var ks in sar  )
     {
 	var strdev = sar[ks];
-	var types = ['whio.IODevice','whio.IOBase','whio.InStream','whio.OutStream'];
+	var types = ['whio.IODevice','whio.IOBase','whio.InStream','whio.OutStream','whio.StreamBase'];
 	for( kt in types )
 	{
 	    typeinfo(strdev,types[kt]);
