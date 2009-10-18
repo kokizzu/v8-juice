@@ -58,7 +58,7 @@ template <typename ReturnT,  typename A0, typename Func>
     return FunctorForwarder<1,ReturnT>::template Call<  A0 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc1(), but the return type can
+   Functionally identical to FwdToFunc1(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0>
@@ -124,7 +124,7 @@ template <typename ReturnT,  typename A0,  typename A1, typename Func>
     return FunctorForwarder<2,ReturnT>::template Call<  A0, A1 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc2(), but the return type can
+   Functionally identical to FwdToFunc2(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0,  typename A1>
@@ -190,7 +190,7 @@ template <typename ReturnT,  typename A0,  typename A1,  typename A2, typename F
     return FunctorForwarder<3,ReturnT>::template Call<  A0, A1, A2 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc3(), but the return type can
+   Functionally identical to FwdToFunc3(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0,  typename A1,  typename A2>
@@ -256,7 +256,7 @@ template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename 
     return FunctorForwarder<4,ReturnT>::template Call<  A0, A1, A2, A3 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc4(), but the return type can
+   Functionally identical to FwdToFunc4(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename A3>
@@ -322,7 +322,7 @@ template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename 
     return FunctorForwarder<5,ReturnT>::template Call<  A0, A1, A2, A3, A4 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc5(), but the return type can
+   Functionally identical to FwdToFunc5(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
@@ -388,7 +388,7 @@ template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename 
     return FunctorForwarder<6,ReturnT>::template Call<  A0, A1, A2, A3, A4, A5 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc6(), but the return type can
+   Functionally identical to FwdToFunc6(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
@@ -454,7 +454,7 @@ template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename 
     return FunctorForwarder<7,ReturnT>::template Call<  A0, A1, A2, A3, A4, A5, A6 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc7(), but the return type can
+   Functionally identical to FwdToFunc7(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
@@ -520,7 +520,7 @@ template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename 
     return FunctorForwarder<8,ReturnT>::template Call<  A0, A1, A2, A3, A4, A5, A6, A7 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc8(), but the return type can
+   Functionally identical to FwdToFunc8(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
@@ -586,7 +586,7 @@ template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename 
     return FunctorForwarder<9,ReturnT>::template Call<  A0, A1, A2, A3, A4, A5, A6, A7, A8 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc9(), but the return type can
+   Functionally identical to FwdToFunc9(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
@@ -652,7 +652,7 @@ template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename 
     return FunctorForwarder<10,ReturnT>::template Call<  A0, A1, A2, A3, A4, A5, A6, A7, A8, A9 >( func, argv );
 }
 /**
-   Functionally identical to FwdToFunc10(), but the return type can
+   Functionally identical to FwdToFunc10(), but the templatized types can
    be deduced by the compiler.
 */
 template <typename ReturnT,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>

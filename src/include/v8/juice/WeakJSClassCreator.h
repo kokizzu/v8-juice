@@ -47,6 +47,13 @@
 #endif
 #endif
 
+#if 0
+#ifndef CERR
+#include <iostream> /* only for debuggering */
+#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#endif
+#endif
+
 #if 1
 /*
   Static assertion code taken from Alexandrescu's Modern C++ Design.
@@ -66,11 +73,11 @@
         struct ERROR_##errormsg {};                             \
         typedef ::v8::juice::Detail::compile_assert< (test) != 0 > tmplimpl; \
         tmplimpl aTemp = tmplimpl(ERROR_##errormsg());          \
-        sizeof(aTemp);                                          \
+        (void) sizeof(aTemp);                                    \
     } while (0)
 #else
 #   define JUICE_COMPILE_ASSERT(test, errormsg)                         \
-    do {} while (0)
+    do {(void)1;} while (0)
 #endif
 
 namespace v8 {

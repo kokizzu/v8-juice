@@ -79,6 +79,7 @@ http://code.google.com/p/v8-juice/issues/detail?id=N
 #include <v8/juice/WeakJSClassCreator.h>
 #include <v8/juice/ToSource.h>
 #include <v8/juice/JuiceShell.h>
+#include <v8/juice/ClassBinder.h>
 
 namespace bind = ::v8::juice::bind;
 
@@ -168,9 +169,22 @@ public:
                   proxied(19),
                   other(0)
     {}
+    my_native * getOther() const
+    {
+        CERR << "my_native::getOther() =="<<this->other<<"\n";
+        return this->other;
+    }
+    void setOther(my_native * o)
+    {
+        CERR << "my_native::setOther("<<o<<")\n";
+        this->other = o;
+    }
 };
 
 namespace v8 { namespace juice {
+    //an experiment: 
+    //template <> struct WeakJSClassCreator_Opt_ShallowBind<my_native> : WeakJSClassCreator_Opt_Bool<true> {};
+    // ^^^ when enabled, breaks automatic conversions of JS-to-(my_native*).
     template <>
     struct WeakJSClassCreatorOps<my_native>
     {
@@ -206,12 +220,12 @@ namespace v8 { namespace juice {
 	    }
 	}
     };
+
 }} // v8::juice
 
 #define WEAK_CLASS_TYPE my_native
 #include <v8/juice/WeakJSClassCreator-CastOps.h>
 
-#include <v8/juice/ClassBinder.h>
 
 int my_forwarded_func()
 {
@@ -273,10 +287,11 @@ int my_fwd( V8CxH const & cx )
         .BindMemFunc< void,int,double, &MY::avoid2 >( "avoid2" )
         .BindMemFunc< double,int,int,int, &MY::takes3 >( "takes3" )
         .BindMemVar<std::string, &MY::str>( "str" )
-        .BindMemVar<my_native *, &MY::other>("other")
         .BindMemFunc< &MY::forwarder >( "forwarder" )
         .BindMemFunc< void, MY &, &MY::someref1 >( "someref1" )
         .BindPropToAccessors< int, &MY::propGetter, int, int, &MY::propSetter >( "proxiedProp" )
+        .BindMemVar<my_native *, &MY::other>("other")
+        .BindPropToAccessors< MY *, &MY::getOther, void, MY *, &MY::setOther >( "otherProxy" )
         //.BindPropToAccessors< int, &MY::propGetter, void, int, &MY::propSetterVoid >( "proxiedProp" )
         //.BindPropToGetter< int, &MY::propGetter >( "proxiedProp" )
         //.BindPropToSetter< void, int, &MY::propSetterVoid >( "proxiedProp" )
@@ -284,7 +299,15 @@ int my_fwd( V8CxH const & cx )
         //.BindMemFunc< MY &, MY &, &MY::someref2 >( "someref2" )
         //.BindMemFunc< MY const &, MY const &, &MY::someref3 >( "someref3" )
         .Set( "destroy", my_native_destroy )
-        .Seal();
+        ;
+#if 0
+    if( WT::OptShallowBind )
+    { // these should cause a compile-time error:
+        w.Inherit( w );
+        //w.InheritNative<MY>();
+    }
+#endif
+    w.Seal();
     w.AddClassTo( cx->Global() );
     return 0;
 }
