@@ -615,7 +615,6 @@ namespace convert {
 	}
     };
 
-#if !defined(DOXYGEN)
     /**
        NativeToJS classes which act on list types compatible with the
        STL can subclass this to get an implementation.
@@ -645,7 +644,6 @@ namespace convert {
 #endif
 	}
     };
-#endif // if !defined(DOXYGEN)
 
     /** Partial specialization for std::list<>. */
     template <typename T>
@@ -654,7 +652,6 @@ namespace convert {
     template <typename T>
     struct NativeToJS< std::vector<T> > : NativeToJS_list< std::vector<T> > {};
 
-#if !defined(DOXYGEN)
     /**
        NativeToJS classes which act on map types compatible with the
        STL can subclass this to get an implementation.
@@ -675,14 +672,12 @@ namespace convert {
 	    return rv;
 	}
     };
-#endif // if !defined(DOXYGEN)
 
     /** Partial specialization for std::map<>. */
     template <typename KeyT,typename ValT>
     struct NativeToJS< std::map<KeyT,ValT> > : NativeToJS_map< std::map<KeyT,ValT> > {};
 
 
-#if !defined(DOXYGEN)
     template <typename ListT>
     struct JSToNative_list
     {
@@ -702,7 +697,6 @@ namespace convert {
 	    return li;
 	}
     };
-#endif // if !defined(DOXYGEN)
 
     /** Partial specialization for std::list<>. */
     template <typename T>
