@@ -85,10 +85,6 @@ public:
     static bool SetupClass( v8::Handle<v8::Context> cx );
 };
 
-int my_forwarded_func();
-int my_forwarded_func3(int x,int y,int z);
-void my_void_forwarded_func(int x);
-
 #include <v8/juice/convert.h>
 #include <v8/juice/cleanup.h>
 #include <v8/juice/WeakJSClassCreator.h>

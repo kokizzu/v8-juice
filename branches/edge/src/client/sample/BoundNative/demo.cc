@@ -2,10 +2,11 @@
 #undef NDEBUG
 #endif
 #include <cassert>
-// Copyright 2008 the V8 project authors. All rights reserved.
+// Copyright 2009 Stephan Beal
+// (http://wanderinghorse.net/home/stephan). All rights reserved.
 // Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// modification, are permitted provided that the following conditions
+// are met:
 //
 //     * Redistributions of source code must retain the above copyright
 //       notice, this list of conditions and the following disclaimer.
@@ -28,20 +29,10 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// END OF LICENSE
+// This code is derived from the v8 shell application.
 /************************************************************************
-This code is based off of the shell.cc sample application in the v8
-source tree. It has been mangled to become the default shell for the
-v8-juice project.
-
-Some changes from the original shell:
-
-- Binds most of the v8-juice add-on functions by default.
-
-- If the argv list contains "--", all arguments after that are ignored
-by the shell but passed on to each script which it runs. Each script
-gets a global arguments object, where arguments[0] is the name of the
-shell (it SHOULD be the name of the script, but it's not), and arguments
-1..N are those after the "--"
 
  ************************************************************************/
 
@@ -54,47 +45,22 @@ shell (it SHOULD be the name of the script, but it's not), and arguments
 
 #include "MyNative.h"
 #include <v8/juice/PathFinder.h>
-//#include <v8/juice/forwarding.h>
 //#include <v8/juice/ToSource.h>
 #include <v8/juice/JuiceShell.h>
 #include <v8/juice/ClassBinder.h>
 
-namespace bind = ::v8::juice::bind;
+//namespace bind = ::v8::juice::bind;
 
 v8::Handle<v8::Value> Quit(const v8::Arguments& args);
-v8::Handle<v8::String> ReadFile(const char* name);
 
-typedef v8::Handle<v8::ObjectTemplate> V8Object;
-typedef v8::Local<v8::Object> V8LObject;
-typedef v8::Handle<v8::Context> V8CxH;
-
-
-using namespace v8;
+using namespace ::v8;
 using namespace ::v8::juice;
 
 
 v8::juice::JuiceShell * ShellInstance = 0; 
 int main(int argc, char * argv[])
 {
-#define JSTR(X) v8::String::New(X)
-    if(0)
-    { /** fuck - SetFlagsFromCommandLine() changes argv such that the
-          "--" arg and those following it are stripped!
-       */
-        typedef std::vector<char *> AV;
-        AV vargv(static_cast<size_t>(argc), 0);
-        int i;
-        for( i = 0; i < argc; ++i )
-        {
-            vargv[(unsigned int)i] = argv[i];
-        }
-        v8::V8::SetFlagsFromCommandLine(&i, &vargv[0], true);
-    }
-    else
-    {
-        // or we could use the undocumented 3rd arg:
-        //v8::V8::SetFlagsFromCommandLine(&argc, argv, false);
-    }
+    //v8::V8::SetFlagsFromCommandLine(&argc, argv, false);
     {
         v8::HandleScope handle_scope;
         v8::juice::cleanup::CleanupSentry cleaner;
@@ -102,17 +68,10 @@ int main(int argc, char * argv[])
         ShellInstance = &shell;
         shell.ProcessMainArgv(argc,argv,1);
         shell.SetupJuiceEnvironment();
-        
-        if(1)
-        {
-            // my_test( context );
-            //my_class_test( context );
-            MyNative::SetupClass(shell.Context());
-            //my_tosource(context);
-            //my_bind_test( context );
-        }
+        MyNative::SetupClass(shell.Context());
         bool run_shell = (argc == 1);
         v8::Locker tlocker;
+        v8::TryCatch jtry;
         std::string const endofargs("--");
         for (int i = 1; i < argc; i++) {
             const char* str = argv[i];
@@ -127,20 +86,20 @@ int main(int argc, char * argv[])
             } else if (strcmp(str, "-e") == 0 && (i + 1 < argc)) {
                 // Execute argument given to -e option directly
                 v8::HandleScope handle_scope;
-                std::string source = (argv[i + 1] ? argv[i + 1] : "");
-                if (!shell.ExecuteString(source, "unnamed"))
+                std::string source(argv[i + 1] ? argv[i + 1] : "");
+                if (!shell.ExecuteString(source, "[-e script]", 0, &jtry))
                 {
                     return 1;
                 }
-                ++i; // skip eval'd string
-                continue;
+                ++i;
             } else {
                 // Use all other arguments as names of files to load and run.
-                v8::HandleScope handle_scope;
-                v8::Handle<v8::Value> rc = v8::juice::IncludeScript( str );
-                if (rc.IsEmpty())
+                shell.Include( str, false, &jtry );
+                if( jtry.HasCaught() )
                 {
-                    std::cerr << "Exiting because of exception via include().\n";
+                    std::cerr << "Exception while including ["<<str<<"]: "
+                              << convert::JSToStdString(jtry.Exception())
+                              <<'\n';
                     return 1;
                 }
                 continue;
@@ -155,13 +114,7 @@ int main(int argc, char * argv[])
         }
     }
     return 0;
-#undef JSTR
 }
-// Extracts a C string from a V8 Utf8Value.
-const char* ToCString(const v8::String::Utf8Value& value) {
-  return *value ? *value : "<string conversion failed>";
-}
-
 
 // The callback that is invoked by v8 whenever the JavaScript 'quit'
 // function is called.  Quits.
@@ -171,28 +124,5 @@ v8::Handle<v8::Value> Quit(const v8::Arguments& args) {
   int exit_code = args[0]->Int32Value();
   exit(exit_code);
   return v8::Undefined();
-}
-
-
-
-// Reads a file into a v8 string.
-v8::Handle<v8::String> ReadFile(const char* name) {
-  FILE* file = fopen(name, "rb");
-  if (file == NULL) return v8::Handle<v8::String>();
-
-  fseek(file, 0, SEEK_END);
-  int size = ftell(file);
-  rewind(file);
-
-  char* chars = new char[size + 1];
-  chars[size] = '\0';
-  for (int i = 0; i < size;) {
-    int read = fread(&chars[i], 1, size - i, file);
-    i += read;
-  }
-  fclose(file);
-  v8::Handle<v8::String> result = v8::String::New(chars, size);
-  delete[] chars;
-  return result;
 }
 

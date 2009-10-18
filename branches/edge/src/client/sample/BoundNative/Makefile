@@ -18,3 +18,17 @@ all: $(BoundNative.BIN)
 #package.install.man1 = BoundNative.1
 #subdirs: subdir-js
 #all: subdirs
+
+define RUN_TEST_BIN
+# $1 = run-name (must be unique)
+# $2 = Binary name
+# $3 = optional arg to binary
+run-$(1):
+	LD_LIBRARY_PATH="$(v8juice.builds.libv8juice):$${LD_LIBRARY_PATH}"; \
+	PATH="$(v8juice.builds.shell):$${PATH}"; \
+	echo ./$(2) $(3); \
+	rc=$$$$?; echo "[run-$(1) RC==$$$$rc]"; exit $$$$rc
+run: run-$(1)
+endef
+
+$(eval $(call RUN_TEST_BIN,BoundNative1,BoundNative,my.js))
