@@ -40,6 +40,59 @@ namespace v8 { namespace juice {
 	return PHX::instance();
     }
 
+    Handle<Value> IncludeScript( char const * filename, bool useSearchPath )
+    {
+        if( ! filename || !*filename )
+        {
+            return ThrowException(v8::String::New("IncludeScript() requires a non-empty filename argument!"));
+        }
+	HandleScope scope;
+	Handle<Value> rv = Undefined();
+	Handle<Value> exc;
+        // Man, everyone needs a different type of String value...
+        std::string const found = useSearchPath ? ScriptsPath().Find( filename ) : filename;
+        if( found.empty() )
+        {
+            std::ostringstream os;
+            os << "Could not find file ["<<filename<<"] in ScriptsPath()!";
+            return ThrowException(v8::String::New(os.str().c_str()));
+        }
+        filename = found.c_str();
+        if( !filename || !*filename )
+        {
+            return ThrowException(v8::String::New("Filename argument is empty!"));
+        }
+        std::ostringstream os;
+        {
+            std::ifstream is( filename );
+            if( ! is.good() )
+            {
+                os << "Error opening file "<<filename<<'!';
+                return ThrowException(v8::String::New(os.str().c_str()));
+            }
+            is >> std::noskipws;
+            std::copy( std::istream_iterator<char>(is),
+                       std::istream_iterator<char>(),
+                       std::ostream_iterator<char>(os) );
+        }
+        std::string src = os.str();
+        do
+        {
+            Handle<String> jsrc( String::New( src.c_str(), static_cast<int>( src.size() ) ) );
+            Handle<Script> Scr( Script::Compile( jsrc, convert::CastToJS(found) ) );
+            if( Scr.IsEmpty() )
+            {
+                return rv;
+            }
+            rv = Scr->Run();
+            if( rv.IsEmpty() )
+            {
+                return rv;
+            }            
+        } while(false);
+        return scope.Close(rv);
+    }
+
     Handle<Value> IncludeScript( Arguments const & argv )
     {
 	HandleScope scope;
@@ -50,60 +103,22 @@ namespace v8 { namespace juice {
 	    HandleScope handle_scope;
 	    // Man, everyone needs a different type of String value...
 	    std::string farg = convert::JSToStdString(argv[i]);
-	    std::string found = ScriptsPath().Find( farg );
+	    std::string const found = ScriptsPath().Find( farg );
 	    if( found.empty() )
 	    {
 		std::ostringstream os;
 		os << "Could not find file ["<<farg<<"] in ScriptsPath()!";
 		return ThrowException(v8::String::New(os.str().c_str()));
 	    }
-	    Handle<String> fnameS( String::New(found.c_str()) );
-	    String::Utf8Value fname( fnameS );
-	    if( !*fname || !**fname )
+            rv = IncludeScript( found.c_str(), false );
+	    if( ! rv.IsEmpty() )
 	    {
-		return ThrowException(v8::String::New("Filename argument is empty!"));
-	    }
-	    std::ostringstream os;
-	    {
-		std::ifstream is( *fname );
-		if( ! is.good() )
-		{
-		    os.str("");
-		    os << "Error opening file "<<*fname<<"!";
-		    return ThrowException(v8::String::New(os.str().c_str()));
-		}
-		is >> std::noskipws;
-		std::copy( std::istream_iterator<char>(is),
-                           std::istream_iterator<char>(),
-			   std::ostream_iterator<char>(os) );
-	    }
-	    std::string src = os.str();
-	    Handle<String> jsrc( String::New( src.c_str(), static_cast<int>( src.size() ) ) );
-	    do
-	    {
-		TryCatch tryer;
-		tryer.SetCaptureMessage(true);
-		tryer.SetVerbose(true);
-		Handle<Script> Scr( Script::Compile( jsrc, convert::CastToJS(found) ) );
-		if( Scr.IsEmpty() )
-		{
-		    exc = tryer.Exception();
-		    break;
-		}
-		rv = Scr->Run();
-		if( rv.IsEmpty() )
-		{
-		    //return ThrowException(tryer.Exception());
-		    exc = tryer.Exception();
-		    break;
-		}
-		//tryer.Reset();
-	    } while(false);
-	    if( ! exc.IsEmpty() )
-	    {
-		return ThrowException(exc);
-	    }
-            rv = handle_scope.Close(rv);
+                rv = handle_scope.Close(rv);
+            }
+            else
+            {
+                return rv;
+            }
 	}
         return scope.Close(rv);
     }

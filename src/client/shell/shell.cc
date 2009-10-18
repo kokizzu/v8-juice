@@ -84,8 +84,6 @@ http://code.google.com/p/v8-juice/issues/detail?id=N
 namespace bind = ::v8::juice::bind;
 
 void RunShell(v8::juice::JuiceShell & shell, std::ostream * out );
-v8::Handle<v8::Value> Print(const v8::Arguments& args);
-v8::Handle<v8::Value> Load(const v8::Arguments& args);
 v8::Handle<v8::Value> Quit(const v8::Arguments& args);
 v8::Handle<v8::Value> Version(const v8::Arguments& args);
 v8::Handle<v8::String> ReadFile(const char* name);
@@ -98,214 +96,6 @@ typedef v8::Handle<v8::Context> V8CxH;
 using namespace v8;
 using namespace ::v8::juice;
 
-
-struct my_native
-{
-    std::string str;
-private:
-    int proxied;
-public:
-    int propGetter() const
-    {
-        CERR << "my_native::propGetter()\n";
-        return this->proxied;
-    }
-    int propSetter(int v)
-    {
-        CERR << "my_native::propSetter("<<v<<")\n";
-        return this->proxied = v;
-    }
-    void propSetterVoid(int v)
-    {
-        CERR << "my_native::propSetterVoid("<<v<<")\n";
-        this->proxied = v;
-        return;
-    }
-    int func1() { return 42; }
-    int func2(int x) { return x*2; }
-    double func3(int x,int y)
-    {
-        CERR << "func3("<<x<<","<<y<<")\n";
-        return x*y;
-    }
-    std::string hi() { return "hi!"; }
-
-    my_native * me() { CERR << "my_native::me()="<<this<<'\n';return this; }
-    bool him(my_native * him) { CERR << "my_native::him("<<him<<")\n"; return 0 != him; }
-
-    void avoid() {CERR << "my_native::avoid()="<<this<<'\n'; }
-    void avoid1(int x ) {CERR << "my_native::avoid1("<<x<<")="<<this<<'\n'; }
-    void avoid2(int x,double d ) {CERR << "my_native::avoid2("<<x<<","<<d<<")="<<this<<'\n'; }
-
-    double takes3(int x, int y, int z) { return x * y * z; }
-
-    Handle<Value> forwarder( Arguments const & );
-
-    void someref1( my_native & x )
-    {
-        CERR << "someref1("<<&x<<")\n";
-        return;
-    }
-    BUG_NUMBER(11)
-    my_native & someref2( my_native & x )
-    {
-        CERR << "someref2("<<&x<<")\n";
-        return x;
-    }
-    BUG_NUMBER(11)
-    my_native const & someref3( my_native const & x )
-    {
-        CERR << "someref3("<<&x<<")\n";
-        return x;
-    }
-
-    my_native * other;
-    my_native() : str(),
-                  proxied(19),
-                  other(0)
-    {}
-    my_native * getOther() const
-    {
-        CERR << "my_native::getOther() =="<<this->other<<"\n";
-        return this->other;
-    }
-    void setOther(my_native * o)
-    {
-        CERR << "my_native::setOther("<<o<<")\n";
-        this->other = o;
-    }
-};
-
-namespace v8 { namespace juice {
-    //an experiment: 
-    //template <> struct WeakJSClassCreator_Opt_ShallowBind<my_native> : WeakJSClassCreator_Opt_Bool<true> {};
-    // ^^^ when enabled, breaks automatic conversions of JS-to-(my_native*).
-    template <>
-    struct WeakJSClassCreatorOps<my_native>
-    {
-    private:
-	/** Callback for use with juice::cleanup::AddToCleanup(). */
-	static void cleanup_callback( void * obj )
-	{
-	    Dtor( static_cast<WrappedType*>(obj) );
-	}
-    public:
-	enum { ExtraInternalFieldCount = 0 };
-	typedef my_native WrappedType;
-	static char const * ClassName() { return "MyNative"; }
-	static WrappedType * Ctor( Arguments const & argv,
-				   std::string & exceptionText)
-	{
-	    my_native * obj = new my_native;
-	    obj->str = "hi, world";
-	    CERR << "Ctor() create @"<<obj<<'\n';
-	    ::v8::juice::cleanup::AddToCleanup(obj,cleanup_callback);
-	    //bind::BindNative( 0, obj, obj );
-	    return obj;
-	}
-
-	static void Dtor( WrappedType * obj )
-	{
-	    CERR << "Dtor() passing on @"<<obj<<'\n';
-	    if( obj )
-	    {
-		//bind::UnbindNative( 0, obj, obj );
-		::v8::juice::cleanup::RemoveFromCleanup(obj);
-		delete obj;
-	    }
-	}
-    };
-
-}} // v8::juice
-
-#define WEAK_CLASS_TYPE my_native
-#include <v8/juice/WeakJSClassCreator-CastOps.h>
-
-
-int my_forwarded_func()
-{
-    CERR << "my_forwarded_func()!\n";
-    return 42;
-}
-int my_forwarded_func3(int x,int y,int z)
-{
-    CERR << "my_forwarded_func()!\n";
-    return x + y + z;
-}
-void my_void_forwarded_func(int x)
-{
-    CERR << "my_void_forwarded_func("<<x<<")!\n";
-}
-
-Handle<Value> my_native::forwarder( Arguments const & argv )
-{
-    v8::juice::convert::FwdToFunc( my_forwarded_func3, argv );
-    return v8::juice::convert::FwdToFunc3<int,int,int,int>( my_forwarded_func3, argv );
-}
-/**
-   Demonstration of adding a close() or destroy() member to
-   a bound class.
-*/
-Handle<Value> my_native_destroy( Arguments const & argv )
-{
-    if(1)
-    { // informational only: has no real effect:
-        int argc = argv.Length();
-        my_native * N = v8::juice::convert::CastFromJS<my_native>( argv.This() );
-        if( ! N ) return ThrowException(String::New("This object is not (or is no longer) a my_native!"));
-        CERR << "my_native_destroy( @"<<(void const *)N<<" )\n";
-    }
-    typedef v8::juice::ClassBinder<my_native> BinderType;
-    BinderType::DestroyObject(argv.This());
-    return Undefined();
-}
-
-int my_fwd( V8CxH const & cx )
-{
-    //typedef WeakJSClassCreator<my_native> WT;
-    typedef ClassBinder<my_native> WT;
-    //WT & w = WT::Instance();
-    WT w;
-    WT::SearchPrototypesForNative(true); // allows JS classes to subclass my_native
-    WT::AllowCtorWithoutNew(true);
-    //BindMemFunc( w, "func1", &my_native::func1 );
-    typedef my_native MY;
-    w
-        .BindMemFunc< int, &MY::func1>( "func1" )
-        .BindMemFunc< int, int, &MY::func2 >( "func2" )
-        .BindMemFunc< std::string,&MY::hi >( "hi" )
-        .BindMemFunc< MY *,&MY::me >( "me" )
-        .BindMemFunc< bool,MY *,&MY::him >( "him" )
-        .BindMemFunc< double,int,int,&MY::func3 >( "func3" )
-        .BindMemFunc< void,&MY::avoid >( "avoid" )
-        .BindMemFunc< void,int,&MY::avoid1 >( "avoid1" )
-        .BindMemFunc< void,int,double, &MY::avoid2 >( "avoid2" )
-        .BindMemFunc< double,int,int,int, &MY::takes3 >( "takes3" )
-        .BindMemVar<std::string, &MY::str>( "str" )
-        .BindMemFunc< &MY::forwarder >( "forwarder" )
-        .BindMemFunc< void, MY &, &MY::someref1 >( "someref1" )
-        .BindPropToAccessors< int, &MY::propGetter, int, int, &MY::propSetter >( "proxiedProp" )
-        .BindMemVar<my_native *, &MY::other>("other")
-        .BindPropToAccessors< MY *, &MY::getOther, void, MY *, &MY::setOther >( "otherProxy" )
-        //.BindPropToAccessors< int, &MY::propGetter, void, int, &MY::propSetterVoid >( "proxiedProp" )
-        //.BindPropToGetter< int, &MY::propGetter >( "proxiedProp" )
-        //.BindPropToSetter< void, int, &MY::propSetterVoid >( "proxiedProp" )
-        BUG_NUMBER(11)
-        //.BindMemFunc< MY &, MY &, &MY::someref2 >( "someref2" )
-        //.BindMemFunc< MY const &, MY const &, &MY::someref3 >( "someref3" )
-        .Set( "destroy", my_native_destroy )
-        ;
-#if 0
-    if( WT::OptShallowBind )
-    { // these should cause a compile-time error:
-        w.Inherit( w );
-        //w.InheritNative<MY>();
-    }
-#endif
-    w.Seal();
-    w.AddClassTo( cx->Global() );
-    return 0;
-}
 
 int my_tosource( V8CxH & cx )
 {
@@ -437,31 +227,7 @@ int my_bind_test( V8CxH & cx )
 }
 
 
-int my_class_test( V8CxH & cx )
-{
-#if 0
-    COUT << "Class tests...\n";
-    using namespace v8::juice;
-    using namespace v8;
-    using namespace v8::bind;
-    using namespace v8::convert;
-    char const * CName = "MyType";
-    typedef my_native NT;
 
-    //Handle<Object> jobj = WrapNative<my_native_dtor>( my
-
-    typedef ClassWrapper<CName,NT> CW;
-
-    CW & w = CW::Inst().
-	Init( cx->Global(), my_native_ctor )
-	;
-
-    COUT << "end ClassWrapper tests.\n";
-#endif
-    return 0;
-}
-
-static bool PrintUsesStdErr = false;
 
 v8::juice::JuiceShell * ShellInstance = 0; 
 int main(int argc, char * argv[])
@@ -483,7 +249,7 @@ int main(int argc, char * argv[])
     else
     {
         // or we could use the undocumented 3rd arg:
-        v8::V8::SetFlagsFromCommandLine(&argc, argv, false);
+        //v8::V8::SetFlagsFromCommandLine(&argc, argv, false);
     }
     {
         v8::HandleScope handle_scope;
@@ -494,29 +260,12 @@ int main(int argc, char * argv[])
         shell.SetupJuiceEnvironment();
 #define FT v8::FunctionTemplate::New
 #define BIND(K,V) shell.AddGlobalFunc( K, V )
-        BIND("print", Print);
-        BIND("load", Load);
         BIND("quit", Quit);
         BIND("version", Version);
 #undef BIND
 #undef FT
-        
-        if(1)
-        {
-            //v8::Handle<v8::Value> iv = v8::juice::sq3::SetupAddon( context->Global() );
-            v8::Handle<v8::Value> iv;
-            iv = v8::juice::SetupPathFinderClass( shell.Context()->Global() );
-            //iv = v8::juice::convert::SetupAddon( context->Global() );
-            //COUT << "SetupAddon() == " << v8::convert::CastFromJS<std::string>( iv ) << '\n';
-        }
-        if(1)
-        {
-            // my_test( context );
-            //my_class_test( context );
-            my_fwd(shell.Context());
-            //my_tosource(context);
-            //my_bind_test( context );
-        }
+
+        v8::TryCatch jtry;
         bool run_shell = (argc == 1);
         v8::Locker tlocker;
         std::string const endofargs("--");
@@ -524,7 +273,7 @@ int main(int argc, char * argv[])
             const char* str = argv[i];
             if( 0 == strcmp(str,"--print-cerr"))
             {
-                PrintUsesStdErr = true;
+                shell.AddGlobalFunc( "print", v8::juice::JuiceShell::PrintToCerr );
                 continue;
             }
             else if( endofargs == str )
@@ -543,24 +292,44 @@ int main(int argc, char * argv[])
             } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
                 // Execute argument given to -e option directly
                 v8::HandleScope handle_scope;
-                v8::Handle<v8::String> file_name = JSTR("unnamed");
-                v8::Handle<v8::String> source = JSTR(argv[i + 1]);
-                if (!shell.ExecuteString(source, file_name, 0))
+                std::string source(argv[i + 1] ? argv[i + 1] : "");
+                if (!shell.ExecuteString(source, "[-e script]", 0, &jtry))
                 {
                     return 1;
                 }
                 i++;
             } else {
                 // Use all other arguments as names of files to load and run.
+#if 0
                 v8::HandleScope handle_scope;
                 v8::Handle<v8::String> file_name = JSTR(str);
                 v8::Handle<v8::String> source = ReadFile(str);
                 if (source.IsEmpty()) {
-                    printf("Error reading '%s'\n", str);
+                    std::cerr << "Error reading file ["<<str<<"]!\n";
                     return 1;
                 }
                 if (!shell.ExecuteString(source, file_name, &std::cout))
+                {
+                    std::cerr << "Exception while including ["<<str<<"]\n";
                     return 1;
+                }
+#else
+                //CERR << "INCLUDE: "<<str<<'\n';
+                v8::Handle<v8::Value> rc =
+                    shell.Include( str, false, &jtry )
+                    //v8::juice::IncludeScript( str, false )
+                    ;
+                //CERR << "jtry.HasCaught() =="<<jtry.HasCaught()<<'\n';
+                //CERR << "shell.Include(): "<<convert::JSToStdString(rc)<<'\n';
+                //CERR << "rc.IsEmpty(): "<<rc.IsEmpty()<<'\n';
+                if(jtry.HasCaught())//rc.IsEmpty())
+                {
+                    std::cerr << "Exception while including ["<<str<<"]: "
+                              << convert::JSToStdString(jtry.Exception())
+                              <<'\n';
+                    return 1;
+                }
+#endif
             }
         }
         if (run_shell) RunShell( shell, &std::cout );
@@ -574,49 +343,6 @@ const char* ToCString(const v8::String::Utf8Value& value) {
 }
 
 
-// The callback that is invoked by v8 whenever the JavaScript 'print'
-// function is called.  Prints its arguments on stdout separated by
-// spaces and ending with a newline.
-v8::Handle<v8::Value> Print(const v8::Arguments& args) {
-  bool first = true;
-  std::ostream & os( PrintUsesStdErr ? std::cerr : std::cout );
-  for (int i = 0; i < args.Length(); i++) {
-    v8::HandleScope handle_scope;
-    if (first) {
-      first = false;
-    } else {
-	os << ' ';
-    }
-    v8::String::Utf8Value str(args[i]);
-    const char* cstr = ToCString(str);
-    if( cstr ) os << cstr;
-  }
-  os << '\n';
-  return v8::Undefined();
-}
-
-
-
-// The callback that is invoked by v8 whenever the JavaScript 'load'
-// function is called.  Loads, compiles and executes its argument
-// JavaScript file.
-v8::Handle<v8::Value> Load(const v8::Arguments& args) {
-  for (int i = 0; i < args.Length(); i++) {
-    v8::HandleScope handle_scope;
-    v8::String::Utf8Value file(args[i]);
-    if (*file == NULL) {
-      return v8::ThrowException(v8::String::New("Error loading file"));
-    }
-    v8::Handle<v8::String> source = ReadFile(*file);
-    if (source.IsEmpty()) {
-      return v8::ThrowException(v8::String::New("Error loading file"));
-    }
-    if (!ShellInstance->ExecuteString(source, v8::String::New(*file), 0, false)) {
-      return v8::ThrowException(v8::String::New("Error executing file"));
-    }
-  }
-  return v8::Undefined();
-}
 
 
 // The callback that is invoked by v8 whenever the JavaScript 'quit'
@@ -626,7 +352,7 @@ v8::Handle<v8::Value> Quit(const v8::Arguments& args) {
   // converts to the integer value 0.
   int exit_code = args[0]->Int32Value();
   exit(exit_code);
-  return v8::Undefined();
+  return v8::Undefined(); // won't happen
 }
 
 
@@ -659,8 +385,9 @@ v8::Handle<v8::String> ReadFile(const char* name) {
 // The read-eval-execute loop of the shell.
 void RunShell( v8::juice::JuiceShell & shell, std::ostream * out )
 {
+    v8::TryCatch jtry;
     if( out ) (*out) << "V8 version "<< v8::V8::GetVersion() << '\n';
-    shell.InputLoop( v8::juice::JuiceShell::StdinLineFetcher, out, true );
+    shell.InputLoop( v8::juice::JuiceShell::StdinLineFetcher, out, &jtry );
     if( out ) (*out) << std::endl;
 }
 

@@ -2,7 +2,6 @@
 #define CODE_GOOGLE_COM_V8_JUICE_JUICESHELL_H_INCLUDED 1
 
 #include <v8/juice/juice.h>
-#include <ostream>
 
 namespace v8 {
 namespace juice {
@@ -58,7 +57,6 @@ namespace juice {
     {
     private:
         Detail::JuiceShellImpl * impl;
-        void ReportException(v8::TryCatch* try_catch);
     public:
         /**
            A callback function signature for reporing JS-side
@@ -140,7 +138,12 @@ namespace juice {
            - setInterval() (v8::juice::setInterval())
            - clearTimeout() (v8::juice::clearTimeout())
            - clearInterval() (v8::juice::clearInterval())
+           - print() (see PrintToCout())
 
+           The following classes are added to the global object:
+
+           - PathFinder (see v8::juice::SetupPathFinderClass()).
+           
            The following properties are added to the global object:
 
            - none yet
@@ -154,6 +157,16 @@ namespace juice {
            std::cerr.
         */
         void SetExecuteErrorReporter( ErrorMessageReporter );
+        /**
+           Outputs an exception message using the current
+           error reporter function.
+
+           If try_catch or the current error reporter are
+           null then nothing is done.
+           
+           @see SetExecuteErrorReporter().
+        */
+        void ReportException(v8::TryCatch* try_catch);
 
         /**
            Executes the given source string in the current
@@ -173,19 +186,52 @@ namespace juice {
            Returns true if execution of the script generates no JS
            errors, else false.
         */
-        bool ExecuteString(v8::Handle<v8::String> source,
+        bool ExecuteString(v8::Handle<v8::String> const & source,
                            v8::Handle<v8::Value> name,
                            std::ostream * resultGoesTo = 0,
-                           bool reportExceptions = true);
+                           v8::TryCatch * reportExceptions = 0);
 
         /**
-           Convenience overload.
+           Convenience form of ExecuteString(source,"some default name", 0, reportExceptions).
+        */
+        bool ExecuteString(v8::Handle<v8::String> source, v8::TryCatch * reportExceptions = 0 );
+
+        /**
+           Convenience overload taking input from native strings.
         */
         bool ExecuteString(std::string const & source,
                            std::string const & name,
                            std::ostream * resultGoesTo = 0,
-                           bool reportExceptions = true);
+                           v8::TryCatch * reportExceptions = 0);
 
+        /**
+           Convenience form of ExecuteString(source,"some default name", 0, reportExceptions).
+        */
+        bool ExecuteString(std::string const & source, v8::TryCatch * reportExceptions = 0 );
+
+        /**
+           Similar to v8::juice::IncludeScript(), except for:
+
+           Due to limitations in v8's native API for
+           handling-then-propagating JS exceptions, this function
+           cannot use a private TryCatch object to intercept error
+           messages for reporting. So... if the fence argument is
+           non-null, and the inclusion of the script generated an
+           exception, the error will be reported via this object's
+           current error reporter. If fence is null then exception
+           reporting will be surpressed.
+
+           Returns the same as v8::juice::IncludeScript(), which is
+           the result of the final expression in the included script.
+           It will (theoretically) be IsEmpty() if an exception is
+           being propagated.
+        */
+        v8::Handle<v8::Value> Include( char const * source,
+                                      bool useSearchPath = true,
+                                      v8::TryCatch * fence = 0
+                                      );
+
+        
         /**
            Runs an interactive shell in a loop. It runs until the
            second argument passed to the input callback is set to true
@@ -195,7 +241,7 @@ namespace juice {
         */
         void InputLoop( LineFetcher input,
                         std::ostream * resultGoesTo = 0,
-                        bool reportExceptions = true );
+                        v8::TryCatch * reportExceptions = 0 );
         /**
            A LineFetcher() implementation which simply reads a single
            line from stdin and assigns the result (minus the newline
@@ -208,6 +254,20 @@ namespace juice {
         */
         static void StdinLineFetcher( std::string & dest, bool & breakOut );
 
+        /**
+           An v8::InvocationCallback implementation which implements a
+           JS-conventional print() routine, sending its output to
+           std::cout.
+        */
+        static Handle<Value> PrintToCout( Arguments const & argv );
+
+        /**
+           Identical to PrintToCout(), but sends its output to
+           std::cerr instead.
+        */
+        static Handle<Value> PrintToCerr( Arguments const & argv );
+
+        
     private:
         //!Copying is disabled.
         JuiceShell & operator=(JuiceShell const &);
