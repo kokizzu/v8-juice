@@ -80,6 +80,16 @@ namespace juice {
     Handle<Value> IncludeScript( Arguments const & argv );
 
     /**
+       EXPERIMENTAL.
+    
+       Works like the JS-bindable version, but takes a single script
+       name as its argument. If useSearchPath is false then the
+       ScriptsPath() path is not used for searching for the filename,
+       and it is assumed to resolve as-is.
+    */
+    Handle<Value> IncludeScript( char const * filename, bool useSearchPath = true );
+        
+    /**
        Escapes all single-quote characters in the given string by inserting
        backslashes before them. Returns the escaped string, which may be
        the same as the original.
@@ -97,6 +107,8 @@ namespace juice {
        Returns the modified string.
     */
     std::string StringJSQuote( std::string const & s );
+
+
 }} // namespace
 
 #endif // CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED
