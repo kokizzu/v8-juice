@@ -74,14 +74,13 @@ namespace juice {
     /**
        This can be registered as a JS function to provide an include()
        feature.  It reads the given file as JS, using the search path
-       specified by ScriptsPath(). Returns the result of evaluting the file,
-       or an exception on error.
+       specified by ScriptsPath(). Returns the result of evaluting the
+       file, throwing exception on error. The returned value will be
+       IsEmpty() if an exception is thrown or propagated.
     */
-    Handle<Value> IncludeScript( Arguments const & argv );
+    Handle<Value> IncludeScript( v8::Arguments const & argv );
 
     /**
-       EXPERIMENTAL.
-    
        Works like the JS-bindable version, but takes a single script
        name as its argument. If useSearchPath is false then the
        ScriptsPath() path is not used for searching for the filename,
@@ -95,6 +94,7 @@ namespace juice {
        the same as the original.
     */
     std::string StringJSEscape( std::string const & inp );
+
     /**
        Works like StringJSEscape(), but also adds outer quotes
        to the string. The type of quotes it adds is determined

@@ -47,10 +47,56 @@
 #endif
 #endif
 
+#if 0
+#ifndef CERR
+#include <iostream> /* only for debuggering */
+#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#endif
+#endif
+
+#if 1
+/*
+  Static assertion code taken from Alexandrescu's Modern C++ Design.
+
+  Args:
+
+  'test' is a compile-time condition which evaluates to true or
+  false. If false, it triggers the instantiation of an incomplete
+  class, with the error message encoded in the class name.
+
+  'errormsg' is an identifier which forms the error text (no spaces!).
+  e.g. Illegal_argument_combination.
+*/
+
+#   define JUICE_COMPILE_ASSERT(test, errormsg)                         \
+    do {                                                        \
+        struct ERROR_##errormsg {};                             \
+        typedef ::v8::juice::Detail::compile_assert< (test) != 0 > tmplimpl; \
+        tmplimpl aTemp = tmplimpl(ERROR_##errormsg());          \
+        (void) sizeof(aTemp);                                    \
+    } while (0)
+#else
+#   define JUICE_COMPILE_ASSERT(test, errormsg)                         \
+    do {(void)1;} while (0)
+#endif
+
 namespace v8 {
 namespace juice {
 
 #if !defined(DOXYGEN)
+
+    namespace Detail
+    {
+        template<bool> class compile_assert
+        {
+        public:
+            compile_assert(...) {}
+        };
+        
+        template<> class compile_assert<false>
+        {
+        };
+    }
     namespace Detail
     {
 	/**
@@ -182,7 +228,6 @@ namespace juice {
     template <typename T>
     struct WeakJSClassCreatorOps<T const *> : WeakJSClassCreatorOps<T> {};
 
-
     /**
        WeakOpsNoop is a helper for use in the early stages of
        implementing WeakJSClassCreatorOps specializations. The idea is
@@ -233,11 +278,32 @@ namespace juice {
        External::Value() as the source. This is faster but cause
        certain problems in conjunction with inheritance (he says, very
        vaguely).
+
+       Shallow-bound objects have (at least) the following
+       limitations:
+
+       - Conversions from Native-to-JS via the juice conversions API
+       will not work, as the native has no notion of its JS
+       representation.
+
+       - Inheritance will not work properly in all cases where bound
+       classes inherit other bound classes, or JS-side classes inherit
+       bound classes. e.g. virtual members inherited from the native
+       API may not be visible to the JS API.
     */
     template <typename T>
     struct WeakJSClassCreator_Opt_ShallowBind : WeakJSClassCreator_Opt_Bool<false>
     {};
-    
+
+    /**
+       This template defines the default value of
+       WeakJSClassCreator<T>::AllowCtorWithoutNew(). Specializations
+       may redefine the inherited 'value' member.
+    */
+    template <typename T>
+    struct WeakJSClassCreator_Opt_AllowCtorWithoutNew : WeakJSClassCreator_Opt_Bool<true>
+    {};
+
     /**
        WeakJSClassCreator is a tool to simplify the creation of new
        wrapped classes, including addition of automatic cleanup handling
@@ -351,19 +417,17 @@ namespace juice {
        the JSClassCreator base class, and there are several static
        member functions for "casting" between the JS/Native worlds
        and for destroying instances of the generated class.
-
-       TODO(?):
-
-       - Consider how we can add support for C++-side subclassing,
-       such that we can convert a (SubType*) to-a (Type*). Adding
-       another template arg here may screw up client-side usage, as
-       all clients would need to know each of the exact templatized
-       types.
     */
     template <typename WrappedT>
     class WeakJSClassCreator : public JSClassCreator
     {
     public:
+        /**
+           See WeakJSClassCreator_Opt_ShallowBind<> for the complete
+           docs.
+        */
+        static const bool OptShallowBind = WeakJSClassCreator_Opt_ShallowBind<WrappedT>::value;
+
 	/**
 	   The WeakJSClassCreatorOps specialization used by this
 	   class.
@@ -395,20 +459,24 @@ namespace juice {
             static int bob[OptCount] =
                 {
                 0, // OptSearchPrototypesForNative
-                0  // OptAllowCtorWithoutNew
+                WeakJSClassCreator_Opt_AllowCtorWithoutNew<WrappedT>::value ? 1 : 0  // OptAllowCtorWithoutNew
                 };
             return bob;
         }
 
         typedef WrappedType * (*SubclassGetNative)( void const * );
         typedef std::set<SubclassGetNative> SubclassGetNatives;
+
         /** Internal helper to do subtype lookups for GetSelf(). */
         static SubclassGetNatives & subclassGettersN()
         {
             static SubclassGetNatives bob;
             return bob;
         }
-        /** Internal helper to do subtype lookups for GetSelf(). */
+        /** Internal helper to do subtype lookups for GetSelf().
+            SubT MUST NOT be WrappedType, or an endless loop
+            may lead to a stack overflow.
+         */
         template <typename SubT>
         static WrappedType * GetInheritedNative( void const * key )
         {
@@ -416,14 +484,17 @@ namespace juice {
             typedef typename OpsT::WrappedType RealT;
             return Detail::WrapperMapper<RealT>::GetNative( key );
         }
+
         typedef Handle<Object> (*SubclassGetJSObject)( void const * );
         typedef std::set<SubclassGetJSObject> SubclassGetJSObjects;
+
         /** Internal helper to do subtype lookups for GetJSObject(). */
         static SubclassGetJSObjects & subclassGettersJ()
         {
             static SubclassGetJSObjects bob;
             return bob;
         }
+
         /** Internal helper to do subtype lookups for GetJSObject(). */
         template <typename SubT>
         static Handle<Object> GetInheritedJSObject( void const * key )
@@ -454,10 +525,7 @@ namespace juice {
             }
         }
 
-        static const bool shallowBind = WeakJSClassCreator_Opt_ShallowBind<WrappedT>::value;
-
     public:
-
 	/**
 	   Starts the setup of a new class. It will be populated into
 	   the target object when Seal() is called.  See the
@@ -522,10 +590,14 @@ namespace juice {
            GetJSObject(), and GetNative() using type
            WeakJSClassCreator<WrappedT> might actually return an
            object of SubT instead.
+
+           FIXME: use metatemplates to determine if SubT is the same
+           type as WrappedType.
          */
         template <typename SubT>
         static void RegisterSelfSubclass()
-        {              
+        {
+            JUICE_COMPILE_ASSERT((!OptShallowBind),RegisterSelfSubclass_cannot_work_because_OptShallowBind_is_true);
             typedef WeakJSClassCreatorOps<SubT> SubOpsT;
             if( static_cast<int>(SubOpsT::ExtraInternalFieldCount)
                 != static_cast<int>(ClassOpsType::ExtraInternalFieldCount) )
@@ -541,11 +613,32 @@ namespace juice {
         }
 
         using JSClassCreator::Inherit;
+
+        /**
+           Reimplemented to throw a std::exception if OptShallowBind
+           is true, as inheritance cannot work properly when the
+           shallow binding optimization is enabled. To get a compile-time
+           error in this case, use the non-inherited Inherit() overload
+           or InheritNative().
+        */
+	virtual JSClassCreator & Inherit( v8::Handle< v8::FunctionTemplate > parent )
+        {
+            if( OptShallowBind )
+            {
+                //JUICE_COMPILE_ASSERT((OptShallowBind==false),WeakJSClassCreator_T_Inherit_cannot_work_because_WeakJSClassCreator_T_OptShallowBind_is_true);
+                throw std::runtime_error("WeakJSClassCreator<T> cannot work for this type because WeakJSClassCreator<T>::OptShallowBind is true!");
+            }
+            return this->JSClassCreator::Inherit( parent );
+        }
         
         /**
            This sets up "native" inheritance, such that bound
            WrappedType objects can be converted to a baser type.
 
+           Calling this function will trigger a compile-time error if
+           OptShallowBind is on, since inheritance cannot work in that
+           case.
+           
            ParentT must meet these requirements:
 
            - WeakJSClassCreatorOps<ParentT>::WrappedType must be a
@@ -583,8 +676,9 @@ namespace juice {
         template <typename ParentT>
         WeakJSClassCreator & Inherit( WeakJSClassCreator<ParentT> & parent )
         {
+            JUICE_COMPILE_ASSERT((!OptShallowBind),Inherit_cannot_work_because_OptShallowBind_is_true);
             this->template InheritNative<ParentT>();
-            JSClassCreator::Inherit( parent );
+            this->Inherit( parent.CtorTemplate() );
             return *this;
         }
 
@@ -615,10 +709,22 @@ namespace juice {
 	    Local<Value> lv( h->GetInternalField(NativeFieldIndex) );
             if( lv.IsEmpty() || !lv->IsExternal() ) return GetSelfFromPrototype(h,checkSubtypes);
 	    Local<External> ex( External::Cast(*lv) );
-            if( shallowBind )
+            if( OptShallowBind )
             {
                 //CERR << "SHALLOW-CASTING GetSelf()!\n";
-                return static_cast<WrappedType*>( ex->Value() );
+                WrappedType * obj = static_cast<WrappedType*>( ex->Value() );
+#if 0
+                /**
+                   To consider: we could do a lookup in
+                   bind::GetBoundNative(), as that would allow the
+                   cases where the client explicitly bound the object.
+                */
+                if( ! obj )
+                {
+                    obj = ::v8::juice::bind::GetBoundNative<WrappedType>( ex->Value() );
+                }
+#endif
+                return obj;
             }
             else
             {
@@ -744,15 +850,30 @@ namespace juice {
 	*/
 	static Handle<Object> GetJSObject( void const * obj, bool checkSubclasses = true )
 	{
-            Handle<Object> jo = TypeCheck::GetJSObject(obj);
-            if( !checkSubclasses || !jo.IsEmpty() ) return jo;
-            typename SubclassGetJSObjects::iterator it = subclassGettersJ().begin();
-            typename SubclassGetJSObjects::iterator et = subclassGettersJ().end();
-            for( ; (et != it) && jo.IsEmpty(); ++it )
+            if( OptShallowBind )
             {
-                jo = (*it)( obj );
+                static char const * msg = "WeakJSClassCreator<T>::GetJSObject() cannot work for this type because WeakJSClassCreator<T>::OptShallowBind is true!";
+                v8::ThrowException(v8::String::New(msg));
+                /** Reminder: we cannot static assert here because
+                    this code gets generated for all wrapped types,
+                    but not all may actually USE these conversions.
+                 */
+                //JUICE_COMPILE_ASSERT((OptShallowBind==false),WeakJSClassCreator_T_GetJSObject_cannot_work_for_this_type_because_WeakJSClassCreator_T_OptShallowBind_is_true);
+                return v8::Handle<v8::Object>();
             }
-            return jo;
+            else
+            {
+                Handle<Object> jo = TypeCheck::GetJSObject(obj);
+                if( !checkSubclasses || !jo.IsEmpty() ) return jo;
+                typename SubclassGetJSObjects::iterator it = subclassGettersJ().begin();
+                typename SubclassGetJSObjects::iterator et = subclassGettersJ().end();
+                for( ; (et != it) && jo.IsEmpty(); ++it )
+                {
+                    jo = (*it)( obj );
+                }
+                return jo;
+            }
+            // won't get here
 	}
 
         // Without this, gcc isn't seeing the two-arg overload!
@@ -837,7 +958,7 @@ namespace juice {
 	    jobj->SetInternalField(NativeFieldIndex,Null());
 	    pv.Dispose();
 	    pv.Clear();
-            if( ! shallowBind )
+            if( ! OptShallowBind )
             {
                 TypeCheckIter it = typeCheck().find( nobj );
                 if( typeCheck().end() == it ) // serious error
@@ -867,7 +988,7 @@ namespace juice {
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
 	    self->SetInternalField( NativeFieldIndex, External::New(obj) );
-            if( ! shallowBind )
+            if( ! OptShallowBind )
             {
                 typeCheck().insert( std::make_pair( obj, std::make_pair( obj, self ) ) );
             }
