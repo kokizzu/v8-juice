@@ -300,28 +300,8 @@ int main(int argc, char * argv[])
                 i++;
             } else {
                 // Use all other arguments as names of files to load and run.
-#if 0
-                v8::HandleScope handle_scope;
-                v8::Handle<v8::String> file_name = JSTR(str);
-                v8::Handle<v8::String> source = ReadFile(str);
-                if (source.IsEmpty()) {
-                    std::cerr << "Error reading file ["<<str<<"]!\n";
-                    return 1;
-                }
-                if (!shell.ExecuteString(source, file_name, &std::cout))
-                {
-                    std::cerr << "Exception while including ["<<str<<"]\n";
-                    return 1;
-                }
-#else
-                //CERR << "INCLUDE: "<<str<<'\n';
                 v8::Handle<v8::Value> rc =
-                    shell.Include( str, false, &jtry )
-                    //v8::juice::IncludeScript( str, false )
-                    ;
-                //CERR << "jtry.HasCaught() =="<<jtry.HasCaught()<<'\n';
-                //CERR << "shell.Include(): "<<convert::JSToStdString(rc)<<'\n';
-                //CERR << "rc.IsEmpty(): "<<rc.IsEmpty()<<'\n';
+                    shell.Include( str, false, &jtry );
                 if(jtry.HasCaught())//rc.IsEmpty())
                 {
                     std::cerr << "Exception while including ["<<str<<"]: "
@@ -329,7 +309,6 @@ int main(int argc, char * argv[])
                               <<'\n';
                     return 1;
                 }
-#endif
             }
         }
         if (run_shell) RunShell( shell, &std::cout );
@@ -337,13 +316,6 @@ int main(int argc, char * argv[])
     return 0;
 #undef JSTR
 }
-// Extracts a C string from a V8 Utf8Value.
-const char* ToCString(const v8::String::Utf8Value& value) {
-  return *value ? *value : "<string conversion failed>";
-}
-
-
-
 
 // The callback that is invoked by v8 whenever the JavaScript 'quit'
 // function is called.  Quits.
@@ -358,28 +330,6 @@ v8::Handle<v8::Value> Quit(const v8::Arguments& args) {
 
 v8::Handle<v8::Value> Version(const v8::Arguments& args) {
   return v8::String::New(v8::V8::GetVersion());
-}
-
-
-// Reads a file into a v8 string.
-v8::Handle<v8::String> ReadFile(const char* name) {
-  FILE* file = fopen(name, "rb");
-  if (file == NULL) return v8::Handle<v8::String>();
-
-  fseek(file, 0, SEEK_END);
-  int size = ftell(file);
-  rewind(file);
-
-  char* chars = new char[size + 1];
-  chars[size] = '\0';
-  for (int i = 0; i < size;) {
-    int read = fread(&chars[i], 1, size - i, file);
-    i += read;
-  }
-  fclose(file);
-  v8::Handle<v8::String> result = v8::String::New(chars, size);
-  delete[] chars;
-  return result;
 }
 
 // The read-eval-execute loop of the shell.
