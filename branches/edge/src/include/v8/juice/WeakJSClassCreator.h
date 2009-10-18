@@ -613,7 +613,7 @@ namespace juice {
         }
 
         using JSClassCreator::Inherit;
-#if 1
+
         /**
            Reimplemented to throw a std::exception if OptShallowBind
            is true, as inheritance cannot work properly when the
@@ -630,8 +630,6 @@ namespace juice {
             }
             return this->JSClassCreator::Inherit( parent );
         }
-        //#else
-#endif
         
         /**
            This sets up "native" inheritance, such that bound
