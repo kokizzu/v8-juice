@@ -83,13 +83,12 @@ http://code.google.com/p/v8-juice/issues/detail?id=N
 
 namespace bind = ::v8::juice::bind;
 
-void RunShell(v8::juice::JuiceShell & shell );
+void RunShell(v8::juice::JuiceShell & shell, std::ostream * out );
 v8::Handle<v8::Value> Print(const v8::Arguments& args);
 v8::Handle<v8::Value> Load(const v8::Arguments& args);
 v8::Handle<v8::Value> Quit(const v8::Arguments& args);
 v8::Handle<v8::Value> Version(const v8::Arguments& args);
 v8::Handle<v8::String> ReadFile(const char* name);
-void ReportException(v8::TryCatch* handler);
 
 typedef v8::Handle<v8::ObjectTemplate> V8Object;
 typedef v8::Local<v8::Object> V8LObject;
@@ -564,7 +563,7 @@ int main(int argc, char * argv[])
                     return 1;
             }
         }
-        if (run_shell) RunShell( shell );
+        if (run_shell) RunShell( shell, &std::cout );
     }
     return 0;
 #undef JSTR
@@ -657,59 +656,11 @@ v8::Handle<v8::String> ReadFile(const char* name) {
   return result;
 }
 
-
 // The read-eval-execute loop of the shell.
-void RunShell( v8::juice::JuiceShell & shell )
+void RunShell( v8::juice::JuiceShell & shell, std::ostream * out )
 {
-    std::cout << "V8 version "<< v8::V8::GetVersion() << '\n';
-    v8::Handle<v8::Context> context( shell.Context() );
-    static const int kBufferSize = 256;
-    while (true)
-    {
-        char buffer[kBufferSize];
-        printf("> ");
-        char* str = fgets(buffer, kBufferSize, stdin);
-        if (str == NULL) break;
-        v8::HandleScope handle_scope;
-        shell.ExecuteString(v8::String::New(str),
-                            v8::String::New("(shell)"),
-                            &std::cout,
-                            true);
-    }
-    std::cout << '\n';
-}
-
-
-
-void ReportException(v8::TryCatch* try_catch) {
-  v8::HandleScope handle_scope;
-  v8::String::Utf8Value exception(try_catch->Exception());
-  const char* exception_string = ToCString(exception);
-  v8::Handle<v8::Message> message = try_catch->Message();
-  if (message.IsEmpty()) {
-    // V8 didn't provide any extra information about this error; just
-    // print the exception.
-    printf("%s\n", exception_string);
-  } else {
-    // Print (filename):(line number): (message).
-    v8::String::Utf8Value filename(message->GetScriptResourceName());
-    const char* filename_string = ToCString(filename);
-    int linenum = message->GetLineNumber();
-    printf("%s:%i: %s\n", filename_string, linenum, exception_string);
-    // Print line of source code.
-    v8::String::Utf8Value sourceline(message->GetSourceLine());
-    const char* sourceline_string = ToCString(sourceline);
-    printf("%s\n", sourceline_string);
-    // Print wavy underline (GetUnderline is deprecated).
-    int start = message->GetStartColumn();
-    for (int i = 0; i < start; i++) {
-      printf(" ");
-    }
-    int end = message->GetEndColumn();
-    for (int i = start; i < end; i++) {
-      printf("^");
-    }
-    printf("\n");
-  }
+    if( out ) (*out) << "V8 version "<< v8::V8::GetVersion() << '\n';
+    shell.InputLoop( v8::juice::JuiceShell::StdinLineFetcher, out, true );
+    if( out ) (*out) << std::endl;
 }
 

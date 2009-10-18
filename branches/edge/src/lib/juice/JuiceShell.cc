@@ -9,6 +9,7 @@
 #include <string>
 #include <iostream> // cout/cerr
 #include <sstream>
+#include <iterator>
 
 #if 0
 #ifndef CERR
@@ -228,4 +229,54 @@ namespace juice {
         return this->ExecuteString( s, n, resultGoesTo, reportExceptions );
     }
 
+    void JuiceShell::StdinLineFetcher( std::string & dest, bool & breakOut )
+    {
+        breakOut = false;
+        std::cout << "> ";
+        std::cout.flush();
+        std::ostringstream os;
+        std::istream & is( std::cin );
+        is >> std::noskipws;
+        char x;
+        size_t pos = 0;
+        while(true)
+        {
+            is >> x;
+            if( is.eof() )
+            {
+                breakOut = true;
+                break;
+            }
+            if( ('\n' == x) || ('\r' == x) ) break;
+            if( !(pos++) && !x )
+            {
+                breakOut = true;
+                break;
+            }
+            os << x;
+        }
+        dest = os.str();
+        return;
+    }
+    
+    void JuiceShell::InputLoop( LineFetcher input,
+                                std::ostream * os,
+                                bool reportExceptions )
+    {
+        std::string sbuf;
+        bool dobreak = false;
+        while( true )
+        {
+            sbuf.clear();
+            input( sbuf, dobreak );
+            if( dobreak )
+            {
+                break;
+            }
+            v8::HandleScope handle_scope;
+            this->ExecuteString(sbuf, "(JuiceShell::InputLoop())", os, true);
+        }
+    }
+
+    
 }} // namespaces
