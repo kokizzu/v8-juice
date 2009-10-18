@@ -202,10 +202,19 @@ namespace v8 { namespace juice { namespace whio {
     };
 
 
-
-
 } // namespace whio
 
+#if 1 // just to test some inheritance-related stuff:
+    template <>
+    struct WeakJSClassCreator_Opt_ShallowBind<whio::StreamBase>
+        : WeakJSClassCreator_Opt_Bool<false>
+    {};
+    template <>
+    struct WeakJSClassCreator_Opt_ShallowBind<whio::OutStream>
+        : WeakJSClassCreator_Opt_Bool<false>
+    {};
+#endif
+    
     /** Specialization needed by WeakJSClassCreator. */
     template <>
     struct WeakJSClassCreatorOps<whio::StreamBase> :
