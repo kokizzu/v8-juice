@@ -10,7 +10,6 @@
 
 #include <v8.h>
 #include <v8/juice/convert.h>
-#include <v8/juice/forwarding.h>
 #include <v8/juice/WeakJSClassCreator.h>
 #include <stdexcept>
 namespace v8 {
@@ -46,10 +45,6 @@ namespace juice {
 	{
 	    enum { Arity = 0 };
 	    template <typename T, typename RV>
-
-            /**
-               Calls (obj->*MemFunc)().
-            */
 	    static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
 	    {
 		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
@@ -57,9 +52,6 @@ namespace juice {
 		return convert::CastToJS<RV>( (obj->*MemFunc)() );
 	    }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
 	    template <typename T, typename RV>
 	    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
 	    {
@@ -68,9 +60,6 @@ namespace juice {
 		return convert::CastToJS<RV>( (obj->*MemFunc)() );
 	    }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
 	    template <typename T>
 	    static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
 	    {
@@ -80,9 +69,6 @@ namespace juice {
 		return Undefined();
 	    }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
 	    template <typename T>
 	    static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
 	    {
@@ -108,10 +94,6 @@ namespace juice {
         template <>
 	struct WeakMemFuncCaller<0> : MemFuncCaller<0>
 	{
-            /**
-               Extracts a native This object from argv and calls (obj->*func)().
-               Returns the result of converting the native result back to JS.
-            */
 	    template <typename WeakWrappedType, typename RV>
 	    static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)(), Arguments const & argv )
 	    {
@@ -123,10 +105,6 @@ namespace juice {
 		return Call( obj, func, argv );
 	    }
 
-            /**
-               Extracts a native This object from argv and calls (obj->*func)().
-               Returns the result of converting the native result back to JS.
-            */
 	    template <typename WeakWrappedType, typename RV>
 	    static Handle<Value> CallOnWeakSelf( const RV (WeakWrappedType::*func)() const, Arguments const & argv )
 	    {
@@ -138,10 +116,6 @@ namespace juice {
 		return Call( obj, func, argv );
 	    }
 
-            /**
-               Extracts a native This object from argv and calls (obj->*func)().
-               Returns the result of converting the native result back to JS.
-            */
 	    template <typename WeakWrappedType>
 	    static Handle<Value> CallOnWeakSelf( void (WeakWrappedType::*func)(), Arguments const & argv )
 	    {
@@ -153,10 +127,6 @@ namespace juice {
 		return Call( obj, func, argv );
 	    }
 
-            /**
-               Extracts a native This object from argv and calls (obj->*func)().
-               Returns the result of converting the native result back to JS.
-            */
 	    template <typename WeakWrappedType>
 	    static Handle<Value> CallOnWeakSelf( const void (WeakWrappedType::*func)() const, Arguments const & argv )
 	    {
@@ -183,20 +153,10 @@ namespace juice {
 	    enum { Arity = 0 };
 	    typedef RV (T::*FuncSig)();
 	    typedef WeakMemFuncCaller<0> OpBase;
-            /**
-               Calls (obj->*Func)(), extracting the arguments from argv.
-               Returns the native-to-JS-converted result of that function.
-            */
 	    static Handle<Value> Call( Type * obj, Arguments const & argv )
 	    {
 		return OpBase::Call( obj, Func, argv );
 	    }
-            /**
-               Extracts a native T object from argv and calls
-               (obj->*Func)(), extracting the arguments from argv.
-               Returns the native-to-JS-converted result of that
-               function.
-            */
 	    static Handle<Value> CallOnWeakSelf( Arguments const & argv )
 	    {
 		return OpBase::CallOnWeakSelf<Type>( Func, argv );
@@ -323,6 +283,31 @@ namespace juice {
 	return Caller::CallOnWeakSelf<const NativeType>( MemFunc, argv );
     }
 #endif
+
+    /**
+       InvocationCallbackMember is a helper type for binding InvocationCallback-like
+       member functions. It requires that T be supported by CastFromJS(). The Func
+       template parameter is the member invocation callback which we want to proxy.
+    */
+    template <typename T,
+              ::v8::Handle< ::v8::Value > (T::*Func)( ::v8::Arguments const & argv )
+              >
+    struct InvocationCallbackMember
+    {
+	/**
+           Extracts a native T object from argv using
+           CastFromJS(argv.This()) and passes the call on to
+           obj->Func(). If no object can be found it throws a JS
+           exception, otherwise it returns the result of the proxied
+           call.
+	*/
+	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
+	{
+            T * self = convert::CastFromJS<T>( argv.This() );
+            if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
+            return (self->*Func)( argv );
+	}
+    };
 
 
     /**
@@ -488,13 +473,13 @@ namespace juice {
 
         /**
            Binds the member specified as a template parameter. Note that
-           the signature is that defined by the convert::InvocationCallbackMember
+           the signature is that defined by the InvocationCallbackMember
            type.
         */
         template < Handle<Value> (WrappedType::*Func)( Arguments const & ) >
         ClassBinder & BindMemFunc( char const * name )
         {
-            this->Set(name, convert::InvocationCallbackMember<WrappedType,Func>::Call );
+            this->Set(name, InvocationCallbackMember<WrappedType,Func>::Call );
             return *this;
         }
 
@@ -543,16 +528,16 @@ namespace juice {
 	    return *this;
 	}
 
-#include "ClassBinder-BindMemFunc.h" // generated code
-        
     private:
-        /**
-           Internal implementation helper for BindPropToAccessors() and
-           BindPropToGetter().
+        /** EXPERIMENTAL!
 
-           Implements v8::AccessorGetter interface to proxy a given
-           property through a WrappedType member function.
+            Internal implementation helper for BindPropToAccessors() and
+            BindPropToGetter().
+
+            Implements v8::AccessorGetter interface to proxy a given
+            property through a WrappedType member function.
         */
+        // 
 	template <typename RV, RV (WrappedType::*Func)() const>
         static Handle<Value> propGetter( Local< String > /*ignored*/, const AccessorInfo & info )
         {
@@ -560,7 +545,6 @@ namespace juice {
             if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
             return convert::CastToJS( (self->*Func)() );
         }
-
         /**
            Overload to allow a non-const getter.
         */
@@ -573,11 +557,11 @@ namespace juice {
         }
 
         /**
-           Internal implementation helper for BindPropToAccessors() and
-           BindPropToGetter().
+            Internal implementation helper for BindPropToAccessors() and
+            BindPropToGetter().
 
-           Implements v8::AccessorSetter interface to proxy a given
-           property through a WrappedType member function.
+            Implements v8::AccessorSetter interface to proxy a given
+            property through a WrappedType member function.
         */
         template <typename RV, typename ArgT, RV (WrappedType::*Func)(ArgT)>
         static void propSetter(v8::Local< v8::String > property, v8::Local< v8::Value > value, const v8::AccessorInfo &info)
@@ -694,6 +678,8 @@ namespace juice {
 	    return *this;
 	}
 #endif
+
+#include "ClassBinder-BindMemFunc.h" // generated code
 
     }; // class ClassBinder
 

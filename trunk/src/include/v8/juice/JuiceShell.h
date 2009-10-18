@@ -2,6 +2,7 @@
 #define CODE_GOOGLE_COM_V8_JUICE_JUICESHELL_H_INCLUDED 1
 
 #include <v8/juice/juice.h>
+#include <ostream>
 
 namespace v8 {
 namespace juice {
@@ -57,7 +58,9 @@ namespace juice {
     {
     private:
         Detail::JuiceShellImpl * impl;
+        void ReportException(v8::TryCatch* try_catch);
     public:
+        typedef void (*ErrorMessageReporter)( char const * msg );
         /**
            Initialize a v8 context and global object belonging to this object.
 
@@ -72,6 +75,7 @@ namespace juice {
            another question entirely).
         */
         ~JuiceShell();
+
         /** Binds the given function to the global object. */
         void AddGlobalFunc( char const * name, v8::Handle<v8::Function> const & f );
         
@@ -124,6 +128,43 @@ namespace juice {
            - none yet
         */
         void SetupJuiceEnvironment();
+
+        /**
+           Sets the error reporter function used by
+           ExecuteString().
+        */
+        void SetExecuteErrorReporter( ErrorMessageReporter );
+
+        /**
+           Executes the given source string in the current
+           context.
+
+           If resultGoesTo is not null and the result is neither an
+           error nor undefined, then the result is converted to a
+           string and send to that stream.
+
+           If reportExceptions is true then JS-side exceptions will
+           trigger a call to the error reporter defined via
+           SetExecuteErrorReporter() (or the default, which sends the
+           exception to std::cerr). The error reporter will get passed
+           a formatted error message (possible multiple lines)
+           detailing, if possible, the exact location of the error.
+
+           Returns true if execution of the script generates no JS
+           errors, else false.
+        */
+        bool ExecuteString(v8::Handle<v8::String> source,
+                           v8::Handle<v8::Value> name,
+                           std::ostream * resultGoesTo = 0,
+                           bool reportExceptions = true);
+
+        /**
+           Convenience overload.
+        */
+        bool ExecuteString(std::string const & source,
+                           std::string const & name,
+                           std::ostream * resultGoesTo = 0,
+                           bool reportExceptions = true);
         
     private:
         //!Copying is disabled.
