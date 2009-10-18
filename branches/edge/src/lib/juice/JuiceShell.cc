@@ -7,6 +7,8 @@
 
 #include <vector>
 #include <string>
+#include <iostream> // cout/cerr
+#include <sstream>
 
 #if 0
 #ifndef CERR
@@ -20,6 +22,10 @@ namespace juice {
 
     namespace Detail
     {
+        static void DefaultErrorMessageReporter( char const * msg )
+        {
+            if( msg && *msg ) std::cerr << msg << '\n';
+        }
         class JuiceShellImpl
         {
         public:
@@ -29,13 +35,15 @@ namespace juice {
             v8::Handle<v8::Context> context;
             v8::Context::Scope context_scope;
             v8::Handle<v8::Object> global;
+            v8::juice::JuiceShell::ErrorMessageReporter reporter;
             JuiceShellImpl()
                 :
                 //handle_scope(),
                 globt( v8::ObjectTemplate::New() ),
                 context( v8::Context::New(NULL, globt) ),
                 context_scope(context),
-                global( context->Global() )
+                global( context->Global() ),
+                reporter( DefaultErrorMessageReporter )
             {
             }
             ~JuiceShellImpl()
@@ -119,5 +127,105 @@ namespace juice {
         BIND("clearInterval", v8::juice::clearInterval);
 #undef BIND
     }
+
+    void JuiceShell::SetExecuteErrorReporter( ErrorMessageReporter r )
+    {
+        this->impl->reporter = r;
+    }
     
+    void JuiceShell::ReportException(v8::TryCatch* try_catch)
+    {
+        if( ! this->impl->reporter ) return;
+
+        v8::HandleScope handle_scope;
+        v8::String::Utf8Value exception(try_catch->Exception());
+        //std::string const exception_stdstr = convert::CastFromJS<std::string>( exception
+#define TOCSTR(X) (*X ? *X : "<exception string conversion failed!>")
+        const char* exception_string = TOCSTR(exception);
+        v8::Handle<v8::Message> message = try_catch->Message();
+        std::ostringstream os;
+        if (message.IsEmpty())
+        {
+            // V8 didn't provide any extra information about this error; just
+            // print the exception.
+            os << exception_string << '\n';
+        }
+        else
+        {
+            // Print (filename):(line number): (message).
+            v8::String::Utf8Value filename(message->GetScriptResourceName());
+            const char* filename_string = TOCSTR(filename);
+            int linenum = message->GetLineNumber();
+            os << filename_string << ':'
+               << linenum << ": "
+               << exception_string << '\n';
+            // Print line of source code.
+            v8::String::Utf8Value sourceline(message->GetSourceLine());
+            const char* sourceline_string = TOCSTR(sourceline);
+#undef TOCSTR
+            os << sourceline_string << '\n';
+            // Print wavy underline (GetUnderline is deprecated).
+            int start = message->GetStartColumn();
+            for (int i = 0; i < start; i++) {
+                os << ' ';
+            }
+            int end = message->GetEndColumn();
+            for (int i = start; i < end; i++) {
+                os << '^';
+            }
+            os << '\n';
+        }
+        std::string const & str = os.str();
+        this->impl->reporter( str.c_str() );
+    }
+
+
+    bool JuiceShell::ExecuteString(v8::Handle<v8::String> source,
+                                   v8::Handle<v8::Value> name,
+                                   std::ostream * out,
+                                   bool reportExceptions)
+    {
+        v8::HandleScope handle_scope;
+        v8::TryCatch try_catch;
+        v8::Handle<v8::Script> script = v8::Script::Compile(source, name);
+        if (script.IsEmpty())
+        {
+            // Print errors that happened during compilation.
+            if (reportExceptions)
+                this->ReportException(&try_catch);
+            return false;
+        }
+        else
+        {
+            v8::Handle<v8::Value> result = script->Run();
+            if (result.IsEmpty())
+            {
+                if (reportExceptions)
+                {
+                    this->ReportException(&try_catch);
+                }
+                return false;
+            }
+            else
+            {
+                if (out && !result->IsUndefined())
+                {
+                    std::string str = convert::JSToStdString(result);
+                    (*out) << str << '\n';
+                }
+                return true;
+            }
+        }
+    }
+    bool JuiceShell::ExecuteString(std::string const & source,
+                                   std::string const & name,
+                                   std::ostream * resultGoesTo,
+                                   bool reportExceptions)
+    {
+        v8::HandleScope scope;
+        Local<v8::String> s( v8::String::New( source.c_str(), static_cast<int>(source.size()) ) );
+        Local<v8::String> n( v8::String::New( name.c_str(), static_cast<int>(name.size()) ) );
+        return this->ExecuteString( s, n, resultGoesTo, reportExceptions );
+    }
+
 }} // namespaces

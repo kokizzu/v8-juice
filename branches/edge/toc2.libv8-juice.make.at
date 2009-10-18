@@ -17,8 +17,11 @@ package.install.package_dlls.dest := $(prefix)/lib/v8/juice/$(package.version)# 
 # we fudge the linker args for clients which live in this source tree,
 # so that we link against the in-tree libs insead of a previously
 # installed copy somewhere else.
-LIBV8JUICE_CLIENT_INTREE_LDADD = -L$(toc2.top_srcdir)/src/lib/juice \
-				$(LIBV8JUICE_CLIENT_LDADD) $(LD_LDFLAGS)
+#  $(LIBV8JUICE_CLIENT_LDADD)
+LIBV8JUICE_CLIENT_INTREE_LDADD = \
+				-L$(toc2.top_srcdir)/src/lib/juice \
+				-lv8-juice \
+				$(LD_LDFLAGS)
 ############################################################
 
 ########################################################################
