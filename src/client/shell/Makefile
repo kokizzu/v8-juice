@@ -8,7 +8,7 @@ SOURCES = shell.cc
 c-bins.list := v8-juice-shell
 v8-juice-shell.BIN.OBJECTS := shell.o
 #$(error x=$(V8_LDFLAGS))
-v8-juice-shell.BIN.LDADD = -rdynamic $(V8_LDFLAGS) $(LIBV8JUICE_CLIENT_INTREE_LDADD)
+v8-juice-shell.BIN.LDADD = $(LIBV8JUICE_CLIENT_INTREE_LDADD) $(V8_LDFLAGS)
 #$(error v8-juice-shell.BIN.LDADD=$(v8-juice-shell.BIN.LDADD))
 package.install.bins := $(v8-juice-shell.BIN)
 include $(toc2.dirs.makefiles)/c-bins.make

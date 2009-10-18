@@ -79,14 +79,11 @@ http://code.google.com/p/v8-juice/issues/detail?id=N
 #include <v8/juice/WeakJSClassCreator.h>
 #include <v8/juice/ToSource.h>
 #include <v8/juice/JuiceShell.h>
+#include <v8/juice/ClassBinder.h>
 
 namespace bind = ::v8::juice::bind;
 
-void RunShell(v8::Handle<v8::Context> context);
-bool ExecuteString(v8::Handle<v8::String> source,
-                   v8::Handle<v8::Value> name,
-                   bool print_result,
-                   bool report_exceptions);
+void RunShell(v8::juice::JuiceShell & shell );
 v8::Handle<v8::Value> Print(const v8::Arguments& args);
 v8::Handle<v8::Value> Load(const v8::Arguments& args);
 v8::Handle<v8::Value> Quit(const v8::Arguments& args);
@@ -168,9 +165,22 @@ public:
                   proxied(19),
                   other(0)
     {}
+    my_native * getOther() const
+    {
+        CERR << "my_native::getOther() =="<<this->other<<"\n";
+        return this->other;
+    }
+    void setOther(my_native * o)
+    {
+        CERR << "my_native::setOther("<<o<<")\n";
+        this->other = o;
+    }
 };
 
 namespace v8 { namespace juice {
+    //an experiment: 
+    //template <> struct WeakJSClassCreator_Opt_ShallowBind<my_native> : WeakJSClassCreator_Opt_Bool<true> {};
+    // ^^^ when enabled, breaks automatic conversions of JS-to-(my_native*).
     template <>
     struct WeakJSClassCreatorOps<my_native>
     {
@@ -206,12 +216,12 @@ namespace v8 { namespace juice {
 	    }
 	}
     };
+
 }} // v8::juice
 
 #define WEAK_CLASS_TYPE my_native
 #include <v8/juice/WeakJSClassCreator-CastOps.h>
 
-#include <v8/juice/ClassBinder.h>
 
 int my_forwarded_func()
 {
@@ -273,10 +283,11 @@ int my_fwd( V8CxH const & cx )
         .BindMemFunc< void,int,double, &MY::avoid2 >( "avoid2" )
         .BindMemFunc< double,int,int,int, &MY::takes3 >( "takes3" )
         .BindMemVar<std::string, &MY::str>( "str" )
-        .BindMemVar<my_native *, &MY::other>("other")
         .BindMemFunc< &MY::forwarder >( "forwarder" )
         .BindMemFunc< void, MY &, &MY::someref1 >( "someref1" )
         .BindPropToAccessors< int, &MY::propGetter, int, int, &MY::propSetter >( "proxiedProp" )
+        .BindMemVar<my_native *, &MY::other>("other")
+        .BindPropToAccessors< MY *, &MY::getOther, void, MY *, &MY::setOther >( "otherProxy" )
         //.BindPropToAccessors< int, &MY::propGetter, void, int, &MY::propSetterVoid >( "proxiedProp" )
         //.BindPropToGetter< int, &MY::propGetter >( "proxiedProp" )
         //.BindPropToSetter< void, int, &MY::propSetterVoid >( "proxiedProp" )
@@ -284,7 +295,15 @@ int my_fwd( V8CxH const & cx )
         //.BindMemFunc< MY &, MY &, &MY::someref2 >( "someref2" )
         //.BindMemFunc< MY const &, MY const &, &MY::someref3 >( "someref3" )
         .Set( "destroy", my_native_destroy )
-        .Seal();
+        ;
+#if 0
+    if( WT::OptShallowBind )
+    { // these should cause a compile-time error:
+        w.Inherit( w );
+        //w.InheritNative<MY>();
+    }
+#endif
+    w.Seal();
     w.AddClassTo( cx->Global() );
     return 0;
 }
@@ -445,6 +464,7 @@ int my_class_test( V8CxH & cx )
 
 static bool PrintUsesStdErr = false;
 
+v8::juice::JuiceShell * ShellInstance = 0; 
 int main(int argc, char * argv[])
 {
 #define JSTR(X) v8::String::New(X)
@@ -470,6 +490,7 @@ int main(int argc, char * argv[])
         v8::HandleScope handle_scope;
         v8::juice::cleanup::CleanupSentry cleaner;
         v8::juice::JuiceShell shell("v8juice");
+        ShellInstance = &shell;
         shell.ProcessMainArgv(argc,argv,1);
         shell.SetupJuiceEnvironment();
 #define FT v8::FunctionTemplate::New
@@ -525,7 +546,7 @@ int main(int argc, char * argv[])
                 v8::HandleScope handle_scope;
                 v8::Handle<v8::String> file_name = JSTR("unnamed");
                 v8::Handle<v8::String> source = JSTR(argv[i + 1]);
-                if (!ExecuteString(source, file_name, false, true))
+                if (!shell.ExecuteString(source, file_name, 0))
                 {
                     return 1;
                 }
@@ -539,11 +560,11 @@ int main(int argc, char * argv[])
                     printf("Error reading '%s'\n", str);
                     return 1;
                 }
-                if (!ExecuteString(source, file_name, true, true))
+                if (!shell.ExecuteString(source, file_name, &std::cout))
                     return 1;
             }
         }
-        if (run_shell) RunShell( shell.Context() );
+        if (run_shell) RunShell( shell );
     }
     return 0;
 #undef JSTR
@@ -591,7 +612,7 @@ v8::Handle<v8::Value> Load(const v8::Arguments& args) {
     if (source.IsEmpty()) {
       return v8::ThrowException(v8::String::New("Error loading file"));
     }
-    if (!ExecuteString(source, v8::String::New(*file), false, false)) {
+    if (!ShellInstance->ExecuteString(source, v8::String::New(*file), 0, false)) {
       return v8::ThrowException(v8::String::New("Error executing file"));
     }
   }
@@ -638,56 +659,26 @@ v8::Handle<v8::String> ReadFile(const char* name) {
 
 
 // The read-eval-execute loop of the shell.
-void RunShell(v8::Handle<v8::Context> context) {
-  printf("V8 version %s\n", v8::V8::GetVersion());
-  static const int kBufferSize = 256;
-  while (true) {
-    char buffer[kBufferSize];
-    printf("> ");
-    char* str = fgets(buffer, kBufferSize, stdin);
-    if (str == NULL) break;
-    v8::HandleScope handle_scope;
-    ExecuteString(v8::String::New(str),
-                  v8::String::New("(shell)"),
-                  true,
-                  true);
-  }
-  printf("\n");
-}
-
-
-// Executes a string within the current v8 context.
-bool ExecuteString(v8::Handle<v8::String> source,
-                   v8::Handle<v8::Value> name,
-                   bool print_result,
-                   bool report_exceptions) {
-  v8::HandleScope handle_scope;
-  v8::TryCatch try_catch;
-  v8::Handle<v8::Script> script = v8::Script::Compile(source, name);
-  if (script.IsEmpty()) {
-    // Print errors that happened during compilation.
-    if (report_exceptions)
-      ReportException(&try_catch);
-    return false;
-  } else {
-    v8::Handle<v8::Value> result = script->Run();
-    if (result.IsEmpty()) {
-      // Print errors that happened during execution.
-      if (report_exceptions)
-        ReportException(&try_catch);
-      return false;
-    } else {
-      if (print_result && !result->IsUndefined()) {
-        // If all went well and the result wasn't undefined then print
-        // the returned value.
-        v8::String::Utf8Value str(result);
-        const char* cstr = ToCString(str);
-        printf("%s\n", cstr);
-      }
-      return true;
+void RunShell( v8::juice::JuiceShell & shell )
+{
+    std::cout << "V8 version "<< v8::V8::GetVersion() << '\n';
+    v8::Handle<v8::Context> context( shell.Context() );
+    static const int kBufferSize = 256;
+    while (true)
+    {
+        char buffer[kBufferSize];
+        printf("> ");
+        char* str = fgets(buffer, kBufferSize, stdin);
+        if (str == NULL) break;
+        v8::HandleScope handle_scope;
+        shell.ExecuteString(v8::String::New(str),
+                            v8::String::New("(shell)"),
+                            &std::cout,
+                            true);
     }
-  }
+    std::cout << '\n';
 }
+
 
 
 void ReportException(v8::TryCatch* try_catch) {
