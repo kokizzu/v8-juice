@@ -254,3 +254,34 @@ var my2 = new MyClass();
 my2.nativeString = "bar"
 print( my.nativeString, my2.nativeString ); // "bar bar" :(
 }}}
+
+
+= Optimizations =
+
+== Shallow Binding ==
+
+As of 20091018, `WeakJSClassCreator` supports a feature called "shallow binding". When this is enabled, it uses a much faster mechanism for converting from JS-to-Native, but it also loses several features provided by the normal bindings:
+
+  * Uses `static_cast<>()` and is not strictly as type-safe as the normal mechanism. That said, in theory the pointers we cast _must_ be of the correct type (and _will_ be unless client code muddles with the binding data).
+  * If the bound class inherits other bound classes, or will be inherited by bound classes or JS-side classes, not all features of inheritance will work. Notable (but not the only problem), inherited bound virtual functions may not be visible in the subclasses.
+  * `NativeToJS()` cannot work for that type, as the native has no notion of a JS counterpart. This will prohibit conversion of native (`T*`) to their JS counterparts.
+  * Certain member binding routines will fail with a compile-time error because they cannot function in shallow mode.
+  * Certain binding members may trigger a JS exception at runtime because they cannot function in shallow mode.
+
+However, if the a bound class meets the following guidelines, this can be a useful optimization to turn on:
+
+  * It does not participate in any JS-related inheritance (inheritance of non-bound natives is okay).
+  * It binds no member functions which return `(T [const] *)` (as those conversions cannot work).
+
+To enable this optimization, add the following code somewhere _before `WeakJSClassCreator<T>` is used_:
+
+{{{
+namespace v8 { namespace juice {
+
+template <>
+struct WeakJSClassCreator_Opt_ShallowBind< T >
+  : WeakJSClassCreator_Opt_Bool<true> {};
+
+} } /* namespaces */
+}}}
+
