@@ -1,21 +1,22 @@
-
+/************************************************************************
+ ************************************************************************/
 
 #include "MyNative.h"
 #include <v8/juice/forwarding.h>
 #include <v8/juice/ClassBinder.h>
 
 
-int my_forwarded_func()
+static int my_forwarded_func()
 {
     CERR << "my_forwarded_func()!\n";
     return 42;
 }
-int my_forwarded_func3(int x,int y,int z)
+static int my_forwarded_func3(int x,int y,int z)
 {
-    CERR << "my_forwarded_func()!\n";
+    CERR << "my_forwarded_func3()!\n";
     return x + y + z;
 }
-void my_void_forwarded_func(int x)
+static void my_void_forwarded_func(int x)
 {
     CERR << "my_void_forwarded_func("<<x<<")!\n";
 }

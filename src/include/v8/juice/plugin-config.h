@@ -13,7 +13,7 @@
 #  define v8_juice_plugin_CONFIG_DLL_EXTENSIONS std::string(".dll")
 #  define v8_juice_plugin_CONFIG_PATH_SEPARATOR std::string(":")
 #else
-#  define v8_juice_plugin_CONFIG_PLUGINS_PATH std::string(".:/home/stephan/lib/v8/juice/20090325:/home/stephan/lib/v8/juice")
+#  define v8_juice_plugin_CONFIG_PLUGINS_PATH std::string(".:/home/stephan/lib/v8/juice/20091016:/home/stephan/lib/v8/juice")
 #  define v8_juice_plugin_CONFIG_HAVE_LIBLTDL 0
 #  define v8_juice_plugin_CONFIG_HAVE_LIBDL 1
 #  define v8_juice_plugin_CONFIG_DLL_EXTENSIONS std::string(".so:.dynlib")

@@ -8,6 +8,8 @@ package.clean_files += $(wildcard *.o *~)
 CXXFLAGS += -fPIC
 CFLAGS += -fPIC # won't link on AMD64 w/o this.
 
+v8juice.builds.libv8juice := $(toc2.top_srcdir)/src/lib/juice
+v8juice.builds.shell := $(toc2.top_srcdir)/src/client/shell/v8-juice-shell
 
 package.install.package_headers.dest := $(prefix)/include/v8/juice
 package.install.headers.dest = $(package.install.package_headers.dest)
