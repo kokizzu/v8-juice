@@ -260,20 +260,21 @@ print( my.nativeString, my2.nativeString ); // "bar bar" :(
 
 == Shallow Binding ==
 
-As of 20091018, `WeakJSClassCreator` supports a feature called "shallow binding". When this is enabled, it uses a much faster mechanism for converting from JS-to-Native, but it also loses several features provided by the normal bindings:
+As of 20091018, `WeakJSClassCreator` supports a feature called "shallow binding". When this is enabled, it uses a much faster mechanism for converting from JS-to-Native `(T*)`, _but it also loses several features_ provided by the normal bindings:
 
   * Uses `static_cast<>()` and is not strictly as type-safe as the normal mechanism. That said, in theory the pointers we cast _must_ be of the correct type (and _will_ be unless client code muddles with the binding data).
-  * If the bound class inherits other bound classes, or will be inherited by bound classes or JS-side classes, not all features of inheritance will work. Notable (but not the only problem), inherited bound virtual functions may not be visible in the subclasses.
-  * `NativeToJS()` cannot work for that type, as the native has no notion of a JS counterpart. This will prohibit conversion of native (`T*`) to their JS counterparts.
-  * Certain member binding routines will fail with a compile-time error because they cannot function in shallow mode.
-  * Certain binding members may trigger a JS exception at runtime because they cannot function in shallow mode.
+  * If the bound class inherits other bound classes, or will be inherited by bound classes or JS-side classes, not all features of inheritance will work. Notably (but not the only problem), inherited bound functions may not be visible in subclasses.
+  * `NativeToJS()` cannot work for that type, as the native has no notion of a JS counterpart. This will prohibit conversion of native (`T*`) to their JS counterparts, e.g. for bound function arguments or return values.
+  * Certain binding routines will fail with a compile-time error because they cannot function in shallow mode.
+  * Certain binding routines may trigger a JS exception at runtime because they cannot function in shallow mode (but cannot made the determination at compile-time, for unfortunate internal reasons).
 
-However, if the a bound class meets the following guidelines, this can be a useful optimization to turn on:
+Despite the daunting list of limitations, if the a bound class meets the following guidelines then this can be a useful (and "almost certainly safe") optimization to turn on:
 
   * It does not participate in any JS-related inheritance (inheritance of non-bound natives is okay).
-  * It binds no member functions which return `(T [const] *)` (as those conversions cannot work).
+  * It binds no native member functions which return `(T [const] *)` (as those conversions cannot work).
+  * It binds no JS member properties to native `(T [const] *)`, as the conversion will get lost in some contexts.
 
-To enable this optimization, add the following code somewhere _before `WeakJSClassCreator<T>` is used_:
+To enable this optimization add the following code somewhere _before `WeakJSClassCreator<T>` is instantiated_:
 
 {{{
 namespace v8 { namespace juice {
@@ -284,3 +285,5 @@ struct WeakJSClassCreator_Opt_ShallowBind< T >
 
 } } /* namespaces */
 }}}
+
+To disable it, remove that code or change the `true` value to `false`.
