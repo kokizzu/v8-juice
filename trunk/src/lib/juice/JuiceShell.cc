@@ -1,4 +1,5 @@
 #include <v8/juice/JuiceShell.h>
+#include <v8/juice/PathFinder.h>
 #include <v8/juice/convert.h>
 
 #include <v8/juice/sprintf.h>
@@ -11,7 +12,7 @@
 #include <sstream>
 #include <iterator>
 
-#if 0
+#if 1
 #ifndef CERR
 #include <iostream>
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
@@ -126,7 +127,9 @@ namespace juice {
         BIND("setInterval", v8::juice::setInterval);
         BIND("clearTimeout", v8::juice::clearTimeout);
         BIND("clearInterval", v8::juice::clearInterval);
+        BIND("print", PrintToCout);
 #undef BIND
+        v8::juice::SetupPathFinderClass( this->impl->global );
     }
 
     void JuiceShell::SetExecuteErrorReporter( ErrorMessageReporter r )
@@ -136,8 +139,7 @@ namespace juice {
     
     void JuiceShell::ReportException(v8::TryCatch* try_catch)
     {
-        if( ! this->impl->reporter ) return;
-
+        if( !try_catch || ! this->impl->reporter ) return;
         v8::HandleScope handle_scope;
         v8::String::Utf8Value exception(try_catch->Exception());
         //std::string const exception_stdstr = convert::CastFromJS<std::string>( exception
@@ -145,6 +147,7 @@ namespace juice {
         const char* exception_string = TOCSTR(exception);
         v8::Handle<v8::Message> message = try_catch->Message();
         std::ostringstream os;
+        os << "JuiceShell::ReportException(): ";
         if (message.IsEmpty())
         {
             // V8 didn't provide any extra information about this error; just
@@ -159,7 +162,7 @@ namespace juice {
             int linenum = message->GetLineNumber();
             os << filename_string << ':'
                << linenum << ": "
-               << exception_string << '\n';
+               << (exception_string ? exception_string : "") << '\n';
             // Print line of source code.
             v8::String::Utf8Value sourceline(message->GetSourceLine());
             const char* sourceline_string = TOCSTR(sourceline);
@@ -181,30 +184,30 @@ namespace juice {
     }
 
 
-    bool JuiceShell::ExecuteString(v8::Handle<v8::String> source,
+    bool JuiceShell::ExecuteString(v8::Handle<v8::String> const & source,
                                    v8::Handle<v8::Value> name,
                                    std::ostream * out,
-                                   bool reportExceptions)
+                                   v8::TryCatch * reportExceptions)
     {
         v8::HandleScope handle_scope;
-        v8::TryCatch try_catch;
+        //v8::TryCatch try_catch;
+        //try_catch.SetCaptureMessage(true);
+        //try_catch.SetVerbose(true);
+
         v8::Handle<v8::Script> script = v8::Script::Compile(source, name);
-        if (script.IsEmpty())
+        if( reportExceptions && reportExceptions->HasCaught())//script.IsEmpty())
         {
             // Print errors that happened during compilation.
             if (reportExceptions)
-                this->ReportException(&try_catch);
+                this->ReportException(reportExceptions);
             return false;
         }
         else
         {
             v8::Handle<v8::Value> result = script->Run();
-            if (result.IsEmpty())
+            if( reportExceptions && reportExceptions->HasCaught())//(result.IsEmpty())
             {
-                if (reportExceptions)
-                {
-                    this->ReportException(&try_catch);
-                }
+                this->ReportException(reportExceptions);
                 return false;
             }
             else
@@ -221,7 +224,7 @@ namespace juice {
     bool JuiceShell::ExecuteString(std::string const & source,
                                    std::string const & name,
                                    std::ostream * resultGoesTo,
-                                   bool reportExceptions)
+                                   v8::TryCatch * reportExceptions )
     {
         v8::HandleScope scope;
         Local<v8::String> s( v8::String::New( source.c_str(), static_cast<int>(source.size()) ) );
@@ -229,6 +232,41 @@ namespace juice {
         return this->ExecuteString( s, n, resultGoesTo, reportExceptions );
     }
 
+    bool JuiceShell::ExecuteString(std::string const & source, v8::TryCatch * reportExceptions )
+    {
+        return this->ExecuteString(source,"JuiceShell::ExecuteString()", 0, reportExceptions);
+    }
+
+    bool JuiceShell::ExecuteString(v8::Handle<v8::String> source, v8::TryCatch * reportExceptions )
+    {
+        return this->ExecuteString(source,v8::String::New("JuiceShell::ExecuteString()"), 0, reportExceptions);
+    }
+
+    v8::Handle<v8::Value> JuiceShell::Include( char const * source,
+                                              bool useSearchPath,
+                                              v8::TryCatch * fence
+                                              )
+    {
+#if 0
+        return v8::juice::IncludeScript( source.c_str(), useSearchPath );
+#else
+        if( ! source || !*source )
+        {
+                return v8::ThrowException(v8::String::New("IncludeScript() requires a non-empty filename argument!"));
+        }
+        //v8::HandleScope hscope;
+        v8::Handle<v8::Value> rc;
+        rc = v8::juice::IncludeScript( source, useSearchPath );
+        if( fence && fence->HasCaught()) //rc.IsEmpty() ) //
+        {
+            //exc = fence->Exception();
+            this->ReportException( fence );
+        }
+        //return hscope.Close(rc);
+        return rc;
+#endif
+    }
+    
     void JuiceShell::StdinLineFetcher( std::string & dest, bool & breakOut )
     {
         breakOut = false;
@@ -261,7 +299,7 @@ namespace juice {
     
     void JuiceShell::InputLoop( LineFetcher input,
                                 std::ostream * os,
-                                bool reportExceptions )
+                                v8::TryCatch * reportExceptions )
     {
         std::string sbuf;
         bool dobreak = false;
@@ -274,8 +312,47 @@ namespace juice {
                 break;
             }
             v8::HandleScope handle_scope;
-            this->ExecuteString(sbuf, "(JuiceShell::InputLoop())", os, true);
+            this->ExecuteString(sbuf, "(JuiceShell::InputLoop())", os, reportExceptions);
         }
+    }
+
+    /**
+       An v8::InvocationCallback implementation which implements a
+       JS-conventional print() routine. If ToStdOut is true, the
+       output goes to std::cout, otherwise it goes to std::cerr.
+    */
+    template <bool ToStdOut>
+    static Handle<Value> PrintToStdOstream( Arguments const & argv )
+    {
+        bool first = true;
+        std::ostream & os( ToStdOut ? std::cout : std::cerr );
+        for (int i = 0; i < argv.Length(); i++)
+        {
+            v8::HandleScope handle_scope;
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                os << ' ';
+            }
+            v8::String::Utf8Value str(argv[i]);
+            const char* cstr = *str;
+            if( cstr ) os << cstr;
+        }
+        os << '\n';
+        os.flush();
+        return v8::Undefined();
+    }
+
+    Handle<Value> JuiceShell::PrintToCout( Arguments const & argv )
+    {
+        return PrintToStdOstream<true>( argv );
+    }
+    Handle<Value> JuiceShell::PrintToCerr( Arguments const & argv )
+    {
+        return PrintToStdOstream<false>( argv );
     }
 
     

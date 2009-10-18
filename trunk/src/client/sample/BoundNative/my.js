@@ -3,6 +3,7 @@ MyNative.prototype.toString = function()
 {
     return '{MyNative str:'+this.str+'}';
 }
+
 print('void returns:',m.avoid(),m.avoid1(32),m.avoid2(17,11));
 print(m.hi());
 print('m.func1() ==',m.func1());
@@ -23,6 +24,9 @@ print('someref1() =',m.someref1(m.other));
 print('proxiedProp =', m.proxiedProp );
 m.proxiedProp += 23;
 print('proxiedProp =', m.proxiedProp );
+
+//throw new Error("Testing return from JuiceShell::Include()");
+
 var ex = null;
 try
 {
@@ -70,3 +74,4 @@ if(1)
     print("Done again!");
 }
 
+m;
