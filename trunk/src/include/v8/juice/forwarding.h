@@ -237,6 +237,31 @@ namespace v8 { namespace juice { namespace convert {
 	}
     };
 
+    /**
+       InvocationCallbackMember is a helper type for binding InvocationCallback-like
+       member functions. It requires that T be supported by CastFromJS(). The Func
+       template parameter is the member invocation callback which we want to proxy.
+    */
+    template <typename T,
+              ::v8::Handle< ::v8::Value > (T::*Func)( ::v8::Arguments const & argv )
+              >
+    struct InvocationCallbackMember
+    {
+	/**
+           Extracts a native T object from argv using
+           CastFromJS(argv.This()) and passes the call on to
+           obj->Func(). If no object can be found it throws a JS
+           exception, otherwise it returns the result of the proxied
+           call.
+	*/
+	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
+	{
+            T * self = convert::CastFromJS<T>( argv.This() );
+            if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
+            return (self->*Func)( argv );
+	}
+    };
+   
 }}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_FORWARDING_H_INCLUDED */

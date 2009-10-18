@@ -10,6 +10,7 @@
 
 #include <v8.h>
 #include <v8/juice/convert.h>
+#include <v8/juice/forwarding.h>
 #include <v8/juice/WeakJSClassCreator.h>
 #include <stdexcept>
 namespace v8 {
@@ -323,31 +324,6 @@ namespace juice {
     }
 #endif
 
-    /**
-       InvocationCallbackMember is a helper type for binding InvocationCallback-like
-       member functions. It requires that T be supported by CastFromJS(). The Func
-       template parameter is the member invocation callback which we want to proxy.
-    */
-    template <typename T,
-              ::v8::Handle< ::v8::Value > (T::*Func)( ::v8::Arguments const & argv )
-              >
-    struct InvocationCallbackMember
-    {
-	/**
-           Extracts a native T object from argv using
-           CastFromJS(argv.This()) and passes the call on to
-           obj->Func(). If no object can be found it throws a JS
-           exception, otherwise it returns the result of the proxied
-           call.
-	*/
-	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
-	{
-            T * self = convert::CastFromJS<T>( argv.This() );
-            if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
-            return (self->*Func)( argv );
-	}
-    };
-
 
     /**
        This template can be used as an argument to
@@ -512,13 +488,13 @@ namespace juice {
 
         /**
            Binds the member specified as a template parameter. Note that
-           the signature is that defined by the InvocationCallbackMember
+           the signature is that defined by the convert::InvocationCallbackMember
            type.
         */
         template < Handle<Value> (WrappedType::*Func)( Arguments const & ) >
         ClassBinder & BindMemFunc( char const * name )
         {
-            this->Set(name, InvocationCallbackMember<WrappedType,Func>::Call );
+            this->Set(name, convert::InvocationCallbackMember<WrappedType,Func>::Call );
             return *this;
         }
 

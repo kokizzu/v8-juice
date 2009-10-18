@@ -47,6 +47,13 @@
 #endif
 #endif
 
+#if 0
+#ifndef CERR
+#include <iostream> /* only for debuggering */
+#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#endif
+#endif
+
 #if 1
 /*
   Static assertion code taken from Alexandrescu's Modern C++ Design.
