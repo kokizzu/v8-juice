@@ -40,3 +40,4 @@ dumpPF(PathFinder.shared.include,['pf']);
 //dumpPF(PathFinder.shared.include);
 //dumpPF(new Number(3)); // should throw
 //PathFinder.shared.plugins.callMemFunc();
+PathFinder.shared.include;
