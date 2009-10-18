@@ -60,7 +60,25 @@ namespace juice {
         Detail::JuiceShellImpl * impl;
         void ReportException(v8::TryCatch* try_catch);
     public:
+        /**
+           A callback function signature for reporing JS-side
+           exception messages to the native world.
+        */
         typedef void (*ErrorMessageReporter)( char const * msg );
+
+        /**
+           LineFetcher is an interface for reading JS input
+           interactively from the user, for use in an input loop.
+           
+           Reads a line of input from the user and stores it in dest.
+           If it sets breakOut to true then the caller should stop
+           accepting input. e.g. this should be set when Ctrl-D is
+           tapped on most terminals. It should assume that dest is
+           initially empty.
+        */
+        typedef void (*LineFetcher)( std::string & dest, bool & breakOut );
+
+
         /**
            Initialize a v8 context and global object belonging to this object.
 
@@ -131,7 +149,9 @@ namespace juice {
 
         /**
            Sets the error reporter function used by
-           ExecuteString().
+           ExecuteString(). Passing 0 will disable exception
+           reporting. The default reporter sends its output to
+           std::cerr.
         */
         void SetExecuteErrorReporter( ErrorMessageReporter );
 
@@ -165,7 +185,29 @@ namespace juice {
                            std::string const & name,
                            std::ostream * resultGoesTo = 0,
                            bool reportExceptions = true);
-        
+
+        /**
+           Runs an interactive shell in a loop. It runs until the
+           second argument passed to the input callback is set to true
+           by the callback. Each line of input is passed to
+           ExecuteString(), and the resultsTo and reportExceptions
+           arguments are passed to that function.
+        */
+        void InputLoop( LineFetcher input,
+                        std::ostream * resultGoesTo = 0,
+                        bool reportExceptions = true );
+        /**
+           A LineFetcher() implementation which simply reads a single
+           line from stdin and assigns the result (minus the newline
+           character) to dest. It sets breakOut to true at EOF
+           (normally when Ctrl-D is pressed at the start of input on
+           the console).
+
+           This implementation prints a prompt to std::cout before
+           reading input from std::cin.
+        */
+        static void StdinLineFetcher( std::string & dest, bool & breakOut );
+
     private:
         //!Copying is disabled.
         JuiceShell & operator=(JuiceShell const &);
