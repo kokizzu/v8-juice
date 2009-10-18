@@ -119,7 +119,14 @@ public:
     }
     ~CallbackWrapper()
     {}
-    // must be out-of-class b/c it uses WeakWrap before WeakWrap is defined.
+    /**
+       Adds a reference to this object into the given object, using
+       a generated field name. The intention is to force JS to have
+       a reference to the data so it does not GC it.
+    
+       Must be defined out-of-class b/c it uses WeakWrap before
+       WeakWrap is defined.
+    */
     void AddTo( Handle<Object> tgt );
 };
 Persistent<Function> CallbackWrapper::js_ctor;
@@ -515,7 +522,7 @@ void CallbackWrapper::AddTo( Handle<Object> tgt )
 {
     static uint64_t id = 0;
     std::ostringstream os;
-    os << "CallbackWrapper_"<<id;
+    os << "CallbackWrapper_"<<id++;
     Handle<String> str( String::New(os.str().c_str()) );
     tgt->Set(str, WeakWrap::GetJSObject( this ) );
 }
