@@ -1,0 +1,206 @@
+#!/bin/bash
+########################################################################
+# Generates code for the function forwarding parts of the
+# v8::juice::convert API (and friends).
+count=${1-0}
+
+test "$count" -gt 0 || {
+    echo "Usage: $0 NUMBER (>=1) [COMMAND=MemFuncForwarder]"
+    echo "Commands: MemFuncForwarder FunctorForwarder"
+    echo "Generates specializations for operations taking exactly NUMBER argumnents."
+    exit 1
+}
+
+command=${2-MemFuncForwarder}
+
+tmplsig="typename WrappedType, typename RV, "
+ttlist="WrappedType, RV,"
+tmplsigV="typename WrappedType, void, "
+aTDecl="" # typename A0, typename A1,...
+aTParam="" # A0, A1 ...
+castCalls="" # CastFromJS<A0>(argv[0), ...
+at=0
+callop=MemFuncCallOp${count}
+MemFuncForwarder=MemFuncForwarder
+callBase="${MemFuncForwarder}<${count}>"
+callBaseWeak="WeakMemFuncForwarder<${count}>"
+
+########################################################
+# must be called first to populate the shared vars
+function makeLists()
+{
+    for (( at = 0; at < count; at = at + 1)); do
+    #echo "at=$at"
+	local AT="A${at}"
+	tmplsig="${tmplsig} typename ${AT},"
+	ttlist="${ttlist} ${AT},"
+	tmplsigV="${tmplsigV} ${AT},"
+	aTDecl="${aTDecl} typename ${AT}"
+	aTParam="${aTParam} ${AT}"
+	castCalls="${castCalls} CastFromJS< ${AT} >(argv[${at}])"
+	test $at -ne $((count-1)) && {
+	    aTDecl="${aTDecl}, "
+	    aTParam="${aTParam},"
+	    castCalls="${castCalls},"
+	}
+    done
+    #tmplsig="${tmplsig} RV (WrappedType::*Func)(${aTParam})";
+    funcSig="(WrappedType::*Func)(${aTParam}) "
+    tmplsig="typename WrappedType, typename RV, ${aTDecl}, RV ${funcSig}";
+    tmplsigV="typename WrappedType, ${aTDecl}, void ${funcSig}";
+    tmplspecV="WrappedType, void, ${aTParam}, void ${funcSig}"
+}
+
+
+#######################################################
+# Creates ${callBase} and ${callWeakBase} implementations.
+function makeMemFuncForwarder()
+{
+    local err_native_is_null="${callBase}::Call(): Native object is null!"
+    local err_too_few_args="${callBase}::Call(): wrong argument count!"
+cat <<EOF
+/**
+A helper class for forwarding JS arguments to member functions
+taking ${count} arguments.
+*/
+template <>
+struct ${callBase}
+{
+    enum { Arity = ${count} };
+
+    template <typename T, typename RV, ${aTDecl}>
+    static Handle<Value> Call( T * obj, RV (T::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
+	return CastToJS<RV>( (obj->*MemFunc)( ${castCalls} ) );
+    }
+    
+    template <typename T, typename RV, ${aTDecl}>
+    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
+	return CastToJS<RV>( (obj->*MemFunc)(${castCalls} ) );
+    }
+    
+    template <typename T, ${aTDecl}>
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
+	(obj->*MemFunc)(${castCalls} );
+	return Undefined();
+    }
+
+    template <typename T, ${aTDecl} >
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
+	(obj->*MemFunc)(${castCalls} );
+	return Undefined();
+    }
+};
+EOF
+} # makeMemFuncForwarder()
+
+#######################################################
+# Creates FunctorForwarder specializations and FwdToFunc()
+# overloads.
+function makeFunctorForwarder()
+{
+    cat <<EOF
+/** Specialization for functor taking ${count} arguments. */
+template <typename RV>
+struct FunctorForwarder<${count},RV>
+{
+    enum { Arity = ${count} };
+    template < ${aTDecl}, typename Func >
+    static Handle<Value> Call( Func f, ::v8::Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<${count},RV>::Call() expects at least ${count} JS arguments!"));
+        try
+        {
+            return CastToJS<RV>( f( ${castCalls} ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("FunctorForwarder<${count},ReturnType>: Native function threw an unknown native exception type!"));
+        }
+        return Undefined(); // cannot be reached.
+    }
+};
+/** Specialization for functor taking ${count} arguments and returning void. */
+template <>
+struct FunctorForwarder<${count},void>
+{
+    enum { Arity = ${count} };
+    template < ${aTDecl}, typename Func >
+    static Handle<Value> Call( Func f, ::v8::Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<${count},void>::Call() expects at least ${count} JS arguments!"));
+        try
+        {
+            f( ${castCalls} );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("FunctorForwarder<${count},void>: Native function threw an unknown native exception type!"));
+        }
+        return Undefined();
+    }
+};
+
+/**
+   See the docs for FwdToFunc0(). This variant takes ${count} argument(s).
+*/
+template <typename ReturnT, ${aTDecl}, typename Func>
+::v8::Handle< ::v8::Value > FwdToFunc${count}( Func func, ::v8::Arguments const & argv )
+{
+    return FunctorForwarder<${count},ReturnT>::template Call< ${aTParam} >( func, argv );
+}
+/**
+   Functionally identical to FwdToFunc${count}(), but the templatized types can
+   be deduced by the compiler.
+*/
+template <typename ReturnT, ${aTDecl}>
+::v8::Handle< ::v8::Value > FwdToFunc( ReturnT (*func)(${aTParam}), ::v8::Arguments const & argv )
+{
+    return FunctorForwarder<${count},ReturnT>::template Call< ${aTParam} >( func, argv );
+}
+EOF
+}
+
+
+##########################################################
+# here we go...
+makeLists
+false && {
+    echo funcSig=${funcSig}
+    echo tmplsig=${tmplsig}
+    echo tmplsigV=${tmplsigV}
+    echo tmplspecV=${tmplspecV}
+}
+
+
+case $command in
+    'MemFuncForwarder')
+	makeMemFuncForwarder
+	;;
+    'FunctorForwarder')
+	makeFunctorForwarder
+	;;
+    *)
+	echo "Unhandled command: ${command}"
+	exit 2
+    ;;
+esac
