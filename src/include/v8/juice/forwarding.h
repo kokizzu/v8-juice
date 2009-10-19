@@ -49,8 +49,6 @@
 #include "convert.h"
 namespace v8 { namespace juice { namespace convert {
     using namespace v8;
-    /** Convenience typedef. */
-    typedef Handle<Value> ValueHandle;
 
 #if ! defined(DOXYGEN)
     /** Internal library details. */
@@ -168,7 +166,7 @@ namespace v8 { namespace juice { namespace convert {
         return FunctorForwarder<0,ReturnT>::Call( func );
     }
 
-#include "forwarding-FunctorForwarder.h" // generated code
+#include "forwarding-FunctorForwarder.h" // generated specializations for FunctorForwarder
 
     /**
        Useless base instantiation - See the 0-specialization for details.
@@ -181,11 +179,16 @@ namespace v8 { namespace juice { namespace convert {
 
 
     /**
-       A helper type for forwarding JS arguments to member functions
-       taking 0 arguments. The classes MemFuncForwarder<1..N> are
-       generated code and follow this class' API.
+       A helper type for forwarding JS arguments to native member
+       functions taking 0 arguments. The classes
+       MemFuncForwarder<1..N> are generated code and follow this
+       class' API.
 
-       All variants of this class except the nullary one throw a
+       Each specialization of this class handles the cases for N
+       arguments, where N is the templatized value, or arity of the
+       functions.
+       
+       All variants of this class except the 0-arity one throw a
        JS-side exception if the argument list does not have at least
        the required number of parameters.
     */
@@ -241,7 +244,7 @@ namespace v8 { namespace juice { namespace convert {
 	    }
     };
 
-#include "forwarding-MemFuncForwarder.h" // generated code
+#include "forwarding-MemFuncForwarder.h" // generated specializations for MemFuncForwarder
 
     /**
        See InvocationCallbackToArgv for details.
