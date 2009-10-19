@@ -11,6 +11,7 @@
 #include <v8.h>
 #include <v8/juice/convert.h>
 #include <v8/juice/WeakJSClassCreator.h>
+#include <v8/juice/forwarding.h>
 #include <stdexcept>
 namespace v8 {
 namespace juice {
@@ -25,63 +26,6 @@ namespace juice {
         /**
            Useless base instantiation - See the 0-specialization for details.
         */
-        template <int Arity_>
-        struct MemFuncCaller
-        {
-            enum { Arity = Arity_ };
-        };
-
-
-	/**
-	   A helper type for forwarding JS arguments to member functions taking 0
-	   arguments. The classes MemFuncCaller(1..N) are generated but follow
-	   this class' API.
-
-	   All variants of this class except the nullary one throw if the argument
-	   list does not have at least the required number of parameters.
-	*/
-        template <>
-	struct MemFuncCaller<0>
-	{
-	    enum { Arity = 0 };
-	    template <typename T, typename RV>
-	    static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		return convert::CastToJS<RV>( (obj->*MemFunc)() );
-	    }
-
-	    template <typename T, typename RV>
-	    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		return convert::CastToJS<RV>( (obj->*MemFunc)() );
-	    }
-
-	    template <typename T>
-	    static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		(obj->*MemFunc)();
-		return Undefined();
-	    }
-
-	    template <typename T>
-	    static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		(obj->*MemFunc)();
-		return Undefined();
-	    }
-	};
-
-        /**
-           Useless base instantiation - See the 0-specialization for details.
-        */
         template <int Arity>
 	struct WeakMemFuncCaller
         {};
@@ -92,7 +36,7 @@ namespace juice {
 	   number of arguments.
 	*/
         template <>
-	struct WeakMemFuncCaller<0> : MemFuncCaller<0>
+	struct WeakMemFuncCaller<0> : v8::juice::convert::MemFuncForwarder<0>
 	{
 	    template <typename WeakWrappedType, typename RV>
 	    static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)(), Arguments const & argv )
@@ -284,31 +228,6 @@ namespace juice {
     }
 #endif
 
-    /**
-       InvocationCallbackMember is a helper type for binding InvocationCallback-like
-       member functions. It requires that T be supported by CastFromJS(). The Func
-       template parameter is the member invocation callback which we want to proxy.
-    */
-    template <typename T,
-              ::v8::Handle< ::v8::Value > (T::*Func)( ::v8::Arguments const & argv )
-              >
-    struct InvocationCallbackMember
-    {
-	/**
-           Extracts a native T object from argv using
-           CastFromJS(argv.This()) and passes the call on to
-           obj->Func(). If no object can be found it throws a JS
-           exception, otherwise it returns the result of the proxied
-           call.
-	*/
-	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
-	{
-            T * self = convert::CastFromJS<T>( argv.This() );
-            if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
-            return (self->*Func)( argv );
-	}
-    };
-
 
     /**
        This template can be used as an argument to
@@ -473,13 +392,13 @@ namespace juice {
 
         /**
            Binds the member specified as a template parameter. Note that
-           the signature is that defined by the InvocationCallbackMember
+           the signature is that defined by the convert::InvocationCallbackMember
            type.
         */
         template < Handle<Value> (WrappedType::*Func)( Arguments const & ) >
         ClassBinder & BindMemFunc( char const * name )
         {
-            this->Set(name, InvocationCallbackMember<WrappedType,Func>::Call );
+            this->Set(name, convert::InvocationCallbackMember<WrappedType,Func>::Call );
             return *this;
         }
 
