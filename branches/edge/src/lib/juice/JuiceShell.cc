@@ -186,8 +186,8 @@ namespace juice {
 
     bool JuiceShell::ExecuteString(v8::Handle<v8::String> const & source,
                                    v8::Handle<v8::Value> name,
-                                   std::ostream * out,
-                                   v8::TryCatch * reportExceptions)
+                                   v8::TryCatch * reportExceptions,
+                                   std::ostream * out)
     {
         v8::HandleScope handle_scope;
         //v8::TryCatch try_catch;
@@ -223,23 +223,23 @@ namespace juice {
     }
     bool JuiceShell::ExecuteString(std::string const & source,
                                    std::string const & name,
-                                   std::ostream * resultGoesTo,
-                                   v8::TryCatch * reportExceptions )
+                                   v8::TryCatch * reportExceptions,
+                                   std::ostream * resultGoesTo )
     {
         v8::HandleScope scope;
         Local<v8::String> s( v8::String::New( source.c_str(), static_cast<int>(source.size()) ) );
         Local<v8::String> n( v8::String::New( name.c_str(), static_cast<int>(name.size()) ) );
-        return this->ExecuteString( s, n, resultGoesTo, reportExceptions );
+        return this->ExecuteString( s, n, reportExceptions, resultGoesTo );
     }
 
     bool JuiceShell::ExecuteString(std::string const & source, v8::TryCatch * reportExceptions )
     {
-        return this->ExecuteString(source,"JuiceShell::ExecuteString()", 0, reportExceptions);
+        return this->ExecuteString(source,"JuiceShell::ExecuteString()", reportExceptions, 0);
     }
 
     bool JuiceShell::ExecuteString(v8::Handle<v8::String> source, v8::TryCatch * reportExceptions )
     {
-        return this->ExecuteString(source,v8::String::New("JuiceShell::ExecuteString()"), 0, reportExceptions);
+        return this->ExecuteString(source,v8::String::New("JuiceShell::ExecuteString()"), reportExceptions, 0);
     }
 
     v8::Handle<v8::Value> JuiceShell::Include( char const * source,
@@ -312,7 +312,7 @@ namespace juice {
                 break;
             }
             v8::HandleScope handle_scope;
-            this->ExecuteString(sbuf, "(JuiceShell::InputLoop())", os, reportExceptions);
+            this->ExecuteString(sbuf, "(JuiceShell::InputLoop())", reportExceptions, os );
         }
     }
 
