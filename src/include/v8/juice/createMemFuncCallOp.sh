@@ -4,7 +4,7 @@
 count=${1-0}
 
 test "$count" -gt 0 || {
-    echo "Usage: $0 NUMBER (>=0) [COMMAND=BindMemFunc]"
+    echo "Usage: $0 NUMBER (>=1) [COMMAND=BindMemFunc]"
     echo "Commands: MemFuncCallOps, BindMemFunc, MemFuncCaller, FunctorForwarder"
     exit 1
 }
