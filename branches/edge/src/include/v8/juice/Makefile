@@ -38,7 +38,6 @@ ifeq (1,1)
 $(eval $(call CallOps.GenCode,ClassBinder,BindMemFunc))
 $(eval $(call CallOps.GenCode,ClassBinder,MemFuncCaller))
 $(eval $(call CallOps.GenCode,ClassBinder,MemFuncCallOps))
-#$(eval $(call CallOps.GenCode,forwarding,FunctorForwarder))
 endif
 # ^^^ ClassBinder gen'd code
 

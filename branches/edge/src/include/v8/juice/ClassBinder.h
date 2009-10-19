@@ -10,8 +10,8 @@
 
 #include <v8.h>
 #include <v8/juice/convert.h>
-#include <v8/juice/forwarding.h>
 #include <v8/juice/WeakJSClassCreator.h>
+#include <v8/juice/forwarding.h>
 #include <stdexcept>
 namespace v8 {
 namespace juice {
@@ -26,63 +26,6 @@ namespace juice {
         /**
            Useless base instantiation - See the 0-specialization for details.
         */
-        template <int Arity_>
-        struct MemFuncCaller
-        {
-            enum { Arity = Arity_ };
-        };
-
-
-	/**
-	   A helper type for forwarding JS arguments to member functions taking 0
-	   arguments. The classes MemFuncCaller(1..N) are generated but follow
-	   this class' API.
-
-	   All variants of this class except the nullary one throw if the argument
-	   list does not have at least the required number of parameters.
-	*/
-        template <>
-	struct MemFuncCaller<0>
-	{
-	    enum { Arity = 0 };
-	    template <typename T, typename RV>
-	    static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		return convert::CastToJS<RV>( (obj->*MemFunc)() );
-	    }
-
-	    template <typename T, typename RV>
-	    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		return convert::CastToJS<RV>( (obj->*MemFunc)() );
-	    }
-
-	    template <typename T>
-	    static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		(obj->*MemFunc)();
-		return Undefined();
-	    }
-
-	    template <typename T>
-	    static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncCaller0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		(obj->*MemFunc)();
-		return Undefined();
-	    }
-	};
-
-        /**
-           Useless base instantiation - See the 0-specialization for details.
-        */
         template <int Arity>
 	struct WeakMemFuncCaller
         {};
@@ -93,7 +36,7 @@ namespace juice {
 	   number of arguments.
 	*/
         template <>
-	struct WeakMemFuncCaller<0> : MemFuncCaller<0>
+	struct WeakMemFuncCaller<0> : v8::juice::convert::MemFuncForwarder<0>
 	{
 	    template <typename WeakWrappedType, typename RV>
 	    static Handle<Value> CallOnWeakSelf( RV (WeakWrappedType::*func)(), Arguments const & argv )
