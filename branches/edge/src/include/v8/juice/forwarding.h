@@ -170,6 +170,78 @@ namespace v8 { namespace juice { namespace convert {
 
 #include "forwarding-FunctorForwarder.h" // generated code
 
+    /**
+       Useless base instantiation - See the 0-specialization for details.
+    */
+    template <int Arity_>
+    struct MemFuncForwarder
+    {
+        enum { Arity = Arity_ };
+    };
+
+
+    /**
+       A helper type for forwarding JS arguments to member functions
+       taking 0 arguments. The classes MemFuncForwarder<1..N> are
+       generated code and follow this class' API.
+
+       All variants of this class except the nullary one throw a
+       JS-side exception if the argument list does not have at least
+       the required number of parameters.
+    */
+    template <>
+    struct MemFuncForwarder<0>
+    {
+	    enum { Arity = 0 };
+	    template <typename T, typename RV>
+
+            /**
+               Calls (obj->*MemFunc)().
+            */
+	    static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
+		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+		return convert::CastToJS<RV>( (obj->*MemFunc)() );
+	    }
+
+            /**
+               Calls (obj->*MemFunc)().
+            */
+	    template <typename T, typename RV>
+	    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
+		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+		return convert::CastToJS<RV>( (obj->*MemFunc)() );
+	    }
+
+            /**
+               Calls (obj->*MemFunc)().
+            */
+	    template <typename T>
+	    static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
+		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+		(obj->*MemFunc)();
+		return Undefined();
+	    }
+
+            /**
+               Calls (obj->*MemFunc)().
+            */
+	    template <typename T>
+	    static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
+	    {
+		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
+		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+		(obj->*MemFunc)();
+		return Undefined();
+	    }
+    };
+
+#include "forwarding-MemFuncForwarder.h" // generated code
 
     /**
        See InvocationCallbackToArgv for details.

@@ -11,7 +11,7 @@ struct FunctorForwarder<1,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<1,RV>::Call() expects at least 1 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -35,7 +35,7 @@ struct FunctorForwarder<1,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<1,void>::Call() expects at least 1 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]) );
+            f(  CastFromJS< A0 >(argv[0]) );
         }
         catch( std::exception const & ex )
         {
@@ -77,7 +77,7 @@ struct FunctorForwarder<2,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<2,RV>::Call() expects at least 2 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -101,7 +101,7 @@ struct FunctorForwarder<2,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<2,void>::Call() expects at least 2 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]) );
+            f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) );
         }
         catch( std::exception const & ex )
         {
@@ -143,7 +143,7 @@ struct FunctorForwarder<3,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<3,RV>::Call() expects at least 3 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -167,7 +167,7 @@ struct FunctorForwarder<3,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<3,void>::Call() expects at least 3 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]) );
+            f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) );
         }
         catch( std::exception const & ex )
         {
@@ -209,7 +209,7 @@ struct FunctorForwarder<4,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<4,RV>::Call() expects at least 4 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -233,7 +233,7 @@ struct FunctorForwarder<4,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<4,void>::Call() expects at least 4 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]) );
+            f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) );
         }
         catch( std::exception const & ex )
         {
@@ -275,7 +275,7 @@ struct FunctorForwarder<5,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<5,RV>::Call() expects at least 5 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -299,7 +299,7 @@ struct FunctorForwarder<5,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<5,void>::Call() expects at least 5 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]) );
+            f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) );
         }
         catch( std::exception const & ex )
         {
@@ -341,7 +341,7 @@ struct FunctorForwarder<6,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<6,RV>::Call() expects at least 6 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -365,7 +365,7 @@ struct FunctorForwarder<6,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<6,void>::Call() expects at least 6 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]) );
+            f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) );
         }
         catch( std::exception const & ex )
         {
@@ -407,7 +407,7 @@ struct FunctorForwarder<7,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<7,RV>::Call() expects at least 7 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -431,7 +431,7 @@ struct FunctorForwarder<7,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<7,void>::Call() expects at least 7 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]) );
+            f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) );
         }
         catch( std::exception const & ex )
         {
@@ -473,7 +473,7 @@ struct FunctorForwarder<8,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<8,RV>::Call() expects at least 8 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -497,7 +497,7 @@ struct FunctorForwarder<8,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<8,void>::Call() expects at least 8 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]) );
+            f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) );
         }
         catch( std::exception const & ex )
         {
@@ -539,7 +539,7 @@ struct FunctorForwarder<9,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<9,RV>::Call() expects at least 9 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -563,7 +563,7 @@ struct FunctorForwarder<9,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<9,void>::Call() expects at least 9 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]) );
+            f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) );
         }
         catch( std::exception const & ex )
         {
@@ -605,7 +605,7 @@ struct FunctorForwarder<10,RV>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<10,RV>::Call() expects at least 10 JS arguments!"));
         try
         {
-            return convert::CastToJS<RV>( f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]), convert::CastFromJS< A9 >(argv[9]) ) );
+            return CastToJS<RV>( f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) ) );
         }
         catch( std::exception const & ex )
         {
@@ -629,7 +629,7 @@ struct FunctorForwarder<10,void>
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<10,void>::Call() expects at least 10 JS arguments!"));
         try
         {
-            f(  convert::CastFromJS< A0 >(argv[0]), convert::CastFromJS< A1 >(argv[1]), convert::CastFromJS< A2 >(argv[2]), convert::CastFromJS< A3 >(argv[3]), convert::CastFromJS< A4 >(argv[4]), convert::CastFromJS< A5 >(argv[5]), convert::CastFromJS< A6 >(argv[6]), convert::CastFromJS< A7 >(argv[7]), convert::CastFromJS< A8 >(argv[8]), convert::CastFromJS< A9 >(argv[9]) );
+            f(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) );
         }
         catch( std::exception const & ex )
         {
