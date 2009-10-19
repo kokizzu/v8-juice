@@ -96,6 +96,11 @@ namespace v8 { namespace juice { namespace convert {
             }
             return Undefined(); // cannot be reached.
         }
+        template <typename Func>
+        static Handle<Value> Call( Func f, ::v8::Arguments const & argv )
+        {
+            return Call( f );
+        }
     };
 
     /** Specialization for functor taking no arguments and returning void. */
@@ -119,7 +124,6 @@ namespace v8 { namespace juice { namespace convert {
                 return ::v8::ThrowException( ::v8::String::New("Native function threw an unknown native exception type!"));
             }
             return Undefined(); // cannot be reached.
-            return Undefined();
         }
     };
 
@@ -272,14 +276,14 @@ namespace v8 { namespace juice { namespace convert {
        the WeakJSClassCreator:
 
        \code
-       myobj->Set(String::New("func"), InvocationCallbackToArgv<MyCallback>::call );
+       myobj->Set(String::New("func"), InvocationCallbackToArgv<MyCallback>::Call );
        \endcode
 
        This is of course less efficient than directly calling an
        InvocationCallback, because we must synthesize an array of
        Value handles.
 
-       The optional skipArgN parameter tells call() than it should skip
+       The optional skipArgN parameter tells Call() than it should skip
        over the first N arguments in the list, which can be useful when
        stripping a first argument for personal use then passing on the
        rest of the args.
@@ -293,7 +297,7 @@ namespace v8 { namespace juice { namespace convert {
 	   greater than or equal to argv.Length() then
 	   proxy(argv.This(),0,0) is called.
 	*/
-	static ::v8::Handle< ::v8::Value > call( ::v8::Arguments const & argv )
+	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
 	{
 	    typedef Handle<Value> HV;
 	    if( skipArgN >= argv.Length() )
