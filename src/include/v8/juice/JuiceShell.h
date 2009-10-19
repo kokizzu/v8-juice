@@ -176,23 +176,21 @@ namespace juice {
            error nor undefined, then the result is converted to a
            string and send to that stream.
 
-           If reportExceptions is true then JS-side exceptions will
-           trigger a call to the error reporter defined via
-           SetExecuteErrorReporter() (or the default, which sends the
-           exception to std::cerr). The error reporter will get passed
-           a formatted error message (possible multiple lines)
-           detailing, if possible, the exact location of the error.
+           If reportExceptions is not null and the script throws an exception
+           then that TryCatch object is used to build an error string, which
+           is passed to this object's error reporter function. The default sends
+           the output to std::cerr.
 
            Returns true if execution of the script generates no JS
            errors, else false.
         */
         bool ExecuteString(v8::Handle<v8::String> const & source,
                            v8::Handle<v8::Value> name,
-                           std::ostream * resultGoesTo = 0,
-                           v8::TryCatch * reportExceptions = 0);
+                           v8::TryCatch * reportExceptions = 0,
+                           std::ostream * resultGoesTo = 0 );
 
         /**
-           Convenience form of ExecuteString(source,"some default name", 0, reportExceptions).
+           Convenience form of ExecuteString(source,"some default name", reportExceptions, 0).
         */
         bool ExecuteString(v8::Handle<v8::String> source, v8::TryCatch * reportExceptions = 0 );
 
@@ -201,8 +199,9 @@ namespace juice {
         */
         bool ExecuteString(std::string const & source,
                            std::string const & name,
-                           std::ostream * resultGoesTo = 0,
-                           v8::TryCatch * reportExceptions = 0);
+                           v8::TryCatch * reportExceptions = 0,
+                           std::ostream * resultGoesTo = 0
+                           );
 
         /**
            Convenience form of ExecuteString(source,"some default name", 0, reportExceptions).
@@ -215,11 +214,11 @@ namespace juice {
            Due to limitations in v8's native API for
            handling-then-propagating JS exceptions, this function
            cannot use a private TryCatch object to intercept error
-           messages for reporting. So... if the fence argument is
-           non-null, and the inclusion of the script generated an
-           exception, the error will be reported via this object's
-           current error reporter. If fence is null then exception
-           reporting will be surpressed.
+           messages for reporting. So... if the reportExceptions
+           argument is non-null, and the inclusion of the script
+           generated an exception, the error will be reported via this
+           object's current error reporter. If reportExceptions is
+           null then exception reporting will be surpressed.
 
            Returns the same as v8::juice::IncludeScript(), which is
            the result of the final expression in the included script.
@@ -228,7 +227,7 @@ namespace juice {
         */
         v8::Handle<v8::Value> Include( char const * source,
                                       bool useSearchPath = true,
-                                      v8::TryCatch * fence = 0
+                                      v8::TryCatch * reportExceptions = 0
                                       );
 
         
