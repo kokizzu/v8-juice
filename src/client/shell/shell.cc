@@ -293,7 +293,7 @@ int main(int argc, char * argv[])
                 // Execute argument given to -e option directly
                 v8::HandleScope handle_scope;
                 std::string source(argv[i + 1] ? argv[i + 1] : "");
-                if (!shell.ExecuteString(source, "[-e script]", 0, &jtry))
+                if (!shell.ExecuteString(source, "[-e script]", &jtry))
                 {
                     return 1;
                 }
