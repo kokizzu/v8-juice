@@ -341,7 +341,7 @@ void RunShell( v8::juice::JuiceShell & shell, std::ostream * out )
 {
     v8::TryCatch jtry;
     if( out ) (*out) << "V8 version "<< v8::V8::GetVersion() << '\n';
-    shell.InputLoop( v8::juice::JuiceShell::StdinLineFetcher, out, &jtry );
+    shell.InputLoop( v8::juice::JuiceShell::StdinLineFetcher, &jtry, out );
     if( out ) (*out) << std::endl;
 }
 
