@@ -1,4 +1,4 @@
-#summary Inro do the v8::juice::bind API
+#summary Intro do the v8::juice::bind API
 #labels Topic-CPlusPlus,Phase-UserDocs
 
 <wiki:toc max_depth="3" />
@@ -6,7 +6,7 @@
 =An introduction to the `v8::juice::bind` API=
 
 The `bind` API, defined in [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/bind.h bind.h] is not often used by client code, but is
-the core-most part of the v8-juice [ConvertingTypes type conversions API] and, by extension, the ClassBinder API.
+used by the v8-juice [ConvertingTypes type conversions API] and, by extension, the ClassBinder API.
 
 This API allows us to bind arbitrary `(void const *)` to arbitrary native pointers. To bind JS objects to natives, the JS objects need to have some sort of unique ID which we can associate with the native object. In v8, only full-fledged Objects can have any sort of unique ID, and the only way to get one is to store it in an "internal field" (a v8 feature) of the JS object. The only option v8 provides for is to store a (`void *`) in the object by adding an `v8::External` value to the object. That lookup key (the `void *`) can then be used by client applications.
 
@@ -14,7 +14,7 @@ The bind API maps those keys to bound object, keeping the full type of the bound
 
 == The functions ==
 
-The `bind` API has only a small handlfull of public functions, all of which are templatized on the native type:
+The `bind` API has only a small handlful of public functions, all of which are templatized on the native type:
 
   * `bool BindNative<T>(JSObject,T*)` (in several convenience overloads) maps a JS object to a native object.
   * `bool UnbindNative<T>(JSObject)` (with several convenience overloads) unmaps the binding.
