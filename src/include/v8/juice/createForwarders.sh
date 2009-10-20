@@ -258,7 +258,7 @@ template <>
 struct FunctionForwarder<${count}>
 {
     enum { Arity = ${count} };
-    template < typename RV, ${aTDecl}, typename Func >
+    template < typename RV, ${aTDecl} >
     static v8::Handle<v8::Value> Call( RV (*Func)(${aTParam}), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("${err_too_few_args}"));
@@ -277,8 +277,8 @@ struct FunctionForwarder<${count}>
         return Undefined(); // cannot be reached.
     }
 
-    template < ${aTDecl} >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)(${aTParam}), ::v8::Arguments const & argv )
+    template < typename VoidType, ${aTDecl} >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)(${aTParam}), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("${err_too_few_args}"));
         try
@@ -299,13 +299,13 @@ struct FunctionForwarder<${count}>
     template <typename RV, ${aTDecl}, RV (*Func)(${aTParam}) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV,${aTParam}>( Func, argv );
     }
 
-    template <${aTDecl}, void (*Func)(${aTParam}) >
+    template <typename VoidType, ${aTDecl}, VoidType (*Func)(${aTParam}) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid<${aTParam}>( Func, argv );
+        return CallVoid<VoidType, ${aTParam} >( Func, argv );
     }
 
 };

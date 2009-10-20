@@ -5,7 +5,7 @@ template <>
 struct FunctionForwarder<1>
 {
     enum { Arity = 1 };
-    template < typename RV,  typename A0, typename Func >
+    template < typename RV,  typename A0 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<1>::Call() expects at least 1 JS arguments!"));
@@ -24,8 +24,8 @@ struct FunctionForwarder<1>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<1>::Call() expects at least 1 JS arguments!"));
         try
@@ -46,13 +46,13 @@ struct FunctionForwarder<1>
     template <typename RV,  typename A0, RV (*Func)( A0) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0>( Func, argv );
     }
 
-    template < typename A0, void (*Func)( A0) >
+    template <typename VoidType,  typename A0, VoidType (*Func)( A0) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0>( Func, argv );
+        return CallVoid<VoidType,  A0 >( Func, argv );
     }
 
 };
@@ -62,7 +62,7 @@ template <>
 struct FunctionForwarder<2>
 {
     enum { Arity = 2 };
-    template < typename RV,  typename A0,  typename A1, typename Func >
+    template < typename RV,  typename A0,  typename A1 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0, A1), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<2>::Call() expects at least 2 JS arguments!"));
@@ -81,8 +81,8 @@ struct FunctionForwarder<2>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0,  typename A1 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0, A1), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0,  typename A1 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0, A1), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<2>::Call() expects at least 2 JS arguments!"));
         try
@@ -103,13 +103,13 @@ struct FunctionForwarder<2>
     template <typename RV,  typename A0,  typename A1, RV (*Func)( A0, A1) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0, A1>( Func, argv );
     }
 
-    template < typename A0,  typename A1, void (*Func)( A0, A1) >
+    template <typename VoidType,  typename A0,  typename A1, VoidType (*Func)( A0, A1) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0, A1>( Func, argv );
+        return CallVoid<VoidType,  A0, A1 >( Func, argv );
     }
 
 };
@@ -119,7 +119,7 @@ template <>
 struct FunctionForwarder<3>
 {
     enum { Arity = 3 };
-    template < typename RV,  typename A0,  typename A1,  typename A2, typename Func >
+    template < typename RV,  typename A0,  typename A1,  typename A2 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0, A1, A2), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<3>::Call() expects at least 3 JS arguments!"));
@@ -138,8 +138,8 @@ struct FunctionForwarder<3>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0,  typename A1,  typename A2 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0, A1, A2), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0,  typename A1,  typename A2 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0, A1, A2), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<3>::Call() expects at least 3 JS arguments!"));
         try
@@ -160,13 +160,13 @@ struct FunctionForwarder<3>
     template <typename RV,  typename A0,  typename A1,  typename A2, RV (*Func)( A0, A1, A2) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0, A1, A2>( Func, argv );
     }
 
-    template < typename A0,  typename A1,  typename A2, void (*Func)( A0, A1, A2) >
+    template <typename VoidType,  typename A0,  typename A1,  typename A2, VoidType (*Func)( A0, A1, A2) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0, A1, A2>( Func, argv );
+        return CallVoid<VoidType,  A0, A1, A2 >( Func, argv );
     }
 
 };
@@ -176,7 +176,7 @@ template <>
 struct FunctionForwarder<4>
 {
     enum { Arity = 4 };
-    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3, typename Func >
+    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0, A1, A2, A3), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<4>::Call() expects at least 4 JS arguments!"));
@@ -195,8 +195,8 @@ struct FunctionForwarder<4>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0,  typename A1,  typename A2,  typename A3 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0, A1, A2, A3), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0, A1, A2, A3), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<4>::Call() expects at least 4 JS arguments!"));
         try
@@ -217,13 +217,13 @@ struct FunctionForwarder<4>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV (*Func)( A0, A1, A2, A3) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0, A1, A2, A3>( Func, argv );
     }
 
-    template < typename A0,  typename A1,  typename A2,  typename A3, void (*Func)( A0, A1, A2, A3) >
+    template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3, VoidType (*Func)( A0, A1, A2, A3) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0, A1, A2, A3>( Func, argv );
+        return CallVoid<VoidType,  A0, A1, A2, A3 >( Func, argv );
     }
 
 };
@@ -233,7 +233,7 @@ template <>
 struct FunctionForwarder<5>
 {
     enum { Arity = 5 };
-    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, typename Func >
+    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0, A1, A2, A3, A4), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<5>::Call() expects at least 5 JS arguments!"));
@@ -252,8 +252,8 @@ struct FunctionForwarder<5>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0, A1, A2, A3, A4), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0, A1, A2, A3, A4), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<5>::Call() expects at least 5 JS arguments!"));
         try
@@ -274,13 +274,13 @@ struct FunctionForwarder<5>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV (*Func)( A0, A1, A2, A3, A4) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4>( Func, argv );
     }
 
-    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4, void (*Func)( A0, A1, A2, A3, A4) >
+    template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, VoidType (*Func)( A0, A1, A2, A3, A4) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0, A1, A2, A3, A4>( Func, argv );
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4 >( Func, argv );
     }
 
 };
@@ -290,7 +290,7 @@ template <>
 struct FunctionForwarder<6>
 {
     enum { Arity = 6 };
-    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, typename Func >
+    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0, A1, A2, A3, A4, A5), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<6>::Call() expects at least 6 JS arguments!"));
@@ -309,8 +309,8 @@ struct FunctionForwarder<6>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0, A1, A2, A3, A4, A5), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0, A1, A2, A3, A4, A5), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<6>::Call() expects at least 6 JS arguments!"));
         try
@@ -331,13 +331,13 @@ struct FunctionForwarder<6>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (*Func)( A0, A1, A2, A3, A4, A5) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5>( Func, argv );
     }
 
-    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, void (*Func)( A0, A1, A2, A3, A4, A5) >
+    template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, VoidType (*Func)( A0, A1, A2, A3, A4, A5) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0, A1, A2, A3, A4, A5>( Func, argv );
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5 >( Func, argv );
     }
 
 };
@@ -347,7 +347,7 @@ template <>
 struct FunctionForwarder<7>
 {
     enum { Arity = 7 };
-    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, typename Func >
+    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0, A1, A2, A3, A4, A5, A6), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<7>::Call() expects at least 7 JS arguments!"));
@@ -366,8 +366,8 @@ struct FunctionForwarder<7>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0, A1, A2, A3, A4, A5, A6), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<7>::Call() expects at least 7 JS arguments!"));
         try
@@ -388,13 +388,13 @@ struct FunctionForwarder<7>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (*Func)( A0, A1, A2, A3, A4, A5, A6) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5, A6>( Func, argv );
     }
 
-    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, void (*Func)( A0, A1, A2, A3, A4, A5, A6) >
+    template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0, A1, A2, A3, A4, A5, A6>( Func, argv );
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6 >( Func, argv );
     }
 
 };
@@ -404,7 +404,7 @@ template <>
 struct FunctionForwarder<8>
 {
     enum { Arity = 8 };
-    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, typename Func >
+    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<8>::Call() expects at least 8 JS arguments!"));
@@ -423,8 +423,8 @@ struct FunctionForwarder<8>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0, A1, A2, A3, A4, A5, A6, A7), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<8>::Call() expects at least 8 JS arguments!"));
         try
@@ -445,13 +445,13 @@ struct FunctionForwarder<8>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7>( Func, argv );
     }
 
-    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, void (*Func)( A0, A1, A2, A3, A4, A5, A6, A7) >
+    template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0, A1, A2, A3, A4, A5, A6, A7>( Func, argv );
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7 >( Func, argv );
     }
 
 };
@@ -461,7 +461,7 @@ template <>
 struct FunctionForwarder<9>
 {
     enum { Arity = 9 };
-    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, typename Func >
+    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<9>::Call() expects at least 9 JS arguments!"));
@@ -480,8 +480,8 @@ struct FunctionForwarder<9>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<9>::Call() expects at least 9 JS arguments!"));
         try
@@ -502,13 +502,13 @@ struct FunctionForwarder<9>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8>( Func, argv );
     }
 
-    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, void (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
+    template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0, A1, A2, A3, A4, A5, A6, A7, A8>( Func, argv );
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8 >( Func, argv );
     }
 
 };
@@ -518,7 +518,7 @@ template <>
 struct FunctionForwarder<10>
 {
     enum { Arity = 10 };
-    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, typename Func >
+    template < typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
     static v8::Handle<v8::Value> Call( RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<10>::Call() expects at least 10 JS arguments!"));
@@ -537,8 +537,8 @@ struct FunctionForwarder<10>
         return Undefined(); // cannot be reached.
     }
 
-    template <  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
-    static v8::Handle<v8::Value> CallVoid( void (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), ::v8::Arguments const & argv )
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), ::v8::Arguments const & argv )
     {
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctionForwarder<10>::Call() expects at least 10 JS arguments!"));
         try
@@ -559,13 +559,13 @@ struct FunctionForwarder<10>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
     static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
     {
-        return Call( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( Func, argv );
     }
 
-    template < typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, void (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
+    template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
     static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
     {
-        return CallVoid< A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( Func, argv );
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8, A9 >( Func, argv );
     }
 
 };
