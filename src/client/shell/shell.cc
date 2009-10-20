@@ -264,12 +264,16 @@ int main(int argc, char * argv[])
         BIND("version", Version);
 #undef BIND
 #undef FT
-
         v8::TryCatch jtry;
         bool run_shell = (argc == 1);
-        v8::Locker tlocker;
         std::string const endofargs("--");
         for (int i = 1; i < argc; i++) {
+            /* v8 bug 471: http://code.google.com/p/v8/issues/detail?id=471
+               
+            If the following Locker is in the next scope up, newer
+            v8 versions crash on exit.
+            */
+            v8::Locker tlocker;
             const char* str = argv[i];
             if( 0 == strcmp(str,"--print-cerr"))
             {
