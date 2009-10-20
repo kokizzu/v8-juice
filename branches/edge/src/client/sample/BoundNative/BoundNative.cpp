@@ -3,6 +3,9 @@
 
 #include "ClassWrap.h"
 
+
+#include <unistd.h> // sleep(3)
+
 #ifndef CERR
 #include <iostream> /* only for debuggering */
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
@@ -117,12 +120,17 @@ namespace v8 { namespace juice {
         cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Call );
         //cw.BindMemberFunc<&N::toString2>("toString");
         cw.Set( "toString", convert::MemFuncForwarder<0>::Invoke<N,std::string,&N::toString> );
-        cw.Set( "version", convert::FunctionForwarder<0>::Invoke<std::string,BoundNative_version> );
-        v8::InvocationCallback FH =
-            convert::FunctionForwarder<1>::InvokeVoid<std::string const &,BoundNative_doSomething>
+        v8::InvocationCallback FH;
+        FH = convert::FunctionForwarder<0>::Invoke<std::string,BoundNative_version>;
+#define JFH v8::FunctionTemplate::New(FH)->GetFunction()
+        cw.Set( "version", JFH );
+        FH = convert::FunctionForwarder<1>::InvokeVoid<void,std::string const &,BoundNative_doSomething>
             //convert::FunctionForwarder<1>::Invoke<void,std::string const &,BoundNative_doSomething>
             ;
-        cw.Set( "doSomething", FH );
+        cw.Set( "doSomething", JFH );
+        FH = convert::FunctionForwarder<1>::Invoke<unsigned int,unsigned int,::sleep>;
+        cw.Set( "sleep", JFH );
+#undef JFH
         cw.Seal();
         Handle<Object> jobj = cw.NewInstance(0,0);
         N * bound = CW::CastToNative::Value(jobj);

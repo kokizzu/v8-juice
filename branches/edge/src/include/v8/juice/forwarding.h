@@ -379,10 +379,11 @@ namespace v8 { namespace juice { namespace convert {
         }
         
         /**
-           Calls Func(), ignoring the arguments list. If Func throws a native
+           Calls Func(), ignoring the return value. If Func throws a native
            exception then it is transformed into a JS exception.
         */
-        static v8::Handle<v8::Value> CallVoid( void (*Func)(), Arguments const & /*ignored*/ )
+        template <typename VoidType>
+        static v8::Handle<v8::Value> CallVoid( VoidType (*Func)(), Arguments const & /*ignored*/ )
         {
             try
             {
@@ -406,17 +407,17 @@ namespace v8 { namespace juice { namespace convert {
         template <typename RV, RV (*Func)() >
         static v8::Handle<v8::Value> Invoke( Arguments const & argv )
         {
-            return Call( Func, argv );
+            return Call<RV>( Func, argv );
         }
 #if 1
         /**
            Calls Call( Func, argv ). Implements v8::InvocationCallback
            interface.
         */
-        template <void (*Func)() >
+        template <typename VoidType,VoidType (*Func)() >
         static v8::Handle<v8::Value> InvokeVoid( Arguments const & argv )
         {
-            return CallVoid( Func, argv );
+            return CallVoid<VoidType>( Func, argv );
         }
 #endif
     };

@@ -42,3 +42,6 @@ print('b.toString() ==',b.toString());
 print('b.toString2() ==',b.toString2());
 print('b.version() ==',b.version());
 print('b.doSomething() ==',b.doSomething("hi, world"));
+print("b.sleep(2)...");
+b.sleep(2);
+print("b.sleep'd(2)...");
