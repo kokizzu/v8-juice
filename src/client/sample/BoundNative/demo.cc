@@ -57,7 +57,7 @@ v8::Handle<v8::Value> Quit(const v8::Arguments& args);
 using namespace ::v8;
 using namespace ::v8::juice;
 
-#define TEST_CLASSWRAP2 0
+#define TEST_CLASSWRAP2 1
 #if TEST_CLASSWRAP2
 #include "BoundNative.cpp"
 #endif
@@ -67,8 +67,8 @@ int main(int argc, char * argv[])
         //v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
         v8::V8::SetFlagsFromString("--expose-gc",11);
     }
-    {
         v8::HandleScope handle_scope;
+    {
         v8::juice::cleanup::CleanupSentry cleaner;
         v8::juice::JuiceShell shell("v8juice");
         shell.ProcessMainArgv(argc,argv,1);
@@ -94,7 +94,6 @@ int main(int argc, char * argv[])
                 // -e "script"
                 v8::Locker tlocker;
                 v8::TryCatch jtry;
-                v8::HandleScope handle_scope;
                 std::string source(argv[i + 1] ? argv[i + 1] : "");
                 if (!shell.ExecuteString(source, "[-e script]", &jtry))
                 {
@@ -102,10 +101,9 @@ int main(int argc, char * argv[])
                 }
                 ++i;
             } else {
-                v8::Locker tlocker;
                 // assume this is a script file name.
+                v8::Locker tlocker;
                 v8::TryCatch jtry;
-                v8::HandleScope handle_scope;
                 shell.Include( str, false, &jtry );
                 if( jtry.HasCaught() )
                 {
@@ -118,13 +116,14 @@ int main(int argc, char * argv[])
                 continue;
             }
         }
+        if(1)
         {
-            //v8::Locker tlock; // causes crash. See v8 bug #471
+            v8::Locker tlock; // causes crash. See v8 bug #471
+            v8::HandleScope hs;
             if (run_shell)
             {
                 shell.AddGlobalFunc( "quit", Quit );
                 v8::TryCatch jtry;
-                //v8::Locker tlock; // causes crash. See v8 bug #471
                 shell.InputLoop( v8::juice::JuiceShell::StdinLineFetcher, &jtry, &std::cout );
                 std::cout << std::endl;
             }

@@ -16,6 +16,15 @@ struct MemFuncForwarder<1>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]) ) );
     }
+    template <typename T, typename RV,  typename A0>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0) const, Arguments const & argv )
@@ -24,6 +33,16 @@ struct MemFuncForwarder<1>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]) ) );
     }
+
+    template <typename T, typename RV,  typename A0>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0), Arguments const & argv )
@@ -31,6 +50,16 @@ struct MemFuncForwarder<1>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0>
+    static Handle<Value> Call( void (T::*MemFunc)( A0), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -42,6 +71,41 @@ struct MemFuncForwarder<1>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0, RV(T::*MemFunc)( A0) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0, RV(T::*MemFunc)( A0) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0, void (T::*MemFunc)( A0) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0, void (T::*MemFunc)( A0) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -59,6 +123,15 @@ struct MemFuncForwarder<2>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) ) );
     }
+    template <typename T, typename RV,  typename A0,  typename A1>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0,  typename A1>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1) const, Arguments const & argv )
@@ -67,6 +140,16 @@ struct MemFuncForwarder<2>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) ) );
     }
+
+    template <typename T, typename RV,  typename A0,  typename A1>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0,  typename A1>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1), Arguments const & argv )
@@ -74,6 +157,16 @@ struct MemFuncForwarder<2>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -85,6 +178,41 @@ struct MemFuncForwarder<2>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0,  typename A1 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1, RV(T::*MemFunc)( A0, A1) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1, RV(T::*MemFunc)( A0, A1) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1, void (T::*MemFunc)( A0, A1) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1, void (T::*MemFunc)( A0, A1) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -102,6 +230,15 @@ struct MemFuncForwarder<3>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) ) );
     }
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2) const, Arguments const & argv )
@@ -110,6 +247,16 @@ struct MemFuncForwarder<3>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) ) );
     }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0,  typename A1,  typename A2>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
@@ -117,6 +264,16 @@ struct MemFuncForwarder<3>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -128,6 +285,41 @@ struct MemFuncForwarder<3>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0,  typename A1,  typename A2 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2, RV(T::*MemFunc)( A0, A1, A2) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2, RV(T::*MemFunc)( A0, A1, A2) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2, void (T::*MemFunc)( A0, A1, A2) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2, void (T::*MemFunc)( A0, A1, A2) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -145,6 +337,15 @@ struct MemFuncForwarder<4>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) ) );
     }
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2, A3) const, Arguments const & argv )
@@ -153,6 +354,16 @@ struct MemFuncForwarder<4>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) ) );
     }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
@@ -160,6 +371,16 @@ struct MemFuncForwarder<4>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -171,6 +392,41 @@ struct MemFuncForwarder<4>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV(T::*MemFunc)( A0, A1, A2, A3) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV(T::*MemFunc)( A0, A1, A2, A3) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3, void (T::*MemFunc)( A0, A1, A2, A3) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3, void (T::*MemFunc)( A0, A1, A2, A3) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -188,6 +444,15 @@ struct MemFuncForwarder<5>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) ) );
     }
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4) const, Arguments const & argv )
@@ -196,6 +461,16 @@ struct MemFuncForwarder<5>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) ) );
     }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
@@ -203,6 +478,16 @@ struct MemFuncForwarder<5>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -214,6 +499,41 @@ struct MemFuncForwarder<5>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV(T::*MemFunc)( A0, A1, A2, A3, A4) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV(T::*MemFunc)( A0, A1, A2, A3, A4) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, void (T::*MemFunc)( A0, A1, A2, A3, A4) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, void (T::*MemFunc)( A0, A1, A2, A3, A4) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -231,6 +551,15 @@ struct MemFuncForwarder<6>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) ) );
     }
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
@@ -239,6 +568,16 @@ struct MemFuncForwarder<6>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) ) );
     }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
@@ -246,6 +585,16 @@ struct MemFuncForwarder<6>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -257,6 +606,41 @@ struct MemFuncForwarder<6>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -274,6 +658,15 @@ struct MemFuncForwarder<7>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) ) );
     }
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
@@ -282,6 +675,16 @@ struct MemFuncForwarder<7>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) ) );
     }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
@@ -289,6 +692,16 @@ struct MemFuncForwarder<7>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -300,6 +713,41 @@ struct MemFuncForwarder<7>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -317,6 +765,15 @@ struct MemFuncForwarder<8>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) ) );
     }
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
@@ -325,6 +782,16 @@ struct MemFuncForwarder<8>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) ) );
     }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
@@ -332,6 +799,16 @@ struct MemFuncForwarder<8>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -343,6 +820,41 @@ struct MemFuncForwarder<8>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -360,6 +872,15 @@ struct MemFuncForwarder<9>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) ) );
     }
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
@@ -368,6 +889,16 @@ struct MemFuncForwarder<9>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) ) );
     }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
@@ -375,6 +906,16 @@ struct MemFuncForwarder<9>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -386,6 +927,41 @@ struct MemFuncForwarder<9>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -403,6 +979,15 @@ struct MemFuncForwarder<10>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) ) );
     }
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
@@ -411,6 +996,16 @@ struct MemFuncForwarder<10>
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): wrong argument count!"));
 	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) ) );
     }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
+    static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): wrong argument count!"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
@@ -418,6 +1013,16 @@ struct MemFuncForwarder<10>
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) );
+	return Undefined();
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
 	return Undefined();
     }
 
@@ -429,5 +1034,40 @@ struct MemFuncForwarder<10>
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) );
 	return Undefined();
     }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): Native object is null!"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): wrong argument count!"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const >
+    static Handle<Value> Invoke( Arguments const & argv )
+    {
+        return Call( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const >
+    static Handle<Value> InvokeVoid( Arguments const & argv )
+    {
+        return CallVoid( MemFunc, argv );
+    }
+
 };
 #endif // if !defined(DOXYGEN)

@@ -37,9 +37,18 @@ namespace v8 { namespace juice {
             os << "[Object BoundNative@"<<(void const *)this<<']';
             return os.str();
         }
+        void tryRoundaboutApproach()
+        {
+            CERR << "BoundNative[@"<<(void const *)this<<"]::tryRoundaboutApproach()\n";
+        }
         Handle<Value> toString2( Arguments const & argv )
         {
+#if 0
+            typedef convert::MemFuncForwarder<0> MF;
+            return MF::Call( this, &BoundNative::tryRoundaboutApproach, argv );
+#else
             return convert::CastToJS( this->toString() );
+#endif
         }
     };
     size_t BoundNative::instcount = 0;
@@ -86,17 +95,34 @@ namespace v8 { namespace juice {
 #include "ClassWrap-CastOps.h"
 
 namespace v8 { namespace juice {
+    std::string BoundNative_version()
+    {
+        return "alphalpha 0.0.1";
+    }
+    void BoundNative_doSomething(std::string const &x)
+    {
+        CERR << "doSomething(\""<<x<<"\")\n";
+        return;
+    }
     void bind_my_native( v8::Handle<v8::Object> dest )
     {
         using namespace v8;
+        using namespace v8::juice;
         HandleScope scope;
         typedef BoundNative N;
         typedef ClassWrap<N> CW;
         CW cw(dest);
         CERR <<"Binding class "<<CW::ClassName::Value()<<"...\n";
         cw.Set("foo",String::New("this is foo"));
-        cw.Set("toString", convert::InvocationCallbackMember<N,&N::toString2>::Call );
+        cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Call );
         //cw.BindMemberFunc<&N::toString2>("toString");
+        cw.Set( "toString", convert::MemFuncForwarder<0>::Invoke<N,std::string,&N::toString> );
+        cw.Set( "version", convert::FunctionForwarder<0>::Invoke<std::string,BoundNative_version> );
+        v8::InvocationCallback FH =
+            convert::FunctionForwarder<1>::InvokeVoid<std::string const &,BoundNative_doSomething>
+            //convert::FunctionForwarder<1>::Invoke<void,std::string const &,BoundNative_doSomething>
+            ;
+        cw.Set( "doSomething", FH );
         cw.Seal();
         Handle<Object> jobj = cw.NewInstance(0,0);
         N * bound = CW::CastToNative::Value(jobj);

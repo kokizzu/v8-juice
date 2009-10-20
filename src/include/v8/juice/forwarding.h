@@ -125,6 +125,11 @@ namespace v8 { namespace juice { namespace convert {
             }
             return Undefined(); // cannot be reached.
         }
+        template <typename Func>
+        static Handle<Value> Call( Func f, v8::Arguments const & argv )
+        {
+            return Call( f );
+        }
     };
 
 
@@ -199,57 +204,225 @@ namespace v8 { namespace juice { namespace convert {
     template <>
     struct MemFuncForwarder<0>
     {
-	    enum { Arity = 0 };
-	    template <typename T, typename RV>
+        enum { Arity = 0 };
+        
+        /**
+           Calls (obj->*MemFunc)().
+        */
+        template <typename T, typename RV>
+        static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
+        {
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+            return CastToJS<RV>( (obj->*MemFunc)() );
+        }
+        /**
+           Tries to extract a (T*) from argv using CastFromJS(argv.This()). On success, it calls
+           Call( thatObject, MemFunc, argv ). On error it throws a JS-side exception.
+        */
+        template <typename T, typename RV>
+        static Handle<Value> Call( RV (T::*MemFunc)(), Arguments const & argv )
+        {
+            T * obj = CastToJS<T>( argv.This() );
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            return Call( obj, MemFunc, argv );
+        }
+        
+        /**
+           Calls (obj->*MemFunc)().
+        */
+        template <typename T, typename RV>
+        static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
+        {
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+            return CastToJS<RV>( (obj->*MemFunc)() );
+        }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
-	    static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		return convert::CastToJS<RV>( (obj->*MemFunc)() );
-	    }
+        /**
+           Tries to extract a (T*) from argv using CastFromJS(argv.This()). On success, it calls
+           Call( thatObject, MemFunc, argv ). On error it throws a JS-side exception.
+        */
+        template <typename T, typename RV>
+        static Handle<Value> Call( RV (T::*MemFunc)() const, Arguments const & argv )
+        {
+            T const * obj = CastFromJS<T>( argv.This() );
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            return Call( obj, MemFunc, argv );
+        }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
-	    template <typename T, typename RV>
-	    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		return convert::CastToJS<RV>( (obj->*MemFunc)() );
-	    }
+        /**
+           Calls (obj->*MemFunc)().
+        */
+        template <typename T>
+        static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
+        {
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+            (obj->*MemFunc)();
+            return Undefined();
+        }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
-	    template <typename T>
-	    static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		(obj->*MemFunc)();
-		return Undefined();
-	    }
+        /**
+           Tries to extract a (T*) from argv using CastFromJS(argv.This()). On success, it calls
+           Call( thatObject, MemFunc, argv ). On error it throws a JS-side exception.
+        */
+        template <typename T>
+        static Handle<Value> Call( void (T::*MemFunc)(), Arguments const & argv )
+        {
+            T * obj = CastFromJS<T>( argv.This() );
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            Call( obj, MemFunc, argv );
+            return v8::Undefined();
+        }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
-	    template <typename T>
-	    static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		(obj->*MemFunc)();
-		return Undefined();
-	    }
+        /**
+           Calls (obj->*MemFunc)().
+        */
+        template <typename T>
+        static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
+        {
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+            (obj->*MemFunc)();
+            return Undefined();
+        }
+
+        /**
+           Tries to extract a (T*) from argv using CastFromJS(argv.This()). On success, it calls
+           Call( thatObject, MemFunc, argv ). On error it throws a JS-side exception.
+        */
+        template <typename T>
+        static Handle<Value> Call( void (T::*MemFunc)() const, Arguments const & argv )
+        {
+            T const * obj = CastFromJS<T>( argv.This() );
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            Call( obj, MemFunc, argv );
+            return v8::Undefined();
+        }
+
+
+        /**
+           Calls Call( MemFunc, argv ). Implements the
+           v8::InvocationCallback interface.
+        */
+        template <typename T, typename RV, RV (T::*MemFunc)() >
+        static Handle<Value> Invoke( Arguments const & argv )
+        {
+            return Call( MemFunc, argv );
+        }
+
+        /**
+           Calls Call( MemFunc, argv ). Implements the
+           v8::InvocationCallback interface.
+        */
+        template <typename T, typename RV, RV (T::*MemFunc)() const >
+        static Handle<Value> Invoke( Arguments const & argv )
+        {
+            return Call( MemFunc, argv );
+        }
+
+        /**
+           Calls Call( MemFunc, argv ). Implements the
+           v8::InvocationCallback interface.
+        */
+        template <typename T, void (T::*MemFunc)() >
+        static Handle<Value> InvokeVoid( Arguments const & argv )
+        {
+            return Call( MemFunc, argv );
+        }
+
+        /**
+           Calls Call( MemFunc, argv ). Implements the
+           v8::InvocationCallback interface.
+        */
+        template <typename T, void (T::*MemFunc)() const >
+        static Handle<Value> InvokeVoid( Arguments const & argv )
+        {
+            return Call( MemFunc, argv );
+        }
+        
     };
 
 #include "forwarding-MemFuncForwarder.h" // generated specializations for MemFuncForwarder
 
+    template <int Arity_>
+    struct FunctionForwarder
+    {
+        enum { Arity = Arity_ };
+    };
+
+    template <>
+    struct FunctionForwarder<0>
+    {
+        enum { Arity = 0 };
+        /**
+           Calls Func(), ignoring the arguments list, and returns the
+           function's value, converted to JS. If Func throws a native
+           exception then it is transformed into a JS exception.
+        */
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( RV (*Func)(), Arguments const & /*ignored*/ )
+        {
+            try
+            {
+                return CastToJS<RV>( Func() );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<${count}>::Call() Native function threw an unknown native exception type!"));
+            }
+        }
+        
+        /**
+           Calls Func(), ignoring the arguments list. If Func throws a native
+           exception then it is transformed into a JS exception.
+        */
+        static v8::Handle<v8::Value> CallVoid( void (*Func)(), Arguments const & /*ignored*/ )
+        {
+            try
+            {
+                Func();
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<${count}>::Call() Native function threw an unknown native exception type!"));
+            }
+            return v8::Undefined();
+        }
+
+        /**
+           Calls Call( Func, argv ). Implements v8::InvocationCallback
+           interface.
+        */
+        template <typename RV, RV (*Func)() >
+        static v8::Handle<v8::Value> Invoke( Arguments const & argv )
+        {
+            return Call( Func, argv );
+        }
+#if 1
+        /**
+           Calls Call( Func, argv ). Implements v8::InvocationCallback
+           interface.
+        */
+        template <void (*Func)() >
+        static v8::Handle<v8::Value> InvokeVoid( Arguments const & argv )
+        {
+            return CallVoid( Func, argv );
+        }
+#endif
+    };
+
+#include "forwarding-FunctionForwarder.h" // generated specializations for MemFuncForwarder
+    
     /**
        See InvocationCallbackToArgv for details.
     */
@@ -335,7 +508,7 @@ namespace v8 { namespace juice { namespace convert {
 	*/
 	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
 	{
-            T * self = convert::CastFromJS<T>( argv.This() );
+            T * self = CastFromJS<T>( argv.This() );
             if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
             return (self->*Func)( argv );
 	}

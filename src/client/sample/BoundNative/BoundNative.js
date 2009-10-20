@@ -38,3 +38,7 @@ for( var i = 0; i < 5; ++i )
     print("Created",c,"objects...");
 }
 print("Done. Created",total,"objects in total.");
+print('b.toString() ==',b.toString());
+print('b.toString2() ==',b.toString2());
+print('b.version() ==',b.version());
+print('b.doSomething() ==',b.doSomething("hi, world"));
