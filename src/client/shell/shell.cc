@@ -70,6 +70,7 @@ http://code.google.com/p/v8-juice/issues/detail?id=N
 
 #include <v8/juice/juice.h>
 #include <v8/juice/convert.h>
+#include <v8/juice/bind.h>
 #include <v8/juice/time.h>
 #include <v8/juice/sprintf.h>
 #include <v8/juice/plugin.h>

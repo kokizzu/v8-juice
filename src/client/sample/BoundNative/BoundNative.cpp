@@ -131,35 +131,34 @@ namespace v8 { namespace juice {
         typedef
             convert::InvocationCallbackCreator
             //convert::FunctionForwarder<0>
-            CIC;
+            ICC;
         cw.Set( "toString",
-                //convert::MemFuncForwarder<0>::Invoke<N,std::string,&N::toString>
-                CIC::M0::Invocable<N,std::string,&N::toString>
+                ICC::M0::Invocable<N,std::string,&N::toString>
                 );
         cw.Set( "getInt",
-                CIC::M0::Invocable<N,int,&N::getInt>
+                ICC::M0::Invocable<N,int,&N::getInt>
                 );
         cw.Set( "setInt",
-                CIC::M1::Invocable<N,void,int,&N::setInt>
+                ICC::M1::Invocable<N,void,int,&N::setInt>
                 );
         cw.Set( "ptr",
-                CIC::M1::Invocable<N,bool,N const * ,&N::ptr>
-                //CIC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
+                ICC::M1::Invocable<N,bool,N const * ,&N::ptr>
+                //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
                 );
         v8::InvocationCallback FH;
         FH =
-            CIC::F0::Invocable<std::string,BoundNative_version>
-            //CIC::Invocable<std::string,BoundNative_version>
+            ICC::F0::Invocable<std::string,BoundNative_version>
+            //ICC::Invocable<std::string,BoundNative_version>
             ;
 #define JFH v8::FunctionTemplate::New(FH)->GetFunction()
         cw.Set( "version", JFH );
 
-        FH = CIC::F1::Invocable<void,std::string const &,BoundNative_doSomething>;
-        FH = CIC::F1::InvocableVoid<size_t,std::string const &,BoundNative_doSomething2>;
-        FH = CIC::F1::Invocable<size_t,std::string const &,BoundNative_doSomething2>;
+        FH = ICC::F1::Invocable<void,std::string const &,BoundNative_doSomething>;
+        FH = ICC::F1::InvocableVoid<size_t,std::string const &,BoundNative_doSomething2>;
+        FH = ICC::F1::Invocable<size_t,std::string const &,BoundNative_doSomething2>;
 
         cw.Set( "doSomething", JFH );
-        FH = CIC::F1::Invocable<unsigned int,unsigned int,::sleep>;
+        FH = ICC::F1::Invocable<unsigned int,unsigned int,::sleep>;
         cw.Set( "sleep", JFH );
 #undef JFH
         cw.Seal();
