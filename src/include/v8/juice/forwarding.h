@@ -200,6 +200,20 @@ namespace v8 { namespace juice { namespace convert {
        All variants of this class except the 0-arity one throw a
        JS-side exception if the argument list does not have at least
        the required number of parameters.
+
+
+       The various Call() overloads can be used to forward JS calls to
+       member functions.
+
+       The Invocable() members can be used with
+       v8::FunctionTemplate::New(FunctionForwarder<N>::Invocable<...>)
+       to bind member functions to JS objects. For this to work,
+       CastFromJS<T>(argv.This()) must be able to return a native
+       "this" object to call the function on.
+
+
+       FIXME: add try/catch wrappers and convert native exceptions to
+       JS exceptions.
     */
     template <>
     struct MemFuncForwarder<0>
@@ -207,7 +221,8 @@ namespace v8 { namespace juice { namespace convert {
         enum { Arity = 0 };
         
         /**
-           Calls (obj->*MemFunc)().
+           Calls (obj->*MemFunc)() and returns its to-JS-converted
+           value.
         */
         template <typename T, typename RV>
         static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
@@ -235,7 +250,6 @@ namespace v8 { namespace juice { namespace convert {
         static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
         {
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
-            //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
             return CastToJS<RV>( (obj->*MemFunc)() );
         }
 
@@ -251,6 +265,9 @@ namespace v8 { namespace juice { namespace convert {
             return Call( obj, MemFunc, argv );
         }
 
+        /**
+           Calls (obj->*MemFunc()) and discards the return value.
+        */
         template <typename T, typename VoidType>
         static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)(), Arguments const & argv )
         {
@@ -258,6 +275,7 @@ namespace v8 { namespace juice { namespace convert {
             (obj->*MemFunc)();
             return Undefined();
         }
+
         /**
            Identical to CallVoid().
         */
@@ -270,8 +288,8 @@ namespace v8 { namespace juice { namespace convert {
 
         /**
            Tries to extract a (T*) from argv using
-           CastFromJS(argv.This()). On success, it calls Call(
-           thatObject, MemFunc, argv ). On error it throws a JS-side
+           CastFromJS(argv.This()). On success, it calls
+           Call(thatObject,MemFunc,argv). On error it throws a JS-side
            exception. The return value of the native function is
            discarded.
         */
@@ -284,7 +302,11 @@ namespace v8 { namespace juice { namespace convert {
             return v8::Undefined();
         }
 
-        /** Identical to CallVoid(). */
+        /**
+           Identical to CallVoid(), and only exists because it
+           incidentally allows the Invocable() function to work
+           properly when RV==void.
+        */
         template <typename T>
         static Handle<Value> Call( void (T::*MemFunc)(), Arguments const & argv )
         {
@@ -300,7 +322,9 @@ namespace v8 { namespace juice { namespace convert {
             return Undefined();
         }
         /**
-           Identical to CallVoid().
+           Identical to CallVoid(), and only exists because it
+           incidentally allows the Invocable() function to work
+           properly when RV==void.
         */
         template <typename T>
         static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
@@ -321,7 +345,9 @@ namespace v8 { namespace juice { namespace convert {
             return v8::Undefined();
         }
         /**
-           Identical to CallVoid().
+           Identical to CallVoid(), and only exists because it
+           incidentally allows the Invocable() function to work
+           properly when RV==void.
         */
         template <typename T>
         static Handle<Value> Call( void (T::*MemFunc)() const, Arguments const & argv )
@@ -373,20 +399,49 @@ namespace v8 { namespace juice { namespace convert {
 
 #include "forwarding-MemFuncForwarder.h" // generated specializations for MemFuncForwarder
 
+    /**
+       A useless base instantiation. See FunctionForwarder<0> for the
+       full docs.
+    */
     template <int Arity_>
     struct FunctionForwarder
     {
         enum { Arity = Arity_ };
     };
 
+    /**
+       A helper type for forwarding JS arguments to native
+       functions taking 0 arguments. The classes
+       FunctionForwarder<1..N> are generated code and follow this
+       class' API.
+
+       Each specialization of this class handles the cases for N
+       arguments, where N is the templatized value, or arity of the
+       functions.
+       
+       All variants of this class except the 0-arity one throw a
+       JS-side exception if the argument list does not have at least
+       the required number of parameters.
+
+       This functions can support functions taking or returning any
+       argument type which is convertible using CastToJS() and
+       CastFromJS().
+
+       The various Call() overloads can be used to forward JS calls to
+       member functions.
+
+       The Invocable() members can be used with
+       v8::FunctionTemplate::New(FunctionForwarder<N>::Invocable<...>)
+       to bind functions to JS objects.
+    */
     template <>
     struct FunctionForwarder<0>
     {
         enum { Arity = 0 };
         /**
-           Calls Func(), ignoring the arguments list, and returns the
-           function's value, converted to JS. If Func throws a native
-           exception then it is transformed into a JS exception.
+           Calls Func() and returns the function's value, converted to
+           JS. If Func throws a native exception then it is
+           transformed into a JS exception.
         */
         template <typename RV>
         static v8::Handle<v8::Value> Call( RV (*Func)(), Arguments const & /*ignored*/ )
@@ -408,6 +463,10 @@ namespace v8 { namespace juice { namespace convert {
         /**
            Calls Func(), ignoring the return value. If Func throws a native
            exception then it is transformed into a JS exception.
+
+           Note that VoidType is not required to be CastFromJS()'able,
+           so that JSToNative<VoidType> is not instantiated by this
+           call.
         */
         template <typename VoidType>//, VoidType (*FuncT)() >
         static v8::Handle<v8::Value> CallVoid( VoidType (*Func)(), Arguments const & /*ignored*/ )
@@ -426,6 +485,11 @@ namespace v8 { namespace juice { namespace convert {
             }
             return v8::Undefined();
         }
+        /**
+           Identical to CallVoid(), and only exists because it
+           incidentally allows the Invocable() function to work
+           properly when RV==void.
+        */
         template < typename VoidType >
         static v8::Handle<v8::Value> Call( void (*Func)(), ::v8::Arguments const & argv )
         {
@@ -439,7 +503,6 @@ namespace v8 { namespace juice { namespace convert {
         template <typename RV, RV (*Func)() >
         static v8::Handle<v8::Value> Invocable( Arguments const & argv )
         {
-            //return Call<RV, RV (*)() >( Func, argv );
             return Call<RV>( Func, argv );
         }
         /**
@@ -449,8 +512,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename VoidType,VoidType (*Func)() >
         static v8::Handle<v8::Value> InvocableVoid( Arguments const & argv )
         {
-            return CallVoid<VoidType//, VoidType (*)()
-                >( Func, argv );
+            return CallVoid<VoidType>( Func, argv );
         }
     };
 
