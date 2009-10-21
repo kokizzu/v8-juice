@@ -71,9 +71,9 @@ namespace v8 { namespace juice {
     };
 
     template <>
-    struct ClassWrap_Opt_InternalFields<BoundNative> : ClassWrap_Opt_Int<1>
+    struct ClassWrap_Opt_InternalFields<BoundNative> : ClassWrap_Opt_Int<3>
     {
-        static const int NativeIndex = 0;
+        static const int NativeIndex = 2;
     };
 
     template <>
@@ -147,7 +147,10 @@ namespace v8 { namespace juice {
                 //CIC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
                 );
         v8::InvocationCallback FH;
-        FH = CIC::F0::Invocable<std::string,BoundNative_version>; // 
+        FH =
+            CIC::F0::Invocable<std::string,BoundNative_version>
+            //CIC::Invocable<std::string,BoundNative_version>
+            ;
 #define JFH v8::FunctionTemplate::New(FH)->GetFunction()
         cw.Set( "version", JFH );
 
