@@ -298,8 +298,8 @@ namespace juice {
     }
     
     void JuiceShell::InputLoop( LineFetcher input,
-                                std::ostream * os,
-                                v8::TryCatch * reportExceptions )
+                                v8::TryCatch * reportExceptions,
+                                std::ostream * os )
     {
         std::string sbuf;
         bool dobreak = false;

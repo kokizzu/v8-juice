@@ -281,6 +281,7 @@ namespace v8 { namespace juice {
                     Detail::TimerLock lock;
                     if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) break;
                 }
+                if( v8::V8::IsDead() ) break;
                 if( isFunc )
                 {
                     fh->Call( ji.jself, 0, 0 );

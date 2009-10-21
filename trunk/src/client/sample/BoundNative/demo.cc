@@ -48,6 +48,7 @@
 //#include <v8/juice/ToSource.h>
 #include <v8/juice/JuiceShell.h>
 #include <v8/juice/ClassBinder.h>
+//#include <v8/juice/ClassWrap.h>
 
 //namespace bind = ::v8::juice::bind;
 
@@ -56,22 +57,28 @@ v8::Handle<v8::Value> Quit(const v8::Arguments& args);
 using namespace ::v8;
 using namespace ::v8::juice;
 
-
-v8::juice::JuiceShell * ShellInstance = 0; 
+#define TEST_CLASSWRAP2 1
+#if TEST_CLASSWRAP2
+#include "BoundNative.cpp"
+#endif
 int main(int argc, char * argv[])
 {
-    //v8::V8::SetFlagsFromCommandLine(&argc, argv, false);
     {
+        //v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
+        v8::V8::SetFlagsFromString("--expose-gc",11);
+    }
         v8::HandleScope handle_scope;
+    {
         v8::juice::cleanup::CleanupSentry cleaner;
         v8::juice::JuiceShell shell("v8juice");
-        ShellInstance = &shell;
         shell.ProcessMainArgv(argc,argv,1);
         shell.SetupJuiceEnvironment();
         MyNative::SetupClass(shell.Context());
+#if TEST_CLASSWRAP2
+        v8::juice::bind_my_native( shell.Global() );
+#endif
+
         bool run_shell = (argc == 1);
-        v8::Locker tlocker;
-        v8::TryCatch jtry;
         std::string const endofargs("--");
         for (int i = 1; i < argc; i++) {
             const char* str = argv[i];
@@ -81,19 +88,22 @@ int main(int argc, char * argv[])
             }
             else if (strncmp(str, "--", 2) == 0)
             {
-                printf("Error: unknown flag %s.\n", str);
+                CERR << "Error: unknown flag "<<str<<'\n';
                 return 2;
             } else if (strcmp(str, "-e") == 0 && (i + 1 < argc)) {
-                // Execute argument given to -e option directly
-                v8::HandleScope handle_scope;
+                // -e "script"
+                v8::Locker tlocker;
+                v8::TryCatch jtry;
                 std::string source(argv[i + 1] ? argv[i + 1] : "");
-                if (!shell.ExecuteString(source, "[-e script]", 0, &jtry))
+                if (!shell.ExecuteString(source, "[-e script]", &jtry))
                 {
                     return 1;
                 }
                 ++i;
             } else {
-                // Use all other arguments as names of files to load and run.
+                // assume this is a script file name.
+                v8::Locker tlocker;
+                v8::TryCatch jtry;
                 shell.Include( str, false, &jtry );
                 if( jtry.HasCaught() )
                 {
@@ -102,17 +112,40 @@ int main(int argc, char * argv[])
                               <<'\n';
                     return 1;
                 }
+                //v8::internal::Heap::CollectAllGarbage(false);
                 continue;
             }
         }
-        if (run_shell)
+        if(1)
         {
-            shell.AddGlobalFunc( "quit", Quit );
-            v8::TryCatch jtry;
-            shell.InputLoop( v8::juice::JuiceShell::StdinLineFetcher, &std::cout, &jtry );
-            std::cout << std::endl;
+            v8::Locker tlock; // causes crash. See v8 bug #471
+            v8::HandleScope hs;
+            if (run_shell)
+            {
+                shell.AddGlobalFunc( "quit", Quit );
+                v8::TryCatch jtry;
+                shell.InputLoop( v8::juice::JuiceShell::StdinLineFetcher, &jtry, &std::cout );
+                std::cout << std::endl;
+            }
+            shell.ExecuteString( "gc()", "kludge_to_force_gc" );
         }
+#if TEST_CLASSWRAP2
+        CERR << "BoundNative::InstanceCount() == "<<v8::juice::BoundNative::InstanceCount()<<'\n';
+#endif
+        
     }
+
+    
+    //CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
+    if(0) // try to force v8 to gc!
+    {
+        v8::Locker tlocker;
+        v8::HandleScope scope;
+        v8::juice::JuiceShell shell2("shell2");
+        v8::TryCatch jtry;
+        shell2.ExecuteString( "gc()", "force_gc", &jtry );
+    }
+    //CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
     return 0;
 }
 

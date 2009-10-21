@@ -75,6 +75,15 @@ struct ${callBase}
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
 	return CastToJS<RV>( (obj->*MemFunc)( ${castCalls} ) );
     }
+    template <typename T, typename RV, ${aTDecl}>
+    static Handle<Value> Call( RV (T::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
+	return Call( obj, MemFunc, argv );
+    }
+
     
     template <typename T, typename RV, ${aTDecl}>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
@@ -83,24 +92,99 @@ struct ${callBase}
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
 	return CastToJS<RV>( (obj->*MemFunc)(${castCalls} ) );
     }
-    
+
+    template <typename T, typename RV, ${aTDecl}>
+    static Handle<Value> Call( RV (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
+	return Call( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType, ${aTDecl}>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
+	(obj->*MemFunc)(${castCalls} );
+	return Undefined();
+    }
     template <typename T, ${aTDecl}>
     static Handle<Value> Call( T * obj, void (T::*MemFunc)(${aTParam}), Arguments const & argv )
     {
-	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
-	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
-	(obj->*MemFunc)(${castCalls} );
-	return Undefined();
+	return CallVoid<T,void,${aTParam}>( obj, MemFunc, argv );
     }
 
-    template <typename T, ${aTDecl} >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    template <typename T, typename VoidType, ${aTDecl}>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+        T * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+    template <typename T, ${aTDecl}>
+    static Handle<Value> Call( void (T::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+        return CallVoid<T,void,${aTParam}>( MemFunc, argv );
+    }
+
+
+    template <typename T, typename VoidType, ${aTDecl} >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
 	(obj->*MemFunc)(${castCalls} );
 	return Undefined();
     }
+    template <typename T, ${aTDecl} >
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        return CallVoid<T,void,${aTParam}>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType, ${aTDecl} >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        T const * obj = CastFromJS<T>( argv.This() );
+	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
+	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
+	Call( obj, MemFunc, argv );
+	return Undefined();
+    }
+    template <typename T, ${aTDecl} >
+    static Handle<Value> Call( void (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        return CallVoid<T,void,${aTParam}>( MemFunc, argv );
+    }
+
+    template <typename T, typename RV, ${aTDecl}, RV(T::*MemFunc)(${aTParam}) >
+    static Handle<Value> Invocable( Arguments const & argv )
+    {
+        return Call<T,RV,${aTParam}>( MemFunc, argv );
+    }
+
+    template <typename T, typename RV, ${aTDecl}, RV(T::*MemFunc)(${aTParam}) const >
+    static Handle<Value> Invocable( Arguments const & argv )
+    {
+        return Call<T,RV,${aTParam}>( MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType, ${aTDecl}, VoidType (T::*MemFunc)(${aTParam}) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
+    {
+        return CallVoid<T,VoidType,${aTParam}>( MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType, ${aTDecl}, VoidType (T::*MemFunc)(${aTParam}) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
+    {
+        return CallVoid<T,VoidType,${aTParam}>( MemFunc, argv );
+    }
+
 };
 EOF
 } # makeMemFuncForwarder()
@@ -180,6 +264,81 @@ template <typename ReturnT, ${aTDecl}>
 EOF
 }
 
+#######################################################
+# Creates FunctionForwarder specializations.
+function makeFunctionForwarder()
+{
+
+    local err_too_few_args="FunctionForwarder<${count}>::Call() expects at least ${count} JS arguments!"
+    local err_exception="FunctionForwarder<${count}>::Call() Native function threw an unknown native exception type!"
+
+    cat <<EOF
+/** Specialization for functor taking ${count} arguments. */
+template <>
+struct FunctionForwarder<${count}>
+{
+    enum { Arity = ${count} };
+    template < typename RV, ${aTDecl} >
+    static v8::Handle<v8::Value> Call( RV (*Func)(${aTParam}), ::v8::Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("${err_too_few_args}"));
+        try
+        {
+            return CastToJS<RV>( Func( ${castCalls} ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("${err_exception}"));
+        }
+        return Undefined(); // cannot be reached.
+    }
+
+    template < typename VoidType, ${aTDecl} >
+    static v8::Handle<v8::Value> CallVoid( VoidType (*Func)(${aTParam}), ::v8::Arguments const & argv )
+    {
+	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("${err_too_few_args}"));
+        try
+        {
+            Func( ${castCalls} );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("${err_exception}"));
+        }
+        return Undefined();
+    }
+    template < typename VoidType, ${aTDecl} >
+    static v8::Handle<v8::Value> Call( void (*Func)(${aTParam}), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType, ${aTParam}>( Func, argv );
+    }
+
+    template <typename RV, ${aTDecl}, RV (*Func)(${aTParam}) >
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        //return Call<RV,${aTParam}, RV (*)(${aTParam}) >( Func, argv );
+        return Call<RV,${aTParam} >( Func, argv );
+    }
+
+    template <typename VoidType, ${aTDecl}, VoidType (*Func)(${aTParam}) >
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        //return CallVoid<VoidType, ${aTParam}, VoidType (*)(${aTParam}) >( Func, argv );
+        return CallVoid<VoidType, ${aTParam} >( Func, argv );
+    }
+
+};
+
+EOF
+} # makeFunctionForwarder
 
 ##########################################################
 # here we go...
@@ -199,6 +358,9 @@ case $command in
     'FunctorForwarder')
 	makeFunctorForwarder
 	;;
+    'FunctionForwarder')
+        makeFunctionForwarder
+        ;;
     *)
 	echo "Unhandled command: ${command}"
 	exit 2

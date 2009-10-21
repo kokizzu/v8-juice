@@ -55,6 +55,7 @@ define Forwarder.GenCode
 # Maintenance reminder: don't give these any deps so that they won't
 # be auto-generated on each build. We generate them when we need them
 # and store a copy in source control.
+.PHONY: $(1)
 $(1)-$(2).h:
 	@echo "// GENERATED CODE! Edit at your own risk!" > $$@; \
 	echo "#if !defined(DOXYGEN)" >> $$@; \
@@ -69,8 +70,11 @@ genclean-$(1)-$(2):
 	@-touch foo.bar; rm -f $$(wildcard $(1)-$(2).*) foo.bar
 genclean: genclean-$(1)-$(2)
 gen: $(1)-$(2).h
+$(1): $(1)-$(2).h
+clean-$(1): genclean-$(1)-$(2)
 endef
 $(eval $(call Forwarder.GenCode,forwarding,MemFuncForwarder))
 $(eval $(call Forwarder.GenCode,forwarding,FunctorForwarder))
+$(eval $(call Forwarder.GenCode,forwarding,FunctionForwarder))
 
 package.install.headers := $(wildcard *.h)
