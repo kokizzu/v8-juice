@@ -45,7 +45,7 @@
 #include <list>
 #include <vector>
 #include <map>
-#include "bind.h"
+//#include "bind.h"
 #include "convert.h"
 namespace v8 { namespace juice { namespace convert {
     using namespace v8;
@@ -553,6 +553,7 @@ namespace v8 { namespace juice { namespace convert {
 
     */
     class InvocationCallbackCreator
+    // leads to function ambiguity: : public FunctionForwarder<0>, public MemFuncForwarder<0>...<N>
     {
     public:
         /**
