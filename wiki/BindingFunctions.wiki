@@ -68,13 +68,15 @@ Aside from those two files (and a few script-generated files which they use), th
 For a free (non-member) function to be bindable they must meet these requirements:
 
   * All argument types must be convertible from JS to Native objects using `v8::juice::convert::JSToNative<T>`.
-  * All return types must be convertible from Native to JS using `v8::juice::convert::NativeToJS<T>`.
+  * All return types must be `void` or convertible from Native to JS using `v8::juice::convert::NativeToJS<T>`.
 
 Out of the box this supports at least the following argument/return types:
 
-  * The standard POD types
+  * The standard numeric types (int, double, bool, short, etc.).
   * `std::string`
-  * `std::list`, `std::vector`, and `std::map`, where the container types may contain any other convertible types (nested arbitrarily deep). It is normally easy to add conversions support for custom types.
+  * `std::list`, `std::vector`, and `std::map`, where the container types may contain any other convertible types (nested arbitrarily deep).
+
+It is normally easy to add conversions support for custom types.
 
 Argument types which are known to be problematic, or are not directly supported:
 
@@ -92,7 +94,7 @@ For a given native class `T`, we can bind `T::foo()` (i.e. member functions) to 
   * The member may not have a `throw(...)` clause (it _might_ work, but it's untested).
   * The member may not be variadic (i.e. taking ellipse (`...`) arguments).
 
-Bound member functions may be `const` or return `void` and the may be templates.
+Bound member functions may be `const` or return `void` and they may be templates.
 
 Thus the following member functions are legal for binding purposes:
 
@@ -100,6 +102,7 @@ Thus the following member functions are legal for binding purposes:
 void T::foo();
 size_t T::bar() const;
 std::vector<std::string> T::split( std::vector<std::string> const & ) const;
+template <typename Y> Y add( Y y1, Y y2 ) const; // IFF CastTo/FromJS<Y>() works
 void T::setBuddy(Foo *); // IFF CastFromJS<T>() works
 T * T::getBuddy(); // IFF CastToJS<T>() works
 }}}
@@ -114,4 +117,14 @@ TODO: explain this in gross detail. There are workarounds for some aspects, but 
 
 = Examples =
 
-TODO. The type/function names still aren't finalized. Once they are, i'll post some examples.
+*Achtung:* The type/function names still aren't finalized. Once they are, i'll post some examples.
+
+Until then: here is a complete example of what the binding process itself looks like (in fact, this is the main development/test case):
+
+[http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/sample/BoundNative/BoundNative.cpp BoundNative.cpp]
+
+(search that file for "bind_my_native")
+
+And some JS code demonstrating it:
+
+[http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/sample/BoundNative/BoundNative.js BoundNative.js]
