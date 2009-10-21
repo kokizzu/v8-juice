@@ -305,6 +305,9 @@ namespace convert {
     struct JSToNative<JST *> : JSToNative<JST> {};
 
     template <typename JST>
+    struct JSToNative<JST const *> : JSToNative<JST> {};
+
+    template <typename JST>
     struct JSToNative<JST const &> : JSToNative<JST> {};
 
 

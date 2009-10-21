@@ -239,8 +239,8 @@ namespace juice {
            arguments are passed to that function.
         */
         void InputLoop( LineFetcher input,
-                        std::ostream * resultGoesTo = 0,
-                        v8::TryCatch * reportExceptions = 0 );
+                        v8::TryCatch * reportExceptions = 0,
+                        std::ostream * resultGoesTo = 0 );
         /**
            A LineFetcher() implementation which simply reads a single
            line from stdin and assigns the result (minus the newline

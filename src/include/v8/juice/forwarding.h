@@ -45,7 +45,7 @@
 #include <list>
 #include <vector>
 #include <map>
-#include "bind.h"
+//#include "bind.h"
 #include "convert.h"
 namespace v8 { namespace juice { namespace convert {
     using namespace v8;
@@ -96,6 +96,11 @@ namespace v8 { namespace juice { namespace convert {
             }
             return Undefined(); // cannot be reached.
         }
+        template <typename Func>
+        static Handle<Value> Call( Func f, ::v8::Arguments const & argv )
+        {
+            return Call( f );
+        }
     };
 
     /** Specialization for functor taking no arguments and returning void. */
@@ -119,7 +124,11 @@ namespace v8 { namespace juice { namespace convert {
                 return ::v8::ThrowException( ::v8::String::New("Native function threw an unknown native exception type!"));
             }
             return Undefined(); // cannot be reached.
-            return Undefined();
+        }
+        template <typename Func>
+        static Handle<Value> Call( Func f, v8::Arguments const & argv )
+        {
+            return Call( f );
         }
     };
 
@@ -191,61 +200,444 @@ namespace v8 { namespace juice { namespace convert {
        All variants of this class except the 0-arity one throw a
        JS-side exception if the argument list does not have at least
        the required number of parameters.
+
+
+       The various Call() overloads can be used to forward JS calls to
+       member functions.
+
+       The Invocable() members can be used with
+       v8::FunctionTemplate::New(FunctionForwarder<N>::Invocable<...>)
+       to bind member functions to JS objects. For this to work,
+       CastFromJS<T>(argv.This()) must be able to return a native
+       "this" object to call the function on.
+
+
+       FIXME: add try/catch wrappers and convert native exceptions to
+       JS exceptions.
     */
     template <>
     struct MemFuncForwarder<0>
     {
-	    enum { Arity = 0 };
-	    template <typename T, typename RV>
+        enum { Arity = 0 };
+        
+        /**
+           Calls (obj->*MemFunc)() and returns its to-JS-converted
+           value. If !obj then a JS exception is triggered.
+        */
+        template <typename T, typename RV>
+        static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
+        {
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+            return CastToJS<RV>( (obj->*MemFunc)() );
+        }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
-	    static Handle<Value> Call( T * obj, RV (T::*MemFunc)(), Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		return convert::CastToJS<RV>( (obj->*MemFunc)() );
-	    }
+        /**
+           Tries to extract a (T*) from argv using
+           CastFromJS(argv.This()). On success, it calls Call(
+           thatObject, MemFunc, argv ). On error (e.g. !obj) it throws
+           a JS-side exception.
+           
+        */
+        template <typename T, typename RV>
+        static Handle<Value> Call( RV (T::*MemFunc)(), Arguments const & argv )
+        {
+            T * obj = CastToJS<T>( argv.This() );
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            return Call( obj, MemFunc, argv );
+        }
+        
+        /**
+           Const overload. See the non-const variant for the docs.
+        */
+        template <typename T, typename RV>
+        static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
+        {
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            return CastToJS<RV>( (obj->*MemFunc)() );
+        }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
-	    template <typename T, typename RV>
-	    static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		return convert::CastToJS<RV>( (obj->*MemFunc)() );
-	    }
+        /**
+           Tries to extract a (T*) from argv using CastFromJS(argv.This()). On success, it calls
+           Call( thatObject, MemFunc, argv ). On error it throws a JS-side exception.
+        */
+        template <typename T, typename RV>
+        static Handle<Value> Call( RV (T::*MemFunc)() const, Arguments const & argv )
+        {
+            T const * obj = CastFromJS<T>( argv.This() );
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            return Call( obj, MemFunc, argv );
+        }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
-	    template <typename T>
-	    static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		(obj->*MemFunc)();
-		return Undefined();
-	    }
+        /**
+           Calls (obj->*MemFunc()) and discards the return value. If
+           !obj then a JS exception is triggered.
+        */
+        template <typename T, typename VoidType>
+        static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)(), Arguments const & argv )
+        {
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            (obj->*MemFunc)();
+            return Undefined();
+        }
 
-            /**
-               Calls (obj->*MemFunc)().
-            */
-	    template <typename T>
-	    static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
-	    {
-		if( ! obj ) return ThrowException(String::New("MemFuncForwarder0::Call(): Native object is null!"));
-		//else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-		(obj->*MemFunc)();
-		return Undefined();
-	    }
+        /**
+           Identical to CallVoid(), and only exists because it
+           incidentally allows the Invocable() function to work
+           properly when RV==void.
+        */
+        template <typename T>
+        static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
+        {
+            return CallVoid<T,void>( obj, MemFunc, argv );
+        }
+
+
+        /**
+           Tries to extract a (T*) from argv using
+           CastFromJS(argv.This()). On success, it calls
+           Call(thatObject,MemFunc,argv). On error it throws a JS-side
+           exception. The return value of the native function is
+           discarded, and it need not be a CastToJS()'able type.
+        */
+        template <typename T,typename VoidType>
+        static Handle<Value> CallVoid( VoidType (T::*MemFunc)(), Arguments const & argv )
+        {
+            T * obj = CastFromJS<T>( argv.This() );
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            Call( obj, MemFunc, argv );
+            return v8::Undefined();
+        }
+
+        /**
+           Identical to CallVoid(), and only exists because it
+           incidentally allows the Invocable() function to work
+           properly when RV==void.
+        */
+        template <typename T>
+        static Handle<Value> Call( void (T::*MemFunc)(), Arguments const & argv )
+        {
+            return CallVoid<T,void>( MemFunc, argv );
+        }
+
+        /**
+           Const overload. See the non-const variant for the docs.
+        */
+        template <typename T, typename VoidType>
+        static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)() const, Arguments const & argv )
+        {
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
+            (obj->*MemFunc)();
+            return Undefined();
+        }
+        /**
+           Identical to CallVoid(), and only exists because it
+           incidentally allows the Invocable() function to work
+           properly when RV==void.
+        */
+        template <typename T>
+        static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
+        {
+            return CallVoid<T,void>( obj, MemFunc, argv );
+        }
+
+        /**
+           Tries to extract a (T*) from argv using
+           CastFromJS(argv.This()). On success, it calls Call(
+           thatObject, MemFunc, argv ). On error it throws a JS-side
+           exception. It discards the native return value and returns
+           JS Undefined.
+        */
+        template <typename T, typename VoidType>
+        static Handle<Value> CallVoid( VoidType (T::*MemFunc)() const, Arguments const & argv )
+        {
+            T const * obj = CastFromJS<T>( argv.This() );
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            Call( obj, MemFunc, argv );
+            return v8::Undefined();
+        }
+        /**
+           Identical to CallVoid(), and only exists because it
+           incidentally allows the Invocable() function to work
+           properly when RV==void.
+        */
+        template <typename T>
+        static Handle<Value> Call( void (T::*MemFunc)() const, Arguments const & argv )
+        {
+            return CallVoid<T,void>( MemFunc, argv );
+        }
+
+        /**
+           Calls Call( MemFunc, argv ). Implements the
+           v8::InvocationCallback interface.
+        */
+        template <typename T, typename RV, RV (T::*MemFunc)() >
+        static Handle<Value> Invocable( Arguments const & argv )
+        {
+            return Call( MemFunc, argv );
+        }
+
+        /**
+           Calls Call( MemFunc, argv ). Implements the
+           v8::InvocationCallback interface.
+        */
+        template <typename T, typename RV, RV (T::*MemFunc)() const >
+        static Handle<Value> Invocable( Arguments const & argv )
+        {
+            return Call<T,RV>( MemFunc, argv );
+        }
+
+        /**
+           Calls CallVoid( MemFunc, argv ). Implements the
+           v8::InvocationCallback interface.
+        */
+        template <typename T, typename VoidType, VoidType (T::*MemFunc)() >
+        static Handle<Value> InvocableVoid( Arguments const & argv )
+        {
+            return Call<T,VoidType>( MemFunc, argv );
+        }
+
+        /**
+           Calls CallVoid( MemFunc, argv ). Implements the
+           v8::InvocationCallback interface.
+        */
+        template <typename T, typename VoidType, VoidType (T::*MemFunc)() const >
+        static Handle<Value> InvocableVoid( Arguments const & argv )
+        {
+            return CallVoid<T,VoidType>( MemFunc, argv );
+        }
     };
 
 #include "forwarding-MemFuncForwarder.h" // generated specializations for MemFuncForwarder
 
+    /**
+       A useless base instantiation. See FunctionForwarder<0> for the
+       full docs.
+    */
+    template <int Arity_>
+    struct FunctionForwarder
+    {
+        enum { Arity = Arity_ };
+    };
+
+    /**
+       A helper type for forwarding JS arguments to native
+       functions taking 0 arguments. The classes
+       FunctionForwarder<1..N> are generated code and follow this
+       class' API.
+
+       Each specialization of this class handles the cases for N
+       arguments, where N is the templatized value, or arity of the
+       functions.
+       
+       All variants of this class except the 0-arity one throw a
+       JS-side exception if the argument list does not have at least
+       the required number of parameters.
+
+       This functions can support functions taking or returning any
+       argument type which is convertible using CastToJS() and
+       CastFromJS().
+
+       The various Call() overloads can be used to forward JS calls to
+       member functions.
+
+       The Invocable() members can be used with
+       v8::FunctionTemplate::New(FunctionForwarder<N>::Invocable<...>)
+       to bind functions to JS objects.
+    */
+    template <>
+    struct FunctionForwarder<0>
+    {
+        enum { Arity = 0 };
+        /**
+           Calls Func() and returns the function's value, converted to
+           JS. If Func throws a native exception then it is
+           transformed into a JS exception.
+        */
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( RV (*Func)(), Arguments const & /*ignored*/ )
+        {
+            try
+            {
+                return CastToJS<RV>( Func() );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<${count}>::Call() Native function threw an unknown native exception type!"));
+            }
+        }
+        
+        /**
+           Calls Func(), ignoring the return value. If Func throws a native
+           exception then it is transformed into a JS exception.
+
+           Note that VoidType is not required to be CastFromJS()'able,
+           so that JSToNative<VoidType> is not instantiated by this
+           call.
+        */
+        template <typename VoidType>//, VoidType (*FuncT)() >
+        static v8::Handle<v8::Value> CallVoid( VoidType (*Func)(), Arguments const & /*ignored*/ )
+        {
+            try
+            {
+                Func();
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<${count}>::Call() Native function threw an unknown native exception type!"));
+            }
+            return v8::Undefined();
+        }
+        /**
+           Identical to CallVoid(), and only exists because it
+           incidentally allows the Invocable() function to work
+           properly when RV==void.
+        */
+        template < typename VoidType >
+        static v8::Handle<v8::Value> Call( void (*Func)(), ::v8::Arguments const & argv )
+        {
+            return CallVoid<VoidType>( Func, argv );
+        }
+
+        /**
+           Calls Call( Func, argv ). Implements v8::InvocationCallback
+           interface.
+        */
+        template <typename RV, RV (*Func)() >
+        static v8::Handle<v8::Value> Invocable( Arguments const & argv )
+        {
+            return Call<RV>( Func, argv );
+        }
+        /**
+           Calls Call( Func, argv ). Implements v8::InvocationCallback
+           interface.
+        */
+        template <typename VoidType,VoidType (*Func)() >
+        static v8::Handle<v8::Value> InvocableVoid( Arguments const & argv )
+        {
+            return CallVoid<VoidType>( Func, argv );
+        }
+    };
+
+#include "forwarding-FunctionForwarder.h" // generated specializations for MemFuncForwarder
+
+    /**
+       Possibly a utility class, though it's utility is in question.
+
+
+       The following example binds the Unix sleep(3) function to a JS object:
+
+       @code
+       v8::InvocationCallback fp =
+          InvocationCallbackCreator::F1::Invocable<unsigned int,unsigned int,sleep>;
+       jsObject->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(fp)->GetFunction() );
+       @endcode
+
+       If jsObject can be converted to a (T*) via CastFromJS<T>() then the following will also work
+       if (std::string T::toString()) is defined:
+       
+       @code
+       v8::InvocationCallback fp =
+          InvocationCallbackCreator::M0::Invocable<std::string,&T::toString>;
+       jsObject->Set(v8::String::New("toString"), v8::FunctionTemplate::New(fp)->GetFunction() );
+       @endcode
+
+    */
+    class InvocationCallbackCreator
+    // leads to function ambiguity: : public FunctionForwarder<0>, public MemFuncForwarder<0>...<N>
+    {
+    public:
+        /**
+           InvocationCallback generator for functions taking 0 arguments.
+        */
+        typedef FunctionForwarder<0> F0;
+        /**
+           InvocationCallback generator for member functions taking 0 arguments.
+        */
+        typedef MemFuncForwarder<0> M0;
+        /**
+           InvocationCallback generator for functions taking 1 argument.
+        */
+        typedef FunctionForwarder<1> F1;
+        /**
+           InvocationCallback generator for member functions taking 1 argument.
+        */
+        typedef MemFuncForwarder<1> M1;
+        /**
+           InvocationCallback generator for functions taking 2 arguments.
+        */
+        typedef FunctionForwarder<2> F2;
+        /**
+           InvocationCallback generator for member functions taking 2 arguments.
+        */
+        typedef MemFuncForwarder<2> M2;
+        /**
+           InvocationCallback generator for functions taking 3 arguments.
+        */
+        typedef FunctionForwarder<3> F3;
+        /**
+           InvocationCallback generator for member functions taking 3 arguments.
+        */
+        typedef MemFuncForwarder<3> M3;
+        /**
+           InvocationCallback generator for functions taking 4 arguments.
+        */
+        typedef FunctionForwarder<4> F4;
+        /**
+           InvocationCallback generator for member functions taking 4 arguments.
+        */
+        typedef MemFuncForwarder<4> M4;
+        /**
+           InvocationCallback generator for functions taking 5 arguments.
+        */
+        typedef FunctionForwarder<5> F5;
+        /**
+           InvocationCallback generator for member functions taking 5 arguments.
+        */
+        typedef MemFuncForwarder<5> M5;
+        /**
+           InvocationCallback generator for functions taking 6 arguments.
+        */
+        typedef FunctionForwarder<6> F6;
+        /**
+           InvocationCallback generator for member functions taking 6 arguments.
+        */
+        typedef MemFuncForwarder<6> M6;
+        /**
+           InvocationCallback generator for functions taking 7 arguments.
+        */
+        typedef FunctionForwarder<7> F7;
+        /**
+           InvocationCallback generator for member functions taking 7 arguments.
+        */
+        typedef MemFuncForwarder<7> M7;
+        /**
+           InvocationCallback generator for functions taking 8 arguments.
+        */
+        typedef FunctionForwarder<8> F8;
+        /**
+           InvocationCallback generator for member functions taking 8 arguments.
+        */
+        typedef MemFuncForwarder<8> M8;
+        /**
+           InvocationCallback generator for functions taking 9 arguments.
+        */
+        typedef FunctionForwarder<9> F9;
+        /**
+           InvocationCallback generator for member functions taking 9 arguments.
+        */
+        typedef MemFuncForwarder<9> M9;
+    };
+    
     /**
        See InvocationCallbackToArgv for details.
     */
@@ -272,14 +664,14 @@ namespace v8 { namespace juice { namespace convert {
        the WeakJSClassCreator:
 
        \code
-       myobj->Set(String::New("func"), InvocationCallbackToArgv<MyCallback>::call );
+       myobj->Set(String::New("func"), InvocationCallbackToArgv<MyCallback>::Call );
        \endcode
 
        This is of course less efficient than directly calling an
        InvocationCallback, because we must synthesize an array of
        Value handles.
 
-       The optional skipArgN parameter tells call() than it should skip
+       The optional skipArgN parameter tells Call() than it should skip
        over the first N arguments in the list, which can be useful when
        stripping a first argument for personal use then passing on the
        rest of the args.
@@ -293,7 +685,7 @@ namespace v8 { namespace juice { namespace convert {
 	   greater than or equal to argv.Length() then
 	   proxy(argv.This(),0,0) is called.
 	*/
-	static ::v8::Handle< ::v8::Value > call( ::v8::Arguments const & argv )
+	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
 	{
 	    typedef Handle<Value> HV;
 	    if( skipArgN >= argv.Length() )
@@ -331,7 +723,7 @@ namespace v8 { namespace juice { namespace convert {
 	*/
 	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
 	{
-            T * self = convert::CastFromJS<T>( argv.This() );
+            T * self = CastFromJS<T>( argv.This() );
             if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
             return (self->*Func)( argv );
 	}
