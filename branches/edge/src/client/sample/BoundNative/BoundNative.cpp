@@ -28,6 +28,11 @@ namespace v8 { namespace juice {
         {
             --instcount;
         }
+        bool ptr( BoundNative const * b )
+        {
+            CERR << "BoundNative[@"<<(void const *)this<<"]->ptr("<<(void const *)b<<")\n";
+            return 0 != b;
+        }
         static size_t InstanceCount()
         {
             return instcount;
@@ -137,14 +142,18 @@ namespace v8 { namespace juice {
         cw.Set( "setInt",
                 CIC::M1::Invocable<N,void,int,&N::setInt>
                 );
+        cw.Set( "ptr",
+                CIC::M1::Invocable<N,bool,N const * ,&N::ptr>
+                //CIC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
+                );
         v8::InvocationCallback FH;
         FH = CIC::F0::Invocable<std::string,BoundNative_version>; // 
 #define JFH v8::FunctionTemplate::New(FH)->GetFunction()
         cw.Set( "version", JFH );
 
         FH = CIC::F1::Invocable<void,std::string const &,BoundNative_doSomething>;
-        FH = CIC::F1::Invocable<size_t,std::string const &,BoundNative_doSomething2>;
         FH = CIC::F1::InvocableVoid<size_t,std::string const &,BoundNative_doSomething2>;
+        FH = CIC::F1::Invocable<size_t,std::string const &,BoundNative_doSomething2>;
 
         cw.Set( "doSomething", JFH );
         FH = CIC::F1::Invocable<unsigned int,unsigned int,::sleep>;

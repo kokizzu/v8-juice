@@ -45,7 +45,20 @@ print('b.doSomething() ==',b.doSomething("hi, world"));
 print('b.getInt() ==',b.getInt());
 print('b.setInt(17) ==',b.setInt(17));
 print('b.getInt() ==',b.getInt());
-var stime = 1;
-print("b.sleep("+stime+")...");
-b.sleep(stime);
-print("b.sleep'd("+stime+")...");
+if(1)
+{
+    var b2 = new BoundNative();
+    print('b.ptr(b) ==',b.ptr(b));
+    print('b.ptr(b2) ==',b.ptr(b2));
+    print('b2.ptr(0) ==',b2.ptr(0));
+    delete b2;
+}
+if(1)
+{
+    var stime = 1;
+    print("b.sleep("+stime+")...");
+    b.sleep(stime);
+    print("b.sleep'd("+stime+")...");
+}
+print("Done! You win!");
+
