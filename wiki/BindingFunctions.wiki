@@ -1,0 +1,117 @@
+#summary Binding near-arbitrary functions to JS objects.
+#labels Phase-UserDocs,Topic-CPlusPlus
+
+*Achtung:* this code is currently (20091021) not in the trunk, but will be made public by the end of October or November, 2009. Until it is moved into the trunk, this API may change at any given moment.
+
+<wiki:toc max_depth=3/>
+
+= Introduction =
+
+The function forwarding API is an extension of the [ConvertingTypes type conversion API], and it will help to first understand the concepts described on that page before continuing with this topic.
+
+Most of this API was derived from functionality in the [ClassBinder] code, and may be familiar to anyone who's used that code. This code is, however, more generic, and can be used in conjunction with arbitrary class-binding approaches.
+
+The function binding API works using a very generic principal: convert arbitrary functions to `v8::InvocationCallback` instances, where `v8::InvocationCallback` is a v8 typedef which looks like:
+
+{{{
+    typedef v8::Handle<v8::Value> (*InvocationCallback)( v8::Arguments const & );
+}}}
+
+That is the signature of all "normal" JS callback functions, though there are a few special-case exceptions, like binding accessors functions to JS properties (not yet supported by this API, but will be soon).
+
+In the general case, we bind functions implementing the `InvocationCallback` interface to a JS object like this:
+
+{{{
+jsObj->Set( String::New("foo"),
+            FunctionTemplate::New( MyInvocationCallback )->GetFunction() );
+}}}
+
+(though macros are often used to short that somewhat.)
+
+This framework allows us to convert nearly arbitrary functions to `InvocationCallback` functions, which in turn allows us to bind those functions using the v8-standard approach shown above.
+
+An example of what a binding looks like, here we bind the Unix-standard `sleep()` function to an arbitrary JS object:
+
+{{{
+jsObj->Set( String::New("sleep"), FunctionTemplate::New(
+      convert::FunctionForwarder<1>::Invocable<unsigned int,unsigned int,::sleep>
+    )->GetFunction() );
+}}}
+
+That strange `FunctionForwarder<1>` bit literally _creates_ a `v8::InvocationCallback` function which forwards one `unsigned int` argument to `sleep()` and returns an `unsigned int` value. If any of the conversions are illegal (e.g. the function returns a double instead of an unsigned int), a compile-time error will be generated.
+
+
+== Properties of this framework ==
+
+The general properties of this framework are:
+
+  * Binding is done with compile-time type safety.
+  * Bindings require no extra internal objects to hold the Native-to-JS function mapping (as is the case in most binding frameworks).
+  * Any convertible function can be bound to any JS object. This makes it trivial to add many standard C functions, or common library functions, to JS.
+  * Template specializations can be used to customize certain aspects of it. The most notable example is that a `JSToNative<T>` and `NativeToJS<T>` specializations must normally be created to add automatic conversion support for custom JS/Native-bound `T` types.
+
+
+= Requirements =
+
+== Header files ==
+The required header files:
+
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/forwarding.h <v8/juice/forwarding.h>]
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/convert.h <v8/juice/convert.h>] (included by `forwarding.h`)
+
+The code is all in the `v8::juice::convert` namespace.
+
+Aside from those two files (and a few script-generated files which they use), this support is independent of other v8-juice code, and can easily be extracted for use in unrelated projects.
+
+== Free Functions ==
+
+For a free (non-member) function to be bindable they must meet these requirements:
+
+  * All argument types must be convertible from JS to Native objects using `v8::juice::convert::JSToNative<T>`.
+  * All return types must be convertible from Native to JS using `v8::juice::convert::NativeToJS<T>`.
+
+Out of the box this supports at least the following argument/return types:
+
+  * The standard POD types
+  * `std::string`
+  * `std::list`, `std::vector`, and `std::map`, where the container types may contain any other convertible types (nested arbitrarily deep). It is normally easy to add conversions support for custom types.
+
+Argument types which are known to be problematic, or are not directly supported:
+
+  * Returning references. This is on the to-fix list, but may require treating the return value as a (`T*`) instead of (`T&`). Certain types support a return of (`T const &`), but they treat the result as (`T`), which requires a deep copy.
+  * (`void *`). This cannot work for the general case. v8 allows us to do it, but dereferencing the object in JS will cause a crash, and the 100% lack of type-safety would eventually lead to crashes when the objects travel between JS and native and someone passes the wrong (`void*`) somewhere.
+
+
+== Member Functions ==
+
+For a given native class `T`, we can bind `T::foo()` (i.e. member functions) to a JS object provided the following requirements are met:
+
+  * The JS object the function is bound to must be convertible to a `(T*)` using `CastFromJS<T>()`.
+  * The member meets the same basic requirements as for function bindings (see above).
+  * The member may not return a reference, but this is a bug and will hopefully be resolved.
+  * The member may not have a `throw(...)` clause (it _might_ work, but it's untested).
+  * The member may not be variadic (i.e. taking ellipse (`...`) arguments).
+
+Bound member functions may be `const` or return `void` and the may be templates.
+
+Thus the following member functions are legal for binding purposes:
+
+{{{
+void T::foo();
+size_t T::bar() const;
+std::vector<std::string> T::split( std::vector<std::string> const & ) const;
+void T::setBuddy(Foo *); // IFF CastFromJS<T>() works
+T * T::getBuddy(); // IFF CastToJS<T>() works
+}}}
+
+The notes about `CastToJS<T>` and `CastFromJS<T>()` will be qualified/explained later on, once some planned changes to the API are in place. In short, `CastFromJS()` can be done fairly generically, but `CastToJS()` requires some sort of underlying binding mechanism from which we can map a native pointer to its JS object representation. Those bits come in the form of a higher-level class binding mechanism (like [ClassBinder], though a new one is being developed based on these new binding capabilities).
+
+
+=== Limitations vis-a-vis inheritance ===
+
+TODO: explain this in gross detail. There are workarounds for some aspects, but they require support from a more specific class-binding mechanism (which is being developed on top of this API as we speak).
+
+
+= Examples =
+
+TODO. The type/function names still aren't finalized. Once they are, i'll post some examples.
