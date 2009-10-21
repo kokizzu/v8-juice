@@ -71,9 +71,9 @@ namespace v8 { namespace juice {
     };
 
     template <>
-    struct ClassWrap_Opt_InternalFields<BoundNative> : ClassWrap_Opt_Int<3>
+    struct ClassWrap_Opt_InternalFields<BoundNative> : ClassWrap_Opt_Int<1>
     {
-        static const int NativeObjectIndex = 2;
+        static const int NativeIndex = 0;
     };
 
     template <>
@@ -82,12 +82,12 @@ namespace v8 { namespace juice {
         typedef ClassWrap_Types<BoundNative>::Type Type;
         typedef ClassWrap_Types<BoundNative>::NativeHandle NativeHandle;
 	static NativeHandle Instantiate( Arguments const &  /*argv*/,
-                                         std::string & exceptionText )
+                                         std::ostream & /* exceptionText */ )
 	{
             NativeHandle x = new BoundNative;
             CERR << "BoundNative->Instantiate() == @"<<(void const *)x<<'\n';
             v8::V8::AdjustAmountOfExternalAllocatedMemory( sizeof(BoundNative) );
-    return x;
+            return x;
 	}
 	static void Destruct( NativeHandle obj )
 	{
