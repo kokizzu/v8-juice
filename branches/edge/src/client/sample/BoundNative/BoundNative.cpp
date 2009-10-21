@@ -165,7 +165,7 @@ namespace v8 { namespace juice {
         cw.Seal();
         v8::HandleScope hscope;
         Handle<Object> jobj = cw.NewInstance(0,0);
-        N * bound = CW::CastToNative::Value(jobj);
+        N * bound = CW::ToNative::Value(jobj);
         CERR << "bound == @"<<(void const *)bound<<'\n';
         CERR << "bound == @"<<convert::CastFromJS<N>( jobj )<<'\n';
         if( bound )
