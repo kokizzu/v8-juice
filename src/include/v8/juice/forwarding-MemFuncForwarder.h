@@ -43,18 +43,22 @@ struct MemFuncForwarder<1>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0>
-    static Handle<Value> Call( void (T::*MemFunc)( A0), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): Native object is null!"));
@@ -62,18 +66,29 @@ struct MemFuncForwarder<1>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0>
+    static Handle<Value> Call( void (T::*MemFunc)( A0), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<1>::Call(): Native object is null!"));
@@ -81,29 +96,34 @@ struct MemFuncForwarder<1>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0, RV(T::*MemFunc)( A0) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0, RV(T::*MemFunc)( A0) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0, void (T::*MemFunc)( A0) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0, VoidType (T::*MemFunc)( A0) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0, void (T::*MemFunc)( A0) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0, VoidType (T::*MemFunc)( A0) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0>( MemFunc, argv );
     }
 
 };
@@ -150,18 +170,22 @@ struct MemFuncForwarder<2>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0,  typename A1>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0, A1), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1>
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0, A1>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): Native object is null!"));
@@ -169,18 +193,29 @@ struct MemFuncForwarder<2>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0,  typename A1 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0,  typename A1 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0, A1) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<2>::Call(): Native object is null!"));
@@ -188,29 +223,34 @@ struct MemFuncForwarder<2>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0,  typename A1, RV(T::*MemFunc)( A0, A1) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0,  typename A1, RV(T::*MemFunc)( A0, A1) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1, void (T::*MemFunc)( A0, A1) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1, VoidType (T::*MemFunc)( A0, A1) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1, void (T::*MemFunc)( A0, A1) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1, VoidType (T::*MemFunc)( A0, A1) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1>( MemFunc, argv );
     }
 
 };
@@ -257,18 +297,22 @@ struct MemFuncForwarder<3>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0,  typename A1,  typename A2>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2>
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0, A1, A2>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): Native object is null!"));
@@ -276,18 +320,29 @@ struct MemFuncForwarder<3>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0,  typename A1,  typename A2 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0, A1, A2) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<3>::Call(): Native object is null!"));
@@ -295,29 +350,34 @@ struct MemFuncForwarder<3>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2, RV(T::*MemFunc)( A0, A1, A2) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2, RV(T::*MemFunc)( A0, A1, A2) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2, void (T::*MemFunc)( A0, A1, A2) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2, VoidType (T::*MemFunc)( A0, A1, A2) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2, void (T::*MemFunc)( A0, A1, A2) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2, VoidType (T::*MemFunc)( A0, A1, A2) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2>( MemFunc, argv );
     }
 
 };
@@ -364,18 +424,22 @@ struct MemFuncForwarder<4>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3>
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0, A1, A2, A3>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): Native object is null!"));
@@ -383,18 +447,29 @@ struct MemFuncForwarder<4>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<4>::Call(): Native object is null!"));
@@ -402,29 +477,34 @@ struct MemFuncForwarder<4>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV(T::*MemFunc)( A0, A1, A2, A3) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV(T::*MemFunc)( A0, A1, A2, A3) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3, void (T::*MemFunc)( A0, A1, A2, A3) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3, VoidType (T::*MemFunc)( A0, A1, A2, A3) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3, void (T::*MemFunc)( A0, A1, A2, A3) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3, VoidType (T::*MemFunc)( A0, A1, A2, A3) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3>( MemFunc, argv );
     }
 
 };
@@ -471,18 +551,22 @@ struct MemFuncForwarder<5>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0, A1, A2, A3, A4>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): Native object is null!"));
@@ -490,18 +574,29 @@ struct MemFuncForwarder<5>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<5>::Call(): Native object is null!"));
@@ -509,29 +604,34 @@ struct MemFuncForwarder<5>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV(T::*MemFunc)( A0, A1, A2, A3, A4) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV(T::*MemFunc)( A0, A1, A2, A3, A4) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, void (T::*MemFunc)( A0, A1, A2, A3, A4) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, void (T::*MemFunc)( A0, A1, A2, A3, A4) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4>( MemFunc, argv );
     }
 
 };
@@ -578,18 +678,22 @@ struct MemFuncForwarder<6>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0, A1, A2, A3, A4, A5>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): Native object is null!"));
@@ -597,18 +701,29 @@ struct MemFuncForwarder<6>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<6>::Call(): Native object is null!"));
@@ -616,29 +731,34 @@ struct MemFuncForwarder<6>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5>( MemFunc, argv );
     }
 
 };
@@ -685,18 +805,22 @@ struct MemFuncForwarder<7>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): Native object is null!"));
@@ -704,18 +828,29 @@ struct MemFuncForwarder<7>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<7>::Call(): Native object is null!"));
@@ -723,29 +858,34 @@ struct MemFuncForwarder<7>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5, A6>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5, A6>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6>( MemFunc, argv );
     }
 
 };
@@ -792,18 +932,22 @@ struct MemFuncForwarder<8>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): Native object is null!"));
@@ -811,18 +955,29 @@ struct MemFuncForwarder<8>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<8>::Call(): Native object is null!"));
@@ -830,29 +985,34 @@ struct MemFuncForwarder<8>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5, A6, A7>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5, A6, A7>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6, A7>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6, A7>( MemFunc, argv );
     }
 
 };
@@ -899,18 +1059,22 @@ struct MemFuncForwarder<9>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7, A8>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): Native object is null!"));
@@ -918,18 +1082,29 @@ struct MemFuncForwarder<9>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7, A8>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7, A8>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<9>::Call(): Native object is null!"));
@@ -937,29 +1112,34 @@ struct MemFuncForwarder<9>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7, A8>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5, A6, A7, A8>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5, A6, A7, A8>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6, A7, A8>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6, A7, A8>( MemFunc, argv );
     }
 
 };
@@ -1006,18 +1186,22 @@ struct MemFuncForwarder<10>
 	return Call( obj, MemFunc, argv );
     }
 
-    
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
-    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
+    static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    static Handle<Value> Call( T * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    {
+	return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
     {
         T * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): Native object is null!"));
@@ -1025,18 +1209,29 @@ struct MemFuncForwarder<10>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( MemFunc, argv );
+    }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
-    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): wrong argument count!"));
 	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) );
 	return Undefined();
     }
-
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
-    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+    static Handle<Value> Call( T const * obj, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( obj, MemFunc, argv );
+    }
+
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static Handle<Value> CallVoid( VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
     {
         T const * obj = CastFromJS<T>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder<10>::Call(): Native object is null!"));
@@ -1044,29 +1239,34 @@ struct MemFuncForwarder<10>
 	Call( obj, MemFunc, argv );
 	return Undefined();
     }
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static Handle<Value> Call( void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const, Arguments const & argv )
+    {
+        return CallVoid<T,void, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( MemFunc, argv );
+    }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( MemFunc, argv );
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV(T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const >
-    static Handle<Value> Invoke( Arguments const & argv )
+    static Handle<Value> Invocable( Arguments const & argv )
     {
-        return Call( MemFunc, argv );
+        return Call<T,RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( MemFunc, argv );
     }
 
-    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, void (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const >
-    static Handle<Value> InvokeVoid( Arguments const & argv )
+    template <typename T, typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, VoidType (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
     {
-        return CallVoid( MemFunc, argv );
+        return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( MemFunc, argv );
     }
 
 };

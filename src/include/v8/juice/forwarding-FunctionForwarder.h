@@ -42,16 +42,23 @@ struct FunctionForwarder<1>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0>( Func, argv );
+    }
 
     template <typename RV,  typename A0, RV (*Func)( A0) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0>( Func, argv );
+        //return Call<RV, A0, RV (*)( A0) >( Func, argv );
+        return Call<RV, A0 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0, VoidType (*Func)( A0) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, VoidType (*)( A0) >( Func, argv );
         return CallVoid<VoidType,  A0 >( Func, argv );
     }
 
@@ -99,16 +106,23 @@ struct FunctionForwarder<2>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0,  typename A1 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0, A1), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0, A1>( Func, argv );
+    }
 
     template <typename RV,  typename A0,  typename A1, RV (*Func)( A0, A1) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0, A1>( Func, argv );
+        //return Call<RV, A0, A1, RV (*)( A0, A1) >( Func, argv );
+        return Call<RV, A0, A1 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1, VoidType (*Func)( A0, A1) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, A1, VoidType (*)( A0, A1) >( Func, argv );
         return CallVoid<VoidType,  A0, A1 >( Func, argv );
     }
 
@@ -156,16 +170,23 @@ struct FunctionForwarder<3>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0,  typename A1,  typename A2 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0, A1, A2), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0, A1, A2>( Func, argv );
+    }
 
     template <typename RV,  typename A0,  typename A1,  typename A2, RV (*Func)( A0, A1, A2) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0, A1, A2>( Func, argv );
+        //return Call<RV, A0, A1, A2, RV (*)( A0, A1, A2) >( Func, argv );
+        return Call<RV, A0, A1, A2 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2, VoidType (*Func)( A0, A1, A2) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, A1, A2, VoidType (*)( A0, A1, A2) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2 >( Func, argv );
     }
 
@@ -213,16 +234,23 @@ struct FunctionForwarder<4>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0, A1, A2, A3), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0, A1, A2, A3>( Func, argv );
+    }
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV (*Func)( A0, A1, A2, A3) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0, A1, A2, A3>( Func, argv );
+        //return Call<RV, A0, A1, A2, A3, RV (*)( A0, A1, A2, A3) >( Func, argv );
+        return Call<RV, A0, A1, A2, A3 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3, VoidType (*Func)( A0, A1, A2, A3) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, A1, A2, A3, VoidType (*)( A0, A1, A2, A3) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3 >( Func, argv );
     }
 
@@ -270,16 +298,23 @@ struct FunctionForwarder<5>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0, A1, A2, A3, A4), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4>( Func, argv );
+    }
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV (*Func)( A0, A1, A2, A3, A4) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0, A1, A2, A3, A4>( Func, argv );
+        //return Call<RV, A0, A1, A2, A3, A4, RV (*)( A0, A1, A2, A3, A4) >( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, VoidType (*Func)( A0, A1, A2, A3, A4) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, VoidType (*)( A0, A1, A2, A3, A4) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4 >( Func, argv );
     }
 
@@ -327,16 +362,23 @@ struct FunctionForwarder<6>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0, A1, A2, A3, A4, A5), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5>( Func, argv );
+    }
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (*Func)( A0, A1, A2, A3, A4, A5) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0, A1, A2, A3, A4, A5>( Func, argv );
+        //return Call<RV, A0, A1, A2, A3, A4, A5, RV (*)( A0, A1, A2, A3, A4, A5) >( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, VoidType (*Func)( A0, A1, A2, A3, A4, A5) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, VoidType (*)( A0, A1, A2, A3, A4, A5) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5 >( Func, argv );
     }
 
@@ -384,16 +426,23 @@ struct FunctionForwarder<7>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0, A1, A2, A3, A4, A5, A6), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6>( Func, argv );
+    }
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (*Func)( A0, A1, A2, A3, A4, A5, A6) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0, A1, A2, A3, A4, A5, A6>( Func, argv );
+        //return Call<RV, A0, A1, A2, A3, A4, A5, A6, RV (*)( A0, A1, A2, A3, A4, A5, A6) >( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5, A6 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, VoidType (*)( A0, A1, A2, A3, A4, A5, A6) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6 >( Func, argv );
     }
 
@@ -441,16 +490,23 @@ struct FunctionForwarder<8>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0, A1, A2, A3, A4, A5, A6, A7), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7>( Func, argv );
+    }
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7>( Func, argv );
+        //return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, RV (*)( A0, A1, A2, A3, A4, A5, A6, A7) >( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, VoidType (*)( A0, A1, A2, A3, A4, A5, A6, A7) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7 >( Func, argv );
     }
 
@@ -498,16 +554,23 @@ struct FunctionForwarder<9>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8>( Func, argv );
+    }
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8>( Func, argv );
+        //return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, RV (*)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8, VoidType (*)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8 >( Func, argv );
     }
 
@@ -555,16 +618,23 @@ struct FunctionForwarder<10>
         }
         return Undefined();
     }
+    template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+    static v8::Handle<v8::Value> Call( void (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), ::v8::Arguments const & argv )
+    {
+        return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( Func, argv );
+    }
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
-    static v8::Handle<v8::Value> Invoke( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( Func, argv );
+        //return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, RV (*)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >( Func, argv );
+        return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
-    static v8::Handle<v8::Value> InvokeVoid( v8::Arguments const & argv )
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
+        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, VoidType (*)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8, A9 >( Func, argv );
     }
 

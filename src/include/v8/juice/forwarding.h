@@ -251,24 +251,32 @@ namespace v8 { namespace juice { namespace convert {
             return Call( obj, MemFunc, argv );
         }
 
+        template <typename T, typename VoidType>
+        static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)(), Arguments const & argv )
+        {
+            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
+            (obj->*MemFunc)();
+            return Undefined();
+        }
         /**
-           Calls (obj->*MemFunc)().
+           Identical to CallVoid().
         */
         template <typename T>
         static Handle<Value> Call( T * obj, void (T::*MemFunc)(), Arguments const & argv )
         {
-            if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
-            //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-            (obj->*MemFunc)();
-            return Undefined();
+            return CallVoid<T,void>( obj, MemFunc, argv );
         }
 
+
         /**
-           Tries to extract a (T*) from argv using CastFromJS(argv.This()). On success, it calls
-           Call( thatObject, MemFunc, argv ). On error it throws a JS-side exception.
+           Tries to extract a (T*) from argv using
+           CastFromJS(argv.This()). On success, it calls Call(
+           thatObject, MemFunc, argv ). On error it throws a JS-side
+           exception. The return value of the native function is
+           discarded.
         */
-        template <typename T>
-        static Handle<Value> Call( void (T::*MemFunc)(), Arguments const & argv )
+        template <typename T,typename VoidType>
+        static Handle<Value> CallVoid( VoidType (T::*MemFunc)(), Arguments const & argv )
         {
             T * obj = CastFromJS<T>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
@@ -276,38 +284,57 @@ namespace v8 { namespace juice { namespace convert {
             return v8::Undefined();
         }
 
-        /**
-           Calls (obj->*MemFunc)().
-        */
+        /** Identical to CallVoid(). */
         template <typename T>
-        static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
+        static Handle<Value> Call( void (T::*MemFunc)(), Arguments const & argv )
+        {
+            return CallVoid<T,void>( MemFunc, argv );
+        }
+
+        template <typename T, typename VoidType>
+        static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)() const, Arguments const & argv )
         {
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
             (obj->*MemFunc)();
             return Undefined();
         }
+        /**
+           Identical to CallVoid().
+        */
+        template <typename T>
+        static Handle<Value> Call( T const * obj, void (T::*MemFunc)() const, Arguments const & argv )
+        {
+            return CallVoid<T,void>( obj, MemFunc, argv );
+        }
 
         /**
            Tries to extract a (T*) from argv using CastFromJS(argv.This()). On success, it calls
            Call( thatObject, MemFunc, argv ). On error it throws a JS-side exception.
         */
-        template <typename T>
-        static Handle<Value> Call( void (T::*MemFunc)() const, Arguments const & argv )
+        template <typename T, typename VoidType>
+        static Handle<Value> CallVoid( VoidType (T::*MemFunc)() const, Arguments const & argv )
         {
             T const * obj = CastFromJS<T>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             Call( obj, MemFunc, argv );
             return v8::Undefined();
         }
-
+        /**
+           Identical to CallVoid().
+        */
+        template <typename T>
+        static Handle<Value> Call( void (T::*MemFunc)() const, Arguments const & argv )
+        {
+            return CallVoid<T,void>( MemFunc, argv );
+        }
 
         /**
            Calls Call( MemFunc, argv ). Implements the
            v8::InvocationCallback interface.
         */
         template <typename T, typename RV, RV (T::*MemFunc)() >
-        static Handle<Value> Invoke( Arguments const & argv )
+        static Handle<Value> Invocable( Arguments const & argv )
         {
             return Call( MemFunc, argv );
         }
@@ -317,29 +344,29 @@ namespace v8 { namespace juice { namespace convert {
            v8::InvocationCallback interface.
         */
         template <typename T, typename RV, RV (T::*MemFunc)() const >
-        static Handle<Value> Invoke( Arguments const & argv )
+        static Handle<Value> Invocable( Arguments const & argv )
         {
-            return Call( MemFunc, argv );
+            return Call<T,RV>( MemFunc, argv );
         }
 
         /**
            Calls Call( MemFunc, argv ). Implements the
            v8::InvocationCallback interface.
         */
-        template <typename T, void (T::*MemFunc)() >
-        static Handle<Value> InvokeVoid( Arguments const & argv )
+        template <typename T, typename VoidType, VoidType (T::*MemFunc)() >
+        static Handle<Value> InvocableVoid( Arguments const & argv )
         {
-            return Call( MemFunc, argv );
+            return Call<T,VoidType>( MemFunc, argv );
         }
 
         /**
            Calls Call( MemFunc, argv ). Implements the
            v8::InvocationCallback interface.
         */
-        template <typename T, void (T::*MemFunc)() const >
-        static Handle<Value> InvokeVoid( Arguments const & argv )
+        template <typename T, typename VoidType, VoidType (T::*MemFunc)() const >
+        static Handle<Value> InvocableVoid( Arguments const & argv )
         {
-            return Call( MemFunc, argv );
+            return CallVoid<T,VoidType>( MemFunc, argv );
         }
         
     };
@@ -382,7 +409,7 @@ namespace v8 { namespace juice { namespace convert {
            Calls Func(), ignoring the return value. If Func throws a native
            exception then it is transformed into a JS exception.
         */
-        template <typename VoidType>
+        template <typename VoidType>//, VoidType (*FuncT)() >
         static v8::Handle<v8::Value> CallVoid( VoidType (*Func)(), Arguments const & /*ignored*/ )
         {
             try
@@ -399,30 +426,142 @@ namespace v8 { namespace juice { namespace convert {
             }
             return v8::Undefined();
         }
+        template < typename VoidType >
+        static v8::Handle<v8::Value> Call( void (*Func)(), ::v8::Arguments const & argv )
+        {
+            return CallVoid<VoidType>( Func, argv );
+        }
 
         /**
            Calls Call( Func, argv ). Implements v8::InvocationCallback
            interface.
         */
         template <typename RV, RV (*Func)() >
-        static v8::Handle<v8::Value> Invoke( Arguments const & argv )
+        static v8::Handle<v8::Value> Invocable( Arguments const & argv )
         {
+            //return Call<RV, RV (*)() >( Func, argv );
             return Call<RV>( Func, argv );
         }
-#if 1
         /**
            Calls Call( Func, argv ). Implements v8::InvocationCallback
            interface.
         */
         template <typename VoidType,VoidType (*Func)() >
-        static v8::Handle<v8::Value> InvokeVoid( Arguments const & argv )
+        static v8::Handle<v8::Value> InvocableVoid( Arguments const & argv )
         {
-            return CallVoid<VoidType>( Func, argv );
+            return CallVoid<VoidType//, VoidType (*)()
+                >( Func, argv );
         }
-#endif
     };
 
 #include "forwarding-FunctionForwarder.h" // generated specializations for MemFuncForwarder
+
+    /**
+       Possibly a utility class, though it's utility is in question.
+
+
+       The following example binds the Unix sleep(3) function to a JS object:
+
+       @code
+       v8::InvocationCallback fp =
+          InvocationCallbackCreator::F1::Invocable<unsigned int,unsigned int,sleep>;
+       jsObject->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(fp)->GetFunction() );
+       @endcode
+
+       If jsObject can be converted to a (T*) via CastFromJS<T>() then the following will also work
+       if (std::string T::toString()) is defined:
+       
+       @code
+       v8::InvocationCallback fp =
+          InvocationCallbackCreator::M0::Invocable<std::string,&T::toString>;
+       jsObject->Set(v8::String::New("toString"), v8::FunctionTemplate::New(fp)->GetFunction() );
+       @endcode
+
+    */
+    class InvocationCallbackCreator
+    {
+    public:
+        /**
+           InvocationCallback generator for functions taking 0 arguments.
+        */
+        typedef FunctionForwarder<0> F0;
+        /**
+           InvocationCallback generator for member functions taking 0 arguments.
+        */
+        typedef MemFuncForwarder<0> M0;
+        /**
+           InvocationCallback generator for functions taking 1 argument.
+        */
+        typedef FunctionForwarder<1> F1;
+        /**
+           InvocationCallback generator for member functions taking 1 argument.
+        */
+        typedef MemFuncForwarder<1> M1;
+        /**
+           InvocationCallback generator for functions taking 2 arguments.
+        */
+        typedef FunctionForwarder<2> F2;
+        /**
+           InvocationCallback generator for member functions taking 2 arguments.
+        */
+        typedef MemFuncForwarder<2> M2;
+        /**
+           InvocationCallback generator for functions taking 3 arguments.
+        */
+        typedef FunctionForwarder<3> F3;
+        /**
+           InvocationCallback generator for member functions taking 3 arguments.
+        */
+        typedef MemFuncForwarder<3> M3;
+        /**
+           InvocationCallback generator for functions taking 4 arguments.
+        */
+        typedef FunctionForwarder<4> F4;
+        /**
+           InvocationCallback generator for member functions taking 4 arguments.
+        */
+        typedef MemFuncForwarder<4> M4;
+        /**
+           InvocationCallback generator for functions taking 5 arguments.
+        */
+        typedef FunctionForwarder<5> F5;
+        /**
+           InvocationCallback generator for member functions taking 5 arguments.
+        */
+        typedef MemFuncForwarder<5> M5;
+        /**
+           InvocationCallback generator for functions taking 6 arguments.
+        */
+        typedef FunctionForwarder<6> F6;
+        /**
+           InvocationCallback generator for member functions taking 6 arguments.
+        */
+        typedef MemFuncForwarder<6> M6;
+        /**
+           InvocationCallback generator for functions taking 7 arguments.
+        */
+        typedef FunctionForwarder<7> F7;
+        /**
+           InvocationCallback generator for member functions taking 7 arguments.
+        */
+        typedef MemFuncForwarder<7> M7;
+        /**
+           InvocationCallback generator for functions taking 8 arguments.
+        */
+        typedef FunctionForwarder<8> F8;
+        /**
+           InvocationCallback generator for member functions taking 8 arguments.
+        */
+        typedef MemFuncForwarder<8> M8;
+        /**
+           InvocationCallback generator for functions taking 9 arguments.
+        */
+        typedef FunctionForwarder<9> F9;
+        /**
+           InvocationCallback generator for member functions taking 9 arguments.
+        */
+        typedef MemFuncForwarder<9> M9;
+    };
     
     /**
        See InvocationCallbackToArgv for details.

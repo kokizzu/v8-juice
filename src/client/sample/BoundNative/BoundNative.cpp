@@ -105,7 +105,11 @@ namespace v8 { namespace juice {
     void BoundNative_doSomething(std::string const &x)
     {
         CERR << "doSomething(\""<<x<<"\")\n";
-        return;
+    }
+    size_t BoundNative_doSomething2(std::string const &x)
+    {
+        CERR << "doSomething2(\""<<x<<"\")\n";
+        return 42;
     }
     void bind_my_native( v8::Handle<v8::Object> dest )
     {
@@ -119,19 +123,35 @@ namespace v8 { namespace juice {
         cw.Set("foo",String::New("this is foo"));
         cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Call );
         //cw.BindMemberFunc<&N::toString2>("toString");
-        cw.Set( "toString", convert::MemFuncForwarder<0>::Invoke<N,std::string,&N::toString> );
+        typedef
+            convert::InvocationCallbackCreator
+            //convert::FunctionForwarder<0>
+            CIC;
+        cw.Set( "toString",
+                //convert::MemFuncForwarder<0>::Invoke<N,std::string,&N::toString>
+                CIC::M0::Invocable<N,std::string,&N::toString>
+                );
+        cw.Set( "getInt",
+                CIC::M0::Invocable<N,int,&N::getInt>
+                );
+        cw.Set( "setInt",
+                CIC::M1::Invocable<N,void,int,&N::setInt>
+                );
         v8::InvocationCallback FH;
-        FH = convert::FunctionForwarder<0>::Invoke<std::string,BoundNative_version>;
+        FH = CIC::F0::Invocable<std::string,BoundNative_version>; // 
 #define JFH v8::FunctionTemplate::New(FH)->GetFunction()
         cw.Set( "version", JFH );
-        FH = convert::FunctionForwarder<1>::InvokeVoid<void,std::string const &,BoundNative_doSomething>
-            //convert::FunctionForwarder<1>::Invoke<void,std::string const &,BoundNative_doSomething>
-            ;
+
+        FH = CIC::F1::Invocable<void,std::string const &,BoundNative_doSomething>;
+        FH = CIC::F1::Invocable<size_t,std::string const &,BoundNative_doSomething2>;
+        FH = CIC::F1::InvocableVoid<size_t,std::string const &,BoundNative_doSomething2>;
+
         cw.Set( "doSomething", JFH );
-        FH = convert::FunctionForwarder<1>::Invoke<unsigned int,unsigned int,::sleep>;
+        FH = CIC::F1::Invocable<unsigned int,unsigned int,::sleep>;
         cw.Set( "sleep", JFH );
 #undef JFH
         cw.Seal();
+        v8::HandleScope hscope;
         Handle<Object> jobj = cw.NewInstance(0,0);
         N * bound = CW::CastToNative::Value(jobj);
         CERR << "bound == @"<<(void const *)bound<<'\n';
