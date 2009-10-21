@@ -204,6 +204,36 @@ namespace juice {
 	}
     };
 
+
+#if 0
+    /**
+       Calls CWOps_ToNative(h), where CWOps_ToNative _must_
+       be-a ClassWrap_Ops_ToNative<> specialization.
+
+       It is intended as a convenience to be used by
+       ClassWrap_Ops_ToNative<> specializations to implement their
+       Value(Handle<Value>) overload.
+
+       If h is empty or !h->IsObject() then 0 is returned, else it
+       returns the result of passing that object to
+       CWOps_ToNative::Value(Handle<Object>).
+    */
+    template <typename CWOps_ToNative>
+    static typename CWOps_ToNative::NativeHandle
+    ClassWrap_Ops_ToNative_ValueToObj( v8::Handle<v8::Value> const & h )
+    {
+        if( h.IsEmpty() || !h->IsObject() )
+        {
+            return 0;
+        }
+        else
+        {
+            Handle<Object> const jo( Object::Cast( *h ) );
+            return CWOps_ToNative::Value(h);
+        }
+    }
+#endif
+
     /**
        The type responsible for converting
        v8 Value handles to ClassWrap_Types<T>::NativeHandle objects.
@@ -218,7 +248,6 @@ namespace juice {
     {
         typedef typename ClassWrap_Types<T>::Type Type;
         typedef typename ClassWrap_Types<T>::NativeHandle NativeHandle;
-    private:
     public:
         /**
            The default implementation looks for a v8::External object
@@ -239,15 +268,16 @@ namespace juice {
             static const int FieldNum = IFT::NativeIndex;
             if( jo.IsEmpty() || (jo->InternalFieldCount() < FieldNum) ) return 0;
             v8::Local<v8::Value> const lv( jo->GetInternalField( FieldNum ) );
-            if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
-            Local<External> const ex( External::Cast( *lv ) );
-            NativeHandle x = static_cast<NativeHandle>( ex.IsEmpty() ? 0 : ex->Value() );
+            //if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
+            void * ext = lv.IsEmpty() ? 0 : External::Unwrap(lv);
+            //Local<External> const ex( External::Cast( *lv ) );
+            NativeHandle x = static_cast<NativeHandle>( ext );
             return x;
         }
-
         /**
-           If h is not an Object then 0 is returns, else it returns the result
-           of passing that object to the other Value() overload.
+           Convenience overload. If h is empty or !h->IsObject() then
+           0 is returned, else it returns the result of passing that
+           object to the other Value() overload.
         */
         static NativeHandle Value( v8::Handle<v8::Value> const & h )
         {
@@ -258,7 +288,7 @@ namespace juice {
             else
             {
                 Handle<Object> const jo( Object::Cast( *h ) );
-                return Value( jo );
+                return Value(jo);
             }
         }
     };
@@ -293,68 +323,168 @@ namespace juice {
     };
 
 
-#if 0
-    // don't use this, because it forces us to instantiate both conversions,
-    // whereas a Native-to-JS conversion is not generically possible.
     /**
-       Casting routines used by ClassWrap. This can be defaulted as long as
-       ClassWrap_Ops_ToJS<T> and ClassWrap_Ops_ToNative<T> are properly
-       specialized.
+       A policy class for ClassWrap. 
+
+       The default specialization does nothing (which is okay for the
+       general case) but defines the interface which specializations
+       must implement.
     */
     template <typename T>
-    struct ClassWrap_Ops_Cast
+    struct ClassWrap_Ops_WeakWrap
     {
-        typedef typename ClassWrap_Types<T>::Type Type;
         typedef typename ClassWrap_Types<T>::NativeHandle NativeHandle;
+        /**
+           This operation is called one time from ClassWrap for each
+           new object, directly after the native has been connected to
+           a Persistent handle.
+   
+           Note that the ClassWrap code which calls this has already
+           taken care of connecting nativeSelf to jsSelf. Client
+           specializations of this policy may opt to add their own
+           binding mechanisms, e.g. to allow CastToJS<T>() to work.
 
-    private:
-    public:
-        static NativeHandle ToNative( v8::Handle<v8::Object> const jo )
+           Clients should do any bindings-related cleanup in
+           ClassWrap_Ops_Memory::Destruct().
+        */
+        static void Wrap( v8::Persistent<v8::Object> jsSelf, NativeHandle nativeSelf )
         {
-            return ClassWrap_Ops_ToNative<T>::Value(jo);
-        }
-
-        static NativeHandle ToNative( v8::Handle<v8::Value> const h )
-        {
-            return ClassWrap_Ops_ToNative<T>::Value(h);
-        }
-
-        static v8::Handle<v8::Object> ToJS( NativeHandle h )
-        {
-            return ClassWrap_Ops_ToJS<T>::Value(h);
+            return;
         }
     };
-#endif
 
     /**
-       An experimental policy-based native-to-JS class binder.
+       A policy-based native-to-JS class binder.
+
+       TODO: document it!
     */
     template <typename T>
     class ClassWrap : public JSClassCreator
     {
     public:
+        /**
+           Basic type info.
+        */
         typedef ClassWrap_Types<T> TypeInfo;
+        /**
+           The real native wrapped type. In some cases is may differ
+           from T!
+         */
         typedef typename TypeInfo::Type Type;
+        /**
+           A native object handle, typically (T*) but _theoretically_
+           could be a pointer-like wrapper.
+        */
         typedef typename TypeInfo::NativeHandle NativeHandle;
+        /**
+           The JS-side class name.
+        */
         typedef ClassWrap_Ops_ClassName<T> ClassName;
+        /**
+           The native ctor/dtor routines which are called from
+           JS.
+        */
         typedef ClassWrap_Ops_Memory<T> OpsMemory;
-        typedef ClassWrap_Ops_ToJS<T> CastToJS;
-        typedef ClassWrap_Ops_ToNative<T> CastToNative;
+        /**
+           The Native-to-JS cast operation.
+        */
+        //typedef ClassWrap_Ops_ToJS<T> CastToJS;
+
+        /**
+           The JS-to-Native cast operation.
+           See ClassWrap-CastOps.h for an easy way to generate
+           this for a given type.
+        */
+        typedef ClassWrap_Ops_ToNative<T> ToNative;
+        
+        /**
+           This operation is called one time after a native has been
+           connected to a Persistent handle. Client specializations of
+           this policy may perform their own binding mechanisms,
+           e.g. to allow Native-to-JS conversions to work.
+        */
+        typedef ClassWrap_Ops_WeakWrap<T> WeakWrap;
+        /**
+           Information about the "internal fields" (which holds native
+           data inside the JS object representation). The fields are:
+
+           - Value = the number of internal fields.
+
+           - NativeIndex = the index at which the bound native object
+           is stored within the list. Must be less than Value.
+        */
         typedef ClassWrap_Opt_InternalFields<T> InternalFields;
+        /**
+           A boolean option specifying whether the JS code "Foo()"
+           should be treated like "new Foo()". If false, the former will cause
+           a JS exception.
+        */
         typedef ClassWrap_Opt_CtorWithoutNew<T> AllowCtorWithoutNew;
     private:
+        /** Checks a few static assertions . */
         static void check_assertions()
         {
             Detail::assert_internal_fields<InternalFields>();
         }
-        // TODO: move this into a policy class
+        /**
+           Called by v8 when pv should be destructed. This function
+           removes the native handle from the JS object, desposes of
+           the persistent handle, and calls OpsMemory::Destruct() to
+           destroy the object.
+        */
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
 	    CERR << ClassName::Value()<<"::weak_callback(@"<<(void const *)nobj<<")\n";
+#if 1
 	    Local<Object> jobj( Object::Cast(*pv) );
-	    if( jobj->InternalFieldCount() != (InternalFields::Value) ) return; // how to warn about this?
+	    if( jobj->InternalFieldCount() != (InternalFields::Value) )
+            {
+                CERR << "SERIOUS INTERNAL ERROR: ClassWrap::weak_callback() was passed "
+                     << "an object with an unexpected internal field count: "
+                     << "JS="<<jobj->InternalFieldCount()
+                     << ", Native="<<InternalFields::Value
+                     << "\nSKIPPING DESTRUCTION! NOT DOING ANYTHING!!!\n"
+                    ;
+                return;
+            }
+#endif
+#if 1
+            NativeHandle nh = ToNative::Value( jobj );
+            if( nh != nobj )
+            {
+                CERR << "SERIOUS INTERNAL ERROR: ClassWrap::weak_callback() was passed "
+                     << "two different values for the native object:\n"
+                     << "JS=@"<<(void const *)nh
+                     << ", "
+                     << "Native=@"<<(void const *)nobj
+                     << "\nSKIPPING DESTRUCTION! NOT DOING ANYTHING!!!\n"
+                    ;
+                return;
+            }
+#endif
+#if 0
 	    Local<Value> lv( jobj->GetInternalField(InternalFields::NativeIndex) );
-	    if( lv.IsEmpty() || !lv->IsExternal() ) return; // how to warn about this?
+            //Local<External> ex( External::Cast(*pv) );
+            void const * ext = lv.IsEmpty()
+                ? 0
+                //: ex->Value(); //v8::External::Unwrap(pv)
+                : External::Unwrap(lv)
+                ;
+            if( ext != nobj )
+            {
+                CERR << "SERIOUS INTERNAL ERROR: ClassWrap::weak_callback() was passed "
+                     << "two different values for the native object:\n"
+                     << "JS=@"<<(void const *)ext
+                     << ", "
+                     << "Native=@"<<(void const *)nobj
+                     << "\nSKIPPING DESTRUCTION! NOT DOING ANYTHING!!!\n"
+                    ;
+                return;
+            }
+#endif
+            OpsMemory::Destruct( nh
+                                 //static_cast<NativeHandle>(nobj)
+                                 );
 	    /**
 	       We have to ensure that we have no dangling External in JS space. This
 	       is so that functions like IODevice.close() can act safely with the
@@ -364,16 +494,18 @@ namespace juice {
 	    jobj->SetInternalField(InternalFields::NativeIndex,Null());
 	    pv.Dispose();
 	    pv.Clear();
-            OpsMemory::Destruct( static_cast<NativeHandle>(nobj) );
 	}
 
-        // TODO: move this into a policy class
 	static Persistent<Object> wrap_native( Handle<Object> _self, NativeHandle obj )
 	{
-            CERR << ClassName::Value() <<"::wrap_native(@"<<(void const *)obj<<") Binding to internal field #"<<InternalFields::NativeIndex<<"\n";
+            //CERR << ClassName::Value() <<"::wrap_native(@"<<(void const *)obj<<") Binding to internal field #"<<InternalFields::NativeIndex<<"\n";
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
-	    self->SetInternalField( InternalFields::NativeIndex, External::New(obj) );
+	    self->SetInternalField( InternalFields::NativeIndex,
+                                    //External::New(obj)
+                                    External::Wrap(obj)
+                                    );
+            WeakWrap::Wrap( self, obj );
 	    return self;
 	}
 
@@ -462,7 +594,7 @@ namespace juice {
 
         static NativeHandle GetNative( Handle<Value> const & h )
         {
-            return CastToNative::Value(h);
+            return ToNative::Value(h);
         }
 
         /**
