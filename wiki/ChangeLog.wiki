@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2009 Oct 21*
+  * (edge branch) We have a much more flexible/generic native-to-JS function binding mechanism which can be used to bind near-arbitrary functions to arbitrary JS objects with a single line of code (with compile-time type safety). If `JSToNative()` and `NativeToJS()` are implemented for a JS-bound native, then native member functions may also be bound to their JS counterpart. This can be used in conjunction with [ClassBinder] and friends or with arbitrary JS objects.
+
 *2009 Oct 17*
   * Started factoring out the functionality of `v8-juice-shell` into the `JuiceShell` class, to make it more reusable.
   * Added an optional (and experimental) optimization for `WeakJSClassCreator`, to speed up conversion to/from JS/Native when cross-JS/Native inheritance is not required.
