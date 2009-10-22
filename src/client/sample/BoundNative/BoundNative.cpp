@@ -180,14 +180,16 @@ namespace v8 { namespace juice {
         //v8::HandleScope hscope;
         Handle<Object> jobj = cw.NewInstance(0,0);
         N * bound = CW::ToNative::Value(jobj);
-        CERR << "bound == @"<<(void const *)bound<<'\n';
-        CERR << "bound == @"<<convert::CastFromJS<N>( jobj )<<'\n';
-
+        CERR << "bound (void *) == @"<<(void const *)bound<<'\n';
+        CERR << "bound (CastFromJS<T>(jsObj)) == @"<<convert::CastFromJS<N>( jobj )<<'\n';
         if( bound )
         {
             typedef convert::MemFuncForwarder<0> MFF;
             //Handle<Value> = MFF::Call( obj, BoundNative::toString
         }
+        CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
+        CW::DestroyObject(jobj);
+        CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
 #if 0
         if(0 && bound)
         {
