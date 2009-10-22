@@ -45,6 +45,7 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <stdexcept>
 namespace v8 {
 namespace juice {
 
@@ -288,6 +289,24 @@ namespace convert {
     /** Convenience instance of NativeToJS. */
     static const NativeToJS<std::string> StdStringToJS = NativeToJS<std::string>();
 
+    /**
+       Converts a native std::exception to a JS exception.
+     */
+    template <>
+    struct NativeToJS<std::exception>
+    {
+        /** Calls v8::ThrowException(ex.what()) and returns an empty
+            handle.
+        */
+	ValueHandle operator()( std::exception const & ex ) const
+	{
+            char const * msg = ex.what();
+	    v8::ThrowException( String::New( msg ? msg : "unknown std::exception!" ) );
+	    /** ^^^ String::New() internally calls strlen(), which hates it when string==0. */
+            return ValueHandle();
+	}
+    };
+    
     /**
        Base interface for converting from native objects to JS
        objects. By default it uses GetBoundNative() to find
