@@ -119,7 +119,7 @@ For a given native class `T`, we can bind `T::foo()` (i.e. member functions) to 
 
 Bound member functions may be `const` or return `void` and they may be templates.
 
-Thus the following member functions are legal for binding purposes:
+For example, the following member functions are legal for binding purposes:
 
 {{{
 void T::foo();
@@ -132,7 +132,7 @@ typedef std::vector<std::string> StringVec;
 StringVec T::split( std::string const & ) const;
 // ^^^ MemFuncForwarder<1>::Invocable<T, StringVec, std::string const &,&T::split>
 
-template <typename Y> Y add( Y y1, Y y2 ) const; // IFF CastTo/FromJS<Y>() works
+template <typename Y> Y T::add( Y y1, Y y2 ) const; // IFF CastTo/FromJS<Y>() works
 // ^^^ e.g. MemFuncForwarder<2>::Invocable<int,int,int,&T::add<int> >
 
 Foo * T::getBuddy(); // IFF CastToJS<Foo>() works
