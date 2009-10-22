@@ -1,6 +1,10 @@
 #summary Contributing to this project
 #labels Phase-UserDocs,Phase-Implementation,Featured,Topic-Project
 
+<wiki:toc max_depth=3/>
+
+= Contributing to v8-juice =
+
 Anyone is welcomed to contribute to this project - just get in touch. Coders, documenters, commentors, code reviewers, bug submitters, etc.... they're all welcomed. Even marketing people and armchair code analysts.
 
 Particular areas where help is currently sought are:
@@ -19,3 +23,10 @@ New code _must be documented_. The documentation belongs in the header files (e.
 Nobody's asking for doctorate-level documentation, but some description of what the code does is a must. The existing API docs are good guideline (though sometimes there's admittedly a bit more documentation than is strictly necessary).
 
 Other than that, i'm pretty much open to anything.
+
+= Contributors =
+
+So far they include:
+  * [http://wanderinghorse.net/home/stephan Stephan Beal] is the primary architect and author.
+  * Rob Tsuk has made several suggestions which led to new features or fundamental improvements.
+  * The folks at http://groups.google.com/group/v8-users have been very helpful in all things related to v8.
