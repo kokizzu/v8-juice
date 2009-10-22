@@ -452,11 +452,18 @@ namespace juice {
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
 	    //CERR << ClassName::Value()<<"::weak_callback(@"<<(void const *)nobj<<")\n";
+            if( pv.IsEmpty() || ! pv->IsObject() )
+            {
+                CERR << "WARNING: ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
+                     << "an empty or non-object handle!\n";
+                return;
+            }
 	    Local<Object> jobj( Object::Cast(*pv) );
 #if 0
 	    if( jobj->InternalFieldCount() != (InternalFields::Value) )
             {
-                CERR << "SERIOUS INTERNAL ERROR: ClassWrap::weak_callback() was passed "
+                CERR << "SERIOUS INTERNAL ERROR:\n"
+                     << "ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
                      << "an object with an unexpected internal field count: "
                      << "JS="<<jobj->InternalFieldCount()
                      << ", Native="<<InternalFields::Value
@@ -475,14 +482,19 @@ namespace juice {
                        blithely assume that the native was removed via outside measures, e.g.
                        a call to a member Close() method.
                     */
-                    if(0) CERR << "WARNING: ClassWrap::weak_callback(): "
+                    if(0) CERR << "WARNING: ClassWrap<"<<ClassName::Value()<<">::weak_callback(): "
                                << "From JS=@"<<(void const *)nobj
                                << ", Converted to Native=@"<<(void const *)nh
                                << '\n'
                         ;
+                    jobj->SetInternalField(InternalFields::NativeIndex,Null());
+                    pv.Dispose();
+                    pv.Clear();
+
                     return;
                 }
-                CERR << "SERIOUS INTERNAL ERROR: ClassWrap::weak_callback() was passed "
+                CERR << "SERIOUS INTERNAL ERROR:\n"
+                     << "ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
                      << "two different values for the native object:\n"
                      << "From JS=@"<<(void const *)nobj
                      << ", Converted to Native=@"<<(void const *)nh
@@ -630,15 +642,20 @@ namespace juice {
             check_assertions();
 	}
 
-        /** UNTESTED!
-
+        /**
            Destroys the given object by disconnecting its associated
            native object and calling the native destructor function
            for it.
 
            If jo cannot be converted to a NativeHandle then false is
-           returned. Otherwise true is returned, and the object
+           returned. Otherwise the true is returned, and the object
            referenced by jo is no longer valid and should not be used.
+
+           Native functions bound to that object should take care to
+           bail out with an exception once the native pointer is gone,
+           as opposed to blindly stepping on its null/dangling pointer
+           (which _might_ have been re-allocated to a different
+           object, even of a different type, in the mean time).
         */
 	static bool DestroyObject( Handle<Object> const & jo )
 	{
@@ -649,6 +666,11 @@ namespace juice {
 	    return true;
 	}
 
+        /**
+           If jv is empty or !jv->IsObject() then 0 is returned,
+           otherwise it returns the result of
+           DestroyObject(Handle<Object>).
+        */
         static bool DestroyObject( Handle<Value> const & jv )
 	{
             return (jv.IsEmpty() || !jv->IsObject())
