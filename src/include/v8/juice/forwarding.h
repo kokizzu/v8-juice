@@ -731,7 +731,267 @@ namespace v8 { namespace juice { namespace convert {
             return (self->*Func)( argv );
 	}
     };
-   
+
+    /**
+       A helper class for binding JS properties to native code, in particular
+       for when JS objects are bound to native T objects.
+
+       It contains utility functions to simplify the process of binding
+       JS properties to native member functions or native properties.
+       
+       Requirements:
+
+       - T must be of class type.
+
+       - JSToNative<T> must be implemented for T.
+
+       - TypeInfo<T>::NativeHandle must be usable in a boolean context
+       to determine whether the JS-to-Native converted object is null
+       or not.
+    */
+    template <typename T>
+    struct PropertyBinder
+    {
+        typedef typename TypeInfo<T>::Type Type;
+        typedef typename JSToNative<T>::ResultType NativeHandle;
+
+        /**
+           This template can be used as an argument to
+           v8::ObjectTemplate::SetAccessor()'s Getter parameter to
+           generically tie a native member variable to a named JS
+           property.
+
+           Requirements:
+
+           - Type must be convertible to NativeHandle via CastFromJS<T>().
+
+           - PropertyType must be convertible via CastToJS<PropertyType>().
+
+           If the underlying native This object cannot be found (that
+           is, if CastFromJS<T>() fails) then this routine will
+           trigger a JS exception.
+
+           Example:
+
+           Assume we have a native type Foo with a std::string member
+           called str. We can bind the member variable with:
+
+           \code
+           myObjectTemplate.SetAccessor("foo",
+           MemVarGetter<Foo,std::string,&Foo::str>,
+           MemVarSetter<Foo,std::string,&Foo::str> );
+           \endcode
+
+           In almost 10 years of C++ coding, this is the first time i've ever had
+           a use for a pointer-to-member.
+        */
+        template <typename PropertyType, PropertyType Type::*MemVar>
+        static v8::Handle<v8::Value> MemVarGetter(v8::Local<v8::String> property, const AccessorInfo &info)
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+            return CastToJS( (self->*MemVar) );
+        }
+
+        /**
+           This is the Setter counterpart of MemVarGetter(). See
+           that function for most of the details.
+
+           Requirements:
+
+           - MemVar must be an accessible member of Type.
+           - PropertyType must be convertible via CastFromJS<PropertyType>().
+
+           If the underlying native This object cannot be found then this
+           routine will trigger a JS exception, though it is currently
+           unclear whether this is actually legal in v8 (and difficult to
+           test, since the native bindings work so well ;).
+        */
+        template <typename PropertyType, PropertyType Type::*MemVar>
+        static void MemVarSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( self )
+            {
+                self->*MemVar = CastFromJS<PropertyType>( value );
+            }
+            else
+            {
+                // It is legal to do this from here?
+                ::v8::ThrowException(v8::String::New("Native member property setter could not access native This object!"));
+            }
+        }
+
+        /**
+           Binds automatically-generated getter/setter functions to the given
+           member variable. See MemVarGetter() and MemVarSetter()
+           for the requirements of the templatized types.
+
+           If you only want to bind one of the getter OR the setter then
+           use the 5-argument variant of Set() instead and pass MemVarGetter
+           or MemVarGetter, as appropriate, to that function.
+        */
+        template <typename VarType, VarType Type::*MemVar>
+        static void BindMemVar( char const * name,
+                                v8::Handle<v8::ObjectTemplate> const & prototype,
+                                v8::AccessControl settings = v8::PROHIBITS_OVERWRITING,
+                                v8::PropertyAttribute attribute = v8::DontDelete
+                         )
+        {
+            if( ! prototype.IsEmpty() )
+            {
+                prototype->SetAccessor( v8::String::New(name),
+                                        MemVarGetter<VarType,MemVar>,
+                                        MemVarSetter<VarType,MemVar>,
+                                        v8::Handle< v8::Value >(),
+                                        settings,
+                                        attribute );
+            }
+        }
+
+        /**
+           Binds the given JS property to MemVar, such that read/get
+           operations will work but write/set operations will be
+           ignored (that is, will not affect the value returned by the
+           getter).
+        */
+        template <typename VarType, VarType Type::*MemVar>
+        static void BindMemVarRO( char const * name,
+                                  v8::Handle<v8::ObjectTemplate> const & prototype )
+        {
+            if( ! prototype.IsEmpty() )
+            {
+                prototype->SetAccessor( v8::String::New(name),
+                                        MemVarGetter<VarType,MemVar>,
+                                        0,
+                                        v8::Handle< v8::Value >(),
+                                        v8::PROHIBITS_OVERWRITING,
+                                        v8::DontDelete );
+            }
+        }
+        
+        /**
+           Implements the v8::AccessorGetter interface to bind a JS
+           member property to a native getter function. This function
+           can be used as the getter parameter to
+           v8::ObjectTemplate::SetAccessor().
+        */
+	template <typename RV, RV (Type::*Func)()>
+        static Handle<Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+            return convert::CastToJS( (self->*Func)() );
+        }
+        /**
+           Overload for const native getter functions.
+        */
+	template <typename RV, RV (Type::*Func)() const>
+        static Handle<Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+            return convert::CastToJS( (self->*Func)() );
+        }
+        /**
+            Implements v8::AccessorSetter interface to proxy a JS
+            member property through a native member setter function.
+
+            The RV parameter is ignored by the conversion, and does
+            not invoke a conversion operation.
+
+             This function can be used as the setter parameter to
+             v8::ObjectTemplate::SetAccessor().
+        */
+        template <typename RV, typename ArgT, RV (Type::*Func)(ArgT)>
+        static void PropSetterFunc(v8::Local< v8::String > property, v8::Local< v8::Value > value, const v8::AccessorInfo &info)
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( ! self )
+            {
+                v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+                return;
+            }
+            (self->*Func)( CastFromJS<ArgT>( value ) );
+            return;
+        }
+
+        /**
+           Binds the given JS property to a pair of T member
+           functions, such that these functions will be called in
+           place of get/set operations for the property.
+           
+           The native member functions must follow conventional
+           accessor signatures:
+
+           - Getter: T1 getter() [const]
+           - Setter: [AnyType] setter( T2 )
+
+           For the setter, T1 may differ from T2. T1 may be void but
+           T2 may not be. Any return value from the setter is ignored
+           by the JS engine.
+
+           For the getter, an overload of this function is provided which
+           supports a non-const getter.
+         */
+        template <typename RV,
+                  RV (Type::*Getter)(),
+                  typename SetRV,
+                  typename ArgV,
+                  SetRV (Type::*Setter)(ArgV)
+            >
+        static void BindGetterSetter( char const * propName, v8::Handle<v8::ObjectTemplate> const & prototype )
+	{
+            if( ! prototype.IsEmpty() )
+                prototype->SetAccessor( v8::String::New( propName ),
+                                        PropGetterFunc<RV,Getter>,
+                                        PropSetterFunc<SetRV,ArgV,Setter>
+                                        );
+	}
+
+        /**
+           Overload to allow a const getter function. Member setter functions
+           are not, by nature, const.
+         */
+        template <typename RV,
+                  RV (Type::*Getter)() const,
+                  typename SetRV,
+                  typename ArgV,
+                  SetRV (Type::*Setter)(ArgV)
+            >
+        static void BindGetterSetter( char const * propName, v8::Handle<v8::ObjectTemplate> const & prototype )
+	{
+            if( ! prototype.IsEmpty() )
+                prototype->SetAccessor( v8::String::New( propName ),
+                                        PropGetterFunc<RV,Getter>,
+                                        PropSetterFunc<SetRV,ArgV,Setter>
+                                        );
+	}
+
+        /**
+           Binds the templatized getter function to the given JS property of the
+           given prototype object, such that JS-side read access to the property
+           will return the value of that member function.
+         */
+        template <typename RV, RV (Type::*Getter)()>
+        static void BindGetter( char const * propName, v8::Handle<v8::ObjectTemplate> const & prototype )
+	{
+	    prototype->SetAccessor( v8::String::New( propName ),
+                                   PropGetterFunc<RV,Getter> );
+	}
+
+        /**
+           Overload too support const getters.
+        */
+        template <typename RV, RV (Type::*Getter)() const>
+        static void BindGetter( char const * propName, v8::Handle<v8::ObjectTemplate> const & prototype )
+	{
+	    prototype->SetAccessor( v8::String::New( propName ),
+                                   PropGetterFunc<RV,Getter> );
+	}
+
+    };
+    
 }}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_FORWARDING_H_INCLUDED */
