@@ -531,8 +531,9 @@ namespace v8 { namespace juice { namespace convert {
 #include "forwarding-FunctionForwarder.h" // generated specializations for MemFuncForwarder
 
     /**
-       Possibly a utility class, though it's utility is in question.
-
+       Possibly a utility class, though it's utility is in question,
+       this is a helper for using the FunctionForwarder and
+       MemFuncForwarder types.
 
        The following example binds the Unix sleep(3) function to a JS object:
 
@@ -554,6 +555,8 @@ namespace v8 { namespace juice { namespace convert {
     */
     class InvocationCallbackCreator
     // leads to function ambiguity: : public FunctionForwarder<0>, public MemFuncForwarder<0>...<N>
+    // as does   : public FunctionForwarder<0>, public FunctionForwarder<1>
+    // Damn.
     {
     public:
         /**
