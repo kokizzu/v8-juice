@@ -154,6 +154,17 @@ TODO: Some points to discuss:
   * How virtual method lookup across JS/Native inheritance does not come for free, and requires fairly detailed support from a higher-level framework. This is implemented in [ClassBinder], for example.
   * How JS-triggered destruction of bound objects needs to be sure and pick up the proper destructor in the face of inheritance.
 
+= Tips and Tricks =
+
+== Discardable or non-convertible return types ==
+
+The `FunctionForwarder` and `MemFuncForwarder` classes each have a function called `InvocableVoid` which works just like `Invocable` (it generates a `v8::InvocationCallback`), but it does not try to convert the return type. This can be useful when:
+
+  * When there is no legal Native-to-JS conversion for the return type.
+  * When you do not want to instantiate the template for such a conversion (e.g. to avoid a compile error).
+  * Any time you want the JS version of the function to return `undefined` to the caller.
+
+It is not necessary (though it is legal) to use `InvocableVoid` instead of `Invokable` when the return type is actually `void`, as function overloads take care of dispatching `FunctionForwarder<N>::Invocable<void,...>` and `MemFuncForwarder<N>::Invocable<T,void,...>` via `InvocableVoid`.
 
 = Examples =
 
