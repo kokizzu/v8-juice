@@ -73,6 +73,7 @@ For a free (non-member) function to be bindable they must meet these requirement
 Out of the box this supports at least the following argument/return types:
 
   * The standard numeric types (int, double, bool, short, etc.).
+  * (`char const *`) as an argument type, but not a return type (due to ownership and lifetime issues).
   * `std::string`
   * `std::list`, `std::vector`, and `std::map`, where the container types may contain any other convertible types (nested arbitrarily deep).
 
@@ -81,7 +82,7 @@ It is normally easy to add conversions support for custom types, but argument ty
   * Returning references. This is on the to-fix list, but may require treating the return value as a (`T*`) instead of (`T&`). Certain types support a return of (`T const &`), but they treat the result as (`T`), which requires a deep copy.
   * (`void *`). This cannot work for the general case. v8 allows us to do it, but dereferencing the object in JS will cause a crash, and the 100% lack of type-safety would eventually lead to crashes when the objects travel between JS and native and someone passes the wrong (`void*`) somewhere.
 
-Here are examples of functions which can be bound using this framework, including the template required to construct an `InvocationCallback` function from them.
+Here are examples of functions which can be bound using this framework, including the template required to construct a `v8::InvocationCallback` function from them.
 
 {{{
 void foo();
@@ -104,6 +105,8 @@ T * getNative(); // IFF CastToJS<T>() works!
 void setNative(T *); // IFF CastFromJS<T>() works!
 // ^^^ FunctionForwarder<1>::Invocable<void,T*,setNative>
 }}}
+
+(As you may have guessed, the numeric template argument is the number of arguments in the bound function's signature.)
 
 == Member Functions ==
 
