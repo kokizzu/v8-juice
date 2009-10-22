@@ -69,15 +69,15 @@ function testOne()
         print('b2.ptr(0) ==',b2.ptr(0));
         delete b2;
     }
-    if(1)
+    if(0)
     {
         var stime = 1;
         print("b.sleep("+stime+")...");
         b.sleep(stime);
         print("b.sleep("+stime+")'d!");
-        print('b.instanceCount() ==',b.instanceCount());
-        print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
     }
+    print('b.instanceCount() ==',b.instanceCount());
+    print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
 }
 testOne();
 
@@ -88,9 +88,27 @@ function testTwo()
     print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
     b.destroy();
     print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
+    //gc();
 }
 testTwo();
 //gc();
-//print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
+
+function testInheritance1()
+{
+    function MyClass()
+    {
+        this.prototype = this.__proto__ = new BoundNative();
+        this.prototype.constructor = MyClass;
+        return this;
+    }
+    var m = new MyClass();
+    print("m =",m);
+    print("m instanceof BoundNative ==",m instanceof BoundNative);
+    print("m.ptr(m)",m.ptr(m));
+
+}
+testtestInheritance1();
+
+print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
 print("Done! You win!");
 
