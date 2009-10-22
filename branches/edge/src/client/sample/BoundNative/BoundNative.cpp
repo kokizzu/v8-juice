@@ -65,6 +65,14 @@ namespace v8 { namespace juice {
     size_t BoundNative::instcount = 0;
 
     template <>
+    struct ClassWrap_ToNative<BoundNative> :
+        ClassWrap_ToNative_StaticCast<BoundNative,
+                                      true
+                                      //false
+                                      > {};
+
+    
+    template <>
     struct ClassWrap_ClassName<BoundNative>
     {
         static char const * Value()
@@ -85,10 +93,10 @@ namespace v8 { namespace juice {
 #if 1
     template <>
     struct ClassWrap_Inheritance<BoundNative>
-        : ClassWrap_Inheritance_base<
+        : ClassWrap_Inheritance_Base<
         BoundNative
         //,std::string // should fail to compile
-        //BoundNative // should work
+        //,BoundNative // should work
         >
     {};
 #endif
@@ -173,7 +181,8 @@ namespace v8 { namespace juice {
                 ICC::M1::Invocable<N,bool,N const * ,&N::ptr>
                 //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
                 );
-        typedef convert::PropertyBinder<N> PB;
+        //typedef convert::PropertyBinder<N> PB;
+        typedef CW::PB PB;
         PB::BindGetterSetter<int,&N::getInt,void,int,&N::setInt>( "myInt", cw.Prototype() );
         PB::BindGetter<int,&N::getInt>( "intGetter", cw.Prototype() );
         PB::BindMemVar<double,&N::publicProperty>( "publicProperty", cw.Prototype() );
@@ -213,6 +222,19 @@ namespace v8 { namespace juice {
             typedef convert::MemFuncForwarder<0> MFF;
             //Handle<Value> = MFF::Call( obj, BoundNative::toString
         }
+        if(1)
+        {
+            v8::HandleScope hs;
+            int level = 1;
+            v8::Local<v8::Value> proto = jobj->GetPrototype();
+            for( ; ! proto.IsEmpty() && proto->IsObject(); ++level )
+            {
+                CERR << "Prototype level "<<level<<'\n';
+                proto = Local<Object>( v8::Object::Cast(*proto) )->GetPrototype();
+            }
+        }
+
+
         CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
         CW::DestroyObject(jobj);
         CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
