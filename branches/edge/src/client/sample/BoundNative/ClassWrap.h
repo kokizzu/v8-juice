@@ -7,73 +7,32 @@
 
 namespace v8 {
 namespace juice {
-    using namespace v8::juice;
+
+#if !defined(DOXYGEN)
     namespace Detail
     {
-	/**
-	   An internal helper type for only use by ClassWrap.
-	*/
-	template <typename NativeT>
-	struct ClassWrapMapper
-	{
-	    typedef NativeT WrappedType;
-            typedef WrappedType * NativeHandle;
-            typedef v8::Handle<v8::Object> JSObjHandle;
-            typedef std::pair<NativeHandle, JSObjHandle > ObjBindT;
-	    typedef std::map<void const *,ObjBindT > OneOfUsT;
-            typedef typename OneOfUsT::iterator Iterator;
-	    static OneOfUsT & Map()
-	    {
-		static OneOfUsT bob;
-		return bob;
-            }
-            
-            static void Insert( v8::Handle<v8::Object> jself, NativeHandle obj )
-            {
-                JSObjHandle p = JSObjHandle(*jself);
-                Map().insert( std::make_pair( obj, std::make_pair( obj, p ) ) );
-            }
-
-            static NativeHandle Remove( void const * key )
-            {
-                OneOfUsT & map( Map() );
-                Iterator it = map.find( key );
-                if( map.end() == it )
-                {
-                    return 0;
-                }
-                NativeHandle victim = (*it).second.first;
-                map.erase(it);
-                // FIXME? Do we need to Dispose() or Clear() the Persistent handles?
-                return victim;
-            }
-
-            static WrappedType * GetNative( void const * key )
-            {
-                typename OneOfUsT::iterator it = Map().find(key);
-                return (Map().end() == it)
-                      ? 0
-                      : (*it).second.first;
-            }
-
-            static Handle<Object> GetJSObject( void const * key )
-	    {
-                typename OneOfUsT::iterator it = Map().find(key);
-                if( Map().end() == it ) return Handle<Object>();
-                else return (*it).second.second;
-	    }
-        };
-
-        /**
-           Useless base instantiation - See the 0-specialization for details.
-        */
-        template <int Arity_>
-        struct BoundMemberCaller
+        template <typename T1,typename T2>
+        struct IsSameType
         {
-            enum { Arity = Arity_ };
+            static const bool Value = false;
         };
-
+        template <typename T1>
+        struct IsSameType<T1,T1>
+        {
+            static const bool Value = 1;
+        };
+        template <typename T1,typename T2>
+        struct HasParent
+        {
+            static const bool Value = true;
+        };
+        template <typename T1>
+        struct HasParent<T1,T1>
+        {
+            static const bool Value = false;
+        };
     }
+#endif // DOXYGEN
 
     /**
        Base class for static ClassWrap options.
@@ -99,44 +58,65 @@ namespace juice {
     struct ClassWrap_Opt_Bool : ClassWrap_Opt_ConstVal<bool,Val>
     {};
 
-
-    /**
-       Stores the base type info for ClassWrap-able types. All other
-       policies "should" use these typedefs for the parameters and
-       arguments.
-    */
-    template <typename T>
-    struct ClassWrap_Types
+    //! Experimental/incomplete.
+    template <typename T,typename ParentType_ = T>
+    struct ClassWrap_Inheritance_base
     {
-        typedef T Type;
-        typedef T * NativeHandle;
-        //static NativeHandle Pointer( NativeHandle x ) { return x; }
+        typedef convert::TypeInfo<T> TypeInfo;
+        typedef convert::TypeInfo<ParentType_> ParentTypeInfo;
+        typedef typename TypeInfo::Type Type;
+        typedef typename ParentTypeInfo::Type ParentType;
+        static const bool HasParent = Detail::HasParent<Type,ParentType>::Value;
+    private:
+        /**
+           Tries to statically assert that (T*) can be implicitly
+           converted to (ParentType*) (which implies that T and
+           ParentType are the same class or T subclasses ParentType).
+        */
+        static void assert_inheritance()
+        {
+            const typename ParentTypeInfo::NativeHandle * P = 0;
+            const typename TypeInfo::NativeHandle * B = 0;
+            /**
+               If your compiler led you here, it means that T is not
+               ParentType and that T does not inherit from ParentType.
+            */
+            P = B;
+            return;
+        }
+    protected:
+        ClassWrap_Inheritance_base()
+        {
+            assert_inheritance();
+        }
     };
 
+    //! Experimental/incomplete.
     template <typename T>
-    struct ClassWrap_Types<T const> : ClassWrap_Types<T>
+    struct ClassWrap_Inheritance : ClassWrap_Inheritance_base<T,T>
     {};
 
-    template <typename T>
-    struct ClassWrap_Types<T *> : ClassWrap_Types<T>
-    {};
-
-    template <typename T>
-    struct ClassWrap_Types<T const *> : ClassWrap_Types<T>
-    {};
-
-    template <typename T>
-    struct ClassWrap_Types<T &> : ClassWrap_Types<T>
-    {};
-
-    template <typename T>
-    struct ClassWrap_Types<T const &> : ClassWrap_Types<T>
-    {};
-
+    
+    /**
+       A ClassWrap policy class for assigning a class name to a JS
+       class.
+    */
     template <typename T>
     struct ClassWrap_ClassName
     {
-        static char const * Value();
+        /**
+           Must return a valid, unqualified JS class name string. e.g.
+           "MyClass" is legal but neither null nor "my.Class" are.
+
+           The default implementation is useless, and will result in
+           a compile-time error if static assertions are enabled.
+         */
+        static char const * Value()
+        {
+            JUICE_STATIC_ASSERT(false,
+                                ClassWrap_ClassName_MustBeSpecialized);
+
+        }
     };
 
     /**
@@ -144,12 +124,12 @@ namespace juice {
        JS objects. It must be greater than 0 and greater than NativeIndex.
     */
     template <typename T>
-    struct ClassWrap_Opt_InternalFields : ClassWrap_Opt_Int<1>
+    struct ClassWrap_InternalFields : ClassWrap_Opt_Int<1>
     {
         /**
            The internal field index at which ClassWrap policies should
            expect the native object to be found in any give JS object.
-           It must be 0 or greater and less than Value.
+           It must be 0 or greater, and must be less than Value.
         */
         static const int NativeIndex = 0;
     };
@@ -159,7 +139,7 @@ namespace juice {
         /**
            Performs a compile-time assertion for the parameters of the
            given type, which must conform to the
-           ClassWrap_Opt_InternalFields interface.
+           ClassWrap_InternalFields interface.
         */
         template <typename InternalFields>
         void assert_internal_fields()
@@ -175,132 +155,136 @@ namespace juice {
     }
     
     /**
-       Policy class responsible for setting whether or not a ClassWrap-bound
-       class should allow "Foo()" and "new Foo()" to behave the same
-       or not.
+       A ClassWrap policy/options class responsible specifying whether
+       or not a ClassWrap-bound class should allow "Foo()" and "new
+       Foo()" to behave the same or not. If the Value member is false
+       (the default) then "Foo()" is not allowed to behave as a
+       constructor call (it will generate an error), otherwise it will
+       be treated exactly as if "new Foo()" had been called.
     */
     template <typename T>
     struct ClassWrap_Opt_CtorWithoutNew : ClassWrap_Opt_Bool<false>
     {};
 
     /**
-       Policy class responsible for instantiating and destroying
-       ClassWrap_Types<T>::NativeHandle objects.
+       The ClassWrap Policy class responsible for instantiating and
+       destroying convert::TypeInfo<T>::NativeHandle objects.
+       
     */
     template <typename T>
-    struct ClassWrap_Memory
+    struct ClassWrap_Factory
     {
-        typedef typename ClassWrap_Types<T>::Type Type;
-        typedef typename ClassWrap_Types<T>::NativeHandle NativeHandle;
+        /**
+           Specifies the templatized type.
+        */
+        typedef typename convert::TypeInfo<T>::Type Type;
+        /**
+           Specifies the "native handle" typed used for
+           passing around native objects.
+        */
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+	/**
+	   This will be called in response to calling
+	   "new WrappedType(...)" in JS code. It should:
+
+	   - Create a new native object.
+
+	   - If successful, return that object.
+
+	   - On error, return 0 and optionally populate the (ostream &)
+	   argument with an informative error message (e.g. "requires
+	   arguments (String,Integer)").
+
+	   If the client is using any "supplemental" garbage
+	   collection (e.g. the v8::juice::cleanup API) or class
+	   binding mechanism, then they should register the object in
+	   this function and deregister it in Destruct().
+	*/
 	static NativeHandle Instantiate( Arguments const &  /*argv*/,
                                          std::ostream & exceptionText )
 	{
-            JUICE_STATIC_ASSERT(false,ClassWrap_Memory_T_MustBeSpecialized);
-	    exceptionText << "ClassWrap_Memory<"
+            JUICE_STATIC_ASSERT(false,ClassWrap_Factory_T_MustBeSpecialized);
+	    exceptionText << "ClassWrap_Factory<"
                           << ClassWrap_ClassName<T>::Value()
                           << ">::Instantiate() not implemented!";
 	    return NativeHandle(0);
 	}
+	/**
+	   Must "destroy" the given object, though the exact meaning
+	   of "destroy", and mechanism of destruction, is
+	   type-specific.
+
+	   This function is responsible for destroying the native
+	   object. Most implementations must simply call "delete obj",
+	   which is fine for many types, but opaque types and types
+	   allocated via something other than 'new' will need a
+	   different implementation. A destructor functor for shared,
+	   static, or stack-allocated objects should simply do nothing
+	   (or maybe clear the object to some empty/default state).
+
+	   If the client is using any "supplemental" garbage
+	   collection (e.g. the v8::juice::cleanup API) or class
+	   binding mechanism then they should deregister the object in
+	   this function.
+	*/
 	static void Destruct( NativeHandle obj )
 	{
-            JUICE_STATIC_ASSERT(false,ClassWrap_Memory_T_MustBeSpecialized);
+            JUICE_STATIC_ASSERT(false,ClassWrap_Factory_T_MustBeSpecialized);
 	}
     };
 
-
-#if 0
     /**
-       Calls CWOps_ToNative(h), where CWOps_ToNative _must_
-       be-a ClassWrap_ToNative<> specialization.
-
-       It is intended as a convenience to be used by
-       ClassWrap_ToNative<> specializations to implement their
-       Value(Handle<Value>) overload.
-
-       If h is empty or !h->IsObject() then 0 is returned, else it
-       returns the result of passing that object to
-       CWOps_ToNative::Value(Handle<Object>).
-    */
-    template <typename CWOps_ToNative>
-    static typename CWOps_ToNative::NativeHandle
-    ClassWrap_ToNative_ValueToObj( v8::Handle<v8::Value> const & h )
-    {
-        if( h.IsEmpty() || !h->IsObject() )
-        {
-            return 0;
-        }
-        else
-        {
-            Handle<Object> const jo( Object::Cast( *h ) );
-            return CWOps_ToNative::Value(h);
-        }
-    }
-#endif
-
-    /**
-       A ClassWrap_ToNative<T> implementation which uses
-       static_cast<ClassWrap_Types<T>::NativeHandle>(void*) to convert
+       A ClassWrap_ToNative<T> policy implementation which uses
+       static_cast<convert::TypeInfo<T>::NativeHandle>(void*) to convert
        objects from JS to native space. It takes a certain, but not
        infallible, deal of care in ensuring that the (void*) is
        actually a native object of the proper type.
+
+       See the Value() member for more details.
     */
     template <typename T>
     struct ClassWrap_ToNative_StaticCast
     {
-        typedef typename ClassWrap_Types<T>::Type Type;
-        typedef typename ClassWrap_Types<T>::NativeHandle NativeHandle;
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
     public:
         /**
-           The default implementation looks for a v8::External object
-           stored in the N'th internal field (where N ==
-           ClassWrap_Opt_InternalFields<T>::NativeIndex).
+           Looks for a JS value stored in the N'th internal field of
+           the given object (where N ==
+           ClassWrap_InternalFields<T>::NativeIndex).
 
-           If it finds one, it static_cast()'s it to a NativeHandle
-           and returns it.
+           If it finds one, it the value is extracted to get its
+           native (void *). If none is found, 0 is returned, otherwise
+           static_cast<NativeHandle>(thatPtr) is used to try to
+           convert it, and the result of that conversion is returned..
 
-           Returns 0 on error.
-
-           Ownership of the returned object is not modified by this call.
+           Ownership of the returned object is not modified by this
+           call.
         */
         static NativeHandle Value( v8::Handle<v8::Object> const & jo )
         {
-            typedef ClassWrap_Opt_InternalFields<T> IFT;
+            typedef ClassWrap_InternalFields<T> IFT;
             { static bool inited = (Detail::assert_internal_fields<IFT>(),true); }
-            static const int FieldNum = IFT::NativeIndex;
-            if( jo.IsEmpty() || (jo->InternalFieldCount() < FieldNum) ) return 0;
-            v8::Local<v8::Value> const lv( jo->GetInternalField( FieldNum ) );
+            if( jo.IsEmpty() || (jo->InternalFieldCount() != IFT::Value) ) return 0;
+            v8::Local<v8::Value> const lv( jo->GetInternalField( IFT::NativeIndex ) );
             void * ext = lv.IsEmpty() ? 0 : External::Unwrap(lv);
             return ext ?
                 static_cast<NativeHandle>( ext )
                 : 0;
         }
-        /**
-           Convenience overload. If h is empty or !h->IsObject() then
-           0 is returned, else it returns the result of passing that
-           object to the other Value() overload.
-        */
-        static NativeHandle Value( v8::Handle<v8::Value> const & h )
-        {
-            if( h.IsEmpty() || !h->IsObject() )
-            {
-                return 0;
-            }
-            else
-            {
-                Handle<Object> const jo( Object::Cast( *h ) );
-                return Value(jo);
-            }
-        }
     };
 
     /**
        The type responsible for converting
-       v8 Value handles to ClassWrap_Types<T>::NativeHandle objects.
+       v8 Value handles to convert::TypeInfo<T>::NativeHandle objects.
        The default implementation is designed to work with the
        other ClassWrap_xxx classes, specifically:
 
-       - ClassWrap_Opt_InternalFields
-       - ClassWrap_Types
+       - ClassWrap_InternalFields<T>
+       - TypeInfo<T>
+
+       This policy can (and should) be used to implement a
+       specialization of convert::JSToNative<T>.
     */
     template <typename T>
     struct ClassWrap_ToNative : ClassWrap_ToNative_StaticCast<T> {};
@@ -308,17 +292,18 @@ namespace juice {
 
     /**
        The type responsible for converting
-       ClassWrap_Types<T>::NativeHandle to v8::Objects. This
+       convert::TypeInfo<T>::NativeHandle to v8::Objects. This
        instantiation will cause a compile-time error, as Native-to-JS
        is not possible in the generic case (it requires an extra level
-       of binding info, which can be provided by a specialization).
+       of binding info, which can be provided via custom ClassWrap
+       policy specializations).
     */
     template <typename T>
     struct ClassWrap_ToJS
     {
     public:
-        typedef typename ClassWrap_Types<T>::Type Type;
-        typedef typename ClassWrap_Types<T>::NativeHandle NativeHandle;
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
         /**
            Converts the given handle to a JS object. If it cannot it may:
 
@@ -348,7 +333,7 @@ namespace juice {
     template <typename T>
     struct ClassWrap_WeakWrap
     {
-        typedef typename ClassWrap_Types<T>::NativeHandle NativeHandle;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
         /**
            This operation is called one time from ClassWrap for each
            new object, directly after the native has been connected to
@@ -360,7 +345,7 @@ namespace juice {
            binding mechanisms, e.g. to allow CastToJS<T>() to work.
 
            Clients should do any bindings-related cleanup in
-           ClassWrap_Memory::Destruct().
+           ClassWrap_Factory::Destruct().
         */
         static void Wrap( v8::Persistent<v8::Object> jsSelf, NativeHandle nativeSelf )
         {
@@ -369,7 +354,39 @@ namespace juice {
     };
 
     /**
-       A policy-based native-to-JS class binder.
+       A policy-based native-to-JS class binder, such that T
+       object can be accessed via JS. This class is only
+       a very thin wrapper around:
+
+       - JSClassCreator (its base class)
+       - Various policy classes named ClassWrap_XXX.
+
+       The base class handles the more mundane details of creating a
+       new JS class and this type adds weak pointer binding to
+       that. The T-specific policy classes define how certain aspects
+       of the binding are handled, e.g. how to convert a JS object
+       handle back into a T object.
+
+       Requirements for T:
+
+       - Must be a complete type. i think.
+       - ClassWrap_ClassName<T> must be implemented.
+       - ClassWrap_Factory<T> must be implemented.
+       - ClassWrap_ToNative<T> must be implemented.
+
+       The other ClassWrap_XXX polcies can normally be defaulted, but
+       may also be specialized to change certain aspects of the
+       binding.
+
+
+       At least the following specializations of
+       other classes must be implemented:
+
+       - ClassWrap_ClassName<T>
+       - ClassWrap_Factory<T>
+
+       Other ClassWrap_XXX<T> specializations may (or may have to) be
+       implemented, depending the needs of the binding.
 
        TODO: document it!
     */
@@ -380,7 +397,7 @@ namespace juice {
         /**
            Basic type info.
         */
-        typedef ClassWrap_Types<T> TypeInfo;
+        typedef convert::TypeInfo<T> TypeInfo;
         /**
            The real native wrapped type. In some cases is may differ
            from T!
@@ -399,7 +416,7 @@ namespace juice {
            The native ctor/dtor routines which are called from
            JS.
         */
-        typedef ClassWrap_Memory<T> OpsMemory;
+        typedef ClassWrap_Factory<T> Factory;
 
         /**
            The Native-to-JS cast operation. Not possible for the
@@ -430,7 +447,7 @@ namespace juice {
            - NativeIndex = the index at which the bound native object
            is stored within the list. Must be less than Value.
         */
-        typedef ClassWrap_Opt_InternalFields<T> InternalFields;
+        typedef ClassWrap_InternalFields<T> InternalFields;
         /**
            A boolean option specifying whether the JS code "Foo()"
            should be treated like "new Foo()". If false, the former will cause
@@ -438,7 +455,7 @@ namespace juice {
         */
         typedef ClassWrap_Opt_CtorWithoutNew<T> AllowCtorWithoutNew;
     private:
-        /** Checks a few static assertions . */
+        /** Checks a few static assertions. */
         static void check_assertions()
         {
             Detail::assert_internal_fields<InternalFields>();
@@ -446,7 +463,7 @@ namespace juice {
         /**
            Called by v8 when pv should be destructed. This function
            removes the native handle from the JS object, desposes of
-           the persistent handle, and calls OpsMemory::Destruct() to
+           the persistent handle, and calls Factory::Destruct() to
            destroy the object.
         */
 	static void weak_callback(Persistent< Value > pv, void * nobj)
@@ -523,7 +540,7 @@ namespace juice {
                 return;
             }
 #endif
-            OpsMemory::Destruct( nh
+            Factory::Destruct( nh
                                  //static_cast<NativeHandle>(nobj)
                                  );
 	    /**
@@ -537,19 +554,29 @@ namespace juice {
 	    pv.Clear();
 	}
 
+        /**
+           Makes a weak pointer from _self and sets obj as the N's internal field
+           of _self, where N is InternalFields::NativeIndex. Returns the new
+           weak pointer handle.
+        */
 	static Persistent<Object> wrap_native( Handle<Object> _self, NativeHandle obj )
 	{
             //CERR << ClassName::Value() <<"::wrap_native(@"<<(void const *)obj<<") Binding to internal field #"<<InternalFields::NativeIndex<<"\n";
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
 	    self->SetInternalField( InternalFields::NativeIndex,
-                                    //External::New(obj)
-                                    External::Wrap(obj)
-                                    );
+                                    External::Wrap(obj) );
             WeakWrap::Wrap( self, obj );
 	    return self;
 	}
 
+        /**
+           Tries to instantiate a new NativeHandle object by calling
+           Factory::Instantiate(). On success, the returned handle
+           points to a weak-pointer handle to that object. On error
+           a JS exception is triggered and the return value is
+           theoretically empty.
+        */
 	static Handle<Value> ctor_proxy( const Arguments & argv )
 	{
             if( AllowCtorWithoutNew::Value )
@@ -588,7 +615,7 @@ namespace juice {
                 std::ostringstream errstr;
                 try
                 {
-                    obj = OpsMemory::Instantiate( argv, errstr );
+                    obj = Factory::Instantiate( argv, errstr );
                 }
                 catch(std::exception const & ex)
                 {
@@ -605,7 +632,7 @@ namespace juice {
 	    {
 		if( obj )
 		{
-		    OpsMemory::Destruct(obj);
+		    Factory::Destruct(obj);
 		    obj = NativeHandle(0);
 		}
 		return ThrowException(String::New(err.c_str(),static_cast<int>(err.size())));
@@ -648,8 +675,9 @@ namespace juice {
            for it.
 
            If jo cannot be converted to a NativeHandle then false is
-           returned. Otherwise the true is returned, and the object
-           referenced by jo is no longer valid and should not be used.
+           returned. Otherwise the true is returned, and the native
+           object referenced by jo is no longer valid and should not
+           be used.
 
            Native functions bound to that object should take care to
            bail out with an exception once the native pointer is gone,
@@ -707,4 +735,67 @@ namespace juice {
 
     };
 
+
+    namespace Detail
+    {
+
+	/**
+	   An internal helper type for only use by certain ClassWrap
+	   policy classes.
+	*/
+	template <typename T>
+	struct ClassWrapMapper
+	{
+            typedef ::v8::juice::convert::TypeInfo<T> TypeInfo;
+            typedef typename TypeInfo::Type Type;
+            typedef typename TypeInfo::NativeHandle NativeHandle;
+            typedef v8::Handle<v8::Object> JSObjHandle;
+            typedef std::pair<NativeHandle,JSObjHandle> ObjBindT;
+	    typedef std::map<void const *, ObjBindT> OneOfUsT;
+            typedef typename OneOfUsT::iterator Iterator;
+	    static OneOfUsT & Map()
+	    {
+		static OneOfUsT bob;
+		return bob;
+            }
+            
+            static void Insert( v8::Handle<v8::Object> jself, NativeHandle obj )
+            {
+                Map().insert( std::make_pair( obj, std::make_pair( obj, jself ) ) );
+            }
+
+            static NativeHandle Remove( void const * key )
+            {
+                OneOfUsT & map( Map() );
+                Iterator it = map.find( key );
+                if( map.end() == it )
+                {
+                    return 0;
+                }
+                NativeHandle victim = (*it).second.first;
+                map.erase(it);
+                // FIXME? Do we need to Dispose() or Clear() the Persistent handles?
+                return victim;
+            }
+
+            static NativeHandle GetNative( void const * key )
+            {
+                if( ! key ) return 0;
+                typename OneOfUsT::iterator it = Map().find(key);
+                return (Map().end() == it)
+                      ? 0
+                      : (*it).second.first;
+            }
+
+            static Handle<Object> GetJSObject( void const * key )
+	    {
+                typename OneOfUsT::iterator it = Map().find(key);
+                if( Map().end() == it ) return Handle<Object>();
+                else return (*it).second.second;
+	    }
+        };
+
+    }
+
+    
 } } // namespaces
