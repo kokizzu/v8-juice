@@ -23,7 +23,7 @@ function createThem(count)
     return b;
 }
 
-function doAll()
+function testOne()
 {
     var ar = [];
     var b = null;
@@ -62,8 +62,22 @@ function doAll()
         print("b.sleep("+stime+")...");
         b.sleep(stime);
         print("b.sleep("+stime+")'d!");
+        print('b.instanceCount() ==',b.instanceCount());
+        print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
     }
 }
-doAll();
+testOne();
+
+function testTwo()
+{
+    print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
+    var b = new BoundNative;
+    print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
+    b.destroy();
+    print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
+}
+testTwo();
+//gc();
+//print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
 print("Done! You win!");
 

@@ -62,7 +62,7 @@ namespace v8 { namespace juice {
     size_t BoundNative::instcount = 0;
 
     template <>
-    struct ClassWrap_Ops_ClassName<BoundNative>
+    struct ClassWrap_ClassName<BoundNative>
     {
         static char const * Value()
         {
@@ -77,7 +77,7 @@ namespace v8 { namespace juice {
     };
 
     template <>
-    struct ClassWrap_Ops_Memory<BoundNative>
+    struct ClassWrap_Memory<BoundNative>
     {
         typedef ClassWrap_Types<BoundNative>::Type Type;
         typedef ClassWrap_Types<BoundNative>::NativeHandle NativeHandle;
@@ -116,6 +116,13 @@ namespace v8 { namespace juice {
         CERR << "doSomething2(\""<<x<<"\")\n";
         return 42;
     }
+
+    v8::Handle<v8::Value> BoundNative_destroy( v8::Arguments const & argv )
+    {
+        CERR << "BoundNative_Destroy()\n";
+        return convert::CastToJS( ClassWrap<BoundNative>::DestroyObject(argv.This()) );
+    }
+
     void bind_my_native( v8::Handle<v8::Object> dest )
     {
         using namespace v8;
@@ -156,17 +163,26 @@ namespace v8 { namespace juice {
         FH = ICC::F1::Invocable<void,std::string const &,BoundNative_doSomething>;
         FH = ICC::F1::InvocableVoid<size_t,std::string const &,BoundNative_doSomething2>;
         FH = ICC::F1::Invocable<size_t,std::string const &,BoundNative_doSomething2>;
-
         cw.Set( "doSomething", JFH );
+
+        cw.Set( "destroy", CW::DestroyObject );
+
+        FH = ICC::F0::Invocable<size_t,BoundNative::InstanceCount>;
+        cw.Set( "instanceCount", JFH );
+        cw.CtorTemplate()->Set( "instanceCount", JFH );
+
         FH = ICC::F1::Invocable<unsigned int,unsigned int,::sleep>;
         cw.Set( "sleep", JFH );
-#undef JFH
+
         cw.Seal();
-        v8::HandleScope hscope;
+#undef JFH
+
+        //v8::HandleScope hscope;
         Handle<Object> jobj = cw.NewInstance(0,0);
         N * bound = CW::ToNative::Value(jobj);
         CERR << "bound == @"<<(void const *)bound<<'\n';
         CERR << "bound == @"<<convert::CastFromJS<N>( jobj )<<'\n';
+
         if( bound )
         {
             typedef convert::MemFuncForwarder<0> MFF;

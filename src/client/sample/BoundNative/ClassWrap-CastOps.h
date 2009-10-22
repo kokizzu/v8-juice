@@ -14,7 +14,7 @@ namespace v8 { namespace juice { namespace convert {
     template <>
     struct JSToNative< CLASSWRAP_BOUND_TYPE >
     {
-        typedef ::v8::juice::ClassWrap_Ops_ToNative< CLASSWRAP_BOUND_TYPE >  Cast;
+        typedef ::v8::juice::ClassWrap_ToNative< CLASSWRAP_BOUND_TYPE >  Cast;
         typedef Cast::NativeHandle ResultType;
         ResultType operator()( Handle<Value> const & h ) const
         {

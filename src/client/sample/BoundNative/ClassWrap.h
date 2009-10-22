@@ -134,7 +134,7 @@ namespace juice {
     {};
 
     template <typename T>
-    struct ClassWrap_Ops_ClassName
+    struct ClassWrap_ClassName
     {
         static char const * Value();
     };
@@ -166,11 +166,11 @@ namespace juice {
         {
             typedef InternalFields IFT;
             JUICE_STATIC_ASSERT((IFT::Value>0),
-                                ClassWrap_Ops_InternalFields_Value_MayNotBeNegative);
+                                ClassWrap_InternalFields_Value_MayNotBeNegative);
             JUICE_STATIC_ASSERT((IFT::NativeIndex>=0),
-                                ClassWrap_Ops_InternalFields_NativeIndex_MayNotBeNegative);
+                                ClassWrap_InternalFields_NativeIndex_MayNotBeNegative);
             JUICE_STATIC_ASSERT((IFT::Value>IFT::NativeIndex),
-                                ClassWrap_Ops_InternalFields_Value_IsTooSmallForNativeIndex);
+                                ClassWrap_InternalFields_Value_IsTooSmallForNativeIndex);
         }
     }
     
@@ -188,19 +188,22 @@ namespace juice {
        ClassWrap_Types<T>::NativeHandle objects.
     */
     template <typename T>
-    struct ClassWrap_Ops_Memory
+    struct ClassWrap_Memory
     {
         typedef typename ClassWrap_Types<T>::Type Type;
         typedef typename ClassWrap_Types<T>::NativeHandle NativeHandle;
 	static NativeHandle Instantiate( Arguments const &  /*argv*/,
                                          std::ostream & exceptionText )
 	{
-	    exceptionText << "ClassWrap_Ops_Memory<T>::Instantiate() not implemented!";
+            JUICE_STATIC_ASSERT(false,ClassWrap_Memory_T_MustBeSpecialized);
+	    exceptionText << "ClassWrap_Memory<"
+                          << ClassWrap_ClassName<T>::Value()
+                          << ">::Instantiate() not implemented!";
 	    return NativeHandle(0);
 	}
 	static void Destruct( NativeHandle obj )
 	{
-            //JUICE_STATIC_ASSERT(false,ClassWrap_Ops_NativeHandle_T_must_be_specialized);
+            JUICE_STATIC_ASSERT(false,ClassWrap_Memory_T_MustBeSpecialized);
 	}
     };
 
@@ -208,10 +211,10 @@ namespace juice {
 #if 0
     /**
        Calls CWOps_ToNative(h), where CWOps_ToNative _must_
-       be-a ClassWrap_Ops_ToNative<> specialization.
+       be-a ClassWrap_ToNative<> specialization.
 
        It is intended as a convenience to be used by
-       ClassWrap_Ops_ToNative<> specializations to implement their
+       ClassWrap_ToNative<> specializations to implement their
        Value(Handle<Value>) overload.
 
        If h is empty or !h->IsObject() then 0 is returned, else it
@@ -220,7 +223,7 @@ namespace juice {
     */
     template <typename CWOps_ToNative>
     static typename CWOps_ToNative::NativeHandle
-    ClassWrap_Ops_ToNative_ValueToObj( v8::Handle<v8::Value> const & h )
+    ClassWrap_ToNative_ValueToObj( v8::Handle<v8::Value> const & h )
     {
         if( h.IsEmpty() || !h->IsObject() )
         {
@@ -235,16 +238,14 @@ namespace juice {
 #endif
 
     /**
-       The type responsible for converting
-       v8 Value handles to ClassWrap_Types<T>::NativeHandle objects.
-       The default implementation is designed to work with the
-       other ClassWrap_Ops_xxx classes, specifically:
-
-       - ClassWrap_Opt_InternalFields
-       - ClassWrap_Types
+       A ClassWrap_ToNative<T> implementation which uses
+       static_cast<ClassWrap_Types<T>::NativeHandle>(void*) to convert
+       objects from JS to native space. It takes a certain, but not
+       infallible, deal of care in ensuring that the (void*) is
+       actually a native object of the proper type.
     */
     template <typename T>
-    struct ClassWrap_Ops_ToNative
+    struct ClassWrap_ToNative_StaticCast
     {
         typedef typename ClassWrap_Types<T>::Type Type;
         typedef typename ClassWrap_Types<T>::NativeHandle NativeHandle;
@@ -268,11 +269,10 @@ namespace juice {
             static const int FieldNum = IFT::NativeIndex;
             if( jo.IsEmpty() || (jo->InternalFieldCount() < FieldNum) ) return 0;
             v8::Local<v8::Value> const lv( jo->GetInternalField( FieldNum ) );
-            //if( lv.IsEmpty() || !lv->IsExternal() ) return 0;
             void * ext = lv.IsEmpty() ? 0 : External::Unwrap(lv);
-            //Local<External> const ex( External::Cast( *lv ) );
-            NativeHandle x = static_cast<NativeHandle>( ext );
-            return x;
+            return ext ?
+                static_cast<NativeHandle>( ext )
+                : 0;
         }
         /**
            Convenience overload. If h is empty or !h->IsObject() then
@@ -295,13 +295,26 @@ namespace juice {
 
     /**
        The type responsible for converting
+       v8 Value handles to ClassWrap_Types<T>::NativeHandle objects.
+       The default implementation is designed to work with the
+       other ClassWrap_xxx classes, specifically:
+
+       - ClassWrap_Opt_InternalFields
+       - ClassWrap_Types
+    */
+    template <typename T>
+    struct ClassWrap_ToNative : ClassWrap_ToNative_StaticCast<T> {};
+
+
+    /**
+       The type responsible for converting
        ClassWrap_Types<T>::NativeHandle to v8::Objects. This
        instantiation will cause a compile-time error, as Native-to-JS
        is not possible in the generic case (it requires an extra level
        of binding info, which can be provided by a specialization).
     */
     template <typename T>
-    struct ClassWrap_Ops_ToJS
+    struct ClassWrap_ToJS
     {
     public:
         typedef typename ClassWrap_Types<T>::Type Type;
@@ -318,20 +331,22 @@ namespace juice {
         */
         static v8::Handle<v8::Object> Value( NativeHandle )
         {
-            JUICE_STATIC_ASSERT(false,ClassWrap_Ops_T_ToJS_CannotWorkForTheGeneralCase);
+            JUICE_STATIC_ASSERT(false,ClassWrap_T_ToJS_CannotWorkForTheGeneralCase);
         }
     };
 
 
     /**
-       A policy class for ClassWrap. 
+       A policy class for ClassWrap, responsible for doing optional
+       class-specific binding-related work as part of the JS/Native
+       object construction process.
 
        The default specialization does nothing (which is okay for the
        general case) but defines the interface which specializations
        must implement.
     */
     template <typename T>
-    struct ClassWrap_Ops_WeakWrap
+    struct ClassWrap_WeakWrap
     {
         typedef typename ClassWrap_Types<T>::NativeHandle NativeHandle;
         /**
@@ -345,7 +360,7 @@ namespace juice {
            binding mechanisms, e.g. to allow CastToJS<T>() to work.
 
            Clients should do any bindings-related cleanup in
-           ClassWrap_Ops_Memory::Destruct().
+           ClassWrap_Memory::Destruct().
         */
         static void Wrap( v8::Persistent<v8::Object> jsSelf, NativeHandle nativeSelf )
         {
@@ -379,23 +394,25 @@ namespace juice {
         /**
            The JS-side class name.
         */
-        typedef ClassWrap_Ops_ClassName<T> ClassName;
+        typedef ClassWrap_ClassName<T> ClassName;
         /**
            The native ctor/dtor routines which are called from
            JS.
         */
-        typedef ClassWrap_Ops_Memory<T> OpsMemory;
+        typedef ClassWrap_Memory<T> OpsMemory;
+
         /**
-           The Native-to-JS cast operation.
+           The Native-to-JS cast operation. Not possible for the
+           generic case.
         */
-        //typedef ClassWrap_Ops_ToJS<T> CastToJS;
+        //typedef ClassWrap_ToJS<T> CastToJS;
 
         /**
            The JS-to-Native cast operation.
            See ClassWrap-CastOps.h for an easy way to generate
            this for a given type.
         */
-        typedef ClassWrap_Ops_ToNative<T> ToNative;
+        typedef ClassWrap_ToNative<T> ToNative;
         
         /**
            This operation is called one time after a native has been
@@ -403,7 +420,7 @@ namespace juice {
            this policy may perform their own binding mechanisms,
            e.g. to allow Native-to-JS conversions to work.
         */
-        typedef ClassWrap_Ops_WeakWrap<T> WeakWrap;
+        typedef ClassWrap_WeakWrap<T> WeakWrap;
         /**
            Information about the "internal fields" (which holds native
            data inside the JS object representation). The fields are:
@@ -434,9 +451,9 @@ namespace juice {
         */
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
-	    CERR << ClassName::Value()<<"::weak_callback(@"<<(void const *)nobj<<")\n";
-#if 1
+	    //CERR << ClassName::Value()<<"::weak_callback(@"<<(void const *)nobj<<")\n";
 	    Local<Object> jobj( Object::Cast(*pv) );
+#if 0
 	    if( jobj->InternalFieldCount() != (InternalFields::Value) )
             {
                 CERR << "SERIOUS INTERNAL ERROR: ClassWrap::weak_callback() was passed "
@@ -452,11 +469,23 @@ namespace juice {
             NativeHandle nh = ToNative::Value( jobj );
             if( nh != nobj )
             {
+                if( ! nh )
+                {
+                    /**
+                       blithely assume that the native was removed via outside measures, e.g.
+                       a call to a member Close() method.
+                    */
+                    if(0) CERR << "WARNING: ClassWrap::weak_callback(): "
+                               << "From JS=@"<<(void const *)nobj
+                               << ", Converted to Native=@"<<(void const *)nh
+                               << '\n'
+                        ;
+                    return;
+                }
                 CERR << "SERIOUS INTERNAL ERROR: ClassWrap::weak_callback() was passed "
                      << "two different values for the native object:\n"
-                     << "JS=@"<<(void const *)nh
-                     << ", "
-                     << "Native=@"<<(void const *)nobj
+                     << "From JS=@"<<(void const *)nobj
+                     << ", Converted to Native=@"<<(void const *)nh
                      << "\nSKIPPING DESTRUCTION! NOT DOING ANYTHING!!!\n"
                     ;
                 return;
@@ -551,7 +580,8 @@ namespace juice {
                 }
                 catch(std::exception const & ex)
                 {
-                    return ThrowException(String::New(ex.what()));
+                    //return ThrowException(String::New(ex.what()));
+                    return convert::CastToJS( ex );
                 }
                 catch(...)
                 {
@@ -576,6 +606,10 @@ namespace juice {
 	}
         
     public:
+        /**
+           Inititalizes the binding of T as a JS class which will
+           become a member of the given target object.
+        */
         explicit ClassWrap( Handle<Object> target)
 	    : JSClassCreator( ClassName::Value(),
 			      target,
@@ -584,6 +618,10 @@ namespace juice {
 	{
             check_assertions();
 	}
+        /**
+           Inititalizes the binding of T, but AddClassTo() must be
+           used to install the class in a JS object.
+        */
         ClassWrap()
 	    : JSClassCreator( ClassName::Value(),
 			      ctor_proxy,
@@ -592,25 +630,59 @@ namespace juice {
             check_assertions();
 	}
 
-        static NativeHandle GetNative( Handle<Value> const & h )
-        {
-            return ToNative::Value(h);
-        }
+        /** UNTESTED!
 
+           Destroys the given object by disconnecting its associated
+           native object and calling the native destructor function
+           for it.
+
+           If jo cannot be converted to a NativeHandle then false is
+           returned. Otherwise true is returned, and the object
+           referenced by jo is no longer valid and should not be used.
+        */
+	static bool DestroyObject( Handle<Object> const & jo )
+	{
+	    NativeHandle t = ToNative::Value(jo);
+	    if( ! t ) return false;
+	    v8::Persistent<v8::Object> p( v8::Persistent<v8::Object>::New( jo ) );
+	    weak_callback( p, t );
+	    return true;
+	}
+
+        static bool DestroyObject( Handle<Value> const & jv )
+	{
+            return (jv.IsEmpty() || !jv->IsObject())
+                ? 0
+                : DestroyObject( Handle<Object>( Object::Cast(*jv) ) );
+	}
+
+        /**
+           An InvocationCallback implementation which calls
+           DestroyObject( argv.This() ).
+
+           It is intended to be used as a "manual destructor" for
+           classes which need it. The canonical examples are
+           Stream.close() and Database.close().
+        */
+	static v8::Handle<v8::Value> DestroyObject( v8::Arguments const & argv )
+	{
+            return convert::CastToJS( DestroyObject(argv.This()) );
+	}
+        
+#if 0
         /**
            Binds the native member function, specified as a template
            parameter, to a JS member function with the given
            name.
         */
         template < v8::Handle<Value> (Type::*Func)( v8::Arguments const & ) >
-        ClassWrap & BindMemberFunc( char const * name )
+        ClassWrap & Set( char const * name )
         {
             this->Set(name, convert::InvocationCallbackMember<Type,Func>::Call );
             return *this;
         }
-        
+#endif
+
     };
-
-
 
 } } // namespaces
