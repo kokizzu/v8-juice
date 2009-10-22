@@ -29,7 +29,8 @@ function testOne()
     var b = null;
     var total = 0;
 
-    for( var i = 0; i < 5; ++i )
+    var loops = 2;
+    for( var i = 0; i < loops; ++i )
     {
         var c = 2;
         print("Creating",c,"objects...");
@@ -48,6 +49,18 @@ function testOne()
     print('b.getInt() ==',b.getInt());
     print('b.setInt(17) ==',b.setInt(17));
     print('b.getInt() ==',b.getInt());
+    print('b.myInt ==',b.myInt);
+    print('b.myInt += 17 ==',b.myInt += 17);
+    print('b.myInt ==',b.myInt);
+    print('b.intGetter ==',b.intGetter);
+    print('b.intGetter=3 ==',b.intGetter=3);
+    print('b.intGetter ==',b.intGetter);
+    print('b.publicProperty ==',b.publicProperty);
+    print('b.publicProperty/=3 ==',b.publicProperty/=3);
+    print('b.publicProperty ==',b.publicProperty);
+    print('b.publicPropertyRO ==',b.publicPropertyRO);
+    print('b.publicPropertyRO=13 ==',b.publicPropertyRO=13);
+    print('b.publicPropertyRO ==',b.publicPropertyRO);
     if(1)
     {
         var b2 = new BoundNative();

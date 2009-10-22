@@ -16,11 +16,14 @@ namespace v8 { namespace juice {
     struct BoundNative
     {
     private:
-        int propi;
         static size_t instcount;
+        int propi;
     public:
+        double publicProperty;
+        //int publicProperty;
         BoundNative()
-            : propi(13)
+            : propi(13),
+              publicProperty(42.24)
         {
             ++instcount;
         }
@@ -70,17 +73,31 @@ namespace v8 { namespace juice {
         }
     };
 
+#if 1
+    // Only used for testing some compile-time assertions:
     template <>
-    struct ClassWrap_Opt_InternalFields<BoundNative> : ClassWrap_Opt_Int<3>
+    struct ClassWrap_InternalFields<BoundNative> : ClassWrap_Opt_Int<1>
     {
-        static const int NativeIndex = 2;
+        static const int NativeIndex = 0;
     };
+#endif
 
+#if 1
     template <>
-    struct ClassWrap_Memory<BoundNative>
+    struct ClassWrap_Inheritance<BoundNative>
+        : ClassWrap_Inheritance_base<
+        BoundNative
+        //,std::string // should fail to compile
+        //BoundNative // should work
+        >
+    {};
+#endif
+    
+    template <>
+    struct ClassWrap_Factory<BoundNative>
     {
-        typedef ClassWrap_Types<BoundNative>::Type Type;
-        typedef ClassWrap_Types<BoundNative>::NativeHandle NativeHandle;
+        typedef convert::TypeInfo<BoundNative>::Type Type;
+        typedef convert::TypeInfo<BoundNative>::NativeHandle NativeHandle;
 	static NativeHandle Instantiate( Arguments const &  /*argv*/,
                                          std::ostream & /* exceptionText */ )
 	{
@@ -125,6 +142,10 @@ namespace v8 { namespace juice {
 
     void bind_my_native( v8::Handle<v8::Object> dest )
     {
+        typedef ClassWrap_Inheritance<BoundNative> Inherit;
+        {
+            Inherit x;
+        }
         using namespace v8;
         using namespace v8::juice;
         HandleScope scope;
@@ -152,6 +173,11 @@ namespace v8 { namespace juice {
                 ICC::M1::Invocable<N,bool,N const * ,&N::ptr>
                 //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
                 );
+        typedef convert::PropertyBinder<N> PB;
+        PB::BindGetterSetter<int,&N::getInt,void,int,&N::setInt>( "myInt", cw.Prototype() );
+        PB::BindGetter<int,&N::getInt>( "intGetter", cw.Prototype() );
+        PB::BindMemVar<double,&N::publicProperty>( "publicProperty", cw.Prototype() );
+        PB::BindMemVarRO<double,&N::publicProperty>( "publicPropertyRO", cw.Prototype() );
         v8::InvocationCallback FH;
         FH =
             ICC::F0::Invocable<std::string,BoundNative_version>
