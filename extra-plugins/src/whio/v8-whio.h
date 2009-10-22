@@ -10,6 +10,7 @@ be useful in some cross-plugin contexts.
 #include <v8/juice/juice.h>
 #include <v8/juice/juice-config.h>
 #include <v8/juice/convert.h>
+#include <v8/juice/bind.h>
 #include <v8/juice/cleanup.h>
 //#include <v8/juice/JSClassCreator.h>
 #include <v8/juice/WeakJSClassCreator.h>
