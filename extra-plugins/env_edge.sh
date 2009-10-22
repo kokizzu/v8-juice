@@ -10,4 +10,5 @@ else
     export PATH LD_LIBRARY_PATH
 fi
 unset edge
+alias m='make -e'
 
