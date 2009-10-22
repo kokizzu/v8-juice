@@ -192,7 +192,7 @@ namespace juice {
 	   of "destroy", and mechanism of destruction, is
 	   type-specific.
 
-	   This function is is responsible for destroying the native
+	   This function is responsible for destroying the native
 	   object. Most implementations must simply call "delete obj",
 	   which is fine for many types, but opaque types and types
 	   allocated via something other than 'new' will need a
