@@ -314,7 +314,7 @@ namespace convert {
 	typedef NativeToJS<T> F;
 	return F()( v );
     }
-
+    
     /**
        Overload to avoid ambiguity in certain calls.
     */
@@ -530,8 +530,7 @@ namespace convert {
 
        This specialization requires that a single copy per
        conversion be used. Do not use a shared/static instance for
-       conversions! To enforce this, the operator()() is
-       non-const.
+       conversions!
     */
     template <>
     struct JSToNative<char const *>
