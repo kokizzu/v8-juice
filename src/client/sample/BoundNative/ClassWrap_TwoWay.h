@@ -35,9 +35,12 @@
    - ToJS
    - ClassName if CLASSWRAP_BOUND_TYPE_NAME is set.
 
+
+   If CLASSWRAP_BOUND_TYPE is defined:
+   
    This file also sets up JSToNative and NativeToJS specializations
    which use the ToNative/ToJS policies.
-   
+
    If the following policies will be customized by the client, the
    specializations must visible from this file! i.e. they must be
    defined before including this file.

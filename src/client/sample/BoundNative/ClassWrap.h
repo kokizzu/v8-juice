@@ -261,14 +261,14 @@ namespace juice {
        A ClassWrap policy option class used by certain JS-to-Native
        conversions to determine whether they should search the
        prototype object chain for the native object if it is not found
-       in the current JS object. This happens when JS classes inherit
-       bound classes.
+       in the current JS object. Such a lookup is required for finding
+       the native if a JS class inherits the bound class.
 
        See ClassWrap_ToNative_StaticCast<> for a case which uses this
        option.
 
-       Note, however, that JS-side inheritance breaks certain types of operations
-       (namely ClassWrap::DestroyObject()).
+       Note, however, that JS-side inheritance breaks certain types of
+       operations.
     */
     template <typename T>
     struct ClassWrap_ToNative_SearchPrototypesForNative : ClassWrap_Opt_Bool<false>
@@ -296,7 +296,6 @@ namespace juice {
     struct ClassWrap_Extract_Base
     {
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
-
         /**
            Required part of the ClassWrap_Extract interface.
            
@@ -524,6 +523,51 @@ namespace juice {
     };
 
     /**
+       A utility function primarily intended to support various
+       ClassWrap policy implementations.
+
+       This function tries to extract a native from jo using ClassWrap_Extract<T>.
+       If a native is found, and ClassWrap_Extract<T>::VoidToNative() says that it is
+       the same as nh, then jo is returned. If none is found, jo's prototype object
+       is search, recursively, until either nh is found in the prototype chain
+       or the end of the chain is reached. If a match is found, the object
+       in which the data were found is returned.
+
+       If nh is found nowhere in the chain, an empty handle is returned.
+    */
+    template <typename T>
+    v8::Handle<v8::Object> ClassWrap_FindHolder( v8::Handle<v8::Object> jo,
+                                                 typename convert::TypeInfo<T>::NativeHandle nh )
+    {
+        if( jo.IsEmpty() || ! jo->IsObject() ) return v8::Handle<v8::Object>();
+        typedef convert::TypeInfo<T> TI;
+        typedef typename TI::Type Type;
+        typedef typename TI::NativeHandle NH;
+        typedef ClassWrap_Extract<T> XT;
+        void * ext = XT::ExtractVoid( jo, false );
+        if( ! ext )
+        {
+            v8::Local<v8::Value> proto = jo->GetPrototype();
+            if( !proto.IsEmpty() && proto->IsObject() )
+            {
+                return ClassWrap_FindHolder<T>( v8::Local<v8::Object>( v8::Object::Cast( *proto ) ), nh );
+            }
+        }
+        if( ext == nh ) return jo; // shortcut
+        NH xnh = XT::VoidToNative( ext );
+        if( xnh != nh )
+        { // bound native, but the wrong one
+            v8::Local<v8::Value> proto = jo->GetPrototype();
+            if( !proto.IsEmpty() && proto->IsObject() )
+            {
+                return ClassWrap_FindHolder<T>( v8::Local<v8::Object>( v8::Object::Cast( *proto ) ), nh );
+            }
+        }
+        return v8::Handle<v8::Object>();
+    }
+
+    
+    /**
        A policy-based native-to-JS class binder, such that T
        object can be accessed via JS. This class is only
        a very thin wrapper around:
@@ -563,10 +607,7 @@ namespace juice {
 
        Inheriting a wrapped class from the JS side will not work
        properly for all operations, but work is still underway in this
-       area.  Most notably, ClassWrap::DestroyObject()-like behaviour
-       cannot work properly in the face of inheritance, because it
-       does not know (at this level of the API) _exactly_ which JS
-       object the native is stored in, nor how it is stored.
+       area.
     */
     template <typename T>
     class ClassWrap : public JSClassCreator
@@ -629,6 +670,7 @@ namespace juice {
            is stored within the list. Must be less than Value.
         */
         typedef ClassWrap_InternalFields<T> InternalFields;
+
         /**
            A boolean option specifying whether the JS code "Foo()"
            should be treated like "new Foo()". If false, the former will cause
@@ -665,19 +707,6 @@ namespace juice {
             }
             //pv.ClearWeak(); // try to avoid duplicate calls caused by DestroyObject()-like features
 	    Local<Object> jobj( Object::Cast(*pv) );
-#if 0
-	    if( jobj->InternalFieldCount() != (InternalFields::Value) )
-            {
-                CERR << "SERIOUS INTERNAL ERROR:\n"
-                     << "ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
-                     << "an object with an unexpected internal field count: "
-                     << "JS="<<jobj->InternalFieldCount()
-                     << ", Native="<<InternalFields::Value
-                     << "\nSKIPPING DESTRUCTION! NOT DOING ANYTHING!!!\n"
-                    ;
-                return;
-            }
-#endif
 #if 1
             NativeHandle nh = ToNative::Value( jobj );
             if( nh != nobj )
@@ -693,13 +722,18 @@ namespace juice {
                        v8 later calls this function again (at the
                        proper cleanup time), but the native has been
                        unbound and triggers this condition.
+
+                       [Later on...]
+
+                       i believe the above-mentioned dual calls
+                       condition has been fixed, but need to test it
+                       more before removing this if() block.
                     */
                     if(1) CERR << "ACHTUNG: ClassWrap<"<<ClassName::Value()<<">::weak_callback(): "
                                << "From JS=@"<<(void const *)nobj
                                << ", Converted to Native=@"<<(void const *)nh
                                << '\n'
                         ;
-                    jobj->SetInternalField(InternalFields::NativeIndex,Null());
                     pv.Dispose();
                     pv.Clear();
                     return;
@@ -720,38 +754,43 @@ namespace juice {
 	       knowledge that member funcs called after that won't get a dangling
 	       pointer. Without this, some code will crash in that case.
 	    */
+
             /**
-               FIXME: this doesn't work in conjunction with prototype chain
-               lookups in the ToNative conversion. We get the real native,
-               but then try to set an internal field of the current THIS
-               object, which is not the same JS object when JS-side inheritance
-               is used. Damn. Damn damn damn.
+               Reminder: the ClassWrap_FindHolder() bits are here to
+               assist when the bound native exists somewhere in the
+               prototype chain other than jobj itself. In that case,
+               jobj is valid but we cannot clear out the native handle
+               internal field on it because it has no internal fields
+               (or none that belong to us).
 
                To fix this properly we have to be able to know
                _exactly_ which JS object in the prototype chain nh is
-               bound to AND we have to know how it's stuffed in
-               there. To do that we have to directly crawl the
-               prototype chain AND somehow conform with the
-               expectations of the ClassWrap_ToJS<T> specialization
-               being used. Hmm.  Damn.
+               bound to.
             */
-            v8::V8::AdjustAmountOfExternalAllocatedMemory( -static_cast<int>( Factory::AllocatedMemoryCost ) );
-            /**
-               Reminder: we call Destruct() before cleaning up the
-               JS-side fields for the case that the bound class actually
-               does tinker with the JS space directly.
-            */
-            Factory::Destruct( nh );
-            if( jobj->InternalFieldCount() != (InternalFields::Value) )
+            v8::Handle<v8::Object> nholder = ClassWrap_FindHolder<Type>( jobj, nh );
+            if( nholder.IsEmpty() || (nholder->InternalFieldCount() != InternalFields::Value) )
             {
-                CERR << "ERROR: ClassWrap<"<<ClassName::Value()<<">::weak_callback(): "
-                     << "native=@"<<(void const *)nh<<": "
-                     << "using half-ass lame workaround to avoid an inheritance-related crash! "
-                     << "See the source comments!\n";
+                CERR << "SERIOUS INTERNAL ERROR:\n"
+                     << "ClassWrap<"<<ClassName::Value()<<">::weak_callback() "
+                     << "validated that the JS/Native belong together, but "
+                     << "ClassWrap_FindHolder() returned an empty handle!\n"
+                     << "From JS=@"<<(void const *)nobj
+                     << ", Converted to Native=@"<<(void const *)nh
+                     << "\nTHIS MAY LEAD TO A CRASH IF THIS JS HANDLE IS USED AGAIN!!!\n"
+                    ;
+                Factory::Destruct( nh );
+                return;
             }
             else
             {
-                jobj->SetInternalField(InternalFields::NativeIndex,Null());
+                /**
+                   Reminder: we call Destruct() before cleaning up the
+                   JS-side fields for the case that the bound class actually
+                   does tinker with the JS space directly.
+                */
+                Factory::Destruct( nh );
+                nholder->SetInternalField(InternalFields::NativeIndex,Null());
+                v8::V8::AdjustAmountOfExternalAllocatedMemory( -static_cast<int>( Factory::AllocatedMemoryCost ) );
             }
 	}
 
@@ -766,12 +805,7 @@ namespace juice {
             v8::V8::AdjustAmountOfExternalAllocatedMemory( static_cast<int>( Factory::AllocatedMemoryCost ) );
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
-#if 0
-	    self->SetInternalField( InternalFields::NativeIndex,
-                                    External::Wrap(obj) );
-#else
 	    self->SetPointerInInternalField( InternalFields::NativeIndex, obj );
-#endif
             WeakWrap::Wrap( self, obj );
 	    return self;
 	}
@@ -900,30 +934,8 @@ namespace juice {
 	    NativeHandle t = ToNative::Value(jo);
 	    if( ! t ) return false;
 	    v8::Persistent<v8::Object> p( v8::Persistent<v8::Object>::New( jo ) );
-#if 0
-            // Resolves duplicate calls to weak_callback() but does not destroy immediately :(.
-            p.ClearWeak();
-            p.Dispose();
-	    p.Clear();
-            Factory::Destruct( t );
-            jo->SetInternalField(InternalFields::NativeIndex,Null());
-#elif 0
-            /**
-               Reminder: we call Destruct() before cleaning up the
-               JS-side fields for the case that the bound class actually
-               does tinker with the JS space directly.
-            */
-            p.ClearWeak();
-            v8::V8::AdjustAmountOfExternalAllocatedMemory( -static_cast<int>( Factory::AllocatedMemoryCost(t) ) );
-            Factory::Destruct( t );
-            jo->SetInternalField(InternalFields::NativeIndex,Null());
-            p.Dispose();
-	    p.Clear();
-
-#else
             p.ClearWeak(); // avoid a second call to weak_callback() via gc!
 	    weak_callback( p, t );
-#endif
 	    return true;
 	}
 
@@ -968,5 +980,5 @@ namespace juice {
 
     };
 
-   
+    
 } } // namespaces

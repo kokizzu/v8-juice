@@ -70,63 +70,15 @@ namespace v8 { namespace juice {
 
     template <>
     struct ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>
-        : ClassWrap_Opt_Bool<false>
+        : ClassWrap_Opt_Bool<true>
     {};
-
-
-#if 0
-#warning "Using StaticCast policies!"
-    template <>
-    struct ClassWrap_ToNative<BoundNative> :
-        ClassWrap_ToNative_StaticCast<BoundNative> {};
-#elif 0
-#warning "Using JuiceBind policies!"
-#define USING_JUICEBIND_POLICIES
-//     template <>
-//     struct ClassWrap_WeakWrap<BoundNative> :
-//         ClassWrap_WeakWrap_JuiceBind<BoundNative> {};
-
-//     template <>
-//     struct ClassWrap_Extract<BoundNative> :
-//         ClassWrap_Extract_JuiceBind<BoundNative> {};
-
-//     template <>
-//     struct ClassWrap_ToNative<BoundNative> :
-//         ClassWrap_ToNative_JuiceBind<BoundNative> {};
-#elif 1
-#warning "Using Experimental policies!"
-#define USING_TWOWAY_POLICIES
-#endif
-
-} } // nemspaces
-
-#define CLASSWRAP_BOUND_TYPE v8::juice::BoundNative
-#define CLASSWRAP_BOUND_TYPE_NAME "BoundNative"
-#if defined(USING_TWOWAY_POLICIES)
-#  include "ClassWrap_TwoWay.h"
-#elif defined(USING_JUICEBIND_POLICIES)
-#  include "ClassWrap_JuiceBind.h"
-#endif
-
-namespace v8 { namespace juice {
-
-#if 0
-    template <>
-    struct ClassWrap_ClassName<BoundNative>
-    {
-        static char const * Value()
-        {
-            return "BoundNative";
-        }
-    };
-#endif
 
 #if 1
     // Only used for testing some compile-time assertions:
     template <>
-    struct ClassWrap_InternalFields<BoundNative> : ClassWrap_Opt_Int<1>
+    struct ClassWrap_InternalFields<BoundNative> : ClassWrap_Opt_Int<4>
     {
-        static const int NativeIndex = 0;
+        static const int NativeIndex = 2;
     };
 #endif
 
@@ -140,6 +92,44 @@ namespace v8 { namespace juice {
         >
     {};
 #endif
+
+#if 0
+    //#  warning "Using JuiceBind policies!"
+#  define USING_JUICEBIND_POLICIES
+#elif 0
+    //#  warning "Using Experimental policies!"
+#  define USING_TWOWAY_POLICIES
+#else
+    //#  warning "Using default policies!"
+#  define USING_DEFAULT_POLICIES
+#endif
+
+} } // nemspaces
+
+#define CLASSWRAP_BOUND_TYPE v8::juice::BoundNative
+#define CLASSWRAP_BOUND_TYPE_NAME "BoundNative"
+#if defined(USING_TWOWAY_POLICIES)
+#  include "ClassWrap_TwoWay.h"
+#elif defined(USING_JUICEBIND_POLICIES)
+#  include "ClassWrap_JuiceBind.h"
+#elif defined(USING_DEFAULT_POLICIES)
+#  include "ClassWrap-JSToNative.h"
+#  undef CLASSWRAP_BOUND_TYPE_NAME
+#endif
+
+namespace v8 { namespace juice {
+
+#if defined(USING_DEFAULT_POLICIES)
+    template <>
+    struct ClassWrap_ClassName<BoundNative>
+    {
+        static char const * Value()
+        {
+            return "BoundNative";
+        }
+    };
+#endif
+
     
     template <>
     struct ClassWrap_Factory<BoundNative>
@@ -284,6 +274,11 @@ namespace v8 { namespace juice {
             }
         }
 
+        if(1)
+        {
+            v8::Handle<v8::Object> so = ClassWrap_FindHolder<N>( jobj, bound );
+            CERR << "FindHolder() == [" << convert::CastFromJS<std::string>( so ) << "]\n";
+        }
 
         CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
         CW::DestroyObject(jobj);

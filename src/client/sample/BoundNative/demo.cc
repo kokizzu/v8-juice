@@ -112,7 +112,6 @@ int main(int argc, char * argv[])
                               <<'\n';
                     return 1;
                 }
-                //v8::internal::Heap::CollectAllGarbage(false);
                 continue;
             }
         }
