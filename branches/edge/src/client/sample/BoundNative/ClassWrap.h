@@ -372,20 +372,11 @@ namespace juice {
     struct ClassWrap_Extract : ClassWrap_Extract_StaticCast<T>
     {};
 
-    /**
-       A concrete ClassWrap_ToNative<T> policy implementation which
-       uses static_cast<convert::TypeInfo<T>::NativeHandle>(void*) to
-       convert objects from JS to native space. It takes a certain,
-       but not infallible, deal of care in ensuring that the (void*)
-       is actually a native object of the proper type.
-
-       See the Value() member for more details, including the meaning
-       of the SearchPrototypesForNative_ parameter.
-    */
     template <typename T,
+              typename ExtractPolicy = ClassWrap_Extract<T>,
               bool SearchPrototypesForNative_ = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
               >
-    struct ClassWrap_ToNative_StaticCast
+    struct ClassWrap_ToNative_Base
     {
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
@@ -405,12 +396,29 @@ namespace juice {
         */
         static NativeHandle Value( v8::Handle<v8::Object> const & jo )
         {
-            typedef ClassWrap_Extract<T> Unwrap;
-            void * ext = Unwrap::ExtractVoid( jo, SearchPrototypesForNative );
+            void * ext = ExtractPolicy::ExtractVoid( jo, SearchPrototypesForNative );
             return ext
-                ? Unwrap::VoidToNative( ext )
+                ? ExtractPolicy::VoidToNative( ext )
                 : 0;
         }
+    };
+    
+    /**
+       A concrete ClassWrap_ToNative<T> policy implementation which
+       uses static_cast<convert::TypeInfo<T>::NativeHandle>(void*) to
+       convert objects from JS to native space. It takes a certain,
+       but not infallible, deal of care in ensuring that the (void*)
+       is actually a native object of the proper type.
+
+       See the Value() member for more details, including the meaning
+       of the SearchPrototypesForNative_ parameter.
+    */
+    template <typename T,
+              bool SearchPrototypesForNative_ = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
+              >
+    struct ClassWrap_ToNative_StaticCast
+        : ClassWrap_ToNative_Base< T, ClassWrap_Extract_StaticCast<T>, SearchPrototypesForNative_ >
+    {
     };
 
     /**
@@ -427,7 +435,6 @@ namespace juice {
     */
     template <typename T>
     struct ClassWrap_ToNative : ClassWrap_ToNative_StaticCast<T> {};
-
 
     /**
        The type responsible for converting
@@ -489,83 +496,6 @@ namespace juice {
         static void Wrap( v8::Persistent<v8::Object> jsSelf, NativeHandle nativeSelf )
         {
             return;
-        }
-    };
-
-    /**
-       A concrete ClassWrap_WeakWrap policy which uses the v8::juice::bind
-       API to register objects for type-safe lookups later on.
-    */
-    template <typename T>
-    struct ClassWrap_WeakWrap_JuiceBind
-    {
-        typedef typename convert::TypeInfo<T>::Type Type;
-        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
-        /**
-           Calls v8::juice::bind::BindNative(nativeSelf).
-        */
-        static void Wrap( v8::Persistent<v8::Object> /*jsSelf*/, NativeHandle nativeSelf )
-        {
-            v8::juice::bind::BindNative( nativeSelf );
-            return;
-        }
-    };
-
-    /**
-       A concrete ClassWrap_ToNative policy which uses the
-       v8::juice::bind API to extract, type-safely, native objects
-       from JS object.
-    */
-
-    template <typename T>
-    struct ClassWrap_Extract_JuiceBind : ClassWrap_Extract_Base<T>
-    {
-        typedef typename convert::TypeInfo<T>::Type Type;
-        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
-        /**
-           Returns v8::juice::bind::GetBoundNative<Type>(x).
-        */
-        static NativeHandle VoidToNative( void * x )
-        {
-            return x ? v8::juice::bind::GetBoundNative<Type>( x ) : 0;
-
-        }
-    };
-
-    /**
-       A concrete ClassWrap_ToNative policy which uses the v8::juice::bind
-       API to extract, type-safely, native objects from JS object.
-
-       Requires:
-
-       - ClassWrap_WeakWrap<T> == ClassWrap_WeakWrap_JuiceBind<T>
-       - ClassWrap_Extract<T> == ClassWrap_Extract_JuiceBind<T>
-    */
-    template <typename T,
-              bool SearchPrototypesForNative_ = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
-              >
-    struct ClassWrap_ToNative_JuiceBind
-    {
-        typedef typename convert::TypeInfo<T>::Type Type;
-        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
-        /**
-           The SearchPrototypesForNative_ template parameter.  See
-           Class_Extract<T>::ExtractVoid() for how it is used.
-        */
-        static const bool SearchPrototypesForNative = SearchPrototypesForNative_;
-
-        /**
-           It functions identically to ClassWrap_ToNative_StaticCast<T>::Value(),
-           except that it uses the juice::bind API for void-to-native
-           conversions instead of static_cast().
-        */
-        static NativeHandle Value( v8::Handle<v8::Object> const & jo )
-        {
-            typedef ClassWrap_Extract<T> Unwrap;
-            void * ext = Unwrap::ExtractVoid( jo, SearchPrototypesForNative );
-            return ext
-                ? Unwrap::VoidToNative( ext )
-                : 0;
         }
     };
 
@@ -1017,7 +947,6 @@ namespace juice {
 
     namespace Detail
     {
-
 	/**
 	   An internal helper type for only use by certain ClassWrap
 	   policy classes.
@@ -1028,7 +957,8 @@ namespace juice {
             typedef ::v8::juice::convert::TypeInfo<T> TypeInfo;
             typedef typename TypeInfo::Type Type;
             typedef typename TypeInfo::NativeHandle NativeHandle;
-            typedef v8::Handle<v8::Object> JSObjHandle;
+            typedef v8::Persistent<v8::Object> JSObjHandle;
+            //typedef v8::Handle<v8::Object> JSObjHandle;
             typedef std::pair<NativeHandle,JSObjHandle> ObjBindT;
 	    typedef std::map<void const *, ObjBindT> OneOfUsT;
             typedef typename OneOfUsT::iterator Iterator;
@@ -1038,7 +968,9 @@ namespace juice {
 		return bob;
             }
             
-            static void Insert( v8::Handle<v8::Object> const & jself, NativeHandle obj )
+            static void Insert( //v8::Handle<v8::Object> const & jself,
+                                JSObjHandle const & jself,
+                                NativeHandle obj )
             {
                 Map().insert( std::make_pair( obj, std::make_pair( obj, jself ) ) );
             }
@@ -1075,5 +1007,133 @@ namespace juice {
 
     }
 
+
+    /**
+       A concrete ClassWrap_WeakWrap policy which uses the v8::juice::bind
+       API to register objects for type-safe lookups later on.
+    */
+    template <typename T>
+    struct ClassWrap_WeakWrap_JuiceBind
+    {
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Calls v8::juice::bind::BindNative(nativeSelf).
+        */
+        static void Wrap( v8::Persistent<v8::Object> /*jsSelf*/, NativeHandle nativeSelf )
+        {
+            v8::juice::bind::BindNative( nativeSelf );
+            return;
+        }
+    };
+
+    /**
+       A concrete ClassWrap_ToNative policy which uses the
+       v8::juice::bind API to extract, type-safely, native objects
+       from JS object.
+    */
+
+    template <typename T>
+    struct ClassWrap_Extract_JuiceBind : ClassWrap_Extract_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Returns v8::juice::bind::GetBoundNative<Type>(x).
+        */
+        static NativeHandle VoidToNative( void * x )
+        {
+            return x ? v8::juice::bind::GetBoundNative<Type>( x ) : 0;
+
+        }
+    };
+
+    /**
+       A concrete ClassWrap_ToNative policy which uses the v8::juice::bind
+       API to extract, type-safely, native objects from JS object.
+
+       Requires:
+
+       - ClassWrap_WeakWrap<T> == ClassWrap_WeakWrap_JuiceBind<T>
+    */
+    template <typename T,
+              bool SearchPrototypesForNative_ = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
+              >
+    struct ClassWrap_ToNative_JuiceBind
+        : ClassWrap_ToNative_Base<T, ClassWrap_Extract_JuiceBind<T>, SearchPrototypesForNative_>
+    {
+    };
+
+    
+
+    /**
+       A concrete ClassWrap_WeakWrap policy which uses an internal
+       native/js mapping for type-safe lookups later on.
+    */
+    template <typename T>
+    struct ClassWrap_WeakWrap_Experiment
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+
+        /**
+           Calls v8::juice::bind::BindNative(nativeSelf).
+        */
+        static void Wrap( v8::Persistent<v8::Object> jsSelf, NativeHandle nativeSelf )
+        {
+            typedef Detail::ClassWrapMapper<T> Mapper;
+            Mapper::Insert( jsSelf, nativeSelf );
+            return;
+        }
+    };
+
+    /**
+       A concrete ClassWrap_ToNative policy which uses a type-safe
+       conversion.
+    */
+    template <typename T>
+    struct ClassWrap_Extract_Experiment : ClassWrap_Extract_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+        */
+        static NativeHandle VoidToNative( void * x )
+        {
+            typedef Detail::ClassWrapMapper<T> Mapper;
+            return x ? Mapper::GetNative(x) : 0;
+        }
+    };
+
+    /**
+       A concrete ClassWrap_ToNative policy which uses an internal API
+       to extract, type-safely, native objects from JS object.
+
+       Requires:
+
+       - ClassWrap_WeakWrap<T> == ClassWrap_WeakWrap_Experiment<T>
+    */
+    template <typename T,
+              bool SearchPrototypesForNative_ = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
+              >
+    struct ClassWrap_ToNative_Experiment
+        : ClassWrap_ToNative_Base<T, ClassWrap_Extract_Experiment<T>, SearchPrototypesForNative_>
+    {
+    };
+    
+    template <typename T>
+    struct ClassWrap_ToJS_Experiment
+    {
+    public:
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+        */
+        static v8::Handle<v8::Value> Value( NativeHandle nh )
+        {
+            typedef Detail::ClassWrapMapper<T> Mapper;
+            return Mapper::GetJSObject( nh );
+        }
+    };
+    
     
 } } // namespaces

@@ -36,6 +36,10 @@ namespace v8 { namespace juice {
             CERR << "BoundNative[@"<<(void const *)this<<"]->ptr("<<(void const *)b<<")\n";
             return 0 != b;
         }
+        BoundNative * getPtr()
+        {
+            return this;
+        }
         static size_t InstanceCount()
         {
             return instcount;
@@ -71,10 +75,12 @@ namespace v8 { namespace juice {
 
 
 #if 0
+#warning "Using StaticCast policies!"
     template <>
     struct ClassWrap_ToNative<BoundNative> :
         ClassWrap_ToNative_StaticCast<BoundNative> {};
-#else
+#elif 0
+#warning "Using JuiceBind policies!"
     template <>
     struct ClassWrap_WeakWrap<BoundNative> :
         ClassWrap_WeakWrap_JuiceBind<BoundNative> {};
@@ -86,6 +92,23 @@ namespace v8 { namespace juice {
     template <>
     struct ClassWrap_ToNative<BoundNative> :
         ClassWrap_ToNative_JuiceBind<BoundNative> {};
+#else
+#warning "Using Experimental policies!"
+    template <>
+    struct ClassWrap_WeakWrap<BoundNative> :
+        ClassWrap_WeakWrap_Experiment<BoundNative> {};
+
+    template <>
+    struct ClassWrap_Extract<BoundNative> :
+        ClassWrap_Extract_Experiment<BoundNative> {};
+
+    template <>
+    struct ClassWrap_ToNative<BoundNative> :
+        ClassWrap_ToNative_Experiment<BoundNative> {};
+
+    template <>
+    struct ClassWrap_ToJS<BoundNative> :
+        ClassWrap_ToJS_Experiment<BoundNative> {};
 #endif
 
     
@@ -137,6 +160,26 @@ namespace v8 { namespace juice {
 	}
         static const size_t AllocatedMemoryCost = sizeof(BoundNative);
     };
+
+
+
+#if 1
+    namespace convert
+    {
+        template <>
+        struct NativeToJS< BoundNative >
+        {
+            typedef ::v8::juice::ClassWrap_ToJS< BoundNative > Cast;
+            typedef Cast::NativeHandle NativeHandle;
+            v8::Handle<v8::Value> operator()( NativeHandle p ) const
+            {
+                return
+                    p ? Cast::Value(p) :
+                    v8::Handle<v8::Value>();
+            }
+        };
+    }
+#endif
 
 }} // namespaces
 
@@ -197,6 +240,12 @@ namespace v8 { namespace juice {
                 ICC::M1::Invocable<N,bool,N const * ,&N::ptr>
                 //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
                 );
+#if 1
+        cw.Set( "getPtr",
+                ICC::M0::Invocable<N,N*,&N::getPtr>
+                //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
+                );
+#endif
         //typedef convert::PropertyBinder<N> PB;
         typedef CW::PB PB;
         PB::BindGetterSetter<int,&N::getInt,void,int,&N::setInt>( "myInt", cw.Prototype() );
