@@ -46,6 +46,7 @@
 #include <vector>
 #include <map>
 #include <stdexcept>
+#include <sstream>
 namespace v8 {
 namespace juice {
 
@@ -119,9 +120,16 @@ namespace convert {
     template <typename NT>
     struct NativeToJS
     {
+	//! Must be specialized.
 	template <typename X>
-	v8::Handle<v8::Value> operator()( X const & ) const;
-	// must be specialized.
+	v8::Handle<v8::Value> operator()( X const & ) const
+#if defined(JUICE_STATIC_ASSERT)
+        {
+            JUICE_STATIC_ASSERT(false,NativeToJS_T_MustBeSpecialized);
+        }
+#else
+        ;
+#endif
     };
 
     template <typename NT>
@@ -781,6 +789,81 @@ namespace convert {
     template <typename T>
     struct JSToNative< std::vector<T> > : JSToNative_list< std::vector<T> > {};
 
+
+    /**
+       A utility class for building up message strings, most notably
+       exception messages, using a mixture of native and JS message
+       data.
+
+       It is used like a std::ostream:
+
+       @code
+       StringBuffer msg;
+       msg << "Could not set property "
+           << "'" << propName
+           <<"' on object " << myJSObject << '!';
+       return v8::ThrowException(msg);
+       @endcode
+    */
+    class StringBuffer
+    {
+    private:
+        std::ostringstream os;
+    public:
+        /**
+           Initializes the message stream.
+        */
+        StringBuffer() : os()
+        {
+        }
+
+        /**
+           Empties out the message buffer. This invalidates any value
+           returned from previous calls to the (char const *)
+           operator.
+        */
+        void Clear()
+        {
+            this->os.str("");
+        }
+
+        /**
+           Returns a copy of the current message content.
+         */
+        std::string Content() const
+        {
+            return this->os.str();
+        }
+
+        /**
+           Converts the message state to a JS string.
+        */
+        inline operator v8::Handle<v8::Value>() const
+        {
+            return CastToJS<std::string>( this->os.str() );
+        }
+
+        /**
+           Appends to the message using CastFromJS<std::string>(t) 
+        */
+        template <typename T>
+        StringBuffer & operator<<( v8::Handle<T> const t )
+        {
+            this->os << CastFromJS<std::string>( t );
+            return *this;
+        }
+
+        /**
+           Appends t to the message via std::ostream<<.
+        */
+        template <typename T>
+        StringBuffer & operator<<( T const t)
+        {
+            this->os << t;
+            return *this;
+        }
+    };
+    
 }}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_CONVERT_H_INCLUDED */
