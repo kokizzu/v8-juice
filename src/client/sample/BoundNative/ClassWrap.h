@@ -41,8 +41,11 @@ namespace juice {
     struct ClassWrap_Opt_ConstVal
     {
         typedef ValT Type;
-        static const Type Value = Val;
+        //static Type const Value = Val; // giving me an undefined ref error?
+        static Type const Value;
     };
+    template <typename ValT, ValT Val>
+    const ValT ClassWrap_Opt_ConstVal<ValT,Val>::Value = Val;
 
     /**
        Base class for static integer ClassWrap options.
@@ -175,19 +178,6 @@ namespace juice {
     {};
 
     /**
-       A ClassWrap option policy class used by certain JS-to-Native
-       conversions to determine whether they should search the
-       prototype object chain for the native object if it is not found
-       in the current JS object.
-
-       See ClassWrap_ToNative_StaticCast<> for a case which uses this
-       option.
-    */
-    template <typename T>
-    struct ClassWrap_ToNative_SearchPrototypeChainForNative : ClassWrap_Opt_Bool<false>
-    {};
-    
-    /**
        The ClassWrap Policy class responsible for instantiating and
        destroying convert::TypeInfo<T>::NativeHandle objects.
     */
@@ -251,50 +241,65 @@ namespace juice {
 	{
             JUICE_STATIC_ASSERT(false,ClassWrap_Factory_T_MustBeSpecialized);
 	}
+
+        /**
+           Should be the approximate amount of native memory allocated
+           to each bound object. The purpose of this is to allow
+           ClassWrap to tell v8 about the memory cost (a metric it
+           theoretically uses in figuring out when to garbage
+           collect). It need not be a definitive value, and sizeof(T)
+           is a suitable value for most cases. It is legal to be 0, in
+           which case no memory adjustment is made.
+
+           Note that it is a const, and not a function, because the
+           sizes _must_ be the same at construction and destruction.
+        */
+        static const size_t AllocatedMemoryCost = 0;
     };
 
     /**
-       A ClassWrap_ToNative<T> policy implementation which uses
-       static_cast<convert::TypeInfo<T>::NativeHandle>(void*) to convert
-       objects from JS to native space. It takes a certain, but not
-       infallible, deal of care in ensuring that the (void*) is
-       actually a native object of the proper type.
-       
-       See the Value() member for more details, including the meaning
-       of the SearchPrototypeChainForNative_ parameter.
+       A ClassWrap policy option class used by certain JS-to-Native
+       conversions to determine whether they should search the
+       prototype object chain for the native object if it is not found
+       in the current JS object. This happens when JS classes inherit
+       bound classes.
+
+       See ClassWrap_ToNative_StaticCast<> for a case which uses this
+       option.
+
+       Note, however, that JS-side inheritance breaks certain types of operations
+       (namely ClassWrap::DestroyObject()).
     */
-    template <typename T,
-              bool SearchPrototypeChainForNative_ = ClassWrap_ToNative_SearchPrototypeChainForNative<T>::Value
-              >
-    struct ClassWrap_ToNative_StaticCast
+    template <typename T>
+    struct ClassWrap_ToNative_SearchPrototypesForNative : ClassWrap_Opt_Bool<false>
+    {};
+
+    /**
+       A ClassWrap policy for "unwrapping" JS object handles, extracting
+       their native bound data.
+
+       The default implementation should be suitable for most, if not all,
+       cases.
+    */
+    template <typename T>
+    struct ClassWrap_Extract_Base
     {
-        typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
-    public:
-        /**
-           The SearchPrototypeChainForNative_ template parameter.  See
-           Value() for the description.
-        */
-        static const bool SearchPrototypeChainForNative = SearchPrototypeChainForNative_;
 
         /**
+           Required part of the ClassWrap_Extract interface.
+           
            Looks for a JS value stored in the N'th internal field of
            the given object (where N ==
            ClassWrap_InternalFields<T>::NativeIndex).
 
            If it finds one, it the value is extracted to get its
-           native (void *). I an object is found,
-           static_cast<NativeHandle>(thatPtr) is used to try to
-           convert it, and the result of that conversion is
-           returned. If none is found, 0 is returned unless
-           SearchPrototypeChainForNative is true (in which case see
-           below).
+           native (void *). If one is found it is returned.
 
            Ownership of the returned object is not modified by this
            call.
 
-           If SearchPrototypeChainForNative is true and any of the
-           following apply:
+           If searchPrototypes is true and any of the following apply:
 
            * (jo->InternalFieldCount() != ClassWrap_InternalFields<T>::Value)
 
@@ -303,9 +308,12 @@ namespace juice {
            Then this function is called recursively on
            jo->GetPrototype(). This feature is necessary if JS-side
            classes must inherit the bound class, as without it they
-           cannot find their native members.
+           cannot find their native members. But it also doesn't work
+           intuitively in conjunction with certain types of inherited
+           bound functions.
         */
-        static NativeHandle Value( v8::Handle<v8::Object> const & jo )
+        static void * ExtractVoid( v8::Handle<v8::Object> const & jo,
+                                   bool searchPrototypes )
         {
             if( jo.IsEmpty() ) return 0;
             typedef ClassWrap_InternalFields<T> IFT;
@@ -315,17 +323,92 @@ namespace juice {
             {
                 ext = jo->GetPointerFromInternalField( IFT::NativeIndex );
             }
-            if( SearchPrototypeChainForNative && !ext )
+            if( searchPrototypes && !ext )
             {
-                //CERR << "Checking in prototype chain for "<<ClassWrap_ClassName<T>::Value()<<"...\n";
+                //CERR << "Searching in prototype chain for "<<ClassWrap_ClassName<T>::Value()<<"...\n";
                 v8::Local<v8::Value> proto = jo->GetPrototype();
                 if( !proto.IsEmpty() && proto->IsObject() )
                 {
-                    return Value( v8::Local<v8::Object>( v8::Object::Cast( *proto ) ) );
+                    return ExtractVoid( v8::Local<v8::Object>( v8::Object::Cast( *proto ) ), true );
                 }
             }
+            return ext;
+        }
+
+    };
+    /**
+       A concrete ClassWrap_Extract implementation which uses
+       static_cast() to convert between (void*) and (T*).
+    */
+    template <typename T>
+    struct ClassWrap_Extract_StaticCast : ClassWrap_Extract_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+
+        /**
+           Required part of the interface. Implementations must, if
+           possible, return a NativeHandle equivalent for x. If it is
+           not possible, they must return 0.
+
+           The default implementation returns
+           static_cast<NativeHandle>(x).
+
+           Specializations are free to use the (void*) as a lookup key
+           to find, in a type-safe manner, an associated native.
+        */
+        static NativeHandle VoidToNative( void * x )
+        {
+            return x ? static_cast<NativeHandle>( x ) : 0;
+        }
+    };
+    /**
+       A ClassWrap policy for "unwrapping" JS object handles, extracting
+       their native bound data.
+
+       The default implementation should be suitable for most cases.
+    */
+    template <typename T>
+    struct ClassWrap_Extract : ClassWrap_Extract_StaticCast<T>
+    {};
+
+    /**
+       A concrete ClassWrap_ToNative<T> policy implementation which
+       uses static_cast<convert::TypeInfo<T>::NativeHandle>(void*) to
+       convert objects from JS to native space. It takes a certain,
+       but not infallible, deal of care in ensuring that the (void*)
+       is actually a native object of the proper type.
+
+       See the Value() member for more details, including the meaning
+       of the SearchPrototypesForNative_ parameter.
+    */
+    template <typename T,
+              bool SearchPrototypesForNative_ = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
+              >
+    struct ClassWrap_ToNative_StaticCast
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           The SearchPrototypesForNative_ template parameter.  See
+           Value() for the description.
+        */
+        static const bool SearchPrototypesForNative = SearchPrototypesForNative_;
+        /**
+           Uses
+           ClassWrap_Extract<T>::ExtractVoid(jo,SearchPrototypesForNative)
+           to extract a native pointer. If it finds one, it returns
+           VoidToNative(ptr), else it returns 0.
+
+           Ownership of the returned object is not modified by this
+           call.
+        */
+        static NativeHandle Value( v8::Handle<v8::Object> const & jo )
+        {
+            typedef ClassWrap_Extract<T> Unwrap;
+            void * ext = Unwrap::ExtractVoid( jo, SearchPrototypesForNative );
             return ext
-                ? static_cast<NativeHandle>( ext )
+                ? Unwrap::VoidToNative( ext )
                 : 0;
         }
     };
@@ -410,6 +493,83 @@ namespace juice {
     };
 
     /**
+       A concrete ClassWrap_WeakWrap policy which uses the v8::juice::bind
+       API to register objects for type-safe lookups later on.
+    */
+    template <typename T>
+    struct ClassWrap_WeakWrap_JuiceBind
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Calls v8::juice::bind::BindNative(nativeSelf).
+        */
+        static void Wrap( v8::Persistent<v8::Object> /*jsSelf*/, NativeHandle nativeSelf )
+        {
+            v8::juice::bind::BindNative( nativeSelf );
+            return;
+        }
+    };
+
+    /**
+       A concrete ClassWrap_ToNative policy which uses the
+       v8::juice::bind API to extract, type-safely, native objects
+       from JS object.
+    */
+
+    template <typename T>
+    struct ClassWrap_Extract_JuiceBind : ClassWrap_Extract_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Returns v8::juice::bind::GetBoundNative<Type>(x).
+        */
+        static NativeHandle VoidToNative( void * x )
+        {
+            return x ? v8::juice::bind::GetBoundNative<Type>( x ) : 0;
+
+        }
+    };
+
+    /**
+       A concrete ClassWrap_ToNative policy which uses the v8::juice::bind
+       API to extract, type-safely, native objects from JS object.
+
+       Requires:
+
+       - ClassWrap_WeakWrap<T> == ClassWrap_WeakWrap_JuiceBind<T>
+       - ClassWrap_Extract<T> == ClassWrap_Extract_JuiceBind<T>
+    */
+    template <typename T,
+              bool SearchPrototypesForNative_ = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
+              >
+    struct ClassWrap_ToNative_JuiceBind
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           The SearchPrototypesForNative_ template parameter.  See
+           Class_Extract<T>::ExtractVoid() for how it is used.
+        */
+        static const bool SearchPrototypesForNative = SearchPrototypesForNative_;
+
+        /**
+           It functions identically to ClassWrap_ToNative_StaticCast<T>::Value(),
+           except that it uses the juice::bind API for void-to-native
+           conversions instead of static_cast().
+        */
+        static NativeHandle Value( v8::Handle<v8::Object> const & jo )
+        {
+            typedef ClassWrap_Extract<T> Unwrap;
+            void * ext = Unwrap::ExtractVoid( jo, SearchPrototypesForNative );
+            return ext
+                ? Unwrap::VoidToNative( ext )
+                : 0;
+        }
+    };
+
+    /**
        A policy-based native-to-JS class binder, such that T
        object can be accessed via JS. This class is only
        a very thin wrapper around:
@@ -443,6 +603,16 @@ namespace juice {
 
        Other ClassWrap_XXX<T> specializations may (or may have to) be
        implemented, depending the needs of the binding.
+
+
+       BUGS AND SIGNIFICANT CAVEATS:
+
+       Inheriting a wrapped class from the JS side will not work
+       properly for all operations, but work is still underway in this
+       area.  Most notably, ClassWrap::DestroyObject()-like behaviour
+       cannot work properly in the face of inheritance, because it
+       does not know (at this level of the API) _exactly_ which JS
+       object the native is stored in, nor how it is stored.
     */
     template <typename T>
     class ClassWrap : public JSClassCreator
@@ -532,13 +702,14 @@ namespace juice {
         */
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
-	    //CERR << ClassName::Value()<<"::weak_callback(@"<<(void const *)nobj<<")\n";
+	    CERR << ClassName::Value()<<"::weak_callback(@"<<(void const *)nobj<<")\n";
             if( pv.IsEmpty() || ! pv->IsObject() )
             {
                 CERR << "WARNING: ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
                      << "an empty or non-object handle!\n";
                 return;
             }
+            //pv.ClearWeak(); // try to avoid duplicate calls caused by DestroyObject()-like features
 	    Local<Object> jobj( Object::Cast(*pv) );
 #if 0
 	    if( jobj->InternalFieldCount() != (InternalFields::Value) )
@@ -569,7 +740,7 @@ namespace juice {
                        proper cleanup time), but the native has been
                        unbound and triggers this condition.
                     */
-                    if(0) CERR << "ACHTUNG: ClassWrap<"<<ClassName::Value()<<">::weak_callback(): "
+                    if(1) CERR << "ACHTUNG: ClassWrap<"<<ClassName::Value()<<">::weak_callback(): "
                                << "From JS=@"<<(void const *)nobj
                                << ", Converted to Native=@"<<(void const *)nh
                                << '\n'
@@ -589,21 +760,45 @@ namespace juice {
                 return;
             }
 #endif
-            /**
-               Reminder: we call Destruct() before cleaning up the
-               JS-side fields for the case that the bound class actually
-               does tinker with the JS space directly.
-            */
-            Factory::Destruct( nh );
 	    /**
 	       We have to ensure that we have no dangling External in JS space. This
 	       is so that functions like IODevice.close() can act safely with the
 	       knowledge that member funcs called after that won't get a dangling
 	       pointer. Without this, some code will crash in that case.
 	    */
-	    jobj->SetInternalField(InternalFields::NativeIndex,Null());
-	    pv.Dispose();
-	    pv.Clear();
+            /**
+               FIXME: this doesn't work in conjunction with prototype chain
+               lookups in the ToNative conversion. We get the real native,
+               but then try to set an internal field of the current THIS
+               object, which is not the same JS object when JS-side inheritance
+               is used. Damn. Damn damn damn.
+
+               To fix this properly we have to be able to know
+               _exactly_ which JS object in the prototype chain nh is
+               bound to AND we have to know how it's stuffed in
+               there. To do that we have to directly crawl the
+               prototype chain AND somehow conform with the
+               expectations of the ClassWrap_ToJS<T> specialization
+               being used. Hmm.  Damn.
+            */
+            v8::V8::AdjustAmountOfExternalAllocatedMemory( -static_cast<int>( Factory::AllocatedMemoryCost ) );
+            /**
+               Reminder: we call Destruct() before cleaning up the
+               JS-side fields for the case that the bound class actually
+               does tinker with the JS space directly.
+            */
+            Factory::Destruct( nh );
+            if( jobj->InternalFieldCount() != (InternalFields::Value) )
+            {
+                CERR << "ERROR: ClassWrap<"<<ClassName::Value()<<">::weak_callback(): "
+                     << "native=@"<<(void const *)nh<<": "
+                     << "using half-ass lame workaround to avoid an inheritance-related crash! "
+                     << "See the source comments!\n";
+            }
+            else
+            {
+                jobj->SetInternalField(InternalFields::NativeIndex,Null());
+            }
 	}
 
         /**
@@ -614,6 +809,7 @@ namespace juice {
 	static Persistent<Object> wrap_native( Handle<Object> _self, NativeHandle obj )
 	{
             //CERR << ClassName::Value() <<"::wrap_native(@"<<(void const *)obj<<") Binding to internal field #"<<InternalFields::NativeIndex<<"\n";
+            v8::V8::AdjustAmountOfExternalAllocatedMemory( static_cast<int>( Factory::AllocatedMemoryCost ) );
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
 #if 0
@@ -750,7 +946,30 @@ namespace juice {
 	    NativeHandle t = ToNative::Value(jo);
 	    if( ! t ) return false;
 	    v8::Persistent<v8::Object> p( v8::Persistent<v8::Object>::New( jo ) );
+#if 0
+            // Resolves duplicate calls to weak_callback() but does not destroy immediately :(.
+            p.ClearWeak();
+            p.Dispose();
+	    p.Clear();
+            Factory::Destruct( t );
+            jo->SetInternalField(InternalFields::NativeIndex,Null());
+#elif 0
+            /**
+               Reminder: we call Destruct() before cleaning up the
+               JS-side fields for the case that the bound class actually
+               does tinker with the JS space directly.
+            */
+            p.ClearWeak();
+            v8::V8::AdjustAmountOfExternalAllocatedMemory( -static_cast<int>( Factory::AllocatedMemoryCost(t) ) );
+            Factory::Destruct( t );
+            jo->SetInternalField(InternalFields::NativeIndex,Null());
+            p.Dispose();
+	    p.Clear();
+
+#else
+            p.ClearWeak(); // avoid a second call to weak_callback() via gc!
 	    weak_callback( p, t );
+#endif
 	    return true;
 	}
 

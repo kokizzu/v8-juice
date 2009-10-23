@@ -65,11 +65,28 @@ namespace v8 { namespace juice {
     size_t BoundNative::instcount = 0;
 
     template <>
+    struct ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>
+        : ClassWrap_Opt_Bool<false>
+    {};
+
+
+#if 0
+    template <>
     struct ClassWrap_ToNative<BoundNative> :
-        ClassWrap_ToNative_StaticCast<BoundNative,
-                                      true
-                                      //false
-                                      > {};
+        ClassWrap_ToNative_StaticCast<BoundNative> {};
+#else
+    template <>
+    struct ClassWrap_WeakWrap<BoundNative> :
+        ClassWrap_WeakWrap_JuiceBind<BoundNative> {};
+
+    template <>
+    struct ClassWrap_Extract<BoundNative> :
+        ClassWrap_Extract_JuiceBind<BoundNative> {};
+
+    template <>
+    struct ClassWrap_ToNative<BoundNative> :
+        ClassWrap_ToNative_JuiceBind<BoundNative> {};
+#endif
 
     
     template <>
@@ -111,15 +128,14 @@ namespace v8 { namespace juice {
 	{
             NativeHandle x = new BoundNative;
             CERR << "BoundNative->Instantiate() == @"<<(void const *)x<<'\n';
-            v8::V8::AdjustAmountOfExternalAllocatedMemory( sizeof(BoundNative) );
             return x;
 	}
 	static void Destruct( NativeHandle obj )
 	{
             CERR << "BoundNative->Destruct() == @"<<(void const *)obj<<'\n';
-            v8::V8::AdjustAmountOfExternalAllocatedMemory( -sizeof(BoundNative) );
             delete static_cast<NativeHandle>(obj);
 	}
+        static const size_t AllocatedMemoryCost = sizeof(BoundNative);
     };
 
 }} // namespaces
@@ -201,11 +217,13 @@ namespace v8 { namespace juice {
         cw.Set( "doSomething", JFH );
 
         cw.Set( "destroy", CW::DestroyObject );
+        //cw.Set( "destroy", BoundNative_destroy );
 
         FH = ICC::F0::Invocable<size_t,BoundNative::InstanceCount>;
         cw.Set( "instanceCount", JFH );
         cw.CtorTemplate()->Set( "instanceCount", JFH );
-
+        cw.CtorTemplate()->Set( "supportsInheritance",
+                                convert::CastToJS(ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>::Value) );
         FH = ICC::F1::Invocable<unsigned int,unsigned int,::sleep>;
         cw.Set( "sleep", JFH );
 
