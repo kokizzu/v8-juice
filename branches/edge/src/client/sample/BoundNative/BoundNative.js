@@ -36,7 +36,11 @@ function testOne()
         print("Creating",c,"objects...");
         b = createThem(c);
         total += c;
-        ar.push( b ); // keep a reference to ensure that gc doesn't reap it.
+        if(1)
+        {
+            ar.push( b ); // keep a reference to ensure that gc doesn't reap it.
+            //b.destroy();
+        }
         print("b ==",b);//"b.foo ==",b.foo);
         //gc();
         print("Created",c,"objects...");
@@ -77,17 +81,19 @@ function testOne()
         print("b.sleep("+stime+")'d!");
     }
     print('b.instanceCount() ==',b.instanceCount());
+    print("b.destroy()...");
+    b.destroy();
     print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
 }
 testOne();
 
 function testTwo()
 {
-    print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
+    print('BoundNative.instanceCount() before New ==',BoundNative.instanceCount());
     var b = new BoundNative;
-    print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
+    print('BoundNative.instanceCount() after New ==',BoundNative.instanceCount());
     b.destroy();
-    print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
+    print('BoundNative.instanceCount() after b.destroy() ==',BoundNative.instanceCount());
     //gc();
 }
 testTwo();
@@ -105,9 +111,29 @@ function testInheritance1()
     print("m =",m);
     print("m instanceof BoundNative ==",m instanceof BoundNative);
     print("m.ptr(m)",m.ptr(m));
+    if(1)
+    {
+        print('BoundNative.instanceCount() before m.destroy() ==',BoundNative.instanceCount());
+        print("Calling m.destroy()...");
+        m.destroy();
+        print('BoundNative.instanceCount() after m.destroy() ==',BoundNative.instanceCount());
+        print("m.ptr(m)",m.ptr(m));
+        if( m.ptr(m) )
+        {
+            throw new Error("m.ptr(m) should fail after m.destroy()!");
+        }
+    }
 
 }
-testtestInheritance1();
+print("BoundNative.supportsInheritance ==",BoundNative.supportsInheritance);
+if( BoundNative.supportsInheritance )
+{
+    testInheritance1();
+}
+else
+{
+    print("Skipping inheritance tests.");
+}
 
 print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
 print("Done! You win!");
