@@ -15,8 +15,11 @@ namespace v8 { namespace juice {
     /** A class for testing ClasWrap. */
     struct BoundNative
     {
+    public:
+        static bool enableDebug;
     private:
         static size_t instcount;
+#define DBGOUT if(BoundNative::enableDebug) CERR
         int propi;
     public:
         double publicProperty;
@@ -33,7 +36,7 @@ namespace v8 { namespace juice {
         }
         bool ptr( BoundNative const * b )
         {
-            CERR << "BoundNative[@"<<(void const *)this<<"]->ptr("<<(void const *)b<<")\n";
+            DBGOUT << "BoundNative[@"<<(void const *)this<<"]->ptr("<<(void const *)b<<")\n";
             return 0 != b;
         }
         BoundNative * getPtr()
@@ -54,7 +57,7 @@ namespace v8 { namespace juice {
         }
         void tryRoundaboutApproach()
         {
-            CERR << "BoundNative[@"<<(void const *)this<<"]::tryRoundaboutApproach()\n";
+            DBGOUT << "BoundNative[@"<<(void const *)this<<"]::tryRoundaboutApproach()\n";
         }
         Handle<Value> toString2( Arguments const & argv )
         {
@@ -67,6 +70,7 @@ namespace v8 { namespace juice {
         }
     };
     size_t BoundNative::instcount = 0;
+    bool BoundNative::enableDebug = true;
 
     template <>
     struct ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>
@@ -140,12 +144,12 @@ namespace v8 { namespace juice {
                                          std::ostream & /* exceptionText */ )
 	{
             NativeHandle x = new BoundNative;
-            CERR << "BoundNative->Instantiate() == @"<<(void const *)x<<'\n';
+            DBGOUT << "BoundNative->Instantiate() == @"<<(void const *)x<<'\n';
             return x;
 	}
 	static void Destruct( NativeHandle obj )
 	{
-            CERR << "BoundNative->Destruct() == @"<<(void const *)obj<<'\n';
+            DBGOUT << "BoundNative->Destruct() == @"<<(void const *)obj<<'\n';
 #if defined(USING_TWOWAY_POLICIES)
             typedef Detail::ClassWrapMapper<BoundNative> Mapper;
             Mapper::Remove( obj );
@@ -166,17 +170,17 @@ namespace v8 { namespace juice {
     }
     void BoundNative_doSomething(std::string const &x)
     {
-        CERR << "doSomething(\""<<x<<"\")\n";
+        DBGOUT << "doSomething(\""<<x<<"\")\n";
     }
     size_t BoundNative_doSomething2(std::string const &x)
     {
-        CERR << "doSomething2(\""<<x<<"\")\n";
+        DBGOUT << "doSomething2(\""<<x<<"\")\n";
         return 42;
     }
 
     v8::Handle<v8::Value> BoundNative_destroy( v8::Arguments const & argv )
     {
-        CERR << "BoundNative_Destroy()\n";
+        DBGOUT << "BoundNative_Destroy()\n";
         return convert::CastToJS( ClassWrap<BoundNative>::DestroyObject(argv.This()) );
     }
 
@@ -191,8 +195,8 @@ namespace v8 { namespace juice {
         HandleScope scope;
         typedef BoundNative N;
         typedef ClassWrap<N> CW;
-        CW cw(dest);
-        CERR <<"Binding class "<<CW::ClassName::Value()<<"...\n";
+        CW & cw( CW::Instance() );
+        DBGOUT <<"Binding class "<<CW::ClassName::Value()<<"...\n";
         cw.Set("foo",String::New("this is foo"));
         cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Call );
         //cw.BindMemberFunc<&N::toString2>("toString");
@@ -221,10 +225,15 @@ namespace v8 { namespace juice {
 #endif
         //typedef convert::PropertyBinder<N> PB;
         typedef CW::PB PB;
-        PB::BindGetterSetter<int,&N::getInt,void,int,&N::setInt>( "myInt", cw.Prototype() );
-        PB::BindGetter<int,&N::getInt>( "intGetter", cw.Prototype() );
-        PB::BindMemVar<double,&N::publicProperty>( "publicProperty", cw.Prototype() );
-        PB::BindMemVarRO<double,&N::publicProperty>( "publicPropertyRO", cw.Prototype() );
+        v8::Handle<v8::ObjectTemplate> cwproto = cw.Prototype();
+        PB::BindGetterSetter<int,&N::getInt,void,int,&N::setInt>( "myInt", cwproto );
+        PB::BindGetter<int,&N::getInt>( "intGetter", cwproto );
+        PB::BindMemVar<double,&N::publicProperty>( "publicProperty", cwproto );
+        PB::BindMemVarRO<double,&N::publicProperty>( "publicPropertyRO", cwproto );
+
+        PB::BindStaticVar<bool,&N::enableDebug>( "debug", cwproto );
+        PB::BindStaticVarRO<bool,&N::enableDebug>( "debugRO", cwproto );
+        
         v8::InvocationCallback FH;
         FH =
             ICC::F0::Invocable<std::string,BoundNative_version>
@@ -248,15 +257,19 @@ namespace v8 { namespace juice {
                                 convert::CastToJS(ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>::Value) );
         FH = ICC::F1::Invocable<unsigned int,unsigned int,::sleep>;
         cw.Set( "sleep", JFH );
-
-        cw.Seal();
+        v8::Handle<v8::Function> ctor = cw.Seal();
+        cw.AddClassTo( dest );
+//         PB::BindStaticVar<bool,&N::enableDebug>( "debug", ctor );
 #undef JFH
 
         //v8::HandleScope hscope;
-        Handle<Object> jobj = cw.NewInstance(0,0);
+        Handle<Object> jobj =
+            cw.NewInstance(0,0)
+            //ctor->NewInstance(0,0)
+            ;
         N * bound = CW::ToNative::Value(jobj);
-        CERR << "bound (void *) == @"<<(void const *)bound<<'\n';
-        CERR << "bound (CastFromJS<T>(jsObj)) == @"<<convert::CastFromJS<N>( jobj )<<'\n';
+        DBGOUT << "bound (void *) == @"<<(void const *)bound<<'\n';
+        DBGOUT << "bound (CastFromJS<T>(jsObj)) == @"<<convert::CastFromJS<N>( jobj )<<'\n';
         if( bound )
         {
             typedef convert::MemFuncForwarder<0> MFF;
@@ -269,7 +282,7 @@ namespace v8 { namespace juice {
             v8::Local<v8::Value> proto = jobj->GetPrototype();
             for( ; ! proto.IsEmpty() && proto->IsObject(); ++level )
             {
-                CERR << "Prototype level "<<level<<'\n';
+                DBGOUT << "Prototype level "<<level<<'\n';
                 proto = Local<Object>( v8::Object::Cast(*proto) )->GetPrototype();
             }
         }
@@ -277,20 +290,20 @@ namespace v8 { namespace juice {
         if(1)
         {
             v8::Handle<v8::Object> so = ClassWrap_FindHolder<N>( jobj, bound );
-            CERR << "FindHolder() == [" << convert::CastFromJS<std::string>( so ) << "]\n";
+            DBGOUT << "FindHolder() == [" << convert::CastFromJS<std::string>( so ) << "]\n";
         }
 
-        CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
+        DBGOUT << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
         CW::DestroyObject(jobj);
-        CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
+        DBGOUT << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
 #if 0
         if(0 && bound)
         {
             Handle<Object> j2 = CW::CastToJS::Value( bound );
-            CERR << "JW::CastToJS::Value(jobj) == "<<convert::CastFromJS<std::string>(j2)<<'\n';
+            DBGOUT << "JW::CastToJS::Value(jobj) == "<<convert::CastFromJS<std::string>(j2)<<'\n';
         }
 #endif
-        CERR <<"Binding done.\n";
+        DBGOUT <<"Binding done.\n";
     }
 
 } } // namespaces

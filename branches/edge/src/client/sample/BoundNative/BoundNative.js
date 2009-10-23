@@ -89,7 +89,6 @@ function testOne()
     b.destroy();
     print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
 }
-testOne();
 
 function testTwo()
 {
@@ -100,7 +99,6 @@ function testTwo()
     print('BoundNative.instanceCount() after b.destroy() ==',BoundNative.instanceCount());
     //gc();
 }
-testTwo();
 //gc();
 
 function testInheritance1()
@@ -111,28 +109,53 @@ function testInheritance1()
         this.prototype.constructor = MyClass;
         return this;
     }
+    MyClass.prototype = BoundNative;
+
+    function YourClass()
+    {
+        this.prototype = this.__proto__ = new MyClass();
+        this.prototype.constructor = YourClass;
+        return this;
+    }
+    YourClass.prototype = YourClass;
+
+    
     var m = new MyClass();
     print("m =",m);
     print("m instanceof BoundNative ==",m instanceof BoundNative);
-    print("m.ptr(m)",m.ptr(m));
+    var y = new YourClass();
+    print("y instanceof BoundNative ==",y instanceof BoundNative);
+    print("m.ptr(y)",m.ptr(y));
+    print("y.ptr(m)",y.ptr(m));
+    print("m.debug ==",m.debug,", y.debug ==",y.debug);
+    print("y.debug = !y.debug ==",y.debug=!y.debug);
+    print("m.debug ==",m.debug,", y.debug ==",y.debug);
+    print("m.debugRO ==",m.debugRO);
+    print("y.debug = !y.debug ==",y.debug=!y.debug);
+    m.debugRO = "assignment should be a no-op";
+    print("m.debug ==",m.debug,", m.debugRO ==",m.debugRO);
     if(1)
     {
-        print('BoundNative.instanceCount() before m.destroy() ==',BoundNative.instanceCount());
-        print("Calling m.destroy()...");
-        m.destroy();
-        print('BoundNative.instanceCount() after m.destroy() ==',BoundNative.instanceCount());
+        print('BoundNative.instanceCount() before y.destroy() ==',BoundNative.instanceCount());
+        print("Calling y.destroy()...");
+        y.destroy();
+        print('BoundNative.instanceCount() after y.destroy() ==',BoundNative.instanceCount());
         try
         {
-            print("m.ptr(m)",m.ptr(m));
+            print("y.ptr(m)",y.ptr(m));
         }
         catch(e)
         {
-            print("Good: as expected, m.ptr() threw.");
+            print("Good: as expected, y.ptr() threw.");
         }
     }
-
 }
 print("BoundNative.supportsInheritance ==",BoundNative.supportsInheritance);
+print("BoundNative.debug ==",BoundNative.debug);
+
+//testOne();
+testTwo();
+
 if( BoundNative.supportsInheritance )
 {
     testInheritance1();
