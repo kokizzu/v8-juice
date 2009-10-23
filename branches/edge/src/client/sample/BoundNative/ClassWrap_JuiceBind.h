@@ -70,7 +70,7 @@ namespace v8 { namespace juice {
     };
 
     /**
-       A concrete ClassWrap_ToNative policy which uses the
+       A concrete ClassWrap_Extract policy which uses the
        v8::juice::bind API to extract, type-safely, native objects
        from JS object.
     */

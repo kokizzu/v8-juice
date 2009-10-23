@@ -1,7 +1,6 @@
 // EXPERIMENTAL/INCOMPLETE!
 #include <sstream>
 #include <v8/juice/static_assert.h>
-#include <v8/juice/bind.h>
 #include <v8/juice/convert.h>
 #include <vector>
 
@@ -152,6 +151,16 @@ namespace juice {
 
        Intended mainly for testing some error handling cases
        in ClassWrap.
+
+       Conventional meanings of the Value member:
+
+       0 == no debuggering output
+
+       1 == serious problems.
+
+       2 == potentially interesting warnings.
+
+       3 == trivial information/noise
     */
     template <typename T>
     struct ClassWrap_DebugLevel : ClassWrap_Opt_Int<1>
@@ -237,9 +246,8 @@ namespace juice {
 	   of "destroy", and mechanism of destruction, is
 	   type-specific.
 
-	   This function is responsible for destroying the native
-	   object. Most implementations must simply call "delete obj",
-	   which is fine for many types, but opaque types and types
+	   Most implementations must simply call "delete", which
+	   is fine for many types, but opaque types and types
 	   allocated via something other than 'new' will need a
 	   different implementation. A destructor functor for shared,
 	   static, or stack-allocated objects should simply do nothing
@@ -248,9 +256,32 @@ namespace juice {
 	   If the client is using any "supplemental" garbage
 	   collection (e.g. the v8::juice::cleanup API) or class
 	   binding mechanism then they should deregister the object in
-	   this function.
+	   this function or in their ClassWrap_WeakWrap<T>
+	   specialization.
+
+           Normally the jself argument, which refers to the JS-side representation
+           of this native (and which still contains it interally)
+           can be ignored by specializations. However, if you don't wish
+           to simply ignore it...
+           
+           When this function is called, if jself.IsEmpty() then there
+           is not yet an associated JS object. This is normally the
+           result of a post-native-construction error in Instantiate()
+           which needs to clean up the native object before
+           returning. Specializations should not throw an error in
+           that case.
+
+           If !jself.IsEmpty() then the client may (if needed by T's internal
+           policies) clean up the contents of the object's internal fields.
+           HOWEVER, be aware that the jself object might not be the real
+           object which contains the nself pointer (and is not the same
+           object in the face on inheritance). ClassWrap_FindHolder()
+           can be used to get access to the actual JS object which is holding
+           the nobj pointer. The framework internally sets the framework-specified
+           internal field of jself to Null() after Destruct() returns, so there
+           is no need to do so in specializations.
 	*/
-	static void Destruct( NativeHandle obj )
+	static void Destruct( v8::Handle<v8::Object> jself, NativeHandle nself )
 	{
             JUICE_STATIC_ASSERT(false,ClassWrap_Factory_T_MustBeSpecialized);
 	}
@@ -291,8 +322,8 @@ namespace juice {
        A ClassWrap_Extract policy base class for "unwrapping" JS
        object handles, extracting their native bound data.
 
-       This implementation should be suitable for most, if not all,
-       cases.
+       This implementation should be suitable as a base class for
+       most, if not all, cases.
 
        The ClassWrap_Extract interface is responsible for:
 
@@ -401,17 +432,17 @@ namespace juice {
        - T = the native type being bind.
 
        - ExtractPolicy must conform to the ClassWrap_Extract<T> interface, and is used
-       for extracting (void*) from JS object.s
-
-       - SearchPrototypesForNative_ is used as the second parameter to
-       ExtractPolicy::ExtractVoid().
+       for extracting (void*) from JS objects. If ClassWrap_Extract<T> is properly
+       specialized, this can be left at its default value.
 
        
+       ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
+       internally is used as the second parameter to
+       ExtractPolicy::ExtractVoid(), so a specialization of that
+       policy must (if used at all) appear before this type is
+       instantiated.
     */
-    template <typename T,
-              typename ExtractPolicy = ClassWrap_Extract<T>,
-              bool SearchPrototypesForNative_ = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
-              >
+    template <typename T, typename ExtractPolicy = ClassWrap_Extract<T> >
     struct ClassWrap_ToNative_Base
     {
         typedef typename convert::TypeInfo<T>::Type Type;
@@ -420,7 +451,7 @@ namespace juice {
            The SearchPrototypesForNative_ template parameter.  See
            Value() for the description.
         */
-        static const bool SearchPrototypesForNative = SearchPrototypesForNative_;
+        static const bool SearchPrototypesForNative = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value;
         /**
            Uses
            ClassWrap_Extract<T>::ExtractVoid(jo,SearchPrototypesForNative)
@@ -449,11 +480,9 @@ namespace juice {
        See the Value() member for more details, including the meaning
        of the SearchPrototypesForNative_ parameter.
     */
-    template <typename T,
-              bool SearchPrototypesForNative_ = ClassWrap_ToNative_SearchPrototypesForNative<T>::Value
-              >
+    template <typename T>
     struct ClassWrap_ToNative_StaticCast
-        : ClassWrap_ToNative_Base< T, ClassWrap_Extract_StaticCast<T>, SearchPrototypesForNative_ >
+        : ClassWrap_ToNative_Base< T, ClassWrap_Extract_StaticCast<T> >
     {
     };
 
@@ -555,7 +584,8 @@ namespace juice {
        If nh is found nowhere in the chain, an empty handle is returned.
 
        Note that because the function signature uses a typename, the T
-       template parameter may not be defaulted!
+       template parameter may not be omitted from calls to this
+       function.
        
        Required ClassWrap policies:
 
@@ -567,9 +597,8 @@ namespace juice {
     {
         if( jo.IsEmpty() || ! jo->IsObject() ) return v8::Handle<v8::Object>();
         typedef convert::TypeInfo<T> TI;
-        typedef typename TI::Type Type;
-        typedef typename TI::NativeHandle NH;
         typedef ClassWrap_Extract<T> XT;
+        typedef typename TI::NativeHandle NH;
         void * ext = XT::ExtractVoid( jo, false );
         if( ! ext )
         {
@@ -636,9 +665,9 @@ namespace juice {
 
        BUGS AND SIGNIFICANT CAVEATS:
 
-       Inheriting a wrapped class from the JS side will not work
-       properly for all operations, but work is still underway in this
-       area.
+       Inheriting a wrapped class from the JS side, or JS-inheriting
+       one bound class from another, will not work properly for all
+       operations. Work is still underway in this area.
     */
     template <typename T>
     class ClassWrap : public JSClassCreator
@@ -716,7 +745,8 @@ namespace juice {
         typedef ::v8::juice::convert::PropertyBinder<T> PB;
         
     private:
-#define DBGOUT(LVL) if( DBG::Value >= LVL ) CERR
+        typedef ClassWrap_DebugLevel<T> DBG;
+#define DBGOUT(LVL) if( DBG::Value >= LVL ) CERR "ClassWrap<"<<ClassName::Value()<<">::" <<__FUNCTION__<<"() "
         /** Checks a few static assertions. */
         static void check_assertions()
         {
@@ -730,12 +760,10 @@ namespace juice {
         */
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
-            typedef ClassWrap_DebugLevel<T> DBG;
-	    DBGOUT(2) << ClassName::Value()<<"::weak_callback(@"<<(void const *)nobj<<")\n";
+	    DBGOUT(3) << "native @"<<(void const *)nobj<<"\n";
             if( pv.IsEmpty() || ! pv->IsObject() )
             {
-                DBGOUT(1) << "WARNING: ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
-                     << "an empty or non-object handle!\n";
+                DBGOUT(2) << "WARNING: was passed an empty or non-object handle!\n";
                 return;
             }
             //pv.ClearWeak(); // try to avoid duplicate calls caused by DestroyObject()-like features
@@ -808,7 +836,7 @@ namespace juice {
                           << ", Converted to Native=@"<<(void const *)nh
                           << "\nTHIS MAY LEAD TO A CRASH IF THIS JS HANDLE IS USED AGAIN!!!\n"
                     ;
-                Factory::Destruct( nh );
+                Factory::Destruct( jobj, nh );
                 return;
             }
             else
@@ -818,7 +846,7 @@ namespace juice {
                    JS-side fields for the case that the bound class actually
                    does tinker with the JS space directly.
                 */
-                Factory::Destruct( nh );
+                Factory::Destruct( jobj, nh );
                 /**
                    We have to ensure that we have no dangling External
                    in JS space. This is so that member functions
@@ -890,6 +918,7 @@ namespace juice {
                     return v8::ThrowException(msg);
                 }
             }
+	    DBGOUT(3) << "\n";
 	    NativeHandle obj = NativeHandle(0);
             std::string err;
             {
@@ -913,7 +942,7 @@ namespace juice {
 	    {
 		if( obj )
 		{
-		    Factory::Destruct(obj);
+		    Factory::Destruct(v8::Handle<v8::Object>(),obj);
 		    obj = NativeHandle(0);
 		}
 		return ThrowException(String::New(err.c_str(),static_cast<int>(err.size())));
@@ -996,7 +1025,7 @@ namespace juice {
 
         /**
            An InvocationCallback implementation which calls
-           DestroyObject( argv.This() ).
+           DestroyObject( argv.Holder() ).
 
            It is intended to be used as a "manual destructor" for
            classes which need it. The canonical examples are
@@ -1004,7 +1033,7 @@ namespace juice {
         */
 	static v8::Handle<v8::Value> DestroyObject( v8::Arguments const & argv )
 	{
-            return convert::CastToJS( DestroyObject(argv.This()) );
+            return convert::CastToJS( DestroyObject(argv.Holder()) );
 	}
 
         /**

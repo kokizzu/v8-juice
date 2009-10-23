@@ -74,19 +74,19 @@ namespace v8 { namespace juice {
     };
     template <>
     struct ClassWrap_DebugLevel<BoundNative>
-        : ClassWrap_Opt_Int<0>
+        : ClassWrap_Opt_Int<2>
     {};
     size_t BoundNative::instcount = 0;
-    bool BoundNative::enableDebug = 0 != ClassWrap_DebugLevel<BoundNative>::Value;
+    bool BoundNative::enableDebug = ClassWrap_DebugLevel<BoundNative>::Value > 2;
 
     template <>
     struct ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>
-        : ClassWrap_Opt_Bool<false>
+        : ClassWrap_Opt_Bool<true>
     {};
 
     template <>
     struct ClassWrap_AllowCtorWithoutNew<BoundNative>
-        : ClassWrap_Opt_Bool<true>
+        : ClassWrap_Opt_Bool<false>
     {};
 
 
@@ -107,21 +107,24 @@ namespace v8 { namespace juice {
     {};
 #endif
 
+// Set ONE of the following to a true value to select that ClassWrap policy set:
 #if 0
-    //#  warning "Using JuiceBind policies!"
+#  warning "Using JuiceBind policies!"
 #  define USING_JUICEBIND_POLICIES
 #elif 0
-    //#  warning "Using Experimental policies!"
+#  warning "Using TwoWay policies!"
 #  define USING_TWOWAY_POLICIES
 #elif 0
+#  warning "Using Skeleton policies!"
 #  define USING_SKEL_POLICIES
 #else
-    //#  warning "Using default policies!"
+#  warning "Using default policies!"
 #  define USING_DEFAULT_POLICIES
 #endif
 
 } } // nemspaces
 
+// Import the selected ClassWrap policy...
 #define CLASSWRAP_BOUND_TYPE v8::juice::BoundNative
 #define CLASSWRAP_BOUND_TYPE_NAME "BoundNative"
 #if defined(USING_TWOWAY_POLICIES)
@@ -161,7 +164,7 @@ namespace v8 { namespace juice {
             DBGOUT << "BoundNative->Instantiate() == @"<<(void const *)x<<'\n';
             return x;
 	}
-	static void Destruct( NativeHandle obj )
+	static void Destruct( v8::Handle<v8::Object> jself, NativeHandle obj )
 	{
             DBGOUT << "BoundNative->Destruct() == @"<<(void const *)obj<<'\n';
 #if defined(USING_TWOWAY_POLICIES)
@@ -187,6 +190,7 @@ namespace v8 { namespace juice {
     {
         DBGOUT << "doSomething(\""<<x<<"\")\n";
     }
+
     size_t BoundNative_doSomething2(std::string const &x)
     {
         DBGOUT << "doSomething2(\""<<x<<"\")\n";
@@ -214,11 +218,7 @@ namespace v8 { namespace juice {
         DBGOUT <<"Binding class "<<CW::ClassName::Value()<<"...\n";
         cw.Set("foo",String::New("this is foo"));
         cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Call );
-        //cw.BindMemberFunc<&N::toString2>("toString");
-        typedef
-            convert::InvocationCallbackCreator
-            //convert::FunctionForwarder<0>
-            ICC;
+        typedef convert::InvocationCallbackCreator ICC;
         cw.Set( "toString",
                 ICC::M0::Invocable<N,std::string,&N::toString>
                 );
@@ -233,6 +233,7 @@ namespace v8 { namespace juice {
                 //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
                 );
 #if defined(USING_TWOWAY_POLICIES)
+        // If JSToNative isn't specialized, we should get a compile-time error here:
         cw.Set( "getPtr",
                 ICC::M0::Invocable<N,N*,&N::getPtr>
                 //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>

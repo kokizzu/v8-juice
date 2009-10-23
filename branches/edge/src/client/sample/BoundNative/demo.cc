@@ -43,6 +43,7 @@
 #include <cstdlib>
 
 
+#include <v8/juice/static_assert.h> // we need this early on for some test!
 #include "MyNative.h"
 #include <v8/juice/PathFinder.h>
 //#include <v8/juice/ToSource.h>

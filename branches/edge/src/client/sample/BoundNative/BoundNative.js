@@ -120,7 +120,7 @@ function testInheritance1()
         this.prototype.constructor = YourClass;
         return this;
     }
-    YourClass.prototype = YourClass;
+    YourClass.prototype = MyClass;
 
     
     var m = new MyClass();
@@ -174,10 +174,10 @@ function testThree()
 
 ////////////////////////////////////////////////////////////////////////
 //BoundNative.prototype.debug = false;
-testOne();
-testTwo();
-testThree();
-if( BoundNative.supportsInheritance )
+//testOne();
+//testTwo();
+//testThree();
+if( true || BoundNative.supportsInheritance )
 {
     testInheritance1();
 }
