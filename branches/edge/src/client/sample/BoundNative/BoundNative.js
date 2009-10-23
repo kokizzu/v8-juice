@@ -121,10 +121,13 @@ function testInheritance1()
         print("Calling m.destroy()...");
         m.destroy();
         print('BoundNative.instanceCount() after m.destroy() ==',BoundNative.instanceCount());
-        print("m.ptr(m)",m.ptr(m));
-        if( m.ptr(m) )
+        try
         {
-            throw new Error("m.ptr(m) should fail after m.destroy()!");
+            print("m.ptr(m)",m.ptr(m));
+        }
+        catch(e)
+        {
+            print("Good: as expected, m.ptr() threw.");
         }
     }
 
