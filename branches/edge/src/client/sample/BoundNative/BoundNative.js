@@ -173,7 +173,8 @@ function testThree()
 
 
 ////////////////////////////////////////////////////////////////////////
-//testOne();
+//BoundNative.prototype.debug = false;
+testOne();
 testTwo();
 testThree();
 if( BoundNative.supportsInheritance )
