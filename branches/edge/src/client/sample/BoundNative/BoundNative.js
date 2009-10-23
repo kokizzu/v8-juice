@@ -69,7 +69,10 @@ function testOne()
     {
         var b2 = new BoundNative();
         print('b.ptr(b) ==',b.ptr(b));
-        print('b.getPtr() ==',b.getPtr());
+        if( b.getPtr )
+        {
+            print('b.getPtr() ==',b.getPtr());
+        }
         print('b.ptr(b2) ==',b.ptr(b2));
         print('b2.ptr(0) ==',b2.ptr(0));
         delete b2;
