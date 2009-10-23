@@ -242,7 +242,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T, typename RV>
         static Handle<Value> Call( RV (T::*MemFunc)(), Arguments const & argv )
         {
-            T * obj = CastToJS<T>( argv.This() );
+            T * obj = CastFromJS<T>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             return Call( obj, MemFunc, argv );
         }
@@ -822,6 +822,98 @@ namespace v8 { namespace juice { namespace convert {
             }
         }
 
+        /**
+           This template can be used as an argument to
+           v8::ObjectTemplate::SetAccessor()'s Getter parameter to
+           generically tie a static variable to a named JS property.
+
+           SharedVar must be pointer to a static variable and must not
+           be 0.
+
+           CastToJS<PropertyType> must be legal.
+        */
+        template <typename PropertyType, PropertyType const * SharedVar>
+        static v8::Handle<v8::Value> StaticVarGetter(v8::Local<v8::String> property, const AccessorInfo &info)
+        {
+            if( SharedVar )
+            {
+                return CastToJS<PropertyType>( *SharedVar );
+            }
+            else
+            {
+                return v8::ThrowException(v8::String::New("StaticVarGetter(): SharedVar is null!"));
+            }
+        }
+        /**
+           The setter counterpart of StaticVarGetter().
+
+           SharedVar must be pointer to a static variable and must not
+           be 0.
+
+           CastFromJS<PropertyType> must be legal.
+        */
+        template <typename PropertyType, PropertyType * SharedVar>
+        static void StaticVarSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
+        {
+            if( SharedVar )
+            {
+                *SharedVar = CastFromJS<PropertyType>( value );
+            }
+            else
+            {
+                v8::ThrowException(v8::String::New("StaticVarGetter(): SharedVar is null!"));
+            }
+        }
+
+        /**
+           Binds the given static variable to a JS property, such that
+           get/set access will go through
+           StaticVarGetter<VarType,SharedVar> and
+           StaticVarSetter<VarType,SharedVar>.
+        */
+        template <typename VarType, VarType * SharedVar>
+        static void BindStaticVar( char const * name,
+                                   v8::Handle<v8::ObjectTemplate> const & prototype,
+                                   v8::AccessControl settings = v8::PROHIBITS_OVERWRITING,
+                                   v8::PropertyAttribute attribute = v8::DontDelete
+                         )
+        {
+            if( ! prototype.IsEmpty() )
+            {
+                prototype->SetAccessor( v8::String::New(name),
+                                        StaticVarGetter<VarType,SharedVar>,
+                                        StaticVarSetter<VarType,SharedVar>,
+                                        v8::Handle< v8::Value >(),
+                                        settings,
+                                        attribute );
+            }
+        }
+
+        /**
+           Binds the given static variable to a JS property, such that
+           read access will go through
+           StaticVarGetter<VarType,SharedVar> and set access will be
+           ignored (it will not change SharedVar).
+        */
+        template <typename VarType, VarType const * SharedVar>
+        static void BindStaticVarRO( char const * name,
+                                     v8::Handle<v8::ObjectTemplate> const & prototype,
+                                     v8::AccessControl settings = v8::PROHIBITS_OVERWRITING,
+                                     v8::PropertyAttribute attribute = v8::DontDelete
+                         )
+        {
+            if( ! prototype.IsEmpty() )
+            {
+                prototype->SetAccessor( v8::String::New(name),
+                                        StaticVarGetter<VarType,SharedVar>,
+                                        0,
+                                        v8::Handle< v8::Value >(),
+                                        settings,
+                                        attribute );
+            }
+        }
+
+        
         /**
            Binds automatically-generated getter/setter functions to the given
            member variable. See MemVarGetter() and MemVarSetter()
