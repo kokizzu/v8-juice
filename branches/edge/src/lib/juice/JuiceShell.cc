@@ -313,6 +313,7 @@ namespace juice {
             }
             v8::HandleScope handle_scope;
             this->ExecuteString(sbuf, "(JuiceShell::InputLoop())", reportExceptions, os );
+            if( reportExceptions ) reportExceptions->Reset(); // arguable!
         }
     }
 
