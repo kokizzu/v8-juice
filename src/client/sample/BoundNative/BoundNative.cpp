@@ -81,38 +81,36 @@ namespace v8 { namespace juice {
         ClassWrap_ToNative_StaticCast<BoundNative> {};
 #elif 0
 #warning "Using JuiceBind policies!"
-    template <>
-    struct ClassWrap_WeakWrap<BoundNative> :
-        ClassWrap_WeakWrap_JuiceBind<BoundNative> {};
+#define USING_JUICEBIND_POLICIES
+//     template <>
+//     struct ClassWrap_WeakWrap<BoundNative> :
+//         ClassWrap_WeakWrap_JuiceBind<BoundNative> {};
 
-    template <>
-    struct ClassWrap_Extract<BoundNative> :
-        ClassWrap_Extract_JuiceBind<BoundNative> {};
+//     template <>
+//     struct ClassWrap_Extract<BoundNative> :
+//         ClassWrap_Extract_JuiceBind<BoundNative> {};
 
-    template <>
-    struct ClassWrap_ToNative<BoundNative> :
-        ClassWrap_ToNative_JuiceBind<BoundNative> {};
-#else
+//     template <>
+//     struct ClassWrap_ToNative<BoundNative> :
+//         ClassWrap_ToNative_JuiceBind<BoundNative> {};
+#elif 1
 #warning "Using Experimental policies!"
-#define USING_EXPERIMENTAL_POLICIES
-    template <>
-    struct ClassWrap_WeakWrap<BoundNative> :
-        ClassWrap_WeakWrap_Experiment<BoundNative> {};
-
-    template <>
-    struct ClassWrap_Extract<BoundNative> :
-        ClassWrap_Extract_Experiment<BoundNative> {};
-
-    template <>
-    struct ClassWrap_ToNative<BoundNative> :
-        ClassWrap_ToNative_Experiment<BoundNative> {};
-
-    template <>
-    struct ClassWrap_ToJS<BoundNative> :
-        ClassWrap_ToJS_Experiment<BoundNative> {};
+#define USING_TWOWAY_POLICIES
 #endif
 
-    
+} } // nemspaces
+
+#define CLASSWRAP_BOUND_TYPE v8::juice::BoundNative
+#define CLASSWRAP_BOUND_TYPE_NAME "BoundNative"
+#if defined(USING_TWOWAY_POLICIES)
+#  include "ClassWrap_TwoWay.h"
+#elif defined(USING_JUICEBIND_POLICIES)
+#  include "ClassWrap_JuiceBind.h"
+#endif
+
+namespace v8 { namespace juice {
+
+#if 0
     template <>
     struct ClassWrap_ClassName<BoundNative>
     {
@@ -121,6 +119,7 @@ namespace v8 { namespace juice {
             return "BoundNative";
         }
     };
+#endif
 
 #if 1
     // Only used for testing some compile-time assertions:
@@ -157,39 +156,18 @@ namespace v8 { namespace juice {
 	static void Destruct( NativeHandle obj )
 	{
             CERR << "BoundNative->Destruct() == @"<<(void const *)obj<<'\n';
-#ifdef USING_EXPERIMENTAL_POLICIES
+#if defined(USING_TWOWAY_POLICIES)
             typedef Detail::ClassWrapMapper<BoundNative> Mapper;
             Mapper::Remove( obj );
+#elif defined(USING_JUICEBIND_POLICIES)
+            bind::UnbindNative( obj );
 #endif
             delete obj;
 	}
         static const size_t AllocatedMemoryCost = sizeof(BoundNative);
     };
-
-
-
-#ifdef USING_EXPERIMENTAL_POLICIES
-    namespace convert
-    {
-        template <>
-        struct NativeToJS< BoundNative >
-        {
-            typedef ::v8::juice::ClassWrap_ToJS< BoundNative > Cast;
-            typedef Cast::NativeHandle NativeHandle;
-            v8::Handle<v8::Value> operator()( NativeHandle p ) const
-            {
-                return
-                    p ? Cast::Value(p) :
-                    v8::Handle<v8::Value>();
-            }
-        };
-    }
-#endif
-
 }} // namespaces
 
-#define CLASSWRAP_BOUND_TYPE v8::juice::BoundNative
-#include "ClassWrap-CastOps.h"
 
 namespace v8 { namespace juice {
     std::string BoundNative_version()
@@ -245,7 +223,7 @@ namespace v8 { namespace juice {
                 ICC::M1::Invocable<N,bool,N const * ,&N::ptr>
                 //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
                 );
-#if 1
+#if defined(USING_TWOWAY_POLICIES)
         cw.Set( "getPtr",
                 ICC::M0::Invocable<N,N*,&N::getPtr>
                 //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>

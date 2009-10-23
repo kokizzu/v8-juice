@@ -1,6 +1,17 @@
-#include <stdexcept>
 /**
-   See the docs below...
+   A supermacro for creating JSToNative specializations for a given
+   type.
+
+   Using this file:
+
+   @code
+   #define CLASSWRAP_BOUND_TYPE MyType
+   #include <v8/juice/ClassWrap-JSToNative.h>
+   @endcode
+
+   CLASSWRAP_BOUND_TYPE will be undefined by this file, as is conventional for
+   supermacro arguments.
+   
 */
 #if ! defined(CLASSWRAP_BOUND_TYPE)
 #error "You must define CLASSWRAP_BOUND_TYPE before including this file!"
