@@ -60,7 +60,8 @@ namespace juice {
     template <bool Val>
     struct ClassWrap_Opt_Bool : ClassWrap_Opt_ConstVal<bool,Val>
     {};
-
+    
+    
     /**
        EXPERIMENTAL/INCOMPLETE!
        
@@ -106,7 +107,7 @@ namespace juice {
     template <typename T>
     struct ClassWrap_Inheritance : ClassWrap_Inheritance_Base<T,T>
     {};
-
+    
     
     /**
        A ClassWrap policy class for defining a class name to the JS
@@ -534,6 +535,13 @@ namespace juice {
        in which the data were found is returned.
 
        If nh is found nowhere in the chain, an empty handle is returned.
+
+       Note that because the function signature uses a typename, the T
+       template parameter may not be defaulted!
+       
+       Required ClassWrap policies:
+
+       - ClassWrap_Extract<T>
     */
     template <typename T>
     v8::Handle<v8::Object> ClassWrap_FindHolder( v8::Handle<v8::Object> jo,
@@ -552,18 +560,23 @@ namespace juice {
             {
                 return ClassWrap_FindHolder<T>( v8::Local<v8::Object>( v8::Object::Cast( *proto ) ), nh );
             }
+            return v8::Handle<v8::Object>();
         }
         if( ext == nh ) return jo; // shortcut
         NH xnh = XT::VoidToNative( ext );
         if( xnh != nh )
-        { // bound native, but the wrong one
+        { // Bound native, but the wrong one. Keep looking...
             v8::Local<v8::Value> proto = jo->GetPrototype();
             if( !proto.IsEmpty() && proto->IsObject() )
             {
                 return ClassWrap_FindHolder<T>( v8::Local<v8::Object>( v8::Object::Cast( *proto ) ), nh );
             }
+            return v8::Handle<v8::Object>();
         }
-        return v8::Handle<v8::Object>();
+        else
+        {
+            return jo;
+        }
     }
 
     
@@ -964,20 +977,28 @@ namespace juice {
             return convert::CastToJS( DestroyObject(argv.This()) );
 	}
         
-#if 0
-        /**
-           Binds the native member function, specified as a template
-           parameter, to a JS member function with the given
-           name.
-        */
-        template < v8::Handle<Value> (Type::*Func)( v8::Arguments const & ) >
-        ClassWrap & Set( char const * name )
-        {
-            this->Set(name, convert::InvocationCallbackMember<Type,Func>::Call );
-            return *this;
-        }
-#endif
 
+        /**
+           Returns a shared instance of this class.
+
+           Important usage notes:
+
+           First, each ClassWrap instance must only be populated
+           one time, and Seal() must be called to close the binding
+           process.
+
+           Secondly, one must call AddClassTo() to add the generated
+           class to a target JS object (typically the global object).
+
+           Once the shared ClassWrap instance has been populated and
+           sealed, client code can use Instance().NewInstance() to
+           create new JS instances of the bound class.
+        */
+        static ClassWrap & Instance()
+        {
+            static ClassWrap bob;
+            return bob;
+        }
     };
 
     
