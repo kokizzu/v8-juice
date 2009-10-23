@@ -1,6 +1,7 @@
 #if !defined(V8_JUICE_CLASSWRAP_POLICY_JUICEBIND_INCLUDED)
 #define V8_JUICE_CLASSWRAP_POLICY_JUICEBIND_INCLUDED
-/** @file ClassWrap_TwoWay.h
+#include <v8/juice/bind.h>
+/** @file ClassWrap_JuiceBind.h
    This file has two uses:
 
    1) When included "normally", it defines a set of ClassWrap policies

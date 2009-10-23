@@ -75,7 +75,7 @@ int main(int argc, char * argv[])
         shell.SetupJuiceEnvironment();
         MyNative::SetupClass(shell.Context());
 #if TEST_CLASSWRAP2
-        v8::juice::bind_my_native( shell.Global() );
+        v8::juice::BoundNative::SetupClass( shell.Global() );
 #endif
 
         bool run_shell = (argc == 1);

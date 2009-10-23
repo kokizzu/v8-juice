@@ -68,23 +68,28 @@ namespace v8 { namespace juice {
             return convert::CastToJS( this->toString() );
 #endif
         }
+
+        static v8::Handle<v8::Object> SetupClass( v8::Handle<v8::Object> dest );
+
     };
     size_t BoundNative::instcount = 0;
     bool BoundNative::enableDebug = true;
 
     template <>
     struct ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>
+        : ClassWrap_Opt_Bool<false>
+    {};
+
+    template <>
+    struct ClassWrap_AllowCtorWithoutNew<BoundNative>
         : ClassWrap_Opt_Bool<true>
     {};
 
-#if 1
-    // Only used for testing some compile-time assertions:
     template <>
-    struct ClassWrap_InternalFields<BoundNative> : ClassWrap_Opt_Int<4>
+    struct ClassWrap_InternalFields<BoundNative> : ClassWrap_Opt_Int<1>
     {
-        static const int NativeIndex = 2;
+        static const int NativeIndex = 0;
     };
-#endif
 
 #if 1
     template <>
@@ -97,12 +102,14 @@ namespace v8 { namespace juice {
     {};
 #endif
 
-#if 0
+#if 1
     //#  warning "Using JuiceBind policies!"
 #  define USING_JUICEBIND_POLICIES
 #elif 0
     //#  warning "Using Experimental policies!"
 #  define USING_TWOWAY_POLICIES
+#elif 0
+#  define USING_SKEL_POLICIES
 #else
     //#  warning "Using default policies!"
 #  define USING_DEFAULT_POLICIES
@@ -116,6 +123,8 @@ namespace v8 { namespace juice {
 #  include "ClassWrap_TwoWay.h"
 #elif defined(USING_JUICEBIND_POLICIES)
 #  include "ClassWrap_JuiceBind.h"
+#elif defined(USING_SKEL_POLICIES)
+#  include "ClassWrap_Skeleton.h"
 #elif defined(USING_DEFAULT_POLICIES)
 #  include "ClassWrap-JSToNative.h"
 #  undef CLASSWRAP_BOUND_TYPE_NAME
@@ -134,7 +143,7 @@ namespace v8 { namespace juice {
     };
 #endif
 
-    
+#if !defined(USING_SKEL_POLICIES)
     template <>
     struct ClassWrap_Factory<BoundNative>
     {
@@ -160,6 +169,7 @@ namespace v8 { namespace juice {
 	}
         static const size_t AllocatedMemoryCost = sizeof(BoundNative);
     };
+#endif // USING_SKEL_POLICIES
 }} // namespaces
 
 
@@ -184,7 +194,7 @@ namespace v8 { namespace juice {
         return convert::CastToJS( ClassWrap<BoundNative>::DestroyObject(argv.This()) );
     }
 
-    void bind_my_native( v8::Handle<v8::Object> dest )
+    v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
     {
         typedef ClassWrap_Inheritance<BoundNative> Inherit;
         {
@@ -259,7 +269,8 @@ namespace v8 { namespace juice {
         cw.Set( "sleep", JFH );
         v8::Handle<v8::Function> ctor = cw.Seal();
         cw.AddClassTo( dest );
-//         PB::BindStaticVar<bool,&N::enableDebug>( "debug", ctor );
+// not yet possible:  PB::BindStaticVar<bool,&N::enableDebug>( "debug", ctor );
+
 #undef JFH
 
         //v8::HandleScope hscope;
@@ -272,10 +283,11 @@ namespace v8 { namespace juice {
         DBGOUT << "bound (CastFromJS<T>(jsObj)) == @"<<convert::CastFromJS<N>( jobj )<<'\n';
         if( bound )
         {
-            typedef convert::MemFuncForwarder<0> MFF;
             //Handle<Value> = MFF::Call( obj, BoundNative::toString
+            void * exh = jobj->GetPointerFromInternalField(CW::InternalFields::NativeIndex);
+            DBGOUT << "fetched void* == "<<(const void *)exh<<'\n';
         }
-        if(1)
+        if(0)
         {
             v8::HandleScope hs;
             int level = 1;
@@ -304,6 +316,7 @@ namespace v8 { namespace juice {
         }
 #endif
         DBGOUT <<"Binding done.\n";
+        return ctor;
     }
 
 } } // namespaces

@@ -521,6 +521,12 @@ namespace juice {
         {
             return;
         }
+
+        /**
+           TODO: we need an Unwrap() function which gives the caller
+           an opportunity to clean up data stored in other internal
+           fields of the object.
+        */
     };
 
     /**
@@ -756,17 +762,11 @@ namespace juice {
                      << "two different values for the native object:\n"
                      << "From JS=@"<<(void const *)nobj
                      << ", Converted to Native=@"<<(void const *)nh
-                     << "\nSKIPPING DESTRUCTION! NOT DOING ANYTHING!!!\n"
+                     << "\nSKIPPING DESTRUCTION! NOT DOING ANYTHING!! LEAKING MEMORY!!!\n"
                     ;
                 return;
             }
 #endif
-	    /**
-	       We have to ensure that we have no dangling External in JS space. This
-	       is so that functions like IODevice.close() can act safely with the
-	       knowledge that member funcs called after that won't get a dangling
-	       pointer. Without this, some code will crash in that case.
-	    */
 
             /**
                Reminder: the ClassWrap_FindHolder() bits are here to
@@ -786,7 +786,9 @@ namespace juice {
                 CERR << "SERIOUS INTERNAL ERROR:\n"
                      << "ClassWrap<"<<ClassName::Value()<<">::weak_callback() "
                      << "validated that the JS/Native belong together, but "
-                     << "ClassWrap_FindHolder() returned an empty handle!\n"
+                     << "ClassWrap_FindHolder() returned an "
+                     << (nholder.IsEmpty() ? "empty" : "invalid")
+                     << "handle!\n"
                      << "From JS=@"<<(void const *)nobj
                      << ", Converted to Native=@"<<(void const *)nh
                      << "\nTHIS MAY LEAD TO A CRASH IF THIS JS HANDLE IS USED AGAIN!!!\n"
@@ -802,6 +804,14 @@ namespace juice {
                    does tinker with the JS space directly.
                 */
                 Factory::Destruct( nh );
+                /**
+                   We have to ensure that we have no dangling External
+                   in JS space. This is so that member functions
+                   called via the JS handle after the native is gone
+                   do not get a dangling pointer. Without this, such
+                   uses will cause a crash (or a mis-direction to
+                   another object allocated at the same address).
+                */
                 nholder->SetInternalField(InternalFields::NativeIndex,Null());
                 v8::V8::AdjustAmountOfExternalAllocatedMemory( -static_cast<int>( Factory::AllocatedMemoryCost ) );
             }
@@ -857,9 +867,11 @@ namespace juice {
                 */
                 if (!argv.IsConstructCall()) 
                 {
-                    std::ostringstream os;
-                    os << "The "<< ClassName::Value() << " constructor cannot be called as function!";
-                    return ThrowException(String::New(os.str().c_str()));
+                    convert::StringBuffer msg;
+                    msg << "The "<< ClassName::Value()
+                        << " constructor cannot be called as function. It required the 'new' operator!";
+                    //return ThrowException(String::New(os.str().c_str()));
+                    return v8::ThrowException(msg);
                 }
             }
 	    NativeHandle obj = NativeHandle(0);
@@ -897,7 +909,6 @@ namespace juice {
 	    return wrap_native( argv.This(), obj );
 	}
         
-    public:
         /**
            Inititalizes the binding of T as a JS class which will
            become a member of the given target object.
@@ -925,6 +936,8 @@ namespace juice {
 	{
             check_assertions();
 	}
+
+    public:
 
         /**
            Destroys the given object by disconnecting its associated
@@ -976,7 +989,6 @@ namespace juice {
 	{
             return convert::CastToJS( DestroyObject(argv.This()) );
 	}
-        
 
         /**
            Returns a shared instance of this class.

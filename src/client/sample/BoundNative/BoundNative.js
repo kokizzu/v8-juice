@@ -1,5 +1,6 @@
 function createThem(count)
 {
+    print(arguments.callee.name+"() ------------------------------------------");
     print("Constructing",count,"BoundNative objects.");
     function interruptionPoint()
     {
@@ -25,6 +26,7 @@ function createThem(count)
 
 function testOne()
 {
+    print(arguments.callee.name+"() ------------------------------------------");
     var ar = [];
     var b = null;
     var total = 0;
@@ -92,6 +94,7 @@ function testOne()
 
 function testTwo()
 {
+    print(arguments.callee.name+"() ------------------------------------------");
     print('BoundNative.instanceCount() before New ==',BoundNative.instanceCount());
     var b = new BoundNative;
     print('BoundNative.instanceCount() after New ==',BoundNative.instanceCount());
@@ -99,10 +102,10 @@ function testTwo()
     print('BoundNative.instanceCount() after b.destroy() ==',BoundNative.instanceCount());
     //gc();
 }
-//gc();
 
 function testInheritance1()
 {
+    print(arguments.callee.name+"() ------------------------------------------");
     function MyClass()
     {
         this.prototype = this.__proto__ = new BoundNative();
@@ -146,16 +149,33 @@ function testInheritance1()
         }
         catch(e)
         {
-            print("Good: as expected, y.ptr() threw.");
+            print("Good: as expected, y.ptr(m) threw.");
         }
     }
 }
-print("BoundNative.supportsInheritance ==",BoundNative.supportsInheritance);
-print("BoundNative.debug ==",BoundNative.debug);
 
+function testThree()
+{
+    print(arguments.callee.name+"() ------------------------------------------");
+    var b = null;
+    try
+    {
+        b = BoundNative();
+        print("Construction without new ==",b);
+        b.destroy();
+        delete b;
+    }
+    catch(e)
+    {
+        print("Construction without 'new' is apparently disabled.");
+    }
+}
+
+
+////////////////////////////////////////////////////////////////////////
 //testOne();
 testTwo();
-
+testThree();
 if( BoundNative.supportsInheritance )
 {
     testInheritance1();
@@ -165,6 +185,9 @@ else
     print("Skipping inheritance tests.");
 }
 
+print("BoundNative.supportsInheritance ==",BoundNative.supportsInheritance);
+print("BoundNative.debug ==",BoundNative.debug);
+print("BoundNative.prototype.debug ==",BoundNative.prototype.debug);
 print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
 print("Done! You win!");
 
