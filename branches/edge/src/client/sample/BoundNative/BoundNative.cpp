@@ -94,6 +94,7 @@ namespace v8 { namespace juice {
         ClassWrap_ToNative_JuiceBind<BoundNative> {};
 #else
 #warning "Using Experimental policies!"
+#define USING_EXPERIMENTAL_POLICIES
     template <>
     struct ClassWrap_WeakWrap<BoundNative> :
         ClassWrap_WeakWrap_Experiment<BoundNative> {};
@@ -156,14 +157,18 @@ namespace v8 { namespace juice {
 	static void Destruct( NativeHandle obj )
 	{
             CERR << "BoundNative->Destruct() == @"<<(void const *)obj<<'\n';
-            delete static_cast<NativeHandle>(obj);
+#ifdef USING_EXPERIMENTAL_POLICIES
+            typedef Detail::ClassWrapMapper<BoundNative> Mapper;
+            Mapper::Remove( obj );
+#endif
+            delete obj;
 	}
         static const size_t AllocatedMemoryCost = sizeof(BoundNative);
     };
 
 
 
-#if 1
+#ifdef USING_EXPERIMENTAL_POLICIES
     namespace convert
     {
         template <>
