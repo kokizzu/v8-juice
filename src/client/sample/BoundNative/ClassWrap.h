@@ -146,6 +146,18 @@ namespace juice {
         static const int NativeIndex = 0;
     };
 
+    /**
+       A policy class which can be specialized to enable or disable
+       certain internal debuggering features/messages of ClassWrap.
+
+       Intended mainly for testing some error handling cases
+       in ClassWrap.
+    */
+    template <typename T>
+    struct ClassWrap_DebugLevel : ClassWrap_Opt_Int<1>
+    {
+    };
+    
     namespace Detail
     {
         /**
@@ -704,6 +716,7 @@ namespace juice {
         typedef ::v8::juice::convert::PropertyBinder<T> PB;
         
     private:
+#define DBGOUT(LVL) if( DBG::Value >= LVL ) CERR
         /** Checks a few static assertions. */
         static void check_assertions()
         {
@@ -717,10 +730,11 @@ namespace juice {
         */
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
-	    CERR << ClassName::Value()<<"::weak_callback(@"<<(void const *)nobj<<")\n";
+            typedef ClassWrap_DebugLevel<T> DBG;
+	    DBGOUT(2) << ClassName::Value()<<"::weak_callback(@"<<(void const *)nobj<<")\n";
             if( pv.IsEmpty() || ! pv->IsObject() )
             {
-                CERR << "WARNING: ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
+                DBGOUT(1) << "WARNING: ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
                      << "an empty or non-object handle!\n";
                 return;
             }
@@ -748,21 +762,22 @@ namespace juice {
                        condition has been fixed, but need to test it
                        more before removing this if() block.
                     */
-                    if(1) CERR << "ACHTUNG: ClassWrap<"<<ClassName::Value()<<">::weak_callback(): "
-                               << "From JS=@"<<(void const *)nobj
-                               << ", Converted to Native=@"<<(void const *)nh
-                               << '\n'
+                    DBGOUT(0) << "ACHTUNG: ClassWrap<"<<ClassName::Value()<<">::weak_callback(): "
+                              << "Possibly called twice? "
+                              << "From JS=@"<<(void const *)nobj
+                              << ", Converted to Native=@"<<(void const *)nh
+                              << '\n'
                         ;
                     pv.Dispose();
                     pv.Clear();
                     return;
                 }
-                CERR << "SERIOUS INTERNAL ERROR:\n"
-                     << "ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
-                     << "two different values for the native object:\n"
-                     << "From JS=@"<<(void const *)nobj
-                     << ", Converted to Native=@"<<(void const *)nh
-                     << "\nSKIPPING DESTRUCTION! NOT DOING ANYTHING!! LEAKING MEMORY!!!\n"
+                DBGOUT(1) << "SERIOUS INTERNAL ERROR:\n"
+                          << "ClassWrap<"<<ClassName::Value()<<">::weak_callback() was passed "
+                          << "two different values for the native object:\n"
+                          << "From JS=@"<<(void const *)nobj
+                          << ", Converted to Native=@"<<(void const *)nh
+                          << "\nSKIPPING DESTRUCTION! NOT DOING ANYTHING!! LEAKING MEMORY!!!\n"
                     ;
                 return;
             }
@@ -783,15 +798,15 @@ namespace juice {
             v8::Handle<v8::Object> nholder = ClassWrap_FindHolder<Type>( jobj, nh );
             if( nholder.IsEmpty() || (nholder->InternalFieldCount() != InternalFields::Value) )
             {
-                CERR << "SERIOUS INTERNAL ERROR:\n"
-                     << "ClassWrap<"<<ClassName::Value()<<">::weak_callback() "
-                     << "validated that the JS/Native belong together, but "
-                     << "ClassWrap_FindHolder() returned an "
-                     << (nholder.IsEmpty() ? "empty" : "invalid")
-                     << "handle!\n"
-                     << "From JS=@"<<(void const *)nobj
-                     << ", Converted to Native=@"<<(void const *)nh
-                     << "\nTHIS MAY LEAD TO A CRASH IF THIS JS HANDLE IS USED AGAIN!!!\n"
+                DBGOUT(1) << "SERIOUS INTERNAL ERROR:\n"
+                          << "ClassWrap<"<<ClassName::Value()<<">::weak_callback() "
+                          << "validated that the JS/Native belong together, but "
+                          << "ClassWrap_FindHolder() returned an "
+                          << (nholder.IsEmpty() ? "empty" : "invalid")
+                          << "handle!\n"
+                          << "From JS=@"<<(void const *)nobj
+                          << ", Converted to Native=@"<<(void const *)nh
+                          << "\nTHIS MAY LEAD TO A CRASH IF THIS JS HANDLE IS USED AGAIN!!!\n"
                     ;
                 Factory::Destruct( nh );
                 return;
@@ -869,7 +884,8 @@ namespace juice {
                 {
                     convert::StringBuffer msg;
                     msg << "The "<< ClassName::Value()
-                        << " constructor cannot be called as function. It required the 'new' operator!";
+                        << " constructor cannot be called as function. "
+                        << "It requires the 'new' operator!";
                     //return ThrowException(String::New(os.str().c_str()));
                     return v8::ThrowException(msg);
                 }
@@ -908,7 +924,8 @@ namespace juice {
 	    }
 	    return wrap_native( argv.This(), obj );
 	}
-        
+#undef DBGOUT
+       
         /**
            Inititalizes the binding of T as a JS class which will
            become a member of the given target object.

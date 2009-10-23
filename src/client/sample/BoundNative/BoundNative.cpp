@@ -72,8 +72,12 @@ namespace v8 { namespace juice {
         static v8::Handle<v8::Object> SetupClass( v8::Handle<v8::Object> dest );
 
     };
+    template <>
+    struct ClassWrap_DebugLevel<BoundNative>
+        : ClassWrap_Opt_Int<0>
+    {};
     size_t BoundNative::instcount = 0;
-    bool BoundNative::enableDebug = true;
+    bool BoundNative::enableDebug = 0 != ClassWrap_DebugLevel<BoundNative>::Value;
 
     template <>
     struct ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>
@@ -84,6 +88,7 @@ namespace v8 { namespace juice {
     struct ClassWrap_AllowCtorWithoutNew<BoundNative>
         : ClassWrap_Opt_Bool<true>
     {};
+
 
     template <>
     struct ClassWrap_InternalFields<BoundNative> : ClassWrap_Opt_Int<1>
@@ -102,7 +107,7 @@ namespace v8 { namespace juice {
     {};
 #endif
 
-#if 1
+#if 0
     //#  warning "Using JuiceBind policies!"
 #  define USING_JUICEBIND_POLICIES
 #elif 0
