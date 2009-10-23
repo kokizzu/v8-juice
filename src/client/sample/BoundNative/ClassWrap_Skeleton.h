@@ -67,7 +67,7 @@ namespace v8 { namespace juice {
         /**
            Calls (delete obj).
         */
-	static void Destruct( NativeHandle obj )
+	static void Destruct( v8::Handle<v8::Object> /*ignored*/, NativeHandle obj )
 	{
             delete obj;
         }
