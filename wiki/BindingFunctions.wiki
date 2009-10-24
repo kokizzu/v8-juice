@@ -135,17 +135,31 @@ StringVec T::split( std::string const & ) const;
 // ^^^ MemFuncForwarder<1>::Invocable<T, StringVec, std::string const &,&T::split>
 
 template <typename Y> Y T::add( Y y1, Y y2 ) const; // IFF CastTo/FromJS<Y>() works
-// ^^^ e.g. MemFuncForwarder<2>::Invocable<int,int,int,&T::add<int> >
+// ^^^ e.g. MemFuncForwarder<2>::Invocable<T,int,int,int,&T::add<int> >
 
 Foo * T::getBuddy(); // IFF CastToJS<Foo>() works
-// ^^^ MemFuncForwarder<0>::Invocable<Foo*,&T::getBuddy>
+// ^^^ MemFuncForwarder<0>::Invocable<T,Foo*,&T::getBuddy>
 
 void T::setBuddy(Foo *); // IFF CastFromJS<Foo>() works
-// ^^^ MemFuncForwarder<1>::Invocable<void,Foo*,&T::bar>
+// ^^^ MemFuncForwarder<1>::Invocable<T,void,Foo*,&T::bar>
 }}}
 
 The notes about `CastToJS<T>` and `CastFromJS<T>()` will be qualified/explained later on, once some planned changes to the API are in place. In short, `CastFromJS()` can be done fairly generically, but `CastToJS()` requires some sort of underlying binding mechanism from which we can map a native pointer to its JS object representation. Those bits come in the form of a higher-level class binding mechanism (like [ClassBinder], though a new one is being developed based on these new binding capabilities).
 
+The `MemFuncForwarder` class has a counterpart, `TMemFuncForwarder`, which is identical in every way except that it is templatized at the class level instead of the function level. For example:
+
+{{{
+//Assume we have:
+int T::func();
+
+typedef MemFuncForwarder<0> MF;
+typedef TMemFuncForwarder<T,0> TMF;
+
+v8::InvocationCallback IC;
+// These are equivalent:
+IC = MF::Invocable<T,int,&T::Func>
+IC = TMF::Invocable<int,&T::Func>
+}}}
 
 == Limitations vis-a-vis inheritance ==
 
@@ -155,7 +169,7 @@ TODO: Some points to discuss:
 
   * How virtual method lookup across JS/Native inheritance does not come for free, and requires fairly detailed support from a higher-level framework. This is implemented in [ClassBinder], for example.
   * How JS-triggered destruction of bound objects needs to be sure and pick up the proper native destructor function in the face of inheritance.
-  * How to bind to _inherited_ native functions (where the (`T::*Func`) type differs from the type we're binding). (How DO we do this? i think adding `using ...` to the inherited interface might be enough, but that needs to be tested.)
+  * How to bind to _inherited_ native functions. e.g. Class B inherits from native A, and we want to bind an inherited `A::*func` to a `B` object. (How DO we do this? i think adding `using func` to the inherited interface might be enough, but that needs to be tested.)
 
 = Binding to Static or Member Variables =
 
@@ -168,10 +182,10 @@ TODO: document this.
 
 == Discardable or non-convertible return types ==
 
-The `FunctionForwarder` and `MemFuncForwarder` classes each have a function called `InvocableVoid` which works just like `Invocable` (it generates a `v8::InvocationCallback`), but it does not try to convert the return type. This can be useful when:
+The `FunctionForwarder` and `MemFuncForwarder` classes each have a function called `InvocableVoid` which works just like `Invocable` (it generates a `v8::InvocationCallback`), but it does not try to convert the return type. This can be useful in the following cases:
 
   * When there is no legal Native-to-JS conversion for the return type.
-  * When you do not want to instantiate the template for such a conversion (e.g. to avoid a compile error).
+  * When you do not want to instantiate the template for such a conversion (e.g. to avoid a compile error, or to avoid a semantic error).
   * Any time you want the JS version of the function to return `undefined` to the caller.
 
 It is not necessary (though it is legal) to use `InvocableVoid` instead of `Invokable` when the return type is actually `void`, as function overloads take care of dispatching `FunctionForwarder<N>::Invocable<void,...>` and `MemFuncForwarder<N>::Invocable<T,void,...>` via `InvocableVoid`.
