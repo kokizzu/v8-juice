@@ -155,6 +155,14 @@ TODO: Some points to discuss:
 
   * How virtual method lookup across JS/Native inheritance does not come for free, and requires fairly detailed support from a higher-level framework. This is implemented in [ClassBinder], for example.
   * How JS-triggered destruction of bound objects needs to be sure and pick up the proper native destructor function in the face of inheritance.
+  * How to bind to _inherited_ native functions (where the (`T::*Func`) type differs from the type we're binding). (How DO we do this? i think adding `using ...` to the inherited interface might be enough, but that needs to be tested.)
+
+= Binding to Static or Member Variables =
+
+This framework can also bind JS member properties to static or member variables.
+
+TODO: document this.
+
 
 = Tips and Tricks =
 
