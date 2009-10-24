@@ -412,6 +412,130 @@ namespace v8 { namespace juice { namespace convert {
 #include "forwarding-MemFuncForwarder.h" // generated specializations for MemFuncForwarder
 
     /**
+       Useless base instantiation. See TMemFuncForwarder<0> for the
+       docs.
+    */
+    template <typename T, int Arity_>
+    struct TMemFuncForwarder
+    {
+        enum { Arity = -1 };
+    };
+
+    /**
+       This type works exactly like MemFuncForwarder, but is
+       templatized on both T and the function arity, whereas
+       MemFuncForwarder is only templatized on arity.
+
+       All functions in this intereface correspond 1-to-1 to
+       MemFuncForwarder functions, and have the same signatures minus
+       the initial T template argument.
+    */
+    template <typename T>
+    struct TMemFuncForwarder<T,0>
+    {
+    public:
+        enum { Arity = 0 };
+        typedef typename TypeInfo<T>::Type Type;
+    private:
+        // WTF?? leads to compile errors: typedef MemFuncForwarder<Arity> Proxy;
+        typedef MemFuncForwarder<0> Proxy;
+    public:
+
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( Type * obj, RV (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::Call<Type,RV>( obj, MemFunc, argv );
+        }
+
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( RV (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::Call<Type,RV>( MemFunc, argv );
+        }
+        
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( Type const * obj, RV (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type,RV>( obj, MemFunc, argv );
+        }
+
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( RV (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type,RV>( MemFunc, argv );
+        }
+
+        template <typename VoidType>
+        static v8::Handle<v8::Value> CallVoid( Type * obj, VoidType (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::CallVoid<Type,VoidType>( obj, MemFunc, argv );
+        }
+
+        static v8::Handle<v8::Value> Call( Type * obj, void (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::Call<Type>( obj, MemFunc, argv );
+        }
+
+        template <typename VoidType>
+        static v8::Handle<v8::Value> CallVoid( VoidType (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::CallVoid<VoidType>( MemFunc, argv );
+        }
+
+        static v8::Handle<v8::Value> Call( void (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::Call( MemFunc, argv );
+        }
+
+        template <typename VoidType>
+        static v8::Handle<v8::Value> CallVoid( Type const * obj, VoidType (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type,VoidType>( obj, MemFunc, argv );
+        }
+
+        static v8::Handle<v8::Value> Call( Type const * obj, void (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type>( obj, MemFunc, argv );
+        }
+
+        template <typename VoidType>
+        static v8::Handle<v8::Value> CallVoid( VoidType (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::CallVoid<Type,VoidType>( MemFunc, argv );
+        }
+
+        static v8::Handle<v8::Value> Call( void (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type>( MemFunc, argv );
+        }
+
+        template <typename RV, RV (Type::*MemFunc)() >
+        static v8::Handle<v8::Value> Invocable( Arguments const & argv )
+        {
+            return Proxy::Invocable<Type,RV,MemFunc>( argv );
+        }
+
+        template <typename RV, RV (Type::*MemFunc)() const >
+        static v8::Handle<v8::Value> Invocable( Arguments const & argv )
+        {
+            return Proxy::Invocable<Type,RV,MemFunc>( argv );
+        }
+
+        template <typename VoidType, VoidType (Type::*MemFunc)() >
+        static v8::Handle<v8::Value> InvocableVoid( Arguments const & argv )
+        {
+            return Proxy::InvocableVoid<Type,VoidType,MemFunc>( argv );
+        }
+
+        template <typename VoidType, VoidType (Type::*MemFunc)() const >
+        static v8::Handle<v8::Value> InvocableVoid( Arguments const & argv )
+        {
+            return Proxy::InvocableVoid<Type,VoidType,MemFunc>( argv );
+        }
+    };
+#include "forwarding-TMemFuncForwarder.h" // generated specializations for TMemFuncForwarder
+
+    /**
        A useless base instantiation. See FunctionForwarder<0> for the
        full docs.
     */
@@ -640,11 +764,62 @@ namespace v8 { namespace juice { namespace convert {
         */
         typedef MemFuncForwarder<9> M9;
     };
+
+    /**
+       This class is used just like InvocationCallbackCreator, but is
+       templatized on the type containing the member functions.
+    */
+    template <typename T>
+    class MemFuncInvocationCallbackCreator
+    {
+    public:
+        /**
+           InvocationCallback generator for member functions taking 0 arguments.
+        */
+        typedef TMemFuncForwarder<T,0> M0;
+        /**
+           InvocationCallback generator for member functions taking 1 argument.
+        */
+        typedef TMemFuncForwarder<T,1> M1;
+        /**
+           InvocationCallback generator for member functions taking 2 arguments.
+        */
+        typedef TMemFuncForwarder<T,2> M2;
+        /**
+           InvocationCallback generator for member functions taking 3 arguments.
+        */
+        typedef TMemFuncForwarder<T,3> M3;
+        /**
+           InvocationCallback generator for member functions taking 4 arguments.
+        */
+        typedef TMemFuncForwarder<T,4> M4;
+        /**
+           InvocationCallback generator for member functions taking 5 arguments.
+        */
+        typedef TMemFuncForwarder<T,5> M5;
+        /**
+           InvocationCallback generator for member functions taking 6 arguments.
+        */
+        typedef TMemFuncForwarder<T,6> M6;
+        /**
+           InvocationCallback generator for member functions taking 7 arguments.
+        */
+        typedef TMemFuncForwarder<T,7> M7;
+        /**
+           InvocationCallback generator for member functions taking 8 arguments.
+        */
+        typedef TMemFuncForwarder<T,8> M8;
+        /**
+           InvocationCallback generator for member functions taking 9 arguments.
+        */
+        typedef TMemFuncForwarder<T,9> M9;
+    };
+
     
     /**
        See InvocationCallbackToArgv for details.
     */
-    typedef ::v8::Handle< ::v8::Value > (*InvocationCallbackWithArray)( Handle<Object> self, int argc, Handle<Value> argv[] );
+    typedef ::v8::Handle< ::v8::Value > (*InvocationCallbackWithArray)( Handle<Object> self, int argc, v8::Handle<v8::Value> argv[] );
 
     /**
        A helper to allow re-use of certain JS/C++ functions. It's a bit of
@@ -690,7 +865,7 @@ namespace v8 { namespace juice { namespace convert {
 	*/
 	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
 	{
-	    typedef Handle<Value> HV;
+	    typedef v8::Handle<v8::Value> HV;
 	    if( skipArgN >= argv.Length() )
 	    { // Is this sensible? Should we throw instead? Hmm.
 		return proxy( argv.This(), 0, 0 );
@@ -702,7 +877,7 @@ namespace v8 { namespace juice { namespace convert {
 	    {
 		vec[pos] = argv[i];
 	    }
-            Handle<Value> * ar = vec.empty() ? &vec[0] : 0;
+            v8::Handle<v8::Value> * ar = vec.empty() ? &vec[0] : 0;
 	    return proxy( argv.This(), argc, ar );
 	}
     };
@@ -969,7 +1144,7 @@ namespace v8 { namespace juice { namespace convert {
            v8::ObjectTemplate::SetAccessor().
         */
 	template <typename RV, RV (Type::*Func)()>
-        static Handle<Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
+        static v8::Handle<v8::Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
         {
             NativeHandle self = CastFromJS<Type>( info.This() );
             if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
@@ -979,7 +1154,7 @@ namespace v8 { namespace juice { namespace convert {
            Overload for const native getter functions.
         */
 	template <typename RV, RV (Type::*Func)() const>
-        static Handle<Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
+        static v8::Handle<v8::Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
         {
             NativeHandle self = CastFromJS<Type>( info.This() );
             if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
