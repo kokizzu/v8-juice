@@ -45,6 +45,8 @@ That strange `FunctionForwarder<1>` bit literally _creates_ a `v8::InvocationCal
 
 The general properties of this framework are:
 
+  * It can bind native free functions and member functions to JS object functions.
+  * It can bind static variables and member variables to JS properties.
   * Binding is done with compile-time type safety.
   * Bindings generate `v8::InvocationCallback` functions, and thus require no extra internal objects to hold the Native-to-JS function mapping (as is the case in most binding frameworks).
   * Any convertible function can be bound to any JS object. This makes it trivial to add many standard C functions, or common library functions, to JS.
@@ -152,7 +154,7 @@ TODO: explain this in gross detail. There are workarounds for some aspects, but 
 TODO: Some points to discuss:
 
   * How virtual method lookup across JS/Native inheritance does not come for free, and requires fairly detailed support from a higher-level framework. This is implemented in [ClassBinder], for example.
-  * How JS-triggered destruction of bound objects needs to be sure and pick up the proper destructor in the face of inheritance.
+  * How JS-triggered destruction of bound objects needs to be sure and pick up the proper native destructor function in the face of inheritance.
 
 = Tips and Tricks =
 
