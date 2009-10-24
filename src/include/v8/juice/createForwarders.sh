@@ -6,7 +6,7 @@ count=${1-0}
 
 test "$count" -gt 0 || {
     echo "Usage: $0 NUMBER (>=1) [COMMAND=MemFuncForwarder]"
-    echo "Commands: MemFuncForwarder FunctorForwarder"
+    echo "Commands: MemFuncForwarder TMemFuncForwarder FunctorForwarder"
     echo "Generates specializations for operations taking exactly NUMBER argumnents."
     exit 1
 }
@@ -190,6 +190,126 @@ EOF
 } # makeMemFuncForwarder()
 
 #######################################################
+# Creates TMemFuncForwarder implementations.
+function makeTMemFuncForwarder()
+{
+    local err_native_is_null="${callBase}::Call(): Native object is null!"
+    local err_too_few_args="${callBase}::Call(): wrong argument count!"
+cat <<EOF
+/**
+A helper class for forwarding JS arguments to member functions
+taking ${count} arguments.
+*/
+template <typename T>
+struct TMemFuncForwarder<T,${count}>
+{
+private:
+    typedef MemFuncForwarder<${count}> Proxy;
+public:
+    enum { Arity = ${count} };
+    typedef typename TypeInfo<T>::Type Type;
+
+    template <typename RV, ${aTDecl}>
+    static Handle<Value> Call( T * obj, RV (Type::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+        return Proxy::Call<Type,RV,${aTParam}>( obj, MemFunc, argv );
+    }
+    template <typename RV, ${aTDecl}>
+    static Handle<Value> Call( RV (Type::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+        return Proxy::Call<Type,RV,${aTParam}>( MemFunc, argv );
+    }
+
+    template <typename RV, ${aTDecl}>
+    static Handle<Value> Call( Type const * obj, RV (Type::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        return Proxy::Call<Type,RV,${aTParam}>(obj,MemFunc,argv);
+    }
+
+    template <typename RV, ${aTDecl}>
+    static Handle<Value> Call( RV (Type::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        return Proxy::Call<Type,RV,${aTParam}>( MemFunc, argv );
+    }
+
+    template <typename VoidType, ${aTDecl}>
+    static Handle<Value> CallVoid( Type * obj, VoidType (Type::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+        return Proxy::Call<Type,VoidType,${aTParam}>( obj, MemFunc , argv );
+    }
+
+    template <${aTDecl}>
+    static Handle<Value> Call( Type * obj, void (Type::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+        return Proxy::Call<Type,void,${aTParam}>( obj, MemFunc, argv );
+    }
+
+    template <typename VoidType, ${aTDecl}>
+    static Handle<Value> CallVoid( VoidType (Type::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+        return Proxy::CallVoid<Type,VoidType,${aTParam}>( MemFunc, argv );
+    }
+
+    template <${aTDecl}>
+    static Handle<Value> Call( void (Type::*MemFunc)(${aTParam}), Arguments const & argv )
+    {
+        return Proxy::Call<${aTParam}>( MemFunc, argv );
+    }
+
+    template <typename VoidType, ${aTDecl} >
+    static Handle<Value> CallVoid( Type const * obj, VoidType (Type::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        return Proxy::CallVoid<Type,VoidType,${aTParam}>( obj, MemFunc, argv );
+    }
+
+    template <${aTDecl} >
+    static Handle<Value> Call( Type const * obj, void (Type::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        return Proxy::Call<Type,${aTParam}>( obj, MemFunc, argv );
+    }
+
+    template <typename VoidType, ${aTDecl} >
+    static Handle<Value> CallVoid( VoidType (Type::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        return Proxy::Call<Type,VoidType,${aTParam}>( MemFunc, argv );
+    }
+
+    template <${aTDecl} >
+    static Handle<Value> Call( void (Type::*MemFunc)(${aTParam}) const, Arguments const & argv )
+    {
+        return Proxy::Call<Type,${aTParam}>( MemFunc, argv );
+    }
+
+    template <typename RV, ${aTDecl}, RV(Type::*MemFunc)(${aTParam}) >
+    static Handle<Value> Invocable( Arguments const & argv )
+    {
+        return Proxy::Invocable<Type,RV,${aTParam}, MemFunc>( argv );
+    }
+
+    template <typename RV, ${aTDecl}, RV(Type::*MemFunc)(${aTParam}) const >
+    static Handle<Value> Invocable( Arguments const & argv )
+    {
+        return Proxy::Invocable<Type,RV,${aTParam},MemFunc>( argv );
+    }
+
+    template <typename VoidType, ${aTDecl}, VoidType (Type::*MemFunc)(${aTParam}) >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
+    {
+        return Proxy::InvocableVoid<Type,VoidType,${aTParam},MemFunc>( argv );
+    }
+
+    template <typename VoidType, ${aTDecl}, VoidType (Type::*MemFunc)(${aTParam}) const >
+    static Handle<Value> InvocableVoid( Arguments const & argv )
+    {
+        return Proxy::InvocableVoid<Type,VoidType,${aTParam},MemFunc>( argv );
+    }
+
+};
+EOF
+} # makeTMemFuncForwarder()
+
+
+#######################################################
 # Creates FunctorForwarder specializations and FwdToFunc()
 # overloads.
 function makeFunctorForwarder()
@@ -354,6 +474,9 @@ false && {
 case $command in
     'MemFuncForwarder')
 	makeMemFuncForwarder
+	;;
+    'TMemFuncForwarder')
+	makeTMemFuncForwarder
 	;;
     'FunctorForwarder')
 	makeFunctorForwarder
