@@ -82,6 +82,7 @@ It is normally easy to add conversions support for custom types, but argument ty
 
   * Returning references. This is on the to-fix list, but may require treating the return value as a (`T*`) instead of (`T&`). Certain types support a return of (`T const &`), but they treat the result as (`T`), which requires a deep copy.
   * (`void *`). This cannot work for the general case. v8 allows us to do it, but dereferencing the object in JS will cause a crash, and the 100% lack of type-safety would eventually lead to crashes when the objects travel between JS and native and someone passes the wrong (`void*`) somewhere.
+  * (`[const] char *`) cannot be used. For argument-passing it can sometimes be worked around with a `std::string`, and returning a (`char *`) is not supported for various reasons involving unknowable string lifetime and ownership details.
 
 Here are examples of functions which can be bound using this framework, including the template required to construct a `v8::InvocationCallback` function from them.
 
