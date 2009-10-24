@@ -17,7 +17,7 @@ The function binding API works using a very generic principal: convert arbitrary
     typedef v8::Handle<v8::Value> (*InvocationCallback)( v8::Arguments const & );
 }}}
 
-That is the signature of all "normal" JS callback functions, though there are a few special-case exceptions, like binding accessors functions to JS properties (not yet supported by this API, but will be soon).
+That is the signature of all "normal" JS callback functions, though there are a few special-case exceptions, like binding accessors functions to JS properties (those routines have different signatures).
 
 In the general case, we bind functions implementing the `InvocationCallback` interface to a JS object like this:
 
@@ -173,10 +173,31 @@ TODO: Some points to discuss:
 
 = Binding to Static or Member Variables =
 
-This framework can also bind JS member properties to static or member variables.
+This framework can also bind JS member properties to static or member variables. It does so by using templates to create proxies for the `v8::AccessorGetter` and `v8::AccessorSetter` interfaces. Because of this, it is only possible to bind members or static vars at the class (JS prototype) level, and not the level of the individual object.  As a side-effect of that, we can only bind statics to JS objects for which `CastFromJS<T>()` works (that feature is normally provided by a higher-level class creation mechanism like [ClassBinder]).
 
-TODO: document this.
+As an example, assume we are creating a new JS class in C++. Assume the JS class is bound to the native class `MyNativeType`, and `JSToNative<MyNativeType>` has been specialized specialized so that `CastFromJS<MyNativeType>()` will work as expected. To bind a static variable as a member property to JS the objects:
 
+{{{
+v8::Handle<v8::ObjectTemplate> proto = ...;
+typedef v8::juice::convert::PropertyBinder<MyNativeType> PB;
+static int sharedInt = 42;
+static double sharedDouble = 42.42;
+PB::BindStaticVar<int,&sharedInt>( "sharedInteger", proto );
+PB::BindStaticVar<double,&sharedDouble>( "sharedDouble", proto );
+}}}
+
+The syntax for binding to static member variables is the same, but the var name must be prefixed with the containing class name. e.g. `&MyNativeType::sharedInteger`.
+
+Now the following JS code will access the native integer shown above:
+
+{{{
+var m = new MyNativeType();
+print( m.sharedInteger ); // == 42
+++m.sharedInteger;
+print( m.sharedInteger ); // == 43
+}}}
+
+So far i have no found a way (in the v8 API) to bind these to a constructor, such that `MyNativeType.sharedInteger` will work (however, `MyNativeType.prototype.sharedInteger` does). Likewise, i have found no way to bind these selectively to individual objects.
 
 = Tips and Tricks =
 
