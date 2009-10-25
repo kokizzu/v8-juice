@@ -30,7 +30,7 @@ namespace v8 { namespace juice {
         {
             ++instcount;
         }
-        ~BoundNative()
+        virtual ~BoundNative()
         {
             --instcount;
         }
@@ -49,7 +49,7 @@ namespace v8 { namespace juice {
         }
         int getInt() const { return this->propi; }
         void setInt( int i ) { this->propi = i; }
-        std::string toString() const
+        virtual std::string toString() const
         {
             std::ostringstream os;
             os << "[Object BoundNative@"<<(void const *)this<<']';
@@ -72,10 +72,12 @@ namespace v8 { namespace juice {
         static v8::Handle<v8::Object> SetupClass( v8::Handle<v8::Object> dest );
 
     };
+
     template <>
     struct ClassWrap_DebugLevel<BoundNative>
         : ClassWrap_Opt_Int<2>
     {};
+
     size_t BoundNative::instcount = 0;
     bool BoundNative::enableDebug = ClassWrap_DebugLevel<BoundNative>::Value > 2;
 
@@ -91,10 +93,9 @@ namespace v8 { namespace juice {
 
 
     template <>
-    struct ClassWrap_InternalFields<BoundNative> : ClassWrap_Opt_Int<1>
-    {
-        static const int NativeIndex = 0;
-    };
+    struct ClassWrap_InternalFields<BoundNative>
+        : ClassWrap_InternalFields_Base<BoundNative>//,4,2>
+    {};
 
 #if 1
     template <>
@@ -123,6 +124,11 @@ namespace v8 { namespace juice {
 #endif
 
 } } // nemspaces
+
+#include "ClassWrap_TwoWay.h"
+#include "ClassWrap_JuiceBind.h"
+#include "ClassWrap_Skeleton.h"
+
 
 // Import the selected ClassWrap policy...
 #define CLASSWRAP_BOUND_TYPE v8::juice::BoundNative
@@ -167,19 +173,68 @@ namespace v8 { namespace juice {
 	static void Destruct( v8::Handle<v8::Object> jself, NativeHandle obj )
 	{
             DBGOUT << "BoundNative->Destruct() == @"<<(void const *)obj<<'\n';
-#if defined(USING_TWOWAY_POLICIES)
-            typedef Detail::ClassWrapMapper<BoundNative> Mapper;
-            Mapper::Remove( obj );
-#elif defined(USING_JUICEBIND_POLICIES)
-            bind::UnbindNative( obj );
-#endif
             delete obj;
 	}
         static const size_t AllocatedMemoryCost = sizeof(BoundNative);
     };
 #endif // USING_SKEL_POLICIES
+
+
+
+    class BoundSub : public BoundNative
+    {
+    public:
+        BoundSub()
+        {
+            CERR << "BoundSub() this=@"<<(void const *)this << '\n';
+        }
+        virtual ~BoundSub()
+        {
+            CERR << "~BoundSub() this=@"<<(void const *)this << '\n';
+        }
+        virtual std::string toString() const
+        {
+            std::ostringstream os;
+            os << "[Object BoundSub@"<<(void const *)this<<']';
+            return os.str();
+        }
+    };
+
+    template <>
+    struct ClassWrap_DebugLevel<BoundSub>
+        : ClassWrap_Opt_Int<3>
+    {};
+
+#define XTPOLICY(P) template <> struct ClassWrap_ ## P<BoundSub> : ClassWrap_ ## P<BoundNative> {}
+    XTPOLICY(InternalFields);
+    XTPOLICY(ToNative_SearchPrototypesForNative);
+#undef XTPOLICY
+
+//     template <>
+//     struct ClassWrap_WeakWrap<BoundSub> : ClassWrap_WeakWrap_JuiceBind<BoundSub>
+//     {};
+//     template <>
+//     struct ClassWrap_Extract<BoundSub> : ClassWrap_Extract_JuiceBind<BoundSub>
+//     {};
+    
+    template <>
+    struct ClassWrap_Factory<BoundSub> : ClassWrap_Factory_Skeleton<BoundSub>
+    {};
+
+//     template <>
+//     struct ClassWrap_ClassName< BoundSub >
+//     {
+//         static char const * Value()
+//         {
+//             return "BoundSub";
+//         }
+//     };
+
 }} // namespaces
 
+#define CLASSWRAP_BOUND_TYPE v8::juice::BoundSub
+#define CLASSWRAP_BOUND_TYPE_NAME "BoundSub"
+#include "ClassWrap_JuiceBind.h"
 
 namespace v8 { namespace juice {
     std::string BoundNative_version()
@@ -205,10 +260,10 @@ namespace v8 { namespace juice {
 
     v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
     {
-        typedef ClassWrap_Inheritance<BoundNative> Inherit;
-        {
-            Inherit x;
-        }
+//         typedef ClassWrap_Inheritance<BoundNative> Inherit;
+//         {
+//             Inherit x;
+//         }
         using namespace v8;
         using namespace v8::juice;
         HandleScope scope;
@@ -219,23 +274,28 @@ namespace v8 { namespace juice {
         cw.Set("foo",String::New("this is foo"));
         cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Call );
         typedef convert::InvocationCallbackCreator ICC;
+        typedef convert::MemFuncInvocationCallbackCreator<N> ICM;
         cw.Set( "toString",
-                ICC::M0::Invocable<N,std::string,&N::toString>
+                //ICC::M0::Invocable<N,std::string,&N::toString>
+                ICM::M0::Invocable<std::string,&N::toString>
                 );
         cw.Set( "getInt",
-                ICC::M0::Invocable<N,int,&N::getInt>
+                //ICC::M0::Invocable<N,int,&N::getInt>
+                ICM::M0::Invocable<int,&N::getInt>
                 );
         cw.Set( "setInt",
-                ICC::M1::Invocable<N,void,int,&N::setInt>
+                ICM::M1::Invocable<void,int,&N::setInt>
                 );
         cw.Set( "ptr",
-                ICC::M1::Invocable<N,bool,N const * ,&N::ptr>
+                //ICC::M1::Invocable<N,bool,N const * ,&N::ptr>
+                ICM::M1::Invocable<bool,N const * ,&N::ptr>
+                //convert::TMemFuncForwarder<N,1>::Invocable<bool,N const * ,&N::ptr>
                 //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
                 );
 #if defined(USING_TWOWAY_POLICIES)
         // If JSToNative isn't specialized, we should get a compile-time error here:
         cw.Set( "getPtr",
-                ICC::M0::Invocable<N,N*,&N::getPtr>
+                ICM::M0::Invocable<N*,&N::getPtr>
                 //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
                 );
 #endif
@@ -321,6 +381,30 @@ namespace v8 { namespace juice {
             DBGOUT << "JW::CastToJS::Value(jobj) == "<<convert::CastFromJS<std::string>(j2)<<'\n';
         }
 #endif
+
+        if(1)
+        { ////////////////////////////////////////////////////////////////////////
+          // subclassing tests...
+            typedef BoundSub BS;
+            typedef ClassWrap<BS> WBS;
+            WBS &b( WBS::Instance() );
+            b.Inherit( cw );
+            //ClassWrap_NativeSubtypeLookup<BoundNative>::RegisterSubclass<BS>();
+            typedef ClassWrap_NativeInheritance<BoundNative> NIT;
+            NIT::RegisterSubclass<BS>();
+            
+            b.Seal();
+            b.AddClassTo(dest);
+
+            v8::Handle<Value> sj = b.NewInstance(0,0);
+            BS * s = convert::CastFromJS<BS>( sj );
+            DBGOUT << "BoundSub == "<<(void const *) s<<'\n';
+            if( s )
+            {
+                WBS::DestroyObject(sj);
+            }
+        }
+        
         DBGOUT <<"Binding done.\n";
         return ctor;
     }

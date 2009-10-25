@@ -50,21 +50,26 @@
    
 */
 namespace v8 { namespace juice {
-
+    
     /**
        A concrete ClassWrap_WeakWrap policy which uses the v8::juice::bind
        API to register objects for type-safe lookups later on.
     */
     template <typename T>
-    struct ClassWrap_WeakWrap_JuiceBind
+    struct ClassWrap_JuiceBind_WeakWrap
     {
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
         /**
            Calls v8::juice::bind::BindNative(nativeSelf).
         */
-        static void Wrap( v8::Persistent<v8::Object> /*jsSelf*/, NativeHandle nativeSelf )
+        static void Wrap( v8::Persistent<v8::Object> const & /*jsSelf*/, NativeHandle nativeSelf )
         {
             v8::juice::bind::BindNative( nativeSelf );
+            return;
+        }
+        static void Unwrap( v8::Handle<v8::Object> const & /*jsSelf*/, NativeHandle nativeSelf )
+        {
+            v8::juice::bind::UnbindNative( nativeSelf );
             return;
         }
     };
@@ -74,9 +79,8 @@ namespace v8 { namespace juice {
        v8::juice::bind API to extract, type-safely, native objects
        from JS object.
     */
-
     template <typename T>
-    struct ClassWrap_Extract_JuiceBind : ClassWrap_Extract_Base<T>
+    struct ClassWrap_JuiceBind_Extract : ClassWrap_Extract_Base<T>
     {
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
@@ -86,28 +90,8 @@ namespace v8 { namespace juice {
         static NativeHandle VoidToNative( void * x )
         {
             return x ? v8::juice::bind::GetBoundNative<Type>( x ) : 0;
-
         }
     };
-
-    /**
-       A concrete ClassWrap_ToNative policy which uses the v8::juice::bind
-       API to extract, type-safely, native objects from JS object.
-
-       Requires:
-
-       - ClassWrap_WeakWrap<T> == ClassWrap_WeakWrap_JuiceBind<T>
-       - ClassWrap_ToNative_SearchPrototypesForNative<T>
-
-       So if those policies must be specialized for T, they must be specialized
-       before this code is visible.
-    */
-    template <typename T>
-    struct ClassWrap_ToNative_JuiceBind
-        : ClassWrap_ToNative_Base<T, ClassWrap_Extract_JuiceBind<T> >
-    {
-    };
-
 
 } }
 #endif // V8_JUICE_CLASSWRAP_POLICY_JUICEBIND_INCLUDED
@@ -117,15 +101,11 @@ namespace v8 { namespace juice {
 
     template <>
     struct ClassWrap_WeakWrap< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_WeakWrap_JuiceBind< CLASSWRAP_BOUND_TYPE > {};
+        ClassWrap_JuiceBind_WeakWrap< CLASSWRAP_BOUND_TYPE > {};
 
     template <>
     struct ClassWrap_Extract< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_Extract_JuiceBind< CLASSWRAP_BOUND_TYPE > {};
-
-    template <>
-    struct ClassWrap_ToNative< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_ToNative_JuiceBind< CLASSWRAP_BOUND_TYPE > {};
+        ClassWrap_JuiceBind_Extract< CLASSWRAP_BOUND_TYPE > {};
 
 #if defined(CLASSWRAP_BOUND_TYPE_NAME)
     template <>

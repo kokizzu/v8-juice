@@ -68,7 +68,8 @@ int main(int argc, char * argv[])
         //v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
         v8::V8::SetFlagsFromString("--expose-gc",11);
     }
-        v8::HandleScope handle_scope;
+    v8::Locker threadlockerkludge; // See http://code.google.com/p/v8/issues/detail?id=471
+    v8::HandleScope handle_scope;
     {
         v8::juice::cleanup::CleanupSentry cleaner;
         v8::juice::JuiceShell shell("v8juice");
