@@ -1,6 +1,6 @@
 #if !defined(V8_JUICE_CLASSWRAP_TWOWAY_INCLUDED)
 #define V8_JUICE_CLASSWRAP_TWOWAY_INCLUDED
-/** @file TwoWay.h
+/** @file ClassWrap_TwoWay.h
    This file has two uses:
 
    1) When included "normally", it defines a set of ClassWrap policies

@@ -1,7 +1,7 @@
 // EXPERIMENTAL/INCOMPLETE!
 #include <sstream>
 #include <v8/juice/static_assert.h>
-#include <v8/juice/convert.h>
+#include <v8/juice/forwarding.h>
 #include <v8/juice/TypeList.h>
 #include <vector>
 
@@ -1238,7 +1238,7 @@ namespace cw {
                 {
                     const int argc = argv.Length();
                     Handle<Function> ctor( Function::Cast(*argv.Callee()));
-                    std::vector< Handle<Value> > av(static_cast<size_t>(argc),Undefined());
+                    std::vector< v8::Handle<v8::Value> > av(static_cast<size_t>(argc),Undefined());
                     for( int i = 0; i < argc; ++i ) av[i] = argv[i];
                     return ctor->NewInstance( argc, &av[0] );
                 }
