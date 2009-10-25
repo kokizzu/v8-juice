@@ -6,7 +6,7 @@ count=${1-0}
 
 test "$count" -gt 0 || {
     echo "Usage: $0 NUMBER (>=1) [COMMAND=MemFuncForwarder]"
-    echo "Commands: MemFuncForwarder TMemFuncForwarder FunctorForwarder"
+    echo "Commands: MemFuncForwarder TMemFuncForwarder FunctorForwarder CtorForwarder"
     echo "Generates specializations for operations taking exactly NUMBER argumnents."
     exit 1
 }
@@ -460,6 +460,52 @@ struct FunctionForwarder<${count}>
 EOF
 } # makeFunctionForwarder
 
+
+#######################################################
+# Creates CtorForwarder specializations.
+function makeCtorForwarder()
+{
+
+    local err_too_few_args="CtorForwarder<${count}>::Ctor() expects at least ${count} JS arguments!"
+    local err_exception="CtorForwarder<${count}>::Ctor() Native function threw an unknown native exception type!"
+
+    cat <<EOF
+/** Specialization ${count} arguments. */
+template <typename T>
+struct CtorForwarder<T,${count}>
+{
+    enum { Arity = ${count} };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    template < ${aTDecl} >
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+	if( argv.Length() < Arity )
+        {
+            ::v8::ThrowException(::v8::String::New("${err_too_few_args}"));
+            return 0;
+        }
+        try
+        {
+            return new Type( ${castCalls} );
+        }
+        catch( std::exception const & ex )
+        {
+            ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            ::v8::ThrowException( ::v8::String::New("${err_exception}"));
+        }
+        return 0;
+    }
+
+};
+
+EOF
+} # makeCtorForwarder
+
+
 ##########################################################
 # here we go...
 makeLists
@@ -484,6 +530,9 @@ case $command in
     'FunctionForwarder')
         makeFunctionForwarder
         ;;
+    'CtorForwarder')
+	makeCtorForwarder
+	;;
     *)
 	echo "Unhandled command: ${command}"
 	exit 2

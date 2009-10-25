@@ -77,5 +77,6 @@ $(eval $(call Forwarder.GenCode,forwarding,MemFuncForwarder))
 $(eval $(call Forwarder.GenCode,forwarding,TMemFuncForwarder))
 $(eval $(call Forwarder.GenCode,forwarding,FunctorForwarder))
 $(eval $(call Forwarder.GenCode,forwarding,FunctionForwarder))
+$(eval $(call Forwarder.GenCode,forwarding,CtorForwarder))
 
 package.install.headers := $(wildcard *.h)
