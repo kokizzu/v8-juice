@@ -2,6 +2,7 @@ include toc2.make
 package.distclean_files += plugin-config.h juice-config.h
 
 CB.GEN := createMemFuncCallOp.sh
+package.dist_files += $(CB.GEN)
 CB.COUNT := 10# Generate overloads for ClassBinder funcs with N args is 1..$(CB.COUNT)
 $(CB.GEN):
 
@@ -45,6 +46,7 @@ endif
 ########################################################################
 #
 FWD.GEN := createForwarders.sh
+package.dist_files += $(FWD.GEN)
 FWD.COUNT := 10# Generate overloads for ClassBinder funcs with N args is 1..$(FWD.COUNT)
 $(FWD.GEN):
 
@@ -80,3 +82,30 @@ $(eval $(call Forwarder.GenCode,forwarding,FunctionForwarder))
 $(eval $(call Forwarder.GenCode,forwarding,CtorForwarder))
 
 package.install.headers := $(wildcard *.h)
+
+TYPELIST_GENR := maketypelist.pl
+package.dist_files += maketypelist.pl
+$(TYPELIST_GENR):
+
+########################################################################
+# Defines a target for creating TypeList_$(1).h
+define GEN_TYPELIST
+# $1 = count
+TypeList_$(1).h:
+	@echo "Creating $$@"; \
+	echo "#if !defined(DOXYGEN)" > $$@; \
+	perl $$(TYPELIST_GENR) $(1) >> $$@ || exit $$$$?; \
+	echo "#endif // if !defined(DOXYGEN)" >> $$@;
+gen-typelist: TypeList_$(1).h
+clean-typelist-$(1):
+	@-rm -f $$(wildcard TypeList_$(1).h) foo.bar
+clean-typelist: clean-typelist-$(1)
+endef
+gen-typelist:
+clean-typelist:
+	@echo "Cleaning up generated TypeList files."
+
+$(eval $(call GEN_TYPELIST,05))
+$(eval $(call GEN_TYPELIST,10))
+$(eval $(call GEN_TYPELIST,15))
+
