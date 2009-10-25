@@ -20,6 +20,7 @@
 #if !defined(DOXYGEN)
 namespace v8 { namespace juice { namespace convert {
 
+    namespace cw = v8::juice::cw;
     /**
        JSToNative<> specialization which uses
        v8::juice::ClassWrap_ToNative::Value() to convert from JS
@@ -29,10 +30,10 @@ namespace v8 { namespace juice { namespace convert {
     */
     template <>
     struct JSToNative< CLASSWRAP_BOUND_TYPE >
-        : ClassWrap_JSToNativeImpl< CLASSWRAP_BOUND_TYPE >
+        : cw::ClassWrap_JSToNativeImpl< CLASSWRAP_BOUND_TYPE >
     {
 #if 0
-        typedef ::v8::juice::ClassWrap_ToNative< CLASSWRAP_BOUND_TYPE >  Cast;
+        typedef ::v8::juice::cw::ClassWrap_ToNative< CLASSWRAP_BOUND_TYPE >  Cast;
         typedef Cast::NativeHandle ResultType;
         /**
            If h is empty or !h->IsObject() then 0 is returned, else it
@@ -50,7 +51,7 @@ namespace v8 { namespace juice { namespace convert {
             }
             else
             {
-                Handle<Object> const jo( Object::Cast( *h ) );
+                v8::Handle<v8::Object> const jo( v8::Object::Cast( *h ) );
                 return Cast::Value(jo);
             }
         }

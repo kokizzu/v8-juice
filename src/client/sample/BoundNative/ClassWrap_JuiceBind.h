@@ -49,8 +49,9 @@
    - ClassWrap_InternalFields<T> 
    
 */
-namespace v8 { namespace juice {
-    
+namespace v8 { namespace juice { namespace cw {
+    //namespace convert = v8::juice::convert;
+    //using namespace v8::juice;
     /**
        A concrete ClassWrap_WeakWrap policy which uses the v8::juice::bind
        API to register objects for type-safe lookups later on.
@@ -62,12 +63,12 @@ namespace v8 { namespace juice {
         /**
            Calls v8::juice::bind::BindNative(nativeSelf).
         */
-        static void Wrap( v8::Persistent<v8::Object> const & /*jsSelf*/, NativeHandle nativeSelf )
+        static void Wrap( ::v8::Persistent< ::v8::Object> const & /*jsSelf*/, NativeHandle nativeSelf )
         {
             v8::juice::bind::BindNative( nativeSelf );
             return;
         }
-        static void Unwrap( v8::Handle<v8::Object> const & /*jsSelf*/, NativeHandle nativeSelf )
+        static void Unwrap( ::v8::Handle< ::v8::Object> const & /*jsSelf*/, NativeHandle nativeSelf )
         {
             v8::juice::bind::UnbindNative( nativeSelf );
             return;
@@ -80,7 +81,7 @@ namespace v8 { namespace juice {
        from JS object.
     */
     template <typename T>
-    struct ClassWrap_JuiceBind_Extract : ClassWrap_Extract_Base<T>
+    struct ClassWrap_JuiceBind_Extract : ::v8::juice::cw::ClassWrap_Extract_Base<T>
     {
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
@@ -93,11 +94,11 @@ namespace v8 { namespace juice {
         }
     };
 
-} }
+} } } // namespaces
 #endif // V8_JUICE_CLASSWRAP_POLICY_JUICEBIND_INCLUDED
 
 #if defined(CLASSWRAP_BOUND_TYPE)
-namespace v8 { namespace juice {
+namespace v8 { namespace juice { namespace cw {
 
     template <>
     struct ClassWrap_WeakWrap< CLASSWRAP_BOUND_TYPE > :
@@ -119,6 +120,6 @@ namespace v8 { namespace juice {
 #undef CLASSWRAP_BOUND_TYPE_NAME
 #endif
     
-} }
+} } } // namespaces
 #include "ClassWrap-JSToNative.h" // will undefine CLASSWRAP_BOUND_TYPE
 #endif //CLASSWRAP_BOUND_TYPE

@@ -77,7 +77,7 @@ int main(int argc, char * argv[])
         shell.SetupJuiceEnvironment();
         MyNative::SetupClass(shell.Context());
 #if TEST_CLASSWRAP2
-        v8::juice::BoundNative::SetupClass( shell.Global() );
+        BoundNative::SetupClass( shell.Global() );
 #endif
 
         bool run_shell = (argc == 1);
@@ -131,7 +131,7 @@ int main(int argc, char * argv[])
             shell.ExecuteString( "gc()", "kludge_to_force_gc" );
         }
 #if TEST_CLASSWRAP2
-        CERR << "BoundNative::InstanceCount() == "<<v8::juice::BoundNative::InstanceCount()<<'\n';
+        CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
 #endif
         
     }

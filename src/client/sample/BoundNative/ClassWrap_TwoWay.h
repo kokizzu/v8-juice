@@ -49,7 +49,8 @@
    - ClassWrap_InternalFields<T> 
    
 */
-namespace v8 { namespace juice {
+namespace v8 { namespace juice { namespace cw {
+    namespace convert = v8::juice::convert;
     namespace Detail
     {
 	/**
@@ -207,11 +208,11 @@ namespace v8 { namespace juice {
         }
     };
 
-} }
+} } }
 #endif // V8_JUICE_CLASSWRAP_TWOWAY_INCLUDED
 
 #if defined(CLASSWRAP_BOUND_TYPE)
-namespace v8 { namespace juice {
+namespace v8 { namespace juice { namespace cw {
 
     template <>
     struct ClassWrap_WeakWrap< CLASSWRAP_BOUND_TYPE > :
@@ -241,6 +242,10 @@ namespace v8 { namespace juice {
 #undef CLASSWRAP_BOUND_TYPE_NAME
 #endif
     
+ 
+ } // v8::juice::cw
+
+
     namespace convert
     {
         template <>
@@ -254,7 +259,7 @@ namespace v8 { namespace juice {
             }
         };
     }
-   
-} }
+
+} } // namespace v8::juice
 #include "ClassWrap-JSToNative.h" // will undefine CLASSWRAP_BOUND_TYPE
 #endif //CLASSWRAP_BOUND_TYPE
