@@ -192,7 +192,7 @@ namespace juice {
 	   of "destroy", and mechanism of destruction, is
 	   type-specific.
 
-	   This function is is responsible for destroying the native
+	   This function is responsible for destroying the native
 	   object. Most implementations must simply call "delete obj",
 	   which is fine for many types, but opaque types and types
 	   allocated via something other than 'new' will need a
@@ -949,15 +949,6 @@ namespace juice {
 	    if( jobj->InternalFieldCount() != (FieldCount) ) return; // how to warn about this?
 	    Local<Value> lv( jobj->GetInternalField(NativeFieldIndex) );
 	    if( lv.IsEmpty() || !lv->IsExternal() ) return; // how to warn about this?
-	    /**
-	       We have to ensure that we have no dangling External in JS space. This
-	       is so that functions like IODevice.close() can act safely with the
-	       knowledge that member funcs called after that won't get a dangling
-	       pointer. Without this, some code will crash in that case.
-	    */
-	    jobj->SetInternalField(NativeFieldIndex,Null());
-	    pv.Dispose();
-	    pv.Clear();
             if( ! OptShallowBind )
             {
                 TypeCheckIter it = typeCheck().find( nobj );
@@ -974,6 +965,15 @@ namespace juice {
                 //CERR << "SHALLOW-CAST DTOR!!!\n";
                 ClassOpsType::Dtor( static_cast<WrappedType*>(nobj) );
             }
+	    /**
+	       We have to ensure that we have no dangling External in JS space. This
+	       is so that functions like IODevice.close() can act safely with the
+	       knowledge that member funcs called after that won't get a dangling
+	       pointer. Without this, some code will crash in that case.
+	    */
+	    jobj->SetInternalField(NativeFieldIndex,Null());
+	    pv.Dispose();
+	    pv.Clear();
 	}
 
 	/**

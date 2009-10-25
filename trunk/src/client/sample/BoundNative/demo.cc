@@ -43,6 +43,7 @@
 #include <cstdlib>
 
 
+#include <v8/juice/static_assert.h> // we need this early on for some test!
 #include "MyNative.h"
 #include <v8/juice/PathFinder.h>
 //#include <v8/juice/ToSource.h>
@@ -67,7 +68,8 @@ int main(int argc, char * argv[])
         //v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
         v8::V8::SetFlagsFromString("--expose-gc",11);
     }
-        v8::HandleScope handle_scope;
+    v8::Locker threadlockerkludge; // See http://code.google.com/p/v8/issues/detail?id=471
+    v8::HandleScope handle_scope;
     {
         v8::juice::cleanup::CleanupSentry cleaner;
         v8::juice::JuiceShell shell("v8juice");
@@ -75,7 +77,7 @@ int main(int argc, char * argv[])
         shell.SetupJuiceEnvironment();
         MyNative::SetupClass(shell.Context());
 #if TEST_CLASSWRAP2
-        v8::juice::bind_my_native( shell.Global() );
+        BoundNative::SetupClass( shell.Global() );
 #endif
 
         bool run_shell = (argc == 1);
@@ -112,7 +114,6 @@ int main(int argc, char * argv[])
                               <<'\n';
                     return 1;
                 }
-                //v8::internal::Heap::CollectAllGarbage(false);
                 continue;
             }
         }
@@ -130,7 +131,7 @@ int main(int argc, char * argv[])
             shell.ExecuteString( "gc()", "kludge_to_force_gc" );
         }
 #if TEST_CLASSWRAP2
-        CERR << "BoundNative::InstanceCount() == "<<v8::juice::BoundNative::InstanceCount()<<'\n';
+        CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
 #endif
         
     }
