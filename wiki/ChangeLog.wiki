@@ -10,6 +10,9 @@ are at the top. Dates written extra large are release dates. This contains only 
   * http://code.google.com/p/v8-juice/source/list
 
 ----
+*2009 Oct 25*
+  * Added `CtorForwarder` class, which can pass on `v8::Arguments` objects to native constructors.
+
 *2009 Oct 22-24*
   * Significant work done on the new function binding approach (see [BindingFunctions]).
   * Introduced the `v8::juice::convert::TypeTraits<>` class to help pass around proper type information related to JS/Native conversions.
