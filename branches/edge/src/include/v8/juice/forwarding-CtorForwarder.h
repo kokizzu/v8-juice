@@ -21,6 +21,20 @@ struct CtorForwarder<T,1>
     }
 
 };
+/** A CtorForwarder<T,1> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0 >
+struct CtorForwarder1
+{
+    enum { Arity = 1 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,1> CT;
+        return CT::template Ctor<  A0 >( argv );
+    }
+};
 
 /** Specialization 2 arguments. */
 template <typename T>
@@ -42,6 +56,20 @@ struct CtorForwarder<T,2>
         }
     }
 
+};
+/** A CtorForwarder<T,2> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0,  typename A1 >
+struct CtorForwarder2
+{
+    enum { Arity = 2 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,2> CT;
+        return CT::template Ctor<  A0, A1 >( argv );
+    }
 };
 
 /** Specialization 3 arguments. */
@@ -65,6 +93,20 @@ struct CtorForwarder<T,3>
     }
 
 };
+/** A CtorForwarder<T,3> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0,  typename A1,  typename A2 >
+struct CtorForwarder3
+{
+    enum { Arity = 3 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,3> CT;
+        return CT::template Ctor<  A0, A1, A2 >( argv );
+    }
+};
 
 /** Specialization 4 arguments. */
 template <typename T>
@@ -86,6 +128,20 @@ struct CtorForwarder<T,4>
         }
     }
 
+};
+/** A CtorForwarder<T,4> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0,  typename A1,  typename A2,  typename A3 >
+struct CtorForwarder4
+{
+    enum { Arity = 4 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,4> CT;
+        return CT::template Ctor<  A0, A1, A2, A3 >( argv );
+    }
 };
 
 /** Specialization 5 arguments. */
@@ -109,6 +165,20 @@ struct CtorForwarder<T,5>
     }
 
 };
+/** A CtorForwarder<T,5> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
+struct CtorForwarder5
+{
+    enum { Arity = 5 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,5> CT;
+        return CT::template Ctor<  A0, A1, A2, A3, A4 >( argv );
+    }
+};
 
 /** Specialization 6 arguments. */
 template <typename T>
@@ -130,6 +200,20 @@ struct CtorForwarder<T,6>
         }
     }
 
+};
+/** A CtorForwarder<T,6> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
+struct CtorForwarder6
+{
+    enum { Arity = 6 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,6> CT;
+        return CT::template Ctor<  A0, A1, A2, A3, A4, A5 >( argv );
+    }
 };
 
 /** Specialization 7 arguments. */
@@ -153,6 +237,20 @@ struct CtorForwarder<T,7>
     }
 
 };
+/** A CtorForwarder<T,7> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
+struct CtorForwarder7
+{
+    enum { Arity = 7 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,7> CT;
+        return CT::template Ctor<  A0, A1, A2, A3, A4, A5, A6 >( argv );
+    }
+};
 
 /** Specialization 8 arguments. */
 template <typename T>
@@ -174,6 +272,20 @@ struct CtorForwarder<T,8>
         }
     }
 
+};
+/** A CtorForwarder<T,8> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
+struct CtorForwarder8
+{
+    enum { Arity = 8 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,8> CT;
+        return CT::template Ctor<  A0, A1, A2, A3, A4, A5, A6, A7 >( argv );
+    }
 };
 
 /** Specialization 9 arguments. */
@@ -197,6 +309,20 @@ struct CtorForwarder<T,9>
     }
 
 };
+/** A CtorForwarder<T,9> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
+struct CtorForwarder9
+{
+    enum { Arity = 9 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,9> CT;
+        return CT::template Ctor<  A0, A1, A2, A3, A4, A5, A6, A7, A8 >( argv );
+    }
+};
 
 /** Specialization 10 arguments. */
 template <typename T>
@@ -218,6 +344,20 @@ struct CtorForwarder<T,10>
         }
     }
 
+};
+/** A CtorForwarder<T,10> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
+struct CtorForwarder10
+{
+    enum { Arity = 10 };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,10> CT;
+        return CT::template Ctor<  A0, A1, A2, A3, A4, A5, A6, A7, A8, A9 >( argv );
+    }
 };
 
 #endif // if !defined(DOXYGEN)
