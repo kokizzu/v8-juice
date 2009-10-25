@@ -200,6 +200,61 @@ print( m.sharedInteger ); // == 43
 
 So far i have no found a way (in the v8 API) to bind these to a constructor, such that `MyNativeType.sharedInteger` will work (however, `MyNativeType.prototype.sharedInteger` does). Likewise, i have found no way to bind these selectively to individual objects.
 
+= Creating overloaded JS bindings =
+
+As of r889 it is possible to bind a JS function to multiple native functions (including member funcs), such that the argument count will determine which one gets called. This is a fairly advanced feature and requires some knowledge of topics like "type lists".
+
+The list of requirements for overload binding:
+
+  * No two _native_ overloads may take the same number of arguments.
+  * When resolving overloads, the first bound func which matches the given argument count exactly will be called.
+  * If the overload is a `v8::InvocationCallback` function it can take any number of arguments (this requires a trick shown below).
+
+For example's sake, assume we have these functions which we want to bind to a single overloaded JS method:
+
+{{{
+bool BoundNative::overload();
+int BoundNative::overload(int i);
+int BoundNative_overload( int i );
+double BoundNative_overload( int i, double d );
+v8::Handle<v8::Value> BoundNative_overload( v8::Arguments const & argv );
+}}}
+
+Notice the mix of members and non-members, and one implements the `v8::InvocationCallback` interface.
+
+Now let's bind them to a JS object:
+
+{{{
+v8::InvocationCallback IC = 
+ convert:: OverloadInvocables< convert::TypeList<
+     convert::MemFuncInvocable0<BoundNative,bool,&BoundNative::overload>,
+     convert::FunctionInvocable1<int,int,BoundNative_overload>,
+     convert::FunctionInvocable2<double,int,double,BoundNative_overload>,
+     convert::InvocationCallbackInvocable<-1, BoundNative_overload>
+            > >::Invocable
+myObject->Set( String::New("overloaded"), IC );
+}}}
+
+Note that the `OverloadInvocables` type has a `TypeList` as its first argument. Type lists are an advanced C++ topic covered in gross detail in [http://erdani.com/ Modern C++ Design]. They allow us to build up lists of _types_. In this case, each type in the list must provide the following definitions:
+
+{{{
+static const int Arity = NumberOfArgs;
+static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv );
+}}}
+
+Not coincidentally, that is the interface used by much of the function binding code, so this allows us to pass the various function binder helpers.
+
+In the case of `InvocationCallbackInvocable<>` the `Arity` value may be less than 0, which tells the overload resolver to use that overload regardless of the number of arguments. Thus this can be used to catch any unresolved calls.
+
+Now in JS code:
+
+{{{
+myobj.overload(); // calls: bool BoundNative::overload()
+myobj.overload(13); // calls: int BoundNative_overload(int)
+myobj.overload(13, 17.7); // calls: double BoundNative_overload(int,double)
+myobj.overload(1,2,3,4); // calls: Handle<Value> BoundNative_overload(Arguments)
+}}}
+
 = Tips and Tricks =
 
 == Discardable or non-convertible return types ==
