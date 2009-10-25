@@ -379,7 +379,7 @@ v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
             //convert::InvocableFunction1<int,int,BoundNative_overload>,
             convert::InvocableMemFunc2<N,double,int,double,&N::overload>,
             //convert::InvocableFunction2<double,int,double,BoundNative_overload>,
-            convert::InvocationCallbackInvocable<-1, BoundNative_overload>
+            convert::InvocableCallback<-1, BoundNative_overload>
             //convert::
             > >::Invocable );
     //typedef convert::PropertyBinder<N> PB;

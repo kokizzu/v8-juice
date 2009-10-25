@@ -1429,7 +1429,7 @@ namespace v8 { namespace juice { namespace convert {
        requirements).
     */
     template < int Arity_, v8::Handle<v8::Value> (*Func)( v8::Arguments const & ) >
-    struct InvocationCallbackInvocable
+    struct InvocableCallback
     {
         static const int Arity = Arity_;
         /**
@@ -1444,7 +1444,7 @@ namespace v8 { namespace juice { namespace convert {
                 if( argv.Length() != Arity )
                 {
                     StringBuffer msg;
-                    msg << "InvocationCallbackInvocable<>::Invocable(): "
+                    msg << "InvocableCallback<>::Invocable(): "
                         << argv.Callee()->GetName()
                         << "() was passed "<<argv.Length()<<" arguments, but "
                         << "expects "<< Arity<<"!\n";
@@ -1465,7 +1465,7 @@ namespace v8 { namespace juice { namespace convert {
                 if( argv.Length() != Arity )
                 {
                     StringBuffer msg;
-                    msg << "InvocationCallbackInvocable<>::InvocableVoid(): "
+                    msg << "InvocableCallback<>::InvocableVoid(): "
                         << argv.Callee()->GetName()
                         << "() was passed "<<argv.Length()<<" arguments, but "
                         << "expects "<< Arity<<"!\n";
@@ -1492,7 +1492,7 @@ namespace v8 { namespace juice { namespace convert {
     {
         static const int Arity = InvocableT::Arity;
         /**
-           Just like InvocationCallbackInvocable::Invocable(), but
+           Just like InvocableCallback::Invocable(), but
            discards the return value from Func().  It always returns
            v8::Undefined() on success and a JS exception on error.
         */
@@ -1503,7 +1503,7 @@ namespace v8 { namespace juice { namespace convert {
                 if( argv.Length() != Arity )
                 {
                     StringBuffer msg;
-                    msg << "InvocationCallbackInvocableVoid<>::InvocableVoid(): "
+                    msg << "InvocableCallbackVoid<>::InvocableVoid(): "
                         << argv.Callee()->GetName()
                         << "() was passed "<<argv.Length()<<" arguments, but "
                         << "expects "<< Arity<<"!\n";
@@ -1522,7 +1522,7 @@ namespace v8 { namespace juice { namespace convert {
     */
     template < int Arity, v8::Handle<v8::Value> (*Func)( v8::Arguments const & ) >
     struct DiscardInvocableCallback :
-        DiscardInvocableReturnVal< InvocationCallbackInvocable<Arity, Func> >
+        DiscardInvocableReturnVal< InvocableCallback<Arity, Func> >
     {
     };
 
