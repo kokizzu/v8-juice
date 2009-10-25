@@ -491,6 +491,20 @@ struct CtorForwarder<T,${count}>
     }
 
 };
+/** A CtorForwarder<T,${count}> workalike which is 
+templatized on the ctor paramter types. */
+template <typename T, ${aTDecl} >
+struct CtorForwarder${count}
+{
+    enum { Arity = ${count} };
+    typedef typename TypeInfo<T>::Type Type;
+    typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+    static NativeHandle Ctor( ::v8::Arguments const & argv )
+    {
+        typedef CtorForwarder<T,${count}> CT;
+        return CT::template Ctor< ${aTParam} >( argv );
+    }
+};
 
 EOF
 } # makeCtorForwarder

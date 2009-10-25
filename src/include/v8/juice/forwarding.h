@@ -1306,6 +1306,7 @@ namespace v8 { namespace juice { namespace convert {
     template <typename T>
     struct CtorForwarder<T,0>
     {
+        enum { Arity = 0 };
         typedef typename TypeInfo<T>::Type Type;
         typedef typename TypeInfo<T>::NativeHandle NativeHandle;
         /**
@@ -1315,6 +1316,10 @@ namespace v8 { namespace juice { namespace convert {
         {
             return new Type;
         }
+    };
+    template <typename T>
+    struct CtorForwarder0 : CtorForwarder<T,0>
+    {
     };
 #include "forwarding-CtorForwarder.h" /* generated code for specializations taking 1+ args */
 }}} /* namespaces */
