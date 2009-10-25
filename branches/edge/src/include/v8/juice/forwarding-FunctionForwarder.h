@@ -51,18 +51,31 @@ struct FunctionForwarder<1>
     template <typename RV,  typename A0, RV (*Func)( A0) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, RV (*)( A0) >( Func, argv );
         return Call<RV, A0 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0, VoidType (*Func)( A0) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, VoidType (*)( A0) >( Func, argv );
         return CallVoid<VoidType,  A0 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0, RV (*Func)( A0)>
+struct FunctionInvocable1
+{
+    static const int Arity = 1;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 /** Specialization for functor taking 2 arguments. */
 template <>
@@ -115,18 +128,31 @@ struct FunctionForwarder<2>
     template <typename RV,  typename A0,  typename A1, RV (*Func)( A0, A1) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, A1, RV (*)( A0, A1) >( Func, argv );
         return Call<RV, A0, A1 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1, VoidType (*Func)( A0, A1) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, A1, VoidType (*)( A0, A1) >( Func, argv );
         return CallVoid<VoidType,  A0, A1 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0,  typename A1, RV (*Func)( A0, A1)>
+struct FunctionInvocable2
+{
+    static const int Arity = 2;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 /** Specialization for functor taking 3 arguments. */
 template <>
@@ -179,18 +205,31 @@ struct FunctionForwarder<3>
     template <typename RV,  typename A0,  typename A1,  typename A2, RV (*Func)( A0, A1, A2) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, A1, A2, RV (*)( A0, A1, A2) >( Func, argv );
         return Call<RV, A0, A1, A2 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2, VoidType (*Func)( A0, A1, A2) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, A1, A2, VoidType (*)( A0, A1, A2) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0,  typename A1,  typename A2, RV (*Func)( A0, A1, A2)>
+struct FunctionInvocable3
+{
+    static const int Arity = 3;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 /** Specialization for functor taking 4 arguments. */
 template <>
@@ -243,18 +282,31 @@ struct FunctionForwarder<4>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV (*Func)( A0, A1, A2, A3) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, A1, A2, A3, RV (*)( A0, A1, A2, A3) >( Func, argv );
         return Call<RV, A0, A1, A2, A3 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3, VoidType (*Func)( A0, A1, A2, A3) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, A1, A2, A3, VoidType (*)( A0, A1, A2, A3) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV (*Func)( A0, A1, A2, A3)>
+struct FunctionInvocable4
+{
+    static const int Arity = 4;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 /** Specialization for functor taking 5 arguments. */
 template <>
@@ -307,18 +359,31 @@ struct FunctionForwarder<5>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV (*Func)( A0, A1, A2, A3, A4) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, A1, A2, A3, A4, RV (*)( A0, A1, A2, A3, A4) >( Func, argv );
         return Call<RV, A0, A1, A2, A3, A4 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, VoidType (*Func)( A0, A1, A2, A3, A4) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, VoidType (*)( A0, A1, A2, A3, A4) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV (*Func)( A0, A1, A2, A3, A4)>
+struct FunctionInvocable5
+{
+    static const int Arity = 5;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 /** Specialization for functor taking 6 arguments. */
 template <>
@@ -371,18 +436,31 @@ struct FunctionForwarder<6>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (*Func)( A0, A1, A2, A3, A4, A5) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, A1, A2, A3, A4, A5, RV (*)( A0, A1, A2, A3, A4, A5) >( Func, argv );
         return Call<RV, A0, A1, A2, A3, A4, A5 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, VoidType (*Func)( A0, A1, A2, A3, A4, A5) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, VoidType (*)( A0, A1, A2, A3, A4, A5) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (*Func)( A0, A1, A2, A3, A4, A5)>
+struct FunctionInvocable6
+{
+    static const int Arity = 6;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 /** Specialization for functor taking 7 arguments. */
 template <>
@@ -435,18 +513,31 @@ struct FunctionForwarder<7>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (*Func)( A0, A1, A2, A3, A4, A5, A6) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, A1, A2, A3, A4, A5, A6, RV (*)( A0, A1, A2, A3, A4, A5, A6) >( Func, argv );
         return Call<RV, A0, A1, A2, A3, A4, A5, A6 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, VoidType (*)( A0, A1, A2, A3, A4, A5, A6) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (*Func)( A0, A1, A2, A3, A4, A5, A6)>
+struct FunctionInvocable7
+{
+    static const int Arity = 7;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 /** Specialization for functor taking 8 arguments. */
 template <>
@@ -499,18 +590,31 @@ struct FunctionForwarder<8>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, RV (*)( A0, A1, A2, A3, A4, A5, A6, A7) >( Func, argv );
         return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, VoidType (*)( A0, A1, A2, A3, A4, A5, A6, A7) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7)>
+struct FunctionInvocable8
+{
+    static const int Arity = 8;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 /** Specialization for functor taking 9 arguments. */
 template <>
@@ -563,18 +667,31 @@ struct FunctionForwarder<9>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, RV (*)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >( Func, argv );
         return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8, VoidType (*)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8)>
+struct FunctionInvocable9
+{
+    static const int Arity = 9;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 /** Specialization for functor taking 10 arguments. */
 template <>
@@ -627,17 +744,30 @@ struct FunctionForwarder<10>
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, RV (*)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >( Func, argv );
         return Call<RV, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9 >( Func, argv );
     }
 
     template <typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, VoidType (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, VoidType (*)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >( Func, argv );
         return CallVoid<VoidType,  A0, A1, A2, A3, A4, A5, A6, A7, A8, A9 >( Func, argv );
     }
 
 };
+
+template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9)>
+struct FunctionInvocable10
+{
+    static const int Arity = 10;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 #endif // if !defined(DOXYGEN)

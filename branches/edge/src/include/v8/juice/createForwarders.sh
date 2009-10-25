@@ -20,10 +20,6 @@ aTDecl="" # typename A0, typename A1,...
 aTParam="" # A0, A1 ...
 castCalls="" # CastFromJS<A0>(argv[0), ...
 at=0
-callop=MemFuncCallOp${count}
-MemFuncForwarder=MemFuncForwarder
-callBase="${MemFuncForwarder}<${count}>"
-callBaseWeak="WeakMemFuncForwarder<${count}>"
 
 ########################################################
 # must be called first to populate the shared vars
@@ -53,18 +49,18 @@ function makeLists()
 
 
 #######################################################
-# Creates ${callBase} and ${callWeakBase} implementations.
+# Creates MemFuncForwarder implementations.
 function makeMemFuncForwarder()
 {
-    local err_native_is_null="${callBase}::Call(): Native object is null!"
-    local err_too_few_args="${callBase}::Call(): wrong argument count!"
+    local err_native_is_null="MemFuncForwarder::Call(): Native object is null!"
+    local err_too_few_args="MemFuncForwarder::Call(): wrong argument count!"
 cat <<EOF
 /**
 A helper class for forwarding JS arguments to member functions
 taking ${count} arguments.
 */
 template <>
-struct ${callBase}
+struct MemFuncForwarder<${count}>
 {
     enum { Arity = ${count} };
 
@@ -185,6 +181,20 @@ struct ${callBase}
         return CallVoid<T,VoidType,${aTParam}>( MemFunc, argv );
     }
 
+    template <typename T, typename RV, ${aTDecl}, RV (*Func)(${aTParam})>
+    struct MemFuncInvocable${count}
+    {
+        static const int Arity = ${count};
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
+        }
+        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+        {
+            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
+        }
+    };
+
 };
 EOF
 } # makeMemFuncForwarder()
@@ -193,8 +203,8 @@ EOF
 # Creates TMemFuncForwarder implementations.
 function makeTMemFuncForwarder()
 {
-    local err_native_is_null="${callBase}::Call(): Native object is null!"
-    local err_too_few_args="${callBase}::Call(): wrong argument count!"
+    local err_native_is_null="TMemFuncForwarder::Call(): Native object is null!"
+    local err_too_few_args="TMemFuncForwarder::Call(): wrong argument count!"
 cat <<EOF
 /**
 A helper class for forwarding JS arguments to member functions
@@ -444,18 +454,31 @@ struct FunctionForwarder<${count}>
     template <typename RV, ${aTDecl}, RV (*Func)(${aTParam}) >
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        //return Call<RV,${aTParam}, RV (*)(${aTParam}) >( Func, argv );
         return Call<RV,${aTParam} >( Func, argv );
     }
 
     template <typename VoidType, ${aTDecl}, VoidType (*Func)(${aTParam}) >
     static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
     {
-        //return CallVoid<VoidType, ${aTParam}, VoidType (*)(${aTParam}) >( Func, argv );
         return CallVoid<VoidType, ${aTParam} >( Func, argv );
     }
 
 };
+
+template <typename RV, ${aTDecl}, RV (*Func)(${aTParam})>
+struct FunctionInvocable${count}
+{
+    static const int Arity = ${count};
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+    }
+};
+
 
 EOF
 } # makeFunctionForwarder
