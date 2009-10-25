@@ -1492,3 +1492,13 @@ namespace juice {
            {}; \
        } } }
 
+/**
+   Macro to create a v8::juice::ClassWrap_ClassName<Type>
+   speicialization. Must be called from global scope!
+ */
+#define JUICE_CLASSWRAP_CLASSNAME(Type,Name)        \
+       namespace v8 { namespace juice { \
+           template <> \
+           struct ClassWrap_ClassName< Type > \
+           { static char const * Value() {return Name;} };      \
+       } }

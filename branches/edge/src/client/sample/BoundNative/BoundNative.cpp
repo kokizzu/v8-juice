@@ -83,7 +83,6 @@ namespace v8 { namespace juice {
     struct ClassWrap_DebugLevel<BoundNative>
         : ClassWrap_Opt_Int<2>
     {};
-
     size_t BoundNative::instcount = 0;
     bool BoundNative::enableDebug = ClassWrap_DebugLevel<BoundNative>::Value > 2;
 
@@ -114,45 +113,82 @@ namespace v8 { namespace juice {
     {};
 #endif
 
+    class BoundSub : public BoundNative
+    {
+    public:
+        BoundSub()
+        {
+            DBGOUT << "BoundSub() this=@"<<(void const *)this << '\n';
+        }
+        BoundSub( int a, double d = 191.919 )
+            : BoundNative(a, d)
+        {
+            DBGOUT << "BoundSub("<<a<<", "<<d<<") this=@"<<(void const *)this << '\n';
+        }
+        virtual ~BoundSub()
+        {
+            DBGOUT << "~BoundSub() this=@"<<(void const *)this << '\n';
+        }
+        virtual std::string toString() const
+        {
+            std::ostringstream os;
+            os << "[Object BoundSub@"<<(void const *)this<<']';
+            return os.str();
+        }
+    };
+
+    
+#define XTPOLICY(P) template <> struct ClassWrap_ ## P<BoundSub> : ClassWrap_ ## P<BoundNative> {}
+    XTPOLICY(InternalFields);
+    XTPOLICY(ToNative_SearchPrototypesForNative);
+#undef XTPOLICY
+
+    template <>
+    struct ClassWrap_DebugLevel<BoundSub>
+        : ClassWrap_Opt_Int<3>
+    {};
+
+    template <>
+    struct ClassWrap_Factory<BoundSub> :
+        //ClassWrap_Factory_NewDelete<BoundSub>
+        //ClassWrap_Factory_CtorForwarder2<BoundSub,int,double>
+        ClassWrap_Factory_CtorForwarder1<BoundSub,int>
+    {};
+
 // Set ONE of the following to a true value to select that ClassWrap policy set:
-#if 1
+#if 0
 // #  warning "Using JuiceBind policies!"
 #  define USING_JUICEBIND_POLICIES
+#  define CLASSWRAP_POLICY_HEADER "ClassWrap_JuiceBind.h"
 #elif 0
 // #  warning "Using TwoWay policies!"
 #  define USING_TWOWAY_POLICIES
-#elif 0
-// #  warning "Using Skeleton policies!"
-#  define USING_SKEL_POLICIES
+#  define CLASSWRAP_POLICY_HEADER "ClassWrap_TwoWay.h"
 #else
 // #  warning "Using default policies!"
 #  define USING_DEFAULT_POLICIES
+#  define CLASSWRAP_POLICY_HEADER "ClassWrap-JSToNative.h"
 #endif
 
 } } // nemspaces
 
 #include "ClassWrap_TwoWay.h"
 #include "ClassWrap_JuiceBind.h"
-#include "ClassWrap_Skeleton.h"
+//#include "ClassWrap_Skeleton.h"
 
 
 // Import the selected ClassWrap policy...
 #define CLASSWRAP_BOUND_TYPE v8::juice::BoundNative
-#define CLASSWRAP_BOUND_TYPE_NAME "BoundNative"
-#if defined(USING_TWOWAY_POLICIES)
-#  include "ClassWrap_TwoWay.h"
-#elif defined(USING_JUICEBIND_POLICIES)
-#  include "ClassWrap_JuiceBind.h"
-#elif defined(USING_SKEL_POLICIES)
-#  include "ClassWrap_Skeleton.h"
-#elif defined(USING_DEFAULT_POLICIES)
-#  include "ClassWrap-JSToNative.h"
-#  undef CLASSWRAP_BOUND_TYPE_NAME
+#if defined(USING_DEFAULT_POLICIES)
+   JUICE_CLASSWRAP_CLASSNAME(v8::juice::BoundNative,"BoundNative")
+#else
+#  define CLASSWRAP_BOUND_TYPE_NAME "BoundNative"
 #endif
+#include CLASSWRAP_POLICY_HEADER
 
 namespace v8 { namespace juice {
 
-#if defined(USING_DEFAULT_POLICIES)
+#if 0 && defined(USING_DEFAULT_POLICIES)
     template <>
     struct ClassWrap_ClassName<BoundNative>
     {
@@ -163,7 +199,6 @@ namespace v8 { namespace juice {
     };
 #endif
 
-#if !defined(USING_SKEL_POLICIES)
     template <>
     struct ClassWrap_Factory<BoundNative>
     {
@@ -191,43 +226,9 @@ namespace v8 { namespace juice {
 	}
         static const size_t AllocatedMemoryCost = sizeof(BoundNative);
     };
-#endif // USING_SKEL_POLICIES
 
 
 
-    class BoundSub : public BoundNative
-    {
-    public:
-        BoundSub()
-        {
-            DBGOUT << "BoundSub() this=@"<<(void const *)this << '\n';
-        }
-        BoundSub( int a, double d = 191.919 )
-            : BoundNative(a, d)
-        {
-            DBGOUT << "BoundSub("<<a<<", "<<d<<") this=@"<<(void const *)this << '\n';
-        }
-        virtual ~BoundSub()
-        {
-            DBGOUT << "~BoundSub() this=@"<<(void const *)this << '\n';
-        }
-        virtual std::string toString() const
-        {
-            std::ostringstream os;
-            os << "[Object BoundSub@"<<(void const *)this<<']';
-            return os.str();
-        }
-    };
-
-    template <>
-    struct ClassWrap_DebugLevel<BoundSub>
-        : ClassWrap_Opt_Int<3>
-    {};
-
-#define XTPOLICY(P) template <> struct ClassWrap_ ## P<BoundSub> : ClassWrap_ ## P<BoundNative> {}
-    XTPOLICY(InternalFields);
-    XTPOLICY(ToNative_SearchPrototypesForNative);
-#undef XTPOLICY
 
 //     template <>
 //     struct ClassWrap_WeakWrap<BoundSub> : ClassWrap_JuiceBind_WeakWrap<BoundSub>
@@ -235,13 +236,6 @@ namespace v8 { namespace juice {
 //     template <>
 //     struct ClassWrap_Extract<BoundSub> : ClassWrap_JuiceBind_Extract<BoundSub>
 //     {};
-
-    template <>
-    struct ClassWrap_Factory<BoundSub> :
-        //ClassWrap_Factory_NewDelete<BoundSub>
-        //ClassWrap_Factory_CtorForwarder2<BoundSub,int,double>
-        ClassWrap_Factory_CtorForwarder1<BoundSub,int>
-    {};
 
 //     template <>
 //     struct ClassWrap_ClassName< BoundSub >
@@ -254,9 +248,16 @@ namespace v8 { namespace juice {
 
 }} // namespaces
 
+// Import the selected ClassWrap policy...
 #define CLASSWRAP_BOUND_TYPE v8::juice::BoundSub
-#define CLASSWRAP_BOUND_TYPE_NAME "BoundSub"
-#include "ClassWrap_JuiceBind.h"
+#if defined(USING_DEFAULT_POLICIES)
+#  undef CLASSWRAP_BOUND_TYPE_NAME
+   JUICE_CLASSWRAP_CLASSNAME(v8::juice::BoundSub,"BoundSub")
+#else
+#  define CLASSWRAP_BOUND_TYPE_NAME "BoundSub"
+#endif
+#include CLASSWRAP_POLICY_HEADER
+
 
 namespace v8 { namespace juice {
     std::string BoundNative_version()
