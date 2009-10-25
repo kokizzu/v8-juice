@@ -6,6 +6,7 @@
 
 namespace v8 {
 namespace juice {
+namespace cw {
 
 #if !defined(DOXYGEN)
     namespace Detail
@@ -765,7 +766,7 @@ namespace juice {
             }
             else
             {
-                typedef ::v8::juice::ClassWrap_ToNative<T>  Caster;
+                typedef ClassWrap_ToNative<T>  Caster;
                 v8::Handle<Object> const jo( v8::Object::Cast( *h ) );
                 return Caster::Value(jo);
             }
@@ -1478,7 +1479,7 @@ namespace juice {
 
 #undef CtorForwarder_ArgvCheck_Prep
    
-} } // namespaces
+} } } // namespaces
 
 /**
    Macro to create a v8::juice::convert::JSToNative<Type>
@@ -1488,7 +1489,7 @@ namespace juice {
 #define JUICE_CLASSWRAP_JSTONATIVE(Type) \
        namespace v8 { namespace juice { namespace convert { \
            template <> \
-           struct JSToNative< Type > : v8::juice::ClassWrap_JSToNativeImpl< Type > \
+           struct JSToNative< Type > : v8::juice::cw::ClassWrap_JSToNativeImpl< Type > \
            {}; \
        } } }
 
@@ -1497,8 +1498,8 @@ namespace juice {
    speicialization. Must be called from global scope!
  */
 #define JUICE_CLASSWRAP_CLASSNAME(Type,Name)        \
-       namespace v8 { namespace juice { \
+       namespace v8 { namespace juice { namespace cw { \
            template <> \
-           struct ClassWrap_ClassName< Type > \
+           struct ClassWrap_ClassName< Type >  \
            { static char const * Value() {return Name;} };      \
-       } }
+       } } }

@@ -43,7 +43,7 @@ function dumpBoundNative(b,msg)
     print('b.intGetter ==',b.intGetter);
     print('b.publicProperty ==',b.publicProperty);
     print('b.publicProperty/=3 ==',b.publicProperty/=3);
-    print('b.publicProperty ==',b.publicProperty);
+    //print('b.publicProperty ==',b.publicProperty);
     print('b.publicPropertyRO ==',b.publicPropertyRO);
     print('b.publicPropertyRO=13 ==',b.publicPropertyRO=13);
     print('b.publicPropertyRO ==',b.publicPropertyRO);
@@ -51,6 +51,7 @@ function dumpBoundNative(b,msg)
 }
 dumpBoundNative.top =    'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv';
 dumpBoundNative.bottom = '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^';
+
 function testOne()
 {
     print(arguments.callee.name+"() ------------------------------------------");
