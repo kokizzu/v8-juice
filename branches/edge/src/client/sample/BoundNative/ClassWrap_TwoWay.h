@@ -131,13 +131,14 @@ namespace v8 { namespace juice {
         };
 
     }
+
     
     /**
        A concrete ClassWrap_WeakWrap policy which uses an internal
        native/js mapping for type-safe lookups later on.
     */
     template <typename T>
-    struct ClassWrap_WeakWrap_TwoWayBind
+    struct ClassWrap_TwoWayBind_WeakWrap
     {
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
@@ -145,10 +146,16 @@ namespace v8 { namespace juice {
         /**
            Calls v8::juice::bind::BindNative(nativeSelf).
         */
-        static void Wrap( v8::Persistent<v8::Object> jsSelf, NativeHandle nativeSelf )
+        static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf )
         {
             typedef Detail::ClassWrapMapper<T> Mapper;
             Mapper::Insert( jsSelf, nativeSelf );
+            return;
+        }
+        static void Unwrap( v8::Handle<v8::Object> const & /*jsSelf*/, NativeHandle nativeSelf )
+        {
+            typedef Detail::ClassWrapMapper<BoundNative> Mapper;
+            Mapper::Remove( nativeSelf );
             return;
         }
     };
@@ -158,7 +165,7 @@ namespace v8 { namespace juice {
        conversion.
     */
     template <typename T>
-    struct ClassWrap_Extract_TwoWayBind : ClassWrap_Extract_Base<T>
+    struct ClassWrap_TwoWayBind_Extract : ClassWrap_Extract_Base<T>
     {
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
@@ -167,7 +174,7 @@ namespace v8 { namespace juice {
         static NativeHandle VoidToNative( void * x )
         {
             typedef Detail::ClassWrapMapper<T> Mapper;
-            return x ? Mapper::GetNative(x) : 0;
+            return Mapper::GetNative(x);
         }
     };
 
@@ -177,16 +184,16 @@ namespace v8 { namespace juice {
 
        Requires:
 
-       - ClassWrap_WeakWrap<T> == ClassWrap_WeakWrap_TwoWayBind<T>
+       - ClassWrap_WeakWrap<T> == ClassWrap_TwoWayBind_WeakWrap<T>
     */
-    template <typename T>
-    struct ClassWrap_ToNative_TwoWayBind
-        : ClassWrap_ToNative_Base<T, ClassWrap_Extract_TwoWayBind<T> >
-    {
-    };
+//     template <typename T>
+//     struct ClassWrap_TwoWayBind_ToNative
+//         : ClassWrap_ToNative_Base<T, ClassWrap_Extract_TwoWayBind<T> >
+//     {
+//     };
     
     template <typename T>
-    struct ClassWrap_ToJS_TwoWayBind
+    struct ClassWrap_TwoWayBind_ToJS
     {
     public:
         typedef typename convert::TypeInfo<T>::Type Type;
@@ -208,19 +215,19 @@ namespace v8 { namespace juice {
 
     template <>
     struct ClassWrap_WeakWrap< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_WeakWrap_TwoWayBind< CLASSWRAP_BOUND_TYPE > {};
+        ClassWrap_TwoWayBind_WeakWrap< CLASSWRAP_BOUND_TYPE > {};
 
     template <>
     struct ClassWrap_Extract< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_Extract_TwoWayBind< CLASSWRAP_BOUND_TYPE > {};
+        ClassWrap_TwoWayBind_Extract< CLASSWRAP_BOUND_TYPE > {};
 
-    template <>
-    struct ClassWrap_ToNative< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_ToNative_TwoWayBind< CLASSWRAP_BOUND_TYPE > {};
+//     template <>
+//     struct ClassWrap_ToNative< CLASSWRAP_BOUND_TYPE > :
+//         ClassWrap_TwoWayBind_ToNative< CLASSWRAP_BOUND_TYPE > {};
 
     template <>
     struct ClassWrap_ToJS< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_ToJS_TwoWayBind< CLASSWRAP_BOUND_TYPE > {};
+        ClassWrap_TwoWayBind_ToJS< CLASSWRAP_BOUND_TYPE > {};
 
 #if defined(CLASSWRAP_BOUND_TYPE_NAME)
     template <>

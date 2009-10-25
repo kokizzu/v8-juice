@@ -29,7 +29,9 @@ namespace v8 { namespace juice { namespace convert {
     */
     template <>
     struct JSToNative< CLASSWRAP_BOUND_TYPE >
+        : ClassWrap_JSToNativeImpl< CLASSWRAP_BOUND_TYPE >
     {
+#if 0
         typedef ::v8::juice::ClassWrap_ToNative< CLASSWRAP_BOUND_TYPE >  Cast;
         typedef Cast::NativeHandle ResultType;
         /**
@@ -52,6 +54,7 @@ namespace v8 { namespace juice { namespace convert {
                 return Cast::Value(jo);
             }
         }
+#endif
     };
 
 } } }

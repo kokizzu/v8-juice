@@ -4,7 +4,7 @@
 /** @file ClassWrap_Skeleton.h
    This file has two uses:
 
-   1) When included "normally", it defines ClassWrap factory policy
+   1) When included "normally", it defines a ClassWrap factory policy
    which uses the new/delete operators for object
    construction/destrution, and otherwise relies on the default
    ClassWrap policies all other functionality.
@@ -19,7 +19,7 @@
    #include <v8/juice/ClassWrap_Skeleton.h>
    @endcode
 
-   That will install these policies as the defaults for
+   That will install the generated policies as the defaults for
    ClassWrap<CLASSWRAP_BOUND_TYPE>, and then CLASSWRAP_BOUND_TYPE and
    CLASSWRAP_BOUND_TYPE_NAME will be undefined (so that this file can
    be directly included again).

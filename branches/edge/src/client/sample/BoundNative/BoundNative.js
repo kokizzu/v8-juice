@@ -171,13 +171,21 @@ function testThree()
     }
 }
 
+function testNativeSubclass()
+{
+    var s = new BoundSub();
+    print( 's =',s);
+    print( 's.ptr(s) =',s.ptr(s));
+    s.destroy();
+}
 
 ////////////////////////////////////////////////////////////////////////
 //BoundNative.prototype.debug = false;
-//testOne();
-//testTwo();
-//testThree();
-if( true || BoundNative.supportsInheritance )
+testOne();
+testTwo();
+testThree();
+testNativeSubclass();
+if(false) if( BoundNative.supportsInheritance )
 {
     testInheritance1();
 }
