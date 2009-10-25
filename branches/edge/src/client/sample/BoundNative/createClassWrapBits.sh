@@ -39,16 +39,16 @@ function makeLists()
 
 
 #######################################################
-# Creates ClassWrap_Factory_CtorForwarder${count} specializations.
+# Creates Factory_CtorForwarder${count} specializations.
 function makeCtorForwarder()
 {
-    local class=ClassWrap_Factory_CtorForwarder${count}
-    local base="Detail::ClassWrap_Factory_CtorForwarder_Base<T>"
+    local class=Factory_CtorForwarder${count}
+    local base="Detail::Factory_CtorForwarder_Base<T>"
     local err_native_is_null="${callBase}::Call(): Native object is null!"
     local err_too_few_args="${callBase}::Call(): wrong argument count!"
 cat <<EOF
 /**
-A concrete ClassWrap_Factory which creates objects by calling
+A concrete Factory implementation which creates objects by calling
 the ${count}-argument ctor and destroys them with 'delete'.
 
 A0 is the first argument type of the ctor. A1 is the second...
