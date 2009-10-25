@@ -1291,6 +1291,12 @@ namespace v8 { namespace juice { namespace convert {
         enum { Arity = Arity_ };
         typedef typename TypeInfo<T>::Type Type;
         typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Must be specialized.
+
+           For all specializations, the caller owns the returned
+           object.
+        */
         static NativeHandle Ctor( v8::Arguments const & );
     };
 
@@ -1303,7 +1309,7 @@ namespace v8 { namespace juice { namespace convert {
         typedef typename TypeInfo<T>::Type Type;
         typedef typename TypeInfo<T>::NativeHandle NativeHandle;
         /**
-           Returns (new Type).
+           Returns (new Type). The caller owns the returned object.
         */
         static NativeHandle Ctor( v8::Arguments const & )
         {
