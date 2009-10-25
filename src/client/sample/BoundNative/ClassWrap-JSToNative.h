@@ -19,21 +19,19 @@
 
 #if !defined(DOXYGEN)
 namespace v8 { namespace juice { namespace convert {
-
-    namespace cw = v8::juice::cw;
     /**
        JSToNative<> specialization which uses
-       v8::juice::ClassWrap_ToNative::Value() to convert from JS
+       v8::juice::ToNative::Value() to convert from JS
        handles to CLASSWRAP_BOUND_TYPE objects.
        
        See NativeToJS<> for full details.
     */
     template <>
     struct JSToNative< CLASSWRAP_BOUND_TYPE >
-        : cw::ClassWrap_JSToNativeImpl< CLASSWRAP_BOUND_TYPE >
+        : cw::JSToNativeImpl< CLASSWRAP_BOUND_TYPE >
     {
 #if 0
-        typedef ::v8::juice::cw::ClassWrap_ToNative< CLASSWRAP_BOUND_TYPE >  Cast;
+        typedef ::v8::juice::cw::ToNative< CLASSWRAP_BOUND_TYPE >  Cast;
         typedef Cast::NativeHandle ResultType;
         /**
            If h is empty or !h->IsObject() then 0 is returned, else it
