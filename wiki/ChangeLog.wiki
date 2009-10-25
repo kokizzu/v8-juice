@@ -12,6 +12,7 @@ are at the top. Dates written extra large are release dates. This contains only 
 ----
 *2009 Oct 25*
   * Added `CtorForwarder` class, which can pass on `v8::Arguments` objects to native constructors.
+  * The new class binder can now bind a JS ctor to multiple overloaded native ctors. This lays the framework for binding to overloaded (member) functions.
 
 *2009 Oct 22-24*
   * Significant work done on the new function binding approach (see [BindingFunctions]).
