@@ -1,7 +1,7 @@
 #if !defined(V8_JUICE_CLASSWRAP_POLICY_SKELETON_INCLUDED)
 #define V8_JUICE_CLASSWRAP_POLICY_SKELETON_INCLUDED
 
-/** @file ClassWrap_Skeleton.h
+/** @file Skeleton.h
    This file has two uses:
 
    1) When included "normally", it defines a ClassWrap factory policy
@@ -16,7 +16,7 @@
    // From global scope:
    #define CLASSWRAP_BOUND_TYPE MyType
    #define CLASSWRAP_BOUND_TYPE_NAME "MyType"
-   #include <v8/juice/ClassWrap_Skeleton.h>
+   #include <v8/juice/Skeleton.h>
    @endcode
 
    That will install the generated policies as the defaults for
@@ -25,7 +25,7 @@
    be directly included again).
 
    Defining CLASSWRAP_BOUND_TYPE_NAME is optional, but if it is not done
-   then one must provide his own ClassWrap_ClassName<CLASSWRAP_BOUND_TYPE>
+   then one must provide his own ClassName<CLASSWRAP_BOUND_TYPE>
    specialization.
 
    The following ClassWrap policies are set up:
@@ -45,16 +45,16 @@
 */
 namespace v8 { namespace juice {
     /**
-       A concrete ClassWrap_Factory implementation which
+       A concrete Factory implementation which
        uses new/delete to create/destroy objects, but requires
        a default constructor.
     */
     template <typename T>
-    struct ClassWrap_Factory_Skeleton
+    struct Factory_Skeleton
     {
-        /** Required by ClassWrap_Factory interface. */
+        /** Required by Factory interface. */
         typedef typename convert::TypeInfo<T>::Type Type;
-        /** Required by ClassWrap_Factory interface. */
+        /** Required by Factory interface. */
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
         /**
            Returns (new Type).
@@ -80,12 +80,12 @@ namespace v8 { namespace juice {
 namespace v8 { namespace juice {
 
     template <>
-    struct ClassWrap_Factory< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_Factory_Skeleton< CLASSWRAP_BOUND_TYPE > {};
+    struct Factory< CLASSWRAP_BOUND_TYPE > :
+        Factory_Skeleton< CLASSWRAP_BOUND_TYPE > {};
 
 #if defined(CLASSWRAP_BOUND_TYPE_NAME)
     template <>
-    struct ClassWrap_ClassName< CLASSWRAP_BOUND_TYPE >
+    struct ClassName< CLASSWRAP_BOUND_TYPE >
     {
         static char const * Value()
         {
