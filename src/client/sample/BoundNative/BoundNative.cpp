@@ -160,17 +160,14 @@ namespace v8 { namespace juice {
         using namespace v8::juice;
         template <>
         struct Factory<BoundSub> :
-            //Factory_NewDelete<BoundSub>
-            //Factory_CtorForwarder2<BoundSub,int,double>
 #if 0
             Factory_CtorForwarder1<BoundSub,int>
 #else
         Factory_CtorForwarder<BoundSub,
                               convert::TypeList<
             convert::CtorForwarder0<BoundSub>,
-            convert::CtorForwarder2<BoundSub,int,double>,
-            convert::CtorForwarder1<BoundSub,int>
-    //                 convert::CtorForwarder<BoundSub,2,int,double>
+            convert::CtorForwarder1<BoundSub,int>,
+            convert::CtorForwarder2<BoundSub,int,double>
         >
         >
 #endif
@@ -181,12 +178,12 @@ namespace v8 { namespace juice {
 
 
 // Set ONE of the following to a true value to select that ClassWrap policy set:
-#if 0
+#if 1
 // #  warning "Using JuiceBind policies!"
 #  define USING_JUICEBIND_POLICIES
 #  define CLASSWRAP_POLICY_HEADER "ClassWrap_JuiceBind.h"
 #include CLASSWRAP_POLICY_HEADER
-#elif 1
+#elif 0
 // #  warning "Using TwoWay policies!"
 #  define USING_TWOWAY_POLICIES
 #  define CLASSWRAP_POLICY_HEADER "ClassWrap_TwoWay.h"

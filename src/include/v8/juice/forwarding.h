@@ -1415,14 +1415,18 @@ namespace v8 { namespace juice { namespace convert {
 #endif
 
     /**
-       This class converts a v8::InvocationCallback function into
-       something matching the FunctionForwarder, MemFuncForwader,
-       etc. interface.  May seem useless, but has uses (or _a_ use) in
-       binding overloaded native functions to classes.
+       This class converts a v8::InvocationCallback function into an
+       InvocableInterface class.  It may seem useless, but has uses
+       (or _a_ use) in binding overloaded native functions to classes.
 
        The Arity argument is a hint as to how many arguments the
-       function requires. If it is negative it is ignored, otherwise
-       it is enforced.
+       function requires. If it is zero or higher then this type
+       enforces that it is passed exactly that many arguments,
+       throwing a JS exception if there is a mismatch. If it is
+       negative then this class ignores the argument count, leaving
+       enforcement to a lower-level proxy function (which will likely
+       throw a JS exception if the arg count does not match the
+       requirements).
     */
     template < int Arity_, v8::Handle<v8::Value> (*Func)( v8::Arguments const & ) >
     struct InvocationCallbackInvocable
@@ -1450,9 +1454,9 @@ namespace v8 { namespace juice { namespace convert {
             return Func( argv );
         }
         /**
-           Just like Invocable(), but discards the return value from Func().
-           It always returns v8::Undefined() on success and a JS exception
-           on error.
+           Just like Invocable(), but discards the return value from
+           Func().  It always returns v8::Undefined() on success and a
+           JS exception on error (argument count mismatch).
         */
         static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
         {
@@ -1474,14 +1478,14 @@ namespace v8 { namespace juice { namespace convert {
     };
 
     /**
-       This is an adapter type for types implementing the
+       This is an adapter type for types implementing
        InvocableInterface.  It converts the call into a
        v8::InvocationCallback which returns Undefined(). That is, it
        discards the return value. Note that this is slighlty different
        from MemFuncForwarder::InvocableVoid() and friends in that this
-       adapter must invoke the conversion of the return value, which
-       is not legal (compile-time error) if there is no conversion in
-       place.
+       adapter must invoke the conversion template for the return
+       value type, which is not legal (compile-time error) if there is
+       no conversion in place.
     */
     template < typename InvocableT >
     struct DiscardInvocableReturnVal
@@ -1509,6 +1513,17 @@ namespace v8 { namespace juice { namespace convert {
             InvocableT::Invocable( argv );
             return v8::Undefined();
         }
+    };
+
+    /**
+       This works just like DiscardInvocableReturnVal but takes a
+       v8::InvocationCallback pointer. i don't seem to be able to
+       unify them into one interface :/.
+    */
+    template < int Arity, v8::Handle<v8::Value> (*Func)( v8::Arguments const & ) >
+    struct DiscardInvocableCallback :
+        DiscardInvocableReturnVal< InvocationCallbackInvocable<Arity, Func> >
+    {
     };
 
 }}} /* namespaces */
