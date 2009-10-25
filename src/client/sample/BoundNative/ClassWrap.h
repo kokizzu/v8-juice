@@ -2,7 +2,19 @@
 #include <sstream>
 #include <v8/juice/static_assert.h>
 #include <v8/juice/convert.h>
+#include <v8/juice/TypeList.h>
 #include <vector>
+
+
+#ifndef DBGSTREAM
+#include <iostream> /* only for debuggering */
+// only for internal debuggering
+#if 0
+#  define DBGSTREAM std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#else
+#  define DBGSTREAM if(0) std::cerr
+#endif
+#endif
 
 namespace v8 {
 namespace juice {
@@ -504,7 +516,7 @@ namespace cw {
             }
             if( searchPrototypes && !ext )
             {
-                //CERR << "Searching in prototype chain for "<<ClassName<T>::Value()<<"...\n";
+                //DBGSTREAM << "Searching in prototype chain for "<<ClassName<T>::Value()<<"...\n";
                 v8::Local<v8::Value> proto = jo->GetPrototype();
 //                 if( !proto.IsEmpty() && proto->IsObject() )
 //                 {
@@ -549,6 +561,7 @@ namespace cw {
             return x ? static_cast<NativeHandle>( x ) : 0;
         }
     };
+
     /**
        The ClassWrap policy responsible for "unwrapping" JS object
        handles, extracting their native bound data.
@@ -562,11 +575,9 @@ namespace cw {
     {};
 
     /**
-       EXPERIMENTAL/INCOMPLETE!
-
        One approach to handling native subclass lookups in ClassWrap.
        This has some limitations, though, and is not _quite_ what i
-       want.  Don't use it in client code yet.
+       want. Subject to change.
     */
     template <typename T>
     class NativeInheritance
@@ -608,7 +619,7 @@ namespace cw {
         static void RegisterSubclass( CheckIsSubclass pf )
         {
 #if 0
-            CERR << "Registering "<<ClassName<SubT>::Value()<<" as "
+            DBGSTREAM << "Registering "<<ClassName<SubT>::Value()<<" as "
                  << "native subclasss of "<<ClassName<T>::Value()<<'\n';
 #endif
             typedef typename convert::TypeInfo<SubT>::NativeHandle STH;
@@ -638,7 +649,7 @@ namespace cw {
         static NativeHandle CheckForSubclass( void * const ext )
         {
 #if 0
-            CERR << "Doing native subtype lookup for Base Type "
+            DBGSTREAM << "Doing native subtype lookup for Base Type "
                  << ClassName<T>::Value() << '\n';
 #endif
             typename SubToBaseList::const_iterator it = list().begin();
@@ -747,8 +758,6 @@ namespace cw {
     };
 
     /**
-       EXPERIMENTAL!
-
        A concrete ToNative policy class which uses
        NativeInheritance<T>::ToNativeOrSubclass() to
        try to convert JS objects to natives.
@@ -824,8 +833,8 @@ namespace cw {
 
     
     /**
-       The type responsible for converting
-       convert::TypeInfo<T>::NativeHandle to v8::Objects. This
+       The ClassWrap policy type responsible for converting
+       convert::TypeInfo<T>::NativeHandle to v8::Objects. The default
        instantiation will cause a compile-time error, as Native-to-JS
        is not possible in the generic case (it requires an extra level
        of binding info, which can be provided via custom ClassWrap
@@ -852,7 +861,7 @@ namespace cw {
 
 
     /**
-       A policy class for ClassWrap, responsible for doing optional
+       The ClassWrap policy class responsible for doing optional
        class-specific binding-related work as part of the JS/Native
        object construction process.
 
@@ -876,6 +885,8 @@ namespace cw {
 
            Clients should do any bindings-related cleanup in
            Factory::Destruct().
+
+           Ownership of the objects is unchanged by calling this.
         */
         static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf )
         {
@@ -892,6 +903,12 @@ namespace cw {
            framework). Optionally, such cleanup may be done in the
            corresponding Factory::Destruct() routine, and must be done
            there if the dtor will need access to such data.
+
+           Note that when this is called, jsSelf and nativeSelf are
+           about to be destroyed, so do not do anything crazy with the
+           contents of jsSelf and DO NOT destroy nativeSelf.
+
+           Ownership of the objects is unchanged by calling this.
         */
         static void Unwrap( v8::Handle<v8::Object> const & jsSelf, NativeHandle nativeSelf )
         {
@@ -963,19 +980,21 @@ namespace cw {
        - JSClassCreator (its base class)
        - Various policy classes.
 
-       This class handles the more mundane details of creating a
-       new JS class and this type adds weak pointer binding to
-       that. The T-specific policy classes define how certain aspects
-       of the binding are handled, e.g. how to convert a JS object
-       handle back into a T object.
 
-       The policies required by this type are defined as typedefs
-       in the class, and it is up to the client to ensure that all
-       policy specializations (if needed) are in place.
+       This class handles the more mundane details of creating a new
+       JS class, and this provides the weak pointer binding for
+       wrapped classes. The T-specific policy classes define how
+       certain aspects of the binding are handled, e.g. how to convert
+       a JS object handle back into a T object.
+
+       The policies required by this type are defined as typedefs in
+       this class, and it is up to the client to ensure that all
+       policy specializations (if needed) are in place. Most policies
+       have reasonable defaults, but some do not (most notably
+       ClassName and ToJS).
 
 
-       
-       BUGS AND SIGNIFICANT CAVEATS:
+       MISFEATURES AND SIGNIFICANT CAVEATS:
 
        Cross-JS/Native inheritance introduces several problems, some
        of them subtle, some of them not. Some of them can be solved
@@ -983,12 +1002,15 @@ namespace cw {
        encounter, for which there are workaround:
 
        - When inheriting a bound class from JS space, be sure that the
-       ToNative_SearchPrototypesForNative<T> is specialized to hold a
-       True value, to ensure that lookups for the native object can work.
+       ToNative_SearchPrototypesForNative<T>::Value is specialized to
+       hold a true value, to ensure that lookups for the native object
+       can work when accessing bound members via a JS-side derived
+       class.
 
        - When inheriting one bound class from another, be sure to call
        ClassWrap<T>::InheritNative<ParentType>() when wrapping the
-       second class.
+       second class. For this to work, to ToNative<T> policy should be
+       a subclass of ToNative_WithNativeSubclassCheck<T>.
     */
     template <typename T>
     class ClassWrap : public JSClassCreator
@@ -1020,13 +1042,13 @@ namespace cw {
         */
         typedef v8::juice::cw::Factory<T> Factory;
 
-        /**
-           The Native-to-JS cast operation. Not possible for the
-           generic case. We do not typedef it here so we do not end up
-           instantiating it, because there is no default
-           specialization and this operation is not needed by this
-           class.
-        */
+//         /**
+//            The Native-to-JS cast operation. Not possible for the
+//            generic case. We do not typedef it here so we do not end up
+//            instantiating it, because there is no default
+//            specialization and this operation is not needed by this
+//            class.
+//         */
         //typedef ToJS<T> CastToJS;
 
         /**
@@ -1070,7 +1092,7 @@ namespace cw {
         
     private:
         typedef DebugLevel<T> DBG;
-#define DBGOUT(LVL) if( DBG::Value >= LVL ) CERR "ClassWrap<"<<ClassName::Value()<<">::" <<__FUNCTION__<<"() "
+#define DBGOUT(LVL) if( DBG::Value >= LVL ) DBGSTREAM << "ClassWrap<"<<ClassName::Value()<<">::" <<__FUNCTION__<<"() "
         /** Checks a few static assertions. */
         static void check_assertions()
         {
@@ -1188,7 +1210,7 @@ namespace cw {
         */
 	static Persistent<Object> wrap_native( Handle<Object> _self, NativeHandle obj )
 	{
-            //CERR << ClassName::Value() <<"::wrap_native(@"<<(void const *)obj<<") Binding to internal field #"<<InternalFields::NativeIndex<<"\n";
+            //DBGSTREAM << ClassName::Value() <<"::wrap_native(@"<<(void const *)obj<<") Binding to internal field #"<<InternalFields::NativeIndex<<"\n";
             v8::V8::AdjustAmountOfExternalAllocatedMemory( static_cast<int>( Factory::AllocatedMemoryCost ) );
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
@@ -1428,7 +1450,120 @@ namespace cw {
                 }
             }
         };
+
+        template <typename T,typename List>
+        struct CtorFwdDispatchList;
+        /**
+           Internal dispatch routine. CTOR _must_ be a convert::CtorForwardN implementation,
+           where N is 0..N.
+        */
+        template <typename T,typename CTOR>
+        struct CtorFwdDispatch
+        {
+            typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+            static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
+            {
+                if( CTOR::Arity == argv.Length() )
+                {
+                    return CTOR::Ctor( argv );
+                }
+                return 0;
+            }
+        };
+        /**
+           Internal dispatch end-of-list routine.
+        */
+        template <typename T>
+        struct CtorFwdDispatch<T,v8::juice::convert::NilType>
+        {
+            typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+            static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
+            {
+                return 0;
+            }
+        };
+        /**
+           Internal routine type to dispatch a v8::Arguments list to
+           one of several a bound native constructors, depending on
+           on the argument count.
+        
+           List MUST be a convert::TypeList< ... > containing ONLY
+           convert::CtorFowarderXXX implementations, where XXX is an
+           integer value.
+        */
+        template <typename T,typename List>
+        struct CtorFwdDispatchList
+        {
+            typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+            static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
+            {
+                typedef typename List::Head CTOR;
+                typedef typename List::Tail Tail;
+                if( CTOR::Arity == argv.Length() )
+                {
+                    return CtorFwdDispatch< T, CTOR >::Instantiate( argv, errmsg );
+                }
+                {
+                    return CtorFwdDispatchList<T,Tail>::Instantiate(argv,errmsg);
+                }
+                return 0;
+            }
+        };
+        /**
+           End-of-list specialization.
+        */
+        template <typename T>
+        struct CtorFwdDispatchList<T,v8::juice::convert::NilType>
+        {
+            typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+            static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
+            {
+                errmsg << "No native "<< v8::juice::cw::ClassName<T>::Value()
+                       << "() constructor was defined for "<<argv.Length()<<" arguments!\n";
+                return 0;
+            }
+        };
     }
+    /**
+       A concrete ClassWrap factory implementation which binds one or more
+       natve ctors, each requiring a different number of arguments.
+
+       Usage:
+
+       CtorForwarderList _MUST_ be a v8::juice::TypeList of
+       v8::juice::convert::CtorForwardXXX instances, where XXX is a
+       number.
+
+       This class is used like so:
+
+       Assume we have the JS-bound class MyClass and that it has 3 constructors:
+       MyClass(), MyClass(int), and MyClass(int,double).
+
+       We can bind those with:
+       
+       @code
+       template <>
+        struct Factory<MyClass> :
+          Factory_CtorForwarder<MyClass,
+                              convert::TypeList<
+                              convert::CtorForwarder0<MyClass>,
+                              convert::CtorForwarder2<MyClass,int,double>,
+                              convert::CtorForwarder1<MyClass,int>
+                              > >
+        {};
+       @endcode
+    */
+    template <typename T,typename CtorForwarderList>
+    struct Factory_CtorForwarder : Detail::Factory_CtorForwarder_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+	static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
+	{
+            //typedef typename CtorForwarderList::Head Head;
+            return Detail::CtorFwdDispatchList<T,CtorForwarderList>::Instantiate( argv, errmsg );
+	}
+    };
 
     /**
        A concrete Factory which creates objects by calling
@@ -1449,7 +1584,7 @@ namespace cw {
 #define CtorForwarder_ArgvCheck_Prep(N)    \
     if( ! Detail::Factory_CtorForwarder_Base<T>::argv_check( argv, N, errmsg ) ) return NativeHandle(0); \
         typedef convert::CtorForwarder<Type,N> CF
-
+ 
     /**
        A concrete Factory which creates objects by calling
        a 2-argument ctor and destroys them with 'delete'.
@@ -1540,7 +1675,7 @@ namespace cw {
     };
     
 #undef CtorForwarder_ArgvCheck_Prep
-   
+#undef DBGSTREAM   
 } } } // namespaces
 
 /**
@@ -1565,3 +1700,4 @@ namespace cw {
            struct ClassName< Type >  \
            { static char const * Value() {return Name;} };      \
        } } }
+

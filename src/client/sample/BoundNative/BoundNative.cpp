@@ -81,10 +81,7 @@ struct BoundNative
 namespace v8 { namespace juice {
     namespace cw
     {
-        template <>
-        struct DebugLevel<BoundNative>
-            : Opt_Int<2>
-        {};
+        //template <> struct DebugLevel<BoundNative> : Opt_Int<2> {};
 
         template <>
         struct ToNative_SearchPrototypesForNative<BoundNative>
@@ -148,6 +145,7 @@ namespace v8 { namespace juice {
 #define XTPOLICY(P) template <> struct  P<BoundSub> :  P<BoundNative> {}
         XTPOLICY(InternalFields);
         XTPOLICY(ToNative_SearchPrototypesForNative);
+        //XTPOLICY(AllowCtorWithoutNew);
 #undef XTPOLICY
 
         template <>
@@ -155,11 +153,23 @@ namespace v8 { namespace juice {
             : Opt_Int<3>
         {};
 
+        using namespace v8::juice;
         template <>
         struct Factory<BoundSub> :
             //Factory_NewDelete<BoundSub>
             //Factory_CtorForwarder2<BoundSub,int,double>
+#if 0
             Factory_CtorForwarder1<BoundSub,int>
+#else
+        Factory_CtorForwarder<BoundSub,
+                              convert::TypeList<
+            convert::CtorForwarder0<BoundSub>,
+            convert::CtorForwarder2<BoundSub,int,double>,
+            convert::CtorForwarder1<BoundSub,int>
+    //                 convert::CtorForwarder<BoundSub,2,int,double>
+        >
+        >
+#endif
         {};
     } // namespace cw
 
@@ -172,7 +182,7 @@ namespace v8 { namespace juice {
 #  define USING_JUICEBIND_POLICIES
 #  define CLASSWRAP_POLICY_HEADER "ClassWrap_JuiceBind.h"
 #include CLASSWRAP_POLICY_HEADER
-#elif 0
+#elif 1
 // #  warning "Using TwoWay policies!"
 #  define USING_TWOWAY_POLICIES
 #  define CLASSWRAP_POLICY_HEADER "ClassWrap_TwoWay.h"
@@ -210,7 +220,14 @@ namespace v8 { namespace juice { namespace cw {
 
     template <>
     struct Factory<BoundNative>
+        : Factory_CtorForwarder<BoundNative,
+                                convert::TypeList<
+            convert::CtorForwarder0<BoundNative>,
+            convert::CtorForwarder2<BoundNative,int,double>
+            >
+        >
     {
+#if 0
         typedef convert::TypeInfo<BoundNative>::Type Type;
         typedef convert::TypeInfo<BoundNative>::NativeHandle NativeHandle;
 	static NativeHandle Instantiate( Arguments const &  argv,
@@ -234,10 +251,8 @@ namespace v8 { namespace juice { namespace cw {
             delete obj;
 	}
         static const size_t AllocatedMemoryCost = sizeof(BoundNative);
+#endif
     };
-
-
-
 
 //     template <>
 //     struct WeakWrap<BoundSub> : JuiceBind_WeakWrap<BoundSub>
