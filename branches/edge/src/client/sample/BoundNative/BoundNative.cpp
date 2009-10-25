@@ -2,7 +2,7 @@
 #include <sstream>
 
 #include "ClassWrap.h"
-
+#include <v8/juice/overloading.h>
 
 #include <unistd.h> // sleep(3)
 
@@ -54,6 +54,8 @@ struct BoundNative
         }
         int getInt() const { return this->propi; }
         void setInt( int i ) { this->propi = i; }
+        bool overload() { return true; }
+        int overload(int i) { return i; }
         virtual std::string toString() const
         {
             std::ostringstream os;
@@ -150,7 +152,7 @@ namespace v8 { namespace juice {
 
         template <>
         struct DebugLevel<BoundSub>
-            : Opt_Int<3>
+            : Opt_Int<2>
         {};
 
         using namespace v8::juice;
@@ -303,7 +305,28 @@ v8::Handle<v8::Value> BoundNative_destroy( v8::Arguments const & argv )
     DBGOUT << "BoundNative_Destroy()\n";
     return convert::CastToJS( cw::ClassWrap<BoundNative>::DestroyObject(argv.This()) );
 }
-
+void BoundNative_overload()
+{
+    DBGOUT << "BoundNative_overload()\n";
+    return;
+}
+int BoundNative_overload( int i )
+{
+    DBGOUT << "BoundNative_overload("<<i<<")\n";
+    return i;
+}
+double BoundNative_overload( int i, double d )
+{
+    DBGOUT << "BoundNative_overload("<<i<<", "<<d<<")\n";
+    return d;
+}
+v8::Handle<v8::Value> BoundNative_overload( v8::Arguments const & argv )
+{
+    DBGOUT << "BoundNative_overload(v8::Arguments)\n";
+    v8::juice::convert::StringBuffer msg;
+    msg << "BoundNative_overload("<<argv.Length()<<" Arguments)";
+    return msg;
+}
 v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 {
     //         typedef Inheritance<BoundNative> Inherit;
@@ -345,6 +368,16 @@ v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
             //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
             );
 #endif
+    cw.Set( "overload",
+            convert::OverloadForwarder<
+            convert::TypeList<
+            convert::MemFuncInvocable0<BoundNative,bool,&BoundNative::overload>,
+            //convert::FunctionForwarder0<void,BoundNative_overload>,
+            convert::FunctionInvocable1<int,int,BoundNative_overload>,
+            convert::FunctionInvocable2<double,int,double,BoundNative_overload>,
+            convert::InvocationCallbackInvocable<-1, BoundNative_overload>
+            //convert::
+            > >::Invocable );
     //typedef convert::PropertyBinder<N> PB;
     typedef CW::PB PB;
     v8::Handle<v8::ObjectTemplate> cwproto = cw.Prototype();
