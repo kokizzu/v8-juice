@@ -84,6 +84,10 @@ function testOne()
         {
             print('b.getPtr() ==',b.getPtr());
         }
+        else
+        {
+            print('b.getPtr not defined.');
+        }
         print('b.ptr(b2) ==',b.ptr(b2));
         print('b2.ptr(0) ==',b2.ptr(0));
         delete b2;
@@ -182,13 +186,13 @@ function testThree()
 
 function testNativeSubclass()
 {
-    var s = new BoundSub(3);
+    var s = new BoundSub(333);
     print( 's =',s);
     print( 's.ptr(s) =',s.ptr(s));
     dumpBoundNative(s,"BoundSub object:");
     print('BoundNative.instanceCount() before s.destroy() ==',BoundNative.instanceCount());
     s.destroy();
-    print('BoundNative.instanceCount() before y.destroy() ==',BoundNative.instanceCount());
+    print('BoundNative.instanceCount() after s.destroy() ==',BoundNative.instanceCount());
     var exp = null;
     try
     {
@@ -205,10 +209,10 @@ function testNativeSubclass()
 
 ////////////////////////////////////////////////////////////////////////
 //BoundNative.prototype.debug = false;
-// testOne();
+testOne();
 // testTwo();
 // testThree();
-if(true) if( BoundNative.supportsInheritance )
+if(false) if( BoundNative.supportsInheritance )
 {
     testInheritance1();
 }
