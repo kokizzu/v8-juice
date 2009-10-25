@@ -341,6 +341,37 @@ namespace juice {
     };
 
     /**
+       A concrete ClassWrap_Factory implementation which
+       uses new/delete to create/destroy objects, but requires
+       a default constructor.
+    */
+    template <typename T>
+    struct ClassWrap_Factory_NewDelete
+    {
+        /** Required by ClassWrap_Factory interface. */
+        typedef typename convert::TypeInfo<T>::Type Type;
+        /** Required by ClassWrap_Factory interface. */
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Returns (new Type).
+        */
+	static NativeHandle Instantiate( Arguments const &  /*argv*/,
+                                         std::ostream & exceptionText )
+	{
+            return new Type;
+        }
+        /**
+           Calls (delete obj).
+        */
+	static void Destruct( v8::Handle<v8::Object> /*ignored*/, NativeHandle obj )
+	{
+            delete obj;
+        }
+        static const size_t AllocatedMemoryCost = sizeof(Type);
+    };
+
+    
+    /**
        A ClassWrap policy option class used by certain JS-to-Native
        conversions to determine whether they should search the
        prototype object chain for the native object if it is not found
@@ -1306,6 +1337,26 @@ namespace juice {
         {
             static ClassWrap bob;
             return bob;
+        }
+
+        /**
+           Works like the inherited Inherit() function but also
+           registers T with ClassWrap_NativeInheritance<ParentT>.
+        */
+        template <typename ParentT>
+        ClassWrap & InheritNative( ClassWrap<ParentT> const & p )
+        {
+            if(1)
+            {// static type check
+                typedef typename ClassWrap<ParentT>::NativeHandle PH;
+                NativeHandle n = 0;
+                PH p = n;
+                /** ^^^ If your compiler brought you here, T does not inherit from ParentT. */
+            }
+            this->JSClassCreator::Inherit( p );
+            typedef ClassWrap_NativeInheritance<ParentT> CNI;
+            CNI::template RegisterSubclass<Type>();
+            return *this;
         }
 #undef DBGOUT
     };

@@ -30,6 +30,12 @@ namespace v8 { namespace juice {
         {
             ++instcount;
         }
+        explicit BoundNative( int i, double d = 42.24 )
+            : propi(i),
+              publicProperty(d)
+        {
+            ++instcount;
+        }
         virtual ~BoundNative()
         {
             --instcount;
@@ -109,17 +115,17 @@ namespace v8 { namespace juice {
 #endif
 
 // Set ONE of the following to a true value to select that ClassWrap policy set:
-#if 0
-#  warning "Using JuiceBind policies!"
+#if 1
+// #  warning "Using JuiceBind policies!"
 #  define USING_JUICEBIND_POLICIES
 #elif 0
-#  warning "Using TwoWay policies!"
+// #  warning "Using TwoWay policies!"
 #  define USING_TWOWAY_POLICIES
 #elif 0
-#  warning "Using Skeleton policies!"
+// #  warning "Using Skeleton policies!"
 #  define USING_SKEL_POLICIES
 #else
-#  warning "Using default policies!"
+// #  warning "Using default policies!"
 #  define USING_DEFAULT_POLICIES
 #endif
 
@@ -163,10 +169,18 @@ namespace v8 { namespace juice {
     {
         typedef convert::TypeInfo<BoundNative>::Type Type;
         typedef convert::TypeInfo<BoundNative>::NativeHandle NativeHandle;
-	static NativeHandle Instantiate( Arguments const &  /*argv*/,
+	static NativeHandle Instantiate( Arguments const &  argv,
                                          std::ostream & /* exceptionText */ )
 	{
-            NativeHandle x = new BoundNative;
+            NativeHandle x = 0;
+            if( argv.Length() > 1 )
+            {
+                x = convert::CtorForwarder<BoundNative,2>::Ctor<int,double>(argv);
+            }
+            else
+            {
+                x = convert::CtorForwarder<BoundNative,0>::Ctor(argv);
+            }
             DBGOUT << "BoundNative->Instantiate() == @"<<(void const *)x<<'\n';
             return x;
 	}
@@ -186,11 +200,11 @@ namespace v8 { namespace juice {
     public:
         BoundSub()
         {
-            CERR << "BoundSub() this=@"<<(void const *)this << '\n';
+            DBGOUT << "BoundSub() this=@"<<(void const *)this << '\n';
         }
         virtual ~BoundSub()
         {
-            CERR << "~BoundSub() this=@"<<(void const *)this << '\n';
+            DBGOUT << "~BoundSub() this=@"<<(void const *)this << '\n';
         }
         virtual std::string toString() const
         {
@@ -211,14 +225,14 @@ namespace v8 { namespace juice {
 #undef XTPOLICY
 
 //     template <>
-//     struct ClassWrap_WeakWrap<BoundSub> : ClassWrap_WeakWrap_JuiceBind<BoundSub>
+//     struct ClassWrap_WeakWrap<BoundSub> : ClassWrap_JuiceBind_WeakWrap<BoundSub>
 //     {};
 //     template <>
-//     struct ClassWrap_Extract<BoundSub> : ClassWrap_Extract_JuiceBind<BoundSub>
+//     struct ClassWrap_Extract<BoundSub> : ClassWrap_JuiceBind_Extract<BoundSub>
 //     {};
-    
+
     template <>
-    struct ClassWrap_Factory<BoundSub> : ClassWrap_Factory_Skeleton<BoundSub>
+    struct ClassWrap_Factory<BoundSub> : ClassWrap_Factory_NewDelete<BoundSub>
     {};
 
 //     template <>
@@ -388,7 +402,8 @@ namespace v8 { namespace juice {
             typedef BoundSub BS;
             typedef ClassWrap<BS> WBS;
             WBS &b( WBS::Instance() );
-            b.Inherit( cw );
+            //b.Inherit( cw );
+            b.InheritNative( cw );
             //ClassWrap_NativeSubtypeLookup<BoundNative>::RegisterSubclass<BS>();
             typedef ClassWrap_NativeInheritance<BoundNative> NIT;
             NIT::RegisterSubclass<BS>();
@@ -408,6 +423,6 @@ namespace v8 { namespace juice {
         DBGOUT <<"Binding done.\n";
         return ctor;
     }
-
+#undef DBGOUT
 } } // namespaces
 

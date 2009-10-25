@@ -24,6 +24,33 @@ function createThem(count)
     return b;
 }
 
+function dumpBoundNative(b,msg)
+{
+    print(arguments.callee.top);    
+    if( msg ) print(msg);
+    print('b.toString() ==',b.toString());
+    print('b.toString2() ==',b.toString2());
+    print('b.version() ==',b.version());
+    print('b.doSomething() ==',b.doSomething("hi, world"));
+    print('b.getInt() ==',b.getInt());
+    print('b.setInt(17) ==',b.setInt(17));
+    print('b.getInt() ==',b.getInt());
+    print('b.myInt ==',b.myInt);
+    print('b.myInt += 17 ==',b.myInt += 17);
+    print('b.myInt ==',b.myInt);
+    print('b.intGetter ==',b.intGetter);
+    print('b.intGetter=3 ==',b.intGetter=3);
+    print('b.intGetter ==',b.intGetter);
+    print('b.publicProperty ==',b.publicProperty);
+    print('b.publicProperty/=3 ==',b.publicProperty/=3);
+    print('b.publicProperty ==',b.publicProperty);
+    print('b.publicPropertyRO ==',b.publicPropertyRO);
+    print('b.publicPropertyRO=13 ==',b.publicPropertyRO=13);
+    print('b.publicPropertyRO ==',b.publicPropertyRO);
+    print(arguments.callee.bottom);
+}
+dumpBoundNative.top =    'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv';
+dumpBoundNative.bottom = '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^';
 function testOne()
 {
     print(arguments.callee.name+"() ------------------------------------------");
@@ -48,25 +75,7 @@ function testOne()
         print("Created",c,"objects...");
     }
     print("Done. Created",total,"objects in total.");
-    print('b.toString() ==',b.toString());
-    print('b.toString2() ==',b.toString2());
-    print('b.version() ==',b.version());
-    print('b.doSomething() ==',b.doSomething("hi, world"));
-    print('b.getInt() ==',b.getInt());
-    print('b.setInt(17) ==',b.setInt(17));
-    print('b.getInt() ==',b.getInt());
-    print('b.myInt ==',b.myInt);
-    print('b.myInt += 17 ==',b.myInt += 17);
-    print('b.myInt ==',b.myInt);
-    print('b.intGetter ==',b.intGetter);
-    print('b.intGetter=3 ==',b.intGetter=3);
-    print('b.intGetter ==',b.intGetter);
-    print('b.publicProperty ==',b.publicProperty);
-    print('b.publicProperty/=3 ==',b.publicProperty/=3);
-    print('b.publicProperty ==',b.publicProperty);
-    print('b.publicPropertyRO ==',b.publicPropertyRO);
-    print('b.publicPropertyRO=13 ==',b.publicPropertyRO=13);
-    print('b.publicPropertyRO ==',b.publicPropertyRO);
+    dumpBoundNative(b,"BoundNative object:");
     if(1)
     {
         var b2 = new BoundNative();
@@ -108,7 +117,7 @@ function testInheritance1()
     print(arguments.callee.name+"() ------------------------------------------");
     function MyClass()
     {
-        this.prototype = this.__proto__ = new BoundNative();
+        this.prototype = this.__proto__ = new BoundNative(193,242.424);
         this.prototype.constructor = MyClass;
         return this;
     }
@@ -124,7 +133,7 @@ function testInheritance1()
 
     
     var m = new MyClass();
-    print("m =",m);
+    dumpBoundNative(m,"This is m:");
     print("m instanceof BoundNative ==",m instanceof BoundNative);
     var y = new YourClass();
     print("y instanceof BoundNative ==",y instanceof BoundNative);
@@ -176,23 +185,38 @@ function testNativeSubclass()
     var s = new BoundSub();
     print( 's =',s);
     print( 's.ptr(s) =',s.ptr(s));
+    dumpBoundNative(s,"BoundSub object:");
+    print('BoundNative.instanceCount() before s.destroy() ==',BoundNative.instanceCount());
     s.destroy();
+    print('BoundNative.instanceCount() before y.destroy() ==',BoundNative.instanceCount());
+    var exp = null;
+    try
+    {
+        s.ptr(s); // should throw
+        return;
+    }
+    catch(e)
+    { exp = e; /* this is what we expected. */}
+    if( ! exp )
+    {
+        throw new Error("s.memfunc() call did not throw after s.destroy()!");
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
 //BoundNative.prototype.debug = false;
-testOne();
-testTwo();
-testThree();
-testNativeSubclass();
-if(false) if( BoundNative.supportsInheritance )
+// testOne();
+// testTwo();
+// testThree();
+if(true) if( BoundNative.supportsInheritance )
 {
     testInheritance1();
 }
 else
 {
-    print("Skipping inheritance tests.");
+    print("Skipping JS inheritance tests.");
 }
+testNativeSubclass();
 
 print("BoundNative.supportsInheritance ==",BoundNative.supportsInheritance);
 print("BoundNative.debug ==",BoundNative.debug);
