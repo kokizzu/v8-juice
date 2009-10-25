@@ -47,6 +47,10 @@ function dumpBoundNative(b,msg)
     print('b.publicPropertyRO ==',b.publicPropertyRO);
     print('b.publicPropertyRO=13 ==',b.publicPropertyRO=13);
     print('b.publicPropertyRO ==',b.publicPropertyRO);
+    print('b.overload() ==',b.overload());
+    print('b.overload(3) ==',b.overload(3));
+    print('b.overload(17,23.72) ==',b.overload(17,23.72));
+    print('b.overload(1,2,3) ==',b.overload(1,2,3,4,5));
     print(arguments.callee.bottom);
 }
 dumpBoundNative.top =    'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv';
@@ -187,7 +191,7 @@ function testThree()
 
 function testNativeSubclass()
 {
-    var s = new BoundSub(333);
+    var s = new BoundSub(333,23);
     print( 's =',s);
     print( 's.ptr(s) =',s.ptr(s));
     dumpBoundNative(s,"BoundSub object:");
@@ -211,9 +215,9 @@ function testNativeSubclass()
 ////////////////////////////////////////////////////////////////////////
 //BoundNative.prototype.debug = false;
 testOne();
-// testTwo();
-// testThree();
-if(false) if( BoundNative.supportsInheritance )
+testTwo();
+testThree();
+if(true) if( BoundNative.supportsInheritance )
 {
     testInheritance1();
 }

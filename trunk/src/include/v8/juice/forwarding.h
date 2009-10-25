@@ -38,14 +38,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//#include <cstdint> // arg! Requires C++0x!
-#include <stdint.h> // hope the client's platform is recent!
-#include <string>
-#include <cstring>
-#include <list>
 #include <vector>
-#include <map>
-//#include "bind.h"
 #include "convert.h"
 namespace v8 { namespace juice { namespace convert {
     using namespace v8;
@@ -59,6 +52,24 @@ namespace v8 { namespace juice { namespace convert {
 #endif // !DOXYGEN
 
 
+    /**
+       This class is not implemented, but exists solely to document
+       the interface expected by many of the function binding
+       templates.
+    */
+    struct InvocableInterface
+    {
+        /**
+           A v8::InvocationCallback function.
+        */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv );
+        /**
+           Must hold the number of arguments expected by this handler.
+           In some special cases it may be negative, but not in the
+           general case.
+        */
+        static const int Arity = 0;
+    };
 
     /**
        Base instantiation of a helper to forward v8::Arguments
@@ -175,8 +186,10 @@ namespace v8 { namespace juice { namespace convert {
         return FunctorForwarder<0,ReturnT>::Call( func );
     }
 
+#if !defined(DOXYGEN)
 #include "forwarding-FunctorForwarder.h" // generated specializations for FunctorForwarder
-
+#endif
+    
     /**
        Useless base instantiation - See the 0-specialization for details.
     */
@@ -409,8 +422,57 @@ namespace v8 { namespace juice { namespace convert {
         }
     };
 
-#include "forwarding-MemFuncForwarder.h" // generated specializations for MemFuncForwarder
+    /**
+       A helper class for storing type information for JS member
+       function call forwarding.
 
+       RV is the return value type of the templatized function.
+     */
+    template <typename T,typename RV, RV (T::*Func)()>
+    struct InvocableMemFunc0
+    {
+        /**
+           The number of arguments Func requires.
+         */
+        static const int Arity = 0;
+        /** Returns FunctionForwarder<Arity>::Call<T>( Func, argv ). */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
+        }
+        /** Returns FunctionForwarder<Arity>::CallVoid<T>( Func, argv ). */
+        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+        {
+            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
+        }
+    };
+
+    /**
+       An variant of InvocableMemFunc0 which is unfortunately
+       necessary for handling const member functions.
+    */
+    template <typename T,typename RV,RV (T::*Func)() const>
+    struct InvocableConstMemFunc0
+    {
+        /**
+           The number of arguments Func requires.
+         */
+        static const int Arity = 0;
+        /** Returns FunctionForwarder<Arity>::Call<T>( Func, argv ). */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
+        }
+        /** Returns FunctionForwarder<Arity>::CallVoid<T>( Func, argv ). */
+        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+        {
+            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
+        }
+    };
+
+//#if !defined(DOXYGEN)
+#include "forwarding-MemFuncForwarder.h" // generated specializations for MemFuncForwarder
+//#endif
     /**
        Useless base instantiation. See TMemFuncForwarder<0> for the
        docs.
@@ -533,8 +595,9 @@ namespace v8 { namespace juice { namespace convert {
             return Proxy::InvocableVoid<Type,VoidType,MemFunc>( argv );
         }
     };
+#if !defined(DOXYGEN)
 #include "forwarding-TMemFuncForwarder.h" // generated specializations for TMemFuncForwarder
-
+#endif
     /**
        A useless base instantiation. See FunctionForwarder<0> for the
        full docs.
@@ -652,8 +715,34 @@ namespace v8 { namespace juice { namespace convert {
         }
     };
 
-#include "forwarding-FunctionForwarder.h" // generated specializations for MemFuncForwarder
+    /**
+       A helper class for storing type information for JS function
+       call forwarding.
 
+       RV is the return value type of the templatized function.
+     */
+    template <typename RV, RV (*Func)()>
+    struct InvocableFunction0
+    {
+        static const int Arity = 0;
+        /** Returns FunctionForwarder<Arity>::Call<RV>( Func, argv ). */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            return FunctionForwarder<Arity>::Call<RV>( Func, argv );
+        }
+        /** Returns FunctionForwarder<Arity>::CallVoid<RV>( Func, argv ). */
+        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+        {
+            return FunctionForwarder<Arity>::CallVoid<RV>( Func, argv );
+        }
+    };
+
+#if !defined(DOXYGEN)
+#include "forwarding-FunctionForwarder.h" // generated specializations for MemFuncForwarder
+#endif
+
+
+    
     /**
        Possibly a utility class, though it's utility is in question,
        this is a helper for using the FunctionForwarder and
@@ -1306,6 +1395,7 @@ namespace v8 { namespace juice { namespace convert {
     template <typename T>
     struct CtorForwarder<T,0>
     {
+        enum { Arity = 0 };
         typedef typename TypeInfo<T>::Type Type;
         typedef typename TypeInfo<T>::NativeHandle NativeHandle;
         /**
@@ -1316,7 +1406,126 @@ namespace v8 { namespace juice { namespace convert {
             return new Type;
         }
     };
+    template <typename T>
+    struct CtorForwarder0 : CtorForwarder<T,0>
+    {
+    };
+#if !defined(DOXYGEN)
 #include "forwarding-CtorForwarder.h" /* generated code for specializations taking 1+ args */
+#endif
+
+    /**
+       This class converts a v8::InvocationCallback function into an
+       InvocableInterface class.  It may seem useless, but has uses
+       (or _a_ use) in binding overloaded native functions to classes.
+
+       The Arity argument is a hint as to how many arguments the
+       function requires. If it is zero or higher then this type
+       enforces that it is passed exactly that many arguments,
+       throwing a JS exception if there is a mismatch. If it is
+       negative then this class ignores the argument count, leaving
+       enforcement to a lower-level proxy function (which will likely
+       throw a JS exception if the arg count does not match the
+       requirements).
+    */
+    template < int Arity_, v8::Handle<v8::Value> (*Func)( v8::Arguments const & ) >
+    struct InvocableCallback
+    {
+        static const int Arity = Arity_;
+        /**
+           If Arity is negative then it calls Func(argv). Otherwise it
+           calls Func() only if argv.Length()==Arity, throwing a JS
+           exception if the argument count does not match.
+        */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            if( Arity>=0 )
+            {
+                if( argv.Length() != Arity )
+                {
+                    StringBuffer msg;
+                    msg << "InvocableCallback<>::Invocable(): "
+                        << argv.Callee()->GetName()
+                        << "() was passed "<<argv.Length()<<" arguments, but "
+                        << "expects "<< Arity<<"!\n";
+                    return v8::ThrowException( msg );
+                }
+            }
+            return Func( argv );
+        }
+        /**
+           Just like Invocable(), but discards the return value from
+           Func().  It always returns v8::Undefined() on success and a
+           JS exception on error (argument count mismatch).
+        */
+        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+        {
+            if( Arity>=0 )
+            {
+                if( argv.Length() != Arity )
+                {
+                    StringBuffer msg;
+                    msg << "InvocableCallback<>::InvocableVoid(): "
+                        << argv.Callee()->GetName()
+                        << "() was passed "<<argv.Length()<<" arguments, but "
+                        << "expects "<< Arity<<"!\n";
+                    return v8::ThrowException( msg );
+                }
+            }
+            Func( argv );
+            return v8::Undefined();
+        }
+    };
+
+    /**
+       This is an adapter type for types implementing
+       InvocableInterface.  It converts the call into a
+       v8::InvocationCallback which returns Undefined(). That is, it
+       discards the return value. Note that this is slighlty different
+       from MemFuncForwarder::InvocableVoid() and friends in that this
+       adapter must invoke the conversion template for the return
+       value type, which is not legal (compile-time error) if there is
+       no conversion in place.
+    */
+    template < typename InvocableT >
+    struct DiscardInvocableReturnVal
+    {
+        static const int Arity = InvocableT::Arity;
+        /**
+           Just like InvocableCallback::Invocable(), but
+           discards the return value from Func().  It always returns
+           v8::Undefined() on success and a JS exception on error.
+        */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            if( Arity>=0 )
+            {
+                if( argv.Length() != Arity )
+                {
+                    StringBuffer msg;
+                    msg << "InvocableCallbackVoid<>::InvocableVoid(): "
+                        << argv.Callee()->GetName()
+                        << "() was passed "<<argv.Length()<<" arguments, but "
+                        << "expects "<< Arity<<"!\n";
+                    return v8::ThrowException( msg );
+                }
+            }
+            InvocableT::Invocable( argv );
+            return v8::Undefined();
+        }
+    };
+
+    /**
+       This works just like DiscardInvocableReturnVal but takes a
+       v8::InvocationCallback pointer. i don't seem to be able to
+       unify them into one interface :/.
+    */
+    template < int Arity, v8::Handle<v8::Value> (*Func)( v8::Arguments const & ) >
+    struct DiscardInvocableCallback :
+        DiscardInvocableReturnVal< InvocableCallback<Arity, Func> >
+    {
+    };
+
 }}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_FORWARDING_H_INCLUDED */

@@ -1,8 +1,9 @@
 // EXPERIMENTAL/INCOMPLETE!
 #include <sstream>
 
-#include "ClassWrap.h"
-
+#include <v8/juice/ClassWrap.h>
+#include <v8/juice/forwarding.h>
+#include <v8/juice/overloading.h>
 
 #include <unistd.h> // sleep(3)
 
@@ -54,6 +55,9 @@ struct BoundNative
         }
         int getInt() const { return this->propi; }
         void setInt( int i ) { this->propi = i; }
+        bool overload() const { return true; }
+        int overload(int i) { return i; }
+        double overload(int i, double d) { return d; }
         virtual std::string toString() const
         {
             std::ostringstream os;
@@ -81,31 +85,28 @@ struct BoundNative
 namespace v8 { namespace juice {
     namespace cw
     {
+        //template <> struct DebugLevel<BoundNative> : Opt_Int<2> {};
+
         template <>
-        struct ClassWrap_DebugLevel<BoundNative>
-            : ClassWrap_Opt_Int<2>
+        struct ToNative_SearchPrototypesForNative<BoundNative>
+            : Opt_Bool<true>
         {};
 
         template <>
-        struct ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>
-            : ClassWrap_Opt_Bool<true>
-        {};
-
-        template <>
-        struct ClassWrap_AllowCtorWithoutNew<BoundNative>
-            : ClassWrap_Opt_Bool<false>
+        struct AllowCtorWithoutNew<BoundNative>
+            : Opt_Bool<false>
         {};
 
 
         template <>
-        struct ClassWrap_InternalFields<BoundNative>
-            : ClassWrap_InternalFields_Base<BoundNative>//,4,2>
+        struct InternalFields<BoundNative>
+            : InternalFields_Base<BoundNative>//,4,2>
         {};
 
 #if 1
         template <>
-        struct ClassWrap_Inheritance<BoundNative>
-            : ClassWrap_Inheritance_Base<
+        struct Inheritance<BoundNative>
+            : Inheritance_Base<
             BoundNative
             //,std::string // should fail to compile
             //,BoundNative // should work
@@ -115,7 +116,7 @@ namespace v8 { namespace juice {
     } // namespace cw
 } }
 size_t BoundNative::instcount = 0;
-bool BoundNative::enableDebug = v8::juice::cw::ClassWrap_DebugLevel<BoundNative>::Value > 2;
+bool BoundNative::enableDebug = v8::juice::cw::DebugLevel<BoundNative>::Value > 2;
     
     class BoundSub : public BoundNative
     {
@@ -145,21 +146,31 @@ bool BoundNative::enableDebug = v8::juice::cw::ClassWrap_DebugLevel<BoundNative>
 namespace v8 { namespace juice {
     namespace cw
     {
-#define XTPOLICY(P) template <> struct ClassWrap_ ## P<BoundSub> : ClassWrap_ ## P<BoundNative> {}
+#define XTPOLICY(P) template <> struct  P<BoundSub> :  P<BoundNative> {}
         XTPOLICY(InternalFields);
         XTPOLICY(ToNative_SearchPrototypesForNative);
+        //XTPOLICY(AllowCtorWithoutNew);
 #undef XTPOLICY
 
         template <>
-        struct ClassWrap_DebugLevel<BoundSub>
-            : ClassWrap_Opt_Int<3>
+        struct DebugLevel<BoundSub>
+            : Opt_Int<2>
         {};
 
+        using namespace v8::juice;
         template <>
-        struct ClassWrap_Factory<BoundSub> :
-            //ClassWrap_Factory_NewDelete<BoundSub>
-            //ClassWrap_Factory_CtorForwarder2<BoundSub,int,double>
-            ClassWrap_Factory_CtorForwarder1<BoundSub,int>
+        struct Factory<BoundSub> :
+#if 0
+            Factory_CtorForwarder1<BoundSub,int>
+#else
+        Factory_CtorForwarder<BoundSub,
+                              convert::TypeList<
+            convert::CtorForwarder0<BoundSub>,
+            convert::CtorForwarder1<BoundSub,int>,
+            convert::CtorForwarder2<BoundSub,int,double>
+        >
+        >
+#endif
         {};
     } // namespace cw
 
@@ -167,20 +178,20 @@ namespace v8 { namespace juice {
 
 
 // Set ONE of the following to a true value to select that ClassWrap policy set:
-#if 0
+#if 1
 // #  warning "Using JuiceBind policies!"
 #  define USING_JUICEBIND_POLICIES
-#  define CLASSWRAP_POLICY_HEADER "ClassWrap_JuiceBind.h"
+#  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap_JuiceBind.h>
 #include CLASSWRAP_POLICY_HEADER
 #elif 0
 // #  warning "Using TwoWay policies!"
 #  define USING_TWOWAY_POLICIES
-#  define CLASSWRAP_POLICY_HEADER "ClassWrap_TwoWay.h"
+#  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap_TwoWay.h>
 #include CLASSWRAP_POLICY_HEADER
 #else
 // #  warning "Using default policies!"
 #  define USING_DEFAULT_POLICIES
-#  define CLASSWRAP_POLICY_HEADER "ClassWrap-JSToNative.h"
+#  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap-JSToNative.h>
 #endif
 
 
@@ -199,7 +210,7 @@ namespace v8 { namespace juice { namespace cw {
 
 #if 0 && defined(USING_DEFAULT_POLICIES)
     template <>
-    struct ClassWrap_ClassName<BoundNative>
+    struct ClassName<BoundNative>
     {
         static char const * Value()
         {
@@ -209,8 +220,15 @@ namespace v8 { namespace juice { namespace cw {
 #endif
 
     template <>
-    struct ClassWrap_Factory<BoundNative>
+    struct Factory<BoundNative>
+        : Factory_CtorForwarder<BoundNative,
+                                convert::TypeList<
+            convert::CtorForwarder0<BoundNative>,
+            convert::CtorForwarder2<BoundNative,int,double>
+            >
+        >
     {
+#if 0
         typedef convert::TypeInfo<BoundNative>::Type Type;
         typedef convert::TypeInfo<BoundNative>::NativeHandle NativeHandle;
 	static NativeHandle Instantiate( Arguments const &  argv,
@@ -234,20 +252,18 @@ namespace v8 { namespace juice { namespace cw {
             delete obj;
 	}
         static const size_t AllocatedMemoryCost = sizeof(BoundNative);
+#endif
     };
 
-
-
-
 //     template <>
-//     struct ClassWrap_WeakWrap<BoundSub> : ClassWrap_JuiceBind_WeakWrap<BoundSub>
+//     struct WeakWrap<BoundSub> : JuiceBind_WeakWrap<BoundSub>
 //     {};
 //     template <>
-//     struct ClassWrap_Extract<BoundSub> : ClassWrap_JuiceBind_Extract<BoundSub>
+//     struct Extract<BoundSub> : JuiceBind_Extract<BoundSub>
 //     {};
 
 //     template <>
-//     struct ClassWrap_ClassName< BoundSub >
+//     struct ClassName< BoundSub >
 //     {
 //         static char const * Value()
 //         {
@@ -288,10 +304,31 @@ v8::Handle<v8::Value> BoundNative_destroy( v8::Arguments const & argv )
     DBGOUT << "BoundNative_Destroy()\n";
     return convert::CastToJS( cw::ClassWrap<BoundNative>::DestroyObject(argv.This()) );
 }
-
+void BoundNative_overload()
+{
+    DBGOUT << "BoundNative_overload()\n";
+    return;
+}
+int BoundNative_overload( int i )
+{
+    DBGOUT << "BoundNative_overload("<<i<<")\n";
+    return i;
+}
+double BoundNative_overload( int i, double d )
+{
+    DBGOUT << "BoundNative_overload("<<i<<", "<<d<<")\n";
+    return d;
+}
+v8::Handle<v8::Value> BoundNative_overload( v8::Arguments const & argv )
+{
+    DBGOUT << "BoundNative_overload(v8::Arguments)\n";
+    v8::juice::convert::StringBuffer msg;
+    msg << "BoundNative_overload("<<argv.Length()<<" Arguments)";
+    return msg;
+}
 v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 {
-    //         typedef ClassWrap_Inheritance<BoundNative> Inherit;
+    //         typedef Inheritance<BoundNative> Inherit;
     //         {
     //             Inherit x;
     //         }
@@ -330,6 +367,21 @@ v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
             //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
             );
 #endif
+    cw.Set( "overload",
+            convert::OverloadInvocables<
+            convert::TypeList<
+            convert::InvocableConstMemFunc0<N,bool,&N::overload>,
+            //convert::InvocableFunction0<void,BoundNative_overload>,
+            //convert::DiscardInvocableReturnVal<
+              convert::InvocableMemFunc1<N,int,int,&N::overload>
+            //>
+            ,            
+            //convert::InvocableFunction1<int,int,BoundNative_overload>,
+            convert::InvocableMemFunc2<N,double,int,double,&N::overload>,
+            //convert::InvocableFunction2<double,int,double,BoundNative_overload>,
+            convert::InvocableCallback<-1, BoundNative_overload>
+            //convert::
+            > >::Invocable );
     //typedef convert::PropertyBinder<N> PB;
     typedef CW::PB PB;
     v8::Handle<v8::ObjectTemplate> cwproto = cw.Prototype();
@@ -361,7 +413,7 @@ v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
     cw.Set( "instanceCount", JFH );
     cw.CtorTemplate()->Set( "instanceCount", JFH );
     cw.CtorTemplate()->Set( "supportsInheritance",
-                            convert::CastToJS(cw::ClassWrap_ToNative_SearchPrototypesForNative<BoundNative>::Value) );
+                            convert::CastToJS(cw::ToNative_SearchPrototypesForNative<BoundNative>::Value) );
     FH = ICC::F1::Invocable<unsigned int,unsigned int,::sleep>;
     cw.Set( "sleep", JFH );
     v8::Handle<v8::Function> ctor = cw.Seal();
@@ -399,7 +451,7 @@ v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 
     if(1)
     {
-        v8::Handle<v8::Object> so = cw::ClassWrap_FindHolder<N>( jobj, bound );
+        v8::Handle<v8::Object> so = cw::FindHolder<N>( jobj, bound );
         DBGOUT << "FindHolder() == [" << convert::CastFromJS<std::string>( so ) << "]\n";
     }
 
@@ -422,8 +474,8 @@ v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
         WBS &b( WBS::Instance() );
         //b.Inherit( cw );
         b.InheritNative( cw );
-        //ClassWrap_NativeSubtypeLookup<BoundNative>::RegisterSubclass<BS>();
-        //typedef cw::ClassWrap_NativeInheritance<BoundNative> NIT;
+        //NativeSubtypeLookup<BoundNative>::RegisterSubclass<BS>();
+        //typedef cw::NativeInheritance<BoundNative> NIT;
         //NIT::RegisterSubclass<BS>();
             
         b.Seal();

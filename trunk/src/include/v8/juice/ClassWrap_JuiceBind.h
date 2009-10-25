@@ -16,7 +16,7 @@
    // From global scope:
    #define CLASSWRAP_BOUND_TYPE MyType
    #define CLASSWRAP_BOUND_TYPE_NAME "MyType"
-   #include <v8/juice/ClassWrap_JuiceBind.h>
+   #include <v8/juice/JuiceBind.h>
    @endcode
 
    That will install these policies as the defaults for
@@ -25,7 +25,7 @@
    be directly included again).
    
    Defining CLASSWRAP_BOUND_TYPE_NAME is optional, but if it is not done
-   then one must provide his own ClassWrap_ClassName<CLASSWRAP_BOUND_TYPE>
+   then one must provide his own ClassName<CLASSWRAP_BOUND_TYPE>
    specialization.
 
    The following ClassWrap policies are set up:
@@ -45,19 +45,19 @@
    specializations must visible from this file! i.e. they must be
    defined before including this file.
 
-   - ClassWrap_ToNative_SearchPrototypesForNative<T>
-   - ClassWrap_InternalFields<T> 
+   - ToNative_SearchPrototypesForNative<T>
+   - InternalFields<T> 
    
 */
 namespace v8 { namespace juice { namespace cw {
     //namespace convert = v8::juice::convert;
     //using namespace v8::juice;
     /**
-       A concrete ClassWrap_WeakWrap policy which uses the v8::juice::bind
+       A concrete WeakWrap policy which uses the v8::juice::bind
        API to register objects for type-safe lookups later on.
     */
     template <typename T>
-    struct ClassWrap_JuiceBind_WeakWrap
+    struct JuiceBind_WeakWrap
     {
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
         /**
@@ -76,12 +76,12 @@ namespace v8 { namespace juice { namespace cw {
     };
 
     /**
-       A concrete ClassWrap_Extract policy which uses the
+       A concrete Extract policy which uses the
        v8::juice::bind API to extract, type-safely, native objects
        from JS object.
     */
     template <typename T>
-    struct ClassWrap_JuiceBind_Extract : ::v8::juice::cw::ClassWrap_Extract_Base<T>
+    struct JuiceBind_Extract : ::v8::juice::cw::Extract_Base<T>
     {
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
@@ -101,16 +101,16 @@ namespace v8 { namespace juice { namespace cw {
 namespace v8 { namespace juice { namespace cw {
 
     template <>
-    struct ClassWrap_WeakWrap< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_JuiceBind_WeakWrap< CLASSWRAP_BOUND_TYPE > {};
+    struct WeakWrap< CLASSWRAP_BOUND_TYPE > :
+        JuiceBind_WeakWrap< CLASSWRAP_BOUND_TYPE > {};
 
     template <>
-    struct ClassWrap_Extract< CLASSWRAP_BOUND_TYPE > :
-        ClassWrap_JuiceBind_Extract< CLASSWRAP_BOUND_TYPE > {};
+    struct Extract< CLASSWRAP_BOUND_TYPE > :
+        JuiceBind_Extract< CLASSWRAP_BOUND_TYPE > {};
 
 #if defined(CLASSWRAP_BOUND_TYPE_NAME)
     template <>
-    struct ClassWrap_ClassName< CLASSWRAP_BOUND_TYPE >
+    struct ClassName< CLASSWRAP_BOUND_TYPE >
     {
         static char const * Value()
         {
@@ -121,5 +121,5 @@ namespace v8 { namespace juice { namespace cw {
 #endif
     
 } } } // namespaces
-#include "ClassWrap-JSToNative.h" // will undefine CLASSWRAP_BOUND_TYPE
+#include <v8/juice/ClassWrap-JSToNative.h> // will undefine CLASSWRAP_BOUND_TYPE
 #endif //CLASSWRAP_BOUND_TYPE
