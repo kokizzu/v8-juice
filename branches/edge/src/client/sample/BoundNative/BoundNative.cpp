@@ -1,7 +1,7 @@
 // EXPERIMENTAL/INCOMPLETE!
 #include <sstream>
 
-#include "ClassWrap.h"
+#include <v8/juice/ClassWrap.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/overloading.h>
 
@@ -181,17 +181,17 @@ namespace v8 { namespace juice {
 #if 1
 // #  warning "Using JuiceBind policies!"
 #  define USING_JUICEBIND_POLICIES
-#  define CLASSWRAP_POLICY_HEADER "ClassWrap_JuiceBind.h"
+#  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap_JuiceBind.h>
 #include CLASSWRAP_POLICY_HEADER
 #elif 0
 // #  warning "Using TwoWay policies!"
 #  define USING_TWOWAY_POLICIES
-#  define CLASSWRAP_POLICY_HEADER "ClassWrap_TwoWay.h"
+#  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap_TwoWay.h>
 #include CLASSWRAP_POLICY_HEADER
 #else
 // #  warning "Using default policies!"
 #  define USING_DEFAULT_POLICIES
-#  define CLASSWRAP_POLICY_HEADER "ClassWrap-JSToNative.h"
+#  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap-JSToNative.h>
 #endif
 
 

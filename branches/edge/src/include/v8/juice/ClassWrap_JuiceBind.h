@@ -1,7 +1,7 @@
 #if !defined(V8_JUICE_CLASSWRAP_POLICY_JUICEBIND_INCLUDED)
 #define V8_JUICE_CLASSWRAP_POLICY_JUICEBIND_INCLUDED
 #include <v8/juice/bind.h>
-/** @file JuiceBind.h
+/** @file ClassWrap_JuiceBind.h
    This file has two uses:
 
    1) When included "normally", it defines a set of ClassWrap policies
@@ -121,5 +121,5 @@ namespace v8 { namespace juice { namespace cw {
 #endif
     
 } } } // namespaces
-#include "ClassWrap-JSToNative.h" // will undefine CLASSWRAP_BOUND_TYPE
+#include <v8/juice/ClassWrap-JSToNative.h> // will undefine CLASSWRAP_BOUND_TYPE
 #endif //CLASSWRAP_BOUND_TYPE
