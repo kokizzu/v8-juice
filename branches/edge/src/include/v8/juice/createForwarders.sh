@@ -466,8 +466,8 @@ EOF
 function makeCtorForwarder()
 {
 
-    local err_too_few_args="CtorForwarder<${count}>::Ctor() expects at least ${count} JS arguments!"
-    local err_exception="CtorForwarder<${count}>::Ctor() Native function threw an unknown native exception type!"
+    local err_too_few_args="CtorForwarder<T,${count}>::Ctor() expects at least ${count} JS arguments!"
+    local err_exception="CtorForwarder<T,${count}>::Ctor() Native ctor threw an unknown native exception type!"
 
     cat <<EOF
 /** Specialization ${count} arguments. */
@@ -482,22 +482,12 @@ struct CtorForwarder<T,${count}>
     {
 	if( argv.Length() < Arity )
         {
-            ::v8::ThrowException(::v8::String::New("${err_too_few_args}"));
-            return 0;
+            throw std::range_error("${err_too_few_args}");
         }
-        try
+        else
         {
             return new Type( ${castCalls} );
         }
-        catch( std::exception const & ex )
-        {
-            ::v8::ThrowException( ::v8::String::New(ex.what()) );
-        }
-        catch( ... )
-        {
-            ::v8::ThrowException( ::v8::String::New("${err_exception}"));
-        }
-        return 0;
     }
 
 };

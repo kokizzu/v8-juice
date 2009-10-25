@@ -358,14 +358,15 @@ namespace convert {
     struct NativeToJS<std::exception>
     {
         /** Calls v8::ThrowException(ex.what()) and returns an empty
-            handle.
+            handle. It must call ThrowException() because that is
+            apparently the only way to create an Error object from the
+            native API.
         */
 	v8::Handle<v8::Value> operator()( std::exception const & ex ) const
 	{
             char const * msg = ex.what();
-	    v8::ThrowException( String::New( msg ? msg : "unknown std::exception!" ) );
+	    return v8::ThrowException( String::New( msg ? msg : "unknown std::exception!" ) );
 	    /** ^^^ String::New() internally calls strlen(), which hates it when string==0. */
-            return v8::Handle<v8::Value>();
 	}
     };
     
