@@ -226,13 +226,14 @@ Now let's bind them to a JS object:
 
 {{{
 v8::InvocationCallback IC = 
- convert:: OverloadInvocables< convert::TypeList<
+ convert::OverloadInvocables< convert::TypeList<
       convert::InvocableMemFunc0<BoundNative,bool,&BoundNative::overload>,
       convert::InvocableFunction1<int,int,BoundNative_overload>,
       convert::InvocableFunction2<double,int,double,BoundNative_overload>,
       convert::InvocableCallback<-1, BoundNative_overload>
     > >::Invocable
-myObject->Set( String::New("overloaded"), IC );
+myObject->Set( String::New("overloaded"),
+               FunctionTemplate::New( IC )->GetFunction() );
 }}}
 
 Note that the `OverloadInvocables` type has a `TypeList` as its first argument. Type lists are an advanced C++ topic covered in gross detail in [http://erdani.com/ Modern C++ Design]. They allow us to build up lists of _types_. In this case, each type in the list must provide the following definitions:
