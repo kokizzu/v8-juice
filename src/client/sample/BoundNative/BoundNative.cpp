@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include "ClassWrap.h"
+#include <v8/juice/forwarding.h>
 #include <v8/juice/overloading.h>
 
 #include <unistd.h> // sleep(3)
@@ -54,8 +55,9 @@ struct BoundNative
         }
         int getInt() const { return this->propi; }
         void setInt( int i ) { this->propi = i; }
-        bool overload() { return true; }
+        bool overload() const { return true; }
         int overload(int i) { return i; }
+        double overload(int i, double d) { return d; }
         virtual std::string toString() const
         {
             std::ostringstream os;
@@ -369,12 +371,17 @@ v8::Handle<v8::Object> BoundNative::SetupClass( v8::Handle<v8::Object> dest )
             );
 #endif
     cw.Set( "overload",
-            convert::OverloadForwarder<
+            convert::OverloadInvocables<
             convert::TypeList<
-            convert::MemFuncInvocable0<BoundNative,bool,&BoundNative::overload>,
-            //convert::FunctionForwarder0<void,BoundNative_overload>,
-            convert::FunctionInvocable1<int,int,BoundNative_overload>,
-            convert::FunctionInvocable2<double,int,double,BoundNative_overload>,
+            convert::InvocableConstMemFunc0<N,bool,&N::overload>,
+            //convert::InvocableFunction0<void,BoundNative_overload>,
+            //convert::DiscardInvocableReturnVal<
+              convert::InvocableMemFunc1<N,int,int,&N::overload>
+            //>
+            ,            
+            //convert::InvocableFunction1<int,int,BoundNative_overload>,
+            convert::InvocableMemFunc2<N,double,int,double,&N::overload>,
+            //convert::InvocableFunction2<double,int,double,BoundNative_overload>,
             convert::InvocationCallbackInvocable<-1, BoundNative_overload>
             //convert::
             > >::Invocable );

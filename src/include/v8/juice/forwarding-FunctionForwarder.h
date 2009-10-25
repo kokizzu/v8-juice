@@ -63,7 +63,7 @@ struct FunctionForwarder<1>
 };
 
 template <typename RV,  typename A0, RV (*Func)( A0)>
-struct FunctionInvocable1
+struct InvocableFunction1
 {
     static const int Arity = 1;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -140,7 +140,7 @@ struct FunctionForwarder<2>
 };
 
 template <typename RV,  typename A0,  typename A1, RV (*Func)( A0, A1)>
-struct FunctionInvocable2
+struct InvocableFunction2
 {
     static const int Arity = 2;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -217,7 +217,7 @@ struct FunctionForwarder<3>
 };
 
 template <typename RV,  typename A0,  typename A1,  typename A2, RV (*Func)( A0, A1, A2)>
-struct FunctionInvocable3
+struct InvocableFunction3
 {
     static const int Arity = 3;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -294,7 +294,7 @@ struct FunctionForwarder<4>
 };
 
 template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV (*Func)( A0, A1, A2, A3)>
-struct FunctionInvocable4
+struct InvocableFunction4
 {
     static const int Arity = 4;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -371,7 +371,7 @@ struct FunctionForwarder<5>
 };
 
 template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV (*Func)( A0, A1, A2, A3, A4)>
-struct FunctionInvocable5
+struct InvocableFunction5
 {
     static const int Arity = 5;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -448,7 +448,7 @@ struct FunctionForwarder<6>
 };
 
 template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (*Func)( A0, A1, A2, A3, A4, A5)>
-struct FunctionInvocable6
+struct InvocableFunction6
 {
     static const int Arity = 6;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -525,7 +525,7 @@ struct FunctionForwarder<7>
 };
 
 template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (*Func)( A0, A1, A2, A3, A4, A5, A6)>
-struct FunctionInvocable7
+struct InvocableFunction7
 {
     static const int Arity = 7;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -602,7 +602,7 @@ struct FunctionForwarder<8>
 };
 
 template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7)>
-struct FunctionInvocable8
+struct InvocableFunction8
 {
     static const int Arity = 8;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -679,7 +679,7 @@ struct FunctionForwarder<9>
 };
 
 template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8)>
-struct FunctionInvocable9
+struct InvocableFunction9
 {
     static const int Arity = 9;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -756,7 +756,7 @@ struct FunctionForwarder<10>
 };
 
 template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9)>
-struct FunctionInvocable10
+struct InvocableFunction10
 {
     static const int Arity = 10;
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
