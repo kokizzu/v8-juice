@@ -187,7 +187,7 @@ function testThree()
 
 function testNativeSubclass()
 {
-    var s = new BoundSub(333);
+    var s = new BoundSub(333,23);
     print( 's =',s);
     print( 's.ptr(s) =',s.ptr(s));
     dumpBoundNative(s,"BoundSub object:");
@@ -211,9 +211,9 @@ function testNativeSubclass()
 ////////////////////////////////////////////////////////////////////////
 //BoundNative.prototype.debug = false;
 testOne();
-// testTwo();
-// testThree();
-if(false) if( BoundNative.supportsInheritance )
+testTwo();
+testThree();
+if(true) if( BoundNative.supportsInheritance )
 {
     testInheritance1();
 }
