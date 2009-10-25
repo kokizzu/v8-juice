@@ -1047,9 +1047,7 @@ namespace juice {
                 DBGOUT(2) << "WARNING: was passed an empty or non-object handle!\n";
                 return;
             }
-            //pv.ClearWeak(); // try to avoid duplicate calls caused by DestroyObject()-like features
 	    Local<Object> jobj( Object::Cast(*pv) );
-#if 1
             NativeHandle nh = ToNative::Value( jobj );
             if( nh != nobj )
             {
@@ -1090,7 +1088,6 @@ namespace juice {
                     ;
                 return;
             }
-#endif
             ClassWrap_WeakWrap<T>::Unwrap( jobj, nh );
             /**
                Reminder: the ClassWrap_FindHolder() bits are here to
@@ -1105,6 +1102,7 @@ namespace juice {
                bound to.
             */
             v8::Handle<v8::Object> nholder = ClassWrap_FindHolder<Type>( jobj, nh );
+            v8::V8::AdjustAmountOfExternalAllocatedMemory( -static_cast<int>( Factory::AllocatedMemoryCost ) );
             if( nholder.IsEmpty() || (nholder->InternalFieldCount() != InternalFields::Count) )
             {
                 DBGOUT(1) << "SERIOUS INTERNAL ERROR:\n"
@@ -1137,7 +1135,6 @@ namespace juice {
                    another object allocated at the same address).
                 */
                 nholder->SetInternalField(InternalFields::NativeIndex,Null());
-                v8::V8::AdjustAmountOfExternalAllocatedMemory( -static_cast<int>( Factory::AllocatedMemoryCost ) );
             }
 	}
 
@@ -1210,8 +1207,7 @@ namespace juice {
                 }
                 catch(std::exception const & ex)
                 {
-                    //return ThrowException(String::New(ex.what()));
-                    return convert::CastToJS( ex );
+                    return ThrowException(String::New(ex.what()));
                 }
                 catch(...)
                 {
@@ -1226,11 +1222,11 @@ namespace juice {
 		    Factory::Destruct(v8::Handle<v8::Object>(),obj);
 		    obj = NativeHandle(0);
 		}
-		return ThrowException(String::New(err.c_str(),static_cast<int>(err.size())));
+		return v8::ThrowException(v8::String::New(err.c_str(),static_cast<int>(err.size())));
 	    }
 	    if( ! obj )
 	    {
-		return ThrowException(String::New("Constructor failed for an unspecified reason!"));
+		return v8::ThrowException(v8::String::New("Constructor failed for an unspecified reason!"));
 	    }
 	    return wrap_native( argv.This(), obj );
 	}
@@ -1361,6 +1357,126 @@ namespace juice {
 #undef DBGOUT
     };
 
+    namespace Detail
+    {
+        /**
+           A base class for the ClassWrap_Factory_CtorForwarder#
+           family of classes.
+        */
+        template <typename T>
+        struct ClassWrap_Factory_CtorForwarder_Base
+        {
+            typedef typename convert::TypeInfo<T>::Type Type;
+            typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+            static void Destruct( v8::Handle<v8::Object> jself, NativeHandle nself )
+            {
+                delete nself;
+            }
+            static const size_t AllocatedMemoryCost = sizeof(Type);
+        protected:
+            static bool argv_check( v8::Arguments const & argv, int Arity, std::ostream & errmsg )
+            {
+                if( argv.Length() >= Arity ) return true;
+                else
+                {
+                    errmsg << ClassWrap_ClassName<T>::Value() << " constructor requires "
+                           << Arity << " arguments!"; 
+                    return false;
+                }
+            }
+        };
+    }
+
+    /**
+       A concrete ClassWrap_Factory which creates objects by calling
+       the default ctor and destroys them with 'delete'.
+    */
+    template <typename T>
+    struct ClassWrap_Factory_CtorForwarder0 : Detail::ClassWrap_Factory_CtorForwarder_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+	static NativeHandle Instantiate( Arguments const &  argv,
+                                         std::ostream & )
+	{
+            return convert::CtorForwarder<Type,0>::Ctor(argv);
+	}
+    };
+
+#define CtorForwarder_ArgvCheck_Prep(N)    \
+    if( ! Detail::ClassWrap_Factory_CtorForwarder_Base<T>::argv_check( argv, N, errmsg ) ) return NativeHandle(0); \
+        typedef convert::CtorForwarder<Type,N> CF
+
+    /**
+       A concrete ClassWrap_Factory which creates objects by calling
+       a 2-argument ctor and destroys them with 'delete'.
+
+       A0 is the first argument type of the ctor.
+    */
+    template <typename T,typename A0>
+    struct ClassWrap_Factory_CtorForwarder1 : Detail::ClassWrap_Factory_CtorForwarder_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+	static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
+	{
+            CtorForwarder_ArgvCheck_Prep(1);
+            return CF::template Ctor<A0>(argv);
+	}
+    };
+
+    /**
+       A concrete ClassWrap_Factory which creates objects by calling
+       a 2-argument ctor and destroys them with 'delete'.
+
+       A0 is the first argument type of the ctor. A1 is the second...
+    */
+    template <typename T,typename A0,typename A1>
+    struct ClassWrap_Factory_CtorForwarder2 : Detail::ClassWrap_Factory_CtorForwarder_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+	static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
+	{
+            CtorForwarder_ArgvCheck_Prep(2);
+            return CF::template Ctor<A0,A1>(argv);
+	}
+    };
+
+    /**
+       A concrete ClassWrap_Factory which creates objects by calling
+       a 3-argument ctor and destroys them with 'delete'.
+
+       A0 is the first argument type of the ctor. A1 is the second...
+    */
+    template <typename T,  typename A0,  typename A1,  typename A2 >
+    struct ClassWrap_Factory_CtorForwarder3 : public Detail::ClassWrap_Factory_CtorForwarder_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
+        {
+            CtorForwarder_ArgvCheck_Prep(3);
+            return CF::template Ctor< A0, A1, A2 >(argv);
+        }
+    };
+    /**
+       A concrete ClassWrap_Factory which creates objects by calling
+       a 4-argument ctor and destroys them with 'delete'.
+    */
+    template <typename T,  typename A0,  typename A1,  typename A2,  typename A3 >
+    struct ClassWrap_Factory_CtorForwarder4 : public Detail::ClassWrap_Factory_CtorForwarder_Base<T>
+    {
+        typedef typename convert::TypeInfo<T>::Type Type;
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
+        {
+            CtorForwarder_ArgvCheck_Prep(4);
+            return CF::template Ctor< A0, A1, A2, A3 >(argv);
+        }
+    };
+
+#undef CtorForwarder_ArgvCheck_Prep
    
 } } // namespaces
 

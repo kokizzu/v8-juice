@@ -202,6 +202,11 @@ namespace v8 { namespace juice {
         {
             DBGOUT << "BoundSub() this=@"<<(void const *)this << '\n';
         }
+        BoundSub( int a, double d = 191.919 )
+            : BoundNative(a, d)
+        {
+            DBGOUT << "BoundSub("<<a<<", "<<d<<") this=@"<<(void const *)this << '\n';
+        }
         virtual ~BoundSub()
         {
             DBGOUT << "~BoundSub() this=@"<<(void const *)this << '\n';
@@ -232,7 +237,10 @@ namespace v8 { namespace juice {
 //     {};
 
     template <>
-    struct ClassWrap_Factory<BoundSub> : ClassWrap_Factory_NewDelete<BoundSub>
+    struct ClassWrap_Factory<BoundSub> :
+        //ClassWrap_Factory_NewDelete<BoundSub>
+        //ClassWrap_Factory_CtorForwarder2<BoundSub,int,double>
+        ClassWrap_Factory_CtorForwarder1<BoundSub,int>
     {};
 
 //     template <>

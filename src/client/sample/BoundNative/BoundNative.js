@@ -182,7 +182,7 @@ function testThree()
 
 function testNativeSubclass()
 {
-    var s = new BoundSub();
+    var s = new BoundSub(3);
     print( 's =',s);
     print( 's.ptr(s) =',s.ptr(s));
     dumpBoundNative(s,"BoundSub object:");
