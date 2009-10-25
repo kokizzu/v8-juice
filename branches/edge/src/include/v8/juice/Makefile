@@ -92,7 +92,10 @@ $(TYPELIST_GENR):
 define GEN_TYPELIST
 # $1 = count
 TypeList_$(1).h:
-	perl $$(TYPELIST_GENR) $(1) > $$@
+	@echo "Creating $$@"; \
+	echo "#if !defined(DOXYGEN)" > $$@; \
+	perl $$(TYPELIST_GENR) $(1) >> $$@ || exit $$$$?; \
+	echo "#endif // if !defined(DOXYGEN)" >> $$@;
 gen-typelist: TypeList_$(1).h
 clean-typelist-$(1):
 	@-rm -f $$(wildcard TypeList_$(1).h) foo.bar

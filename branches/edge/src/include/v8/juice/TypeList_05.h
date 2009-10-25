@@ -1,4 +1,5 @@
-// auto-generated [Sun Oct 25 16:37:21 2009] by maketypelist.pl
+#if !defined(DOXYGEN)
+// auto-generated [Sun Oct 25 22:22:13 2009] by maketypelist.pl
 struct TypeList_0 : TypeListBase<NilType,NilType> {};
 
 template <class T1>
@@ -34,3 +35,4 @@ struct TypeList<T1, NilType, NilType, NilType, NilType> : TypeList_1<T1> {};
 template <>
 struct TypeList<> : TypeListBase<NilType,NilType> {};
 
+#endif // if !defined(DOXYGEN)
