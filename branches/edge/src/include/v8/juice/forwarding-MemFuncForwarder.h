@@ -125,21 +125,34 @@ struct MemFuncForwarder<1>
     {
         return CallVoid<T,VoidType, A0>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0, RV (*Func)( A0)>
-    struct MemFuncInvocable1
+};
+template <typename T, typename RV,  typename A0, RV (T::*Func)( A0) >
+struct InvocableMemFunc1
+{
+    static const int Arity = 1;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 1;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0, RV (T::*Func)( A0) const>
+struct InvocableConstMemFunc1
+{
+    static const int Arity = 1;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -266,21 +279,34 @@ struct MemFuncForwarder<2>
     {
         return CallVoid<T,VoidType, A0, A1>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0,  typename A1, RV (*Func)( A0, A1)>
-    struct MemFuncInvocable2
+};
+template <typename T, typename RV,  typename A0,  typename A1, RV (T::*Func)( A0, A1) >
+struct InvocableMemFunc2
+{
+    static const int Arity = 2;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 2;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0,  typename A1, RV (T::*Func)( A0, A1) const>
+struct InvocableConstMemFunc2
+{
+    static const int Arity = 2;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -407,21 +433,34 @@ struct MemFuncForwarder<3>
     {
         return CallVoid<T,VoidType, A0, A1, A2>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0,  typename A1,  typename A2, RV (*Func)( A0, A1, A2)>
-    struct MemFuncInvocable3
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2, RV (T::*Func)( A0, A1, A2) >
+struct InvocableMemFunc3
+{
+    static const int Arity = 3;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 3;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2, RV (T::*Func)( A0, A1, A2) const>
+struct InvocableConstMemFunc3
+{
+    static const int Arity = 3;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -548,21 +587,34 @@ struct MemFuncForwarder<4>
     {
         return CallVoid<T,VoidType, A0, A1, A2, A3>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV (*Func)( A0, A1, A2, A3)>
-    struct MemFuncInvocable4
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV (T::*Func)( A0, A1, A2, A3) >
+struct InvocableMemFunc4
+{
+    static const int Arity = 4;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 4;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3, RV (T::*Func)( A0, A1, A2, A3) const>
+struct InvocableConstMemFunc4
+{
+    static const int Arity = 4;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -689,21 +741,34 @@ struct MemFuncForwarder<5>
     {
         return CallVoid<T,VoidType, A0, A1, A2, A3, A4>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV (*Func)( A0, A1, A2, A3, A4)>
-    struct MemFuncInvocable5
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV (T::*Func)( A0, A1, A2, A3, A4) >
+struct InvocableMemFunc5
+{
+    static const int Arity = 5;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 5;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4, RV (T::*Func)( A0, A1, A2, A3, A4) const>
+struct InvocableConstMemFunc5
+{
+    static const int Arity = 5;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -830,21 +895,34 @@ struct MemFuncForwarder<6>
     {
         return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (*Func)( A0, A1, A2, A3, A4, A5)>
-    struct MemFuncInvocable6
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (T::*Func)( A0, A1, A2, A3, A4, A5) >
+struct InvocableMemFunc6
+{
+    static const int Arity = 6;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 6;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5, RV (T::*Func)( A0, A1, A2, A3, A4, A5) const>
+struct InvocableConstMemFunc6
+{
+    static const int Arity = 6;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -971,21 +1049,34 @@ struct MemFuncForwarder<7>
     {
         return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (*Func)( A0, A1, A2, A3, A4, A5, A6)>
-    struct MemFuncInvocable7
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (T::*Func)( A0, A1, A2, A3, A4, A5, A6) >
+struct InvocableMemFunc7
+{
+    static const int Arity = 7;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 7;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6, RV (T::*Func)( A0, A1, A2, A3, A4, A5, A6) const>
+struct InvocableConstMemFunc7
+{
+    static const int Arity = 7;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -1112,21 +1203,34 @@ struct MemFuncForwarder<8>
     {
         return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6, A7>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7)>
-    struct MemFuncInvocable8
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (T::*Func)( A0, A1, A2, A3, A4, A5, A6, A7) >
+struct InvocableMemFunc8
+{
+    static const int Arity = 8;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 8;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7, RV (T::*Func)( A0, A1, A2, A3, A4, A5, A6, A7) const>
+struct InvocableConstMemFunc8
+{
+    static const int Arity = 8;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -1253,21 +1357,34 @@ struct MemFuncForwarder<9>
     {
         return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6, A7, A8>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8)>
-    struct MemFuncInvocable9
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV (T::*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) >
+struct InvocableMemFunc9
+{
+    static const int Arity = 9;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 9;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8, RV (T::*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8) const>
+struct InvocableConstMemFunc9
+{
+    static const int Arity = 9;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 /**
 A helper class for forwarding JS arguments to member functions
@@ -1394,20 +1511,33 @@ struct MemFuncForwarder<10>
     {
         return CallVoid<T,VoidType, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9>( MemFunc, argv );
     }
-
-    template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV (*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9)>
-    struct MemFuncInvocable10
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV (T::*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) >
+struct InvocableMemFunc10
+{
+    static const int Arity = 10;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
-        static const int Arity = 10;
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9, RV (T::*Func)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9) const>
+struct InvocableConstMemFunc10
+{
+    static const int Arity = 10;
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
 };
 #endif // if !defined(DOXYGEN)

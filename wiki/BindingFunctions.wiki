@@ -227,9 +227,9 @@ Now let's bind them to a JS object:
 {{{
 v8::InvocationCallback IC = 
  convert:: OverloadInvocables< convert::TypeList<
-     convert::MemFuncInvocable0<BoundNative,bool,&BoundNative::overload>,
-     convert::FunctionInvocable1<int,int,BoundNative_overload>,
-     convert::FunctionInvocable2<double,int,double,BoundNative_overload>,
+     convert::InvocableMemFunc0<BoundNative,bool,&BoundNative::overload>,
+     convert::InvocableFunction1<int,int,BoundNative_overload>,
+     convert::InvocableFunction2<double,int,double,BoundNative_overload>,
      convert::InvocationCallbackInvocable<-1, BoundNative_overload>
             > >::Invocable
 myObject->Set( String::New("overloaded"), IC );

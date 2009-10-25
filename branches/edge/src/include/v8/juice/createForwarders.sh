@@ -180,23 +180,29 @@ struct MemFuncForwarder<${count}>
     {
         return CallVoid<T,VoidType,${aTParam}>( MemFunc, argv );
     }
-
-    template <typename T, typename RV, ${aTDecl}, RV (*Func)(${aTParam})>
-    struct MemFuncInvocable${count}
-    {
-        static const int Arity = ${count};
-        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
-        }
-        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
-        {
-            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
-        }
-    };
-
 };
 EOF
+
+for CONSTNESS in "" "const"; do
+    local SUFFIX
+    if [[ x${CONSTNESS} = "xconst" ]]; then INSERT=Const; else INSERT=""; fi
+cat <<EOF
+template <typename T, typename RV, ${aTDecl}, RV (T::*Func)(${aTParam}) ${CONSTNESS}>
+struct Invocable${INSERT}MemFunc${count}
+{
+    static const int Arity = ${count};
+    typedef MemFuncForwarder<Arity> Proxy;
+    static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+    {
+        return Proxy::template Call<T,RV>( Func, argv );
+    }
+    static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+    {
+        return Proxy::template CallVoid<T,RV>( Func, argv );
+    }
+};
+EOF
+done
 } # makeMemFuncForwarder()
 
 #######################################################
@@ -466,7 +472,7 @@ struct FunctionForwarder<${count}>
 };
 
 template <typename RV, ${aTDecl}, RV (*Func)(${aTParam})>
-struct FunctionInvocable${count}
+struct InvocableFunction${count}
 {
     static const int Arity = ${count};
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )

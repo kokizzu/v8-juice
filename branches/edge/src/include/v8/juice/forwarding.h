@@ -52,6 +52,24 @@ namespace v8 { namespace juice { namespace convert {
 #endif // !DOXYGEN
 
 
+    /**
+       This class is not implemented, but exists solely to document
+       the interface expected by many of the function binding
+       templates.
+    */
+    struct InvocableInterface
+    {
+        /**
+           A v8::InvocationCallback function.
+        */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv );
+        /**
+           Must hold the number of arguments expected by this handler.
+           In some special cases it may be negative, but not in the
+           general case.
+        */
+        static const int Arity = 0;
+    };
 
     /**
        Base instantiation of a helper to forward v8::Arguments
@@ -411,8 +429,11 @@ namespace v8 { namespace juice { namespace convert {
        RV is the return value type of the templatized function.
      */
     template <typename T,typename RV, RV (T::*Func)()>
-    struct MemFuncInvocable0
+    struct InvocableMemFunc0
     {
+        /**
+           The number of arguments Func requires.
+         */
         static const int Arity = 0;
         /** Returns FunctionForwarder<Arity>::Call<T>( Func, argv ). */
         static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
@@ -426,9 +447,32 @@ namespace v8 { namespace juice { namespace convert {
         }
     };
 
-#if !defined(DOXYGEN)
+    /**
+       An variant of InvocableMemFunc0 which is unfortunately
+       necessary for handling const member functions.
+    */
+    template <typename T,typename RV,RV (T::*Func)() const>
+    struct InvocableConstMemFunc0
+    {
+        /**
+           The number of arguments Func requires.
+         */
+        static const int Arity = 0;
+        /** Returns FunctionForwarder<Arity>::Call<T>( Func, argv ). */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            return MemFuncForwarder<Arity>::Call<T,RV>( Func, argv );
+        }
+        /** Returns FunctionForwarder<Arity>::CallVoid<T>( Func, argv ). */
+        static v8::Handle<v8::Value> InvocableVoid( v8::Arguments const & argv )
+        {
+            return MemFuncForwarder<Arity>::CallVoid<T,RV>( Func, argv );
+        }
+    };
+
+//#if !defined(DOXYGEN)
 #include "forwarding-MemFuncForwarder.h" // generated specializations for MemFuncForwarder
-#endif
+//#endif
     /**
        Useless base instantiation. See TMemFuncForwarder<0> for the
        docs.
@@ -678,7 +722,7 @@ namespace v8 { namespace juice { namespace convert {
        RV is the return value type of the templatized function.
      */
     template <typename RV, RV (*Func)()>
-    struct FunctionInvocable0
+    struct InvocableFunction0
     {
         static const int Arity = 0;
         /** Returns FunctionForwarder<Arity>::Call<RV>( Func, argv ). */
@@ -1425,6 +1469,44 @@ namespace v8 { namespace juice { namespace convert {
                 }
             }
             Func( argv );
+            return v8::Undefined();
+        }
+    };
+
+    /**
+       This is an adapter type for types implementing the
+       InvocableInterface.  It converts the call into a
+       v8::InvocationCallback which returns Undefined(). That is, it
+       discards the return value. Note that this is slighlty different
+       from MemFuncForwarder::InvocableVoid() and friends in that this
+       adapter must invoke the conversion of the return value, which
+       is not legal (compile-time error) if there is no conversion in
+       place.
+    */
+    template < typename InvocableT >
+    struct DiscardInvocableReturnVal
+    {
+        static const int Arity = InvocableT::Arity;
+        /**
+           Just like InvocationCallbackInvocable::Invocable(), but
+           discards the return value from Func().  It always returns
+           v8::Undefined() on success and a JS exception on error.
+        */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            if( Arity>=0 )
+            {
+                if( argv.Length() != Arity )
+                {
+                    StringBuffer msg;
+                    msg << "InvocationCallbackInvocableVoid<>::InvocableVoid(): "
+                        << argv.Callee()->GetName()
+                        << "() was passed "<<argv.Length()<<" arguments, but "
+                        << "expects "<< Arity<<"!\n";
+                    return v8::ThrowException( msg );
+                }
+            }
+            InvocableT::Invocable( argv );
             return v8::Undefined();
         }
     };

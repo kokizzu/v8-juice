@@ -130,11 +130,12 @@ namespace v8 { namespace juice { namespace convert {
        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv );
     */
     template < typename FwdList >
-    struct OverloadForwarder
+    struct OverloadInvocables
     {
         /**
            Tries to dispatch argv to one of the bound functions defined
-           in FwdList.
+           in FwdList, based on the number of arguments in argv and
+           the Arity 
 
            Implements the v8::InvocationCallback interface.
         */
