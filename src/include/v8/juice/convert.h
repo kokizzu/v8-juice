@@ -45,6 +45,8 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <stdexcept>
+#include <sstream>
 namespace v8 {
 namespace juice {
 
@@ -53,7 +55,61 @@ namespace juice {
    between JS and native values using the v8 API.
 */
 namespace convert {
+
+
+    /**
+       A convenience base type for TypeInfo<T> specializations.
+    */
+    template <typename T, typename NHT = T *>
+    struct TypeInfoBase
+    {
+        /**
+           The unqualified type T. In some special cases, Type _may_
+           differ from T.
+        */
+        typedef T Type;
+        /**
+           The "handle" type used to pass around native objects
+           between the JS and Native worlds.
+
+           In _theory_ we can also use shared/smart pointers with this
+           typedef, but that requires custom handling in other
+           ClassWrap policies (mainly because we cannot store a
+           full-fledged shared pointer object directly inside a JS
+           object).
+        */
+        typedef NHT NativeHandle;
+
+        // MAYBE to do: add this function to get a pointer to the object, e.g.
+        // for dereferencing smart pointers. So far it's not been necessary.
+        // static NativeHandle Pointer( NativeHandle x ) { return x; }
+    };
+
+    /**
+       Describes basic type information regarding a type, for purposes
+       of static typing during JS-to/from-Native conversions.
+
+       The default instantiation is suitable for most
+       cases. Specializations may be required in certain JS/Native
+       binding cases.
+    */
+    template <typename T>
+    struct TypeInfo : TypeInfoBase<T>
+    {
+    };
+
+    template <typename T>
+    struct TypeInfo<T *> : TypeInfo<T> {};
+
+    template <typename T>
+    struct TypeInfo<T const *> : TypeInfo<T> {};
+
+    template <typename T>
+    struct TypeInfo<T const &> : TypeInfo<T> {};
+
+
     using namespace v8;
+
     /** Convenience typedef. */
     typedef Handle<Value> ValueHandle;
 
@@ -64,9 +120,16 @@ namespace convert {
     template <typename NT>
     struct NativeToJS
     {
+	//! Must be specialized.
 	template <typename X>
-	ValueHandle operator()( X const & ) const;
-	// must be specialized.
+	v8::Handle<v8::Value> operator()( X const & ) const
+#if defined(JUICE_STATIC_ASSERT)
+        {
+            JUICE_STATIC_ASSERT(false,NativeToJS_T_MustBeSpecialized);
+        }
+#else
+        ;
+#endif
     };
 
     template <typename NT>
@@ -84,7 +147,7 @@ namespace convert {
 	/**
 	   Returns Undefined().
 	*/
-	ValueHandle operator()(...) const
+	v8::Handle<v8::Value> operator()(...) const
 	{
 	    return ::v8::Undefined();
 	}
@@ -98,7 +161,7 @@ namespace convert {
     template <typename IntegerT>
     struct NativeToJS_int_small
     {
-	ValueHandle operator()( IntegerT v ) const
+	v8::Handle<v8::Value> operator()( IntegerT v ) const
 	{
 	    return Integer::New( static_cast<int32_t>(v) );
 	}
@@ -124,7 +187,7 @@ namespace convert {
     template <typename IntegerT>
     struct NativeToJS_int_big
     {
-	ValueHandle operator()( IntegerT v ) const
+	v8::Handle<v8::Value> operator()( IntegerT v ) const
 	{
 	    return Number::New( static_cast<double>(v) );
 	}
@@ -140,7 +203,7 @@ namespace convert {
     template <>
     struct NativeToJS<double>
     {
-	ValueHandle operator()( double v ) const
+	v8::Handle<v8::Value> operator()( double v ) const
 	{
 	    return Number::New( v );
 	}
@@ -149,7 +212,7 @@ namespace convert {
     template <>
     struct NativeToJS<bool>
     {
-	ValueHandle operator()( bool v ) const
+	v8::Handle<v8::Value> operator()( bool v ) const
 	{
 	    return Boolean::New( v );
 	}
@@ -159,7 +222,7 @@ namespace convert {
     struct NativeToJS< ::v8::Handle<T> >
     {
 	typedef ::v8::Handle<T> handle_type;
-	ValueHandle operator()( handle_type & li ) const
+	v8::Handle<v8::Value> operator()( handle_type & li ) const
 	{
 	    return li;
 	}
@@ -169,7 +232,7 @@ namespace convert {
     struct NativeToJS< ::v8::Local<T> >
     {
 	typedef ::v8::Local<T> handle_type;
-	ValueHandle operator()( handle_type const & li ) const
+	v8::Handle<v8::Value> operator()( handle_type const & li ) const
 	{
 	    return li;
 	}
@@ -179,7 +242,7 @@ namespace convert {
     struct NativeToJS< ::v8::Persistent<T> >
     {
 	typedef ::v8::Persistent<T> handle_type;
-	ValueHandle operator()( handle_type const & li ) const
+	v8::Handle<v8::Value> operator()( handle_type const & li ) const
 	{
 	    return li;
 	}
@@ -188,7 +251,7 @@ namespace convert {
     template <>
     struct NativeToJS< ::v8::InvocationCallback >
     {
-	ValueHandle operator()( ::v8::InvocationCallback f ) const
+	v8::Handle<v8::Value> operator()( ::v8::InvocationCallback f ) const
 	{
 	    return ::v8::FunctionTemplate::New(f)->GetFunction();
 	}
@@ -198,7 +261,7 @@ namespace convert {
     // 	template <>
     // 	struct NativeToJS< ::v8::Function >
     // 	{
-    // 	    ValueHandle operator()( ::v8::Function const & li ) const
+    // 	    v8::Handle<v8::Value> operator()( ::v8::Function const & li ) const
     // 	    {
     // 		return Handle<Function>(li);
     // 	    }
@@ -211,7 +274,7 @@ namespace convert {
     template <>
     struct NativeToJS<std::string const &>
     {
-	ValueHandle operator()( std::string const & v ) const
+	v8::Handle<v8::Value> operator()( std::string const & v ) const
 	{
 	    return String::New( v.data(), static_cast<int>( v.size() ) );
 	}
@@ -219,9 +282,9 @@ namespace convert {
 #endif
 
     template <>
-    struct NativeToJS<ValueHandle>
+    struct NativeToJS< v8::Handle<v8::Value> >
     {
-	ValueHandle operator()( ValueHandle const & v ) const
+	v8::Handle<v8::Value> operator()( v8::Handle<v8::Value> const & v ) const
 	{
 	    return v;
 	}
@@ -230,7 +293,7 @@ namespace convert {
     template <>
     struct NativeToJS<std::string>
     {
-	ValueHandle operator()( std::string const & v ) const
+	v8::Handle<v8::Value> operator()( std::string const & v ) const
 	{
 	    /** This use of v.data() instead of v.c_str() is highly arguable. */
 	    return String::New( v.data(), static_cast<int>( v.size() ) );
@@ -240,7 +303,7 @@ namespace convert {
     template <>
     struct NativeToJS<char const *>
     {
-	ValueHandle operator()( char const * v ) const
+	v8::Handle<v8::Value> operator()( char const * v ) const
 	{
 	    return String::New( v ? v : "", v ? std::strlen(v) : 0 );
 	    /** String::New() internally calls strlen(), which hates it when string==0. */
@@ -254,16 +317,16 @@ namespace convert {
        exact parameter type, instead of using (T const &).
     */
     template <typename T>
-    ValueHandle CastToJS( T const & v )
+    v8::Handle<v8::Value> CastToJS( T const & v )
     {
 	typedef NativeToJS<T> F;
 	return F()( v );
     }
-
+    
     /**
        Overload to avoid ambiguity in certain calls.
     */
-    static inline ValueHandle CastToJS( char const * v )
+    static inline v8::Handle<v8::Value> CastToJS( char const * v )
     {
 	typedef NativeToJS<char const *> F;
 	return F()( v );
@@ -289,6 +352,25 @@ namespace convert {
     static const NativeToJS<std::string> StdStringToJS = NativeToJS<std::string>();
 
     /**
+       Converts a native std::exception to a JS exception.
+     */
+    template <>
+    struct NativeToJS<std::exception>
+    {
+        /** Calls v8::ThrowException(ex.what()) and returns an empty
+            handle. It must call ThrowException() because that is
+            apparently the only way to create an Error object from the
+            native API.
+        */
+	v8::Handle<v8::Value> operator()( std::exception const & ex ) const
+	{
+            char const * msg = ex.what();
+	    return v8::ThrowException( String::New( msg ? msg : "unknown std::exception!" ) );
+	    /** ^^^ String::New() internally calls strlen(), which hates it when string==0. */
+	}
+    };
+    
+    /**
        Base interface for converting from native objects to JS
        objects. By default it uses GetBoundNative() to find
        a match. Specializations may be provided to use custom
@@ -298,7 +380,7 @@ namespace convert {
     struct JSToNative
     {
 	typedef JST * ResultType;
-	ResultType operator()( ValueHandle const & h ) const;
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const;
         // Must be specialized to be useful
     };
     template <typename JST>
@@ -312,10 +394,10 @@ namespace convert {
 
 
     template <>
-    struct JSToNative<ValueHandle>
+    struct JSToNative<v8::Handle<v8::Value> >
     {
-	typedef ValueHandle ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	typedef v8::Handle<v8::Value> ResultType;
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    return h;
 	}
@@ -325,7 +407,7 @@ namespace convert {
     struct JSToNative<void>
     {
 	typedef void ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    return;
 	}
@@ -335,7 +417,7 @@ namespace convert {
     struct JSToNative<void *>
     {
 	typedef void * ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    if( h.IsEmpty() || ! h->IsExternal() ) return 0;
 	    return External::Cast(*h)->Value();
@@ -346,7 +428,7 @@ namespace convert {
     struct JSToNative<int16_t>
     {
 	typedef int16_t ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->Int32Value())
@@ -358,7 +440,7 @@ namespace convert {
     struct JSToNative<uint16_t>
     {
 	typedef uint16_t ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->Int32Value())
@@ -370,7 +452,7 @@ namespace convert {
     struct JSToNative<int32_t>
     {
 	typedef int32_t ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    // FIXME: try to lexically cast, if we can
 	    return h->IsNumber()
@@ -383,7 +465,7 @@ namespace convert {
     struct JSToNative<uint32_t>
     {
 	typedef uint32_t ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->Uint32Value())
@@ -396,7 +478,7 @@ namespace convert {
     struct JSToNative<int64_t>
     {
 	typedef int64_t ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->IntegerValue())
@@ -408,7 +490,7 @@ namespace convert {
     struct JSToNative<uint64_t>
     {
 	typedef uint64_t ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    return h->IsNumber()
 		? static_cast<ResultType>(h->IntegerValue())
@@ -420,7 +502,7 @@ namespace convert {
     struct JSToNative<double>
     {
 	typedef double ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    return h->IsNumber()
 		? h->NumberValue()
@@ -432,7 +514,7 @@ namespace convert {
     struct JSToNative<bool>
     {
 	typedef bool ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    return h->BooleanValue();
 	}
@@ -442,7 +524,7 @@ namespace convert {
     struct JSToNative<std::string>
     {
 	typedef std::string ResultType;
-	ResultType operator()( ValueHandle const & h ) const
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
 	    String::AsciiValue asc( h );
 	    return std::string( *asc ? *asc : "" );
@@ -457,8 +539,7 @@ namespace convert {
 
        This specialization requires that a single copy per
        conversion be used. Do not use a shared/static instance for
-       conversions! To enforce this, the operator()() is
-       non-const.
+       conversions!
     */
     template <>
     struct JSToNative<char const *>
@@ -467,7 +548,7 @@ namespace convert {
 	std::string kludge;
     public:
 	typedef char const * ResultType;
-	ResultType operator()( ValueHandle const & h )
+	ResultType operator()( v8::Handle<v8::Value> const & h )
 	{
 	    this->kludge = JSToNative<std::string>()( h );
 	    return this->kludge.c_str();
@@ -484,7 +565,7 @@ namespace convert {
        the conversion.
     */
     template <typename NT>
-    typename JSToNative<NT>::ResultType CastFromJS( ValueHandle const & h )
+    typename JSToNative<NT>::ResultType CastFromJS( v8::Handle<v8::Value> const & h )
     {
 	typedef JSToNative<NT> F;
 	return F()( h );
@@ -625,7 +706,7 @@ namespace convert {
     template <typename ListT>
     struct NativeToJS_list
     {
-	ValueHandle operator()( ListT const & li ) const
+	v8::Handle<v8::Value> operator()( ListT const & li ) const
 	{
 	    typedef typename ListT::const_iterator IT;
 	    IT it = li.begin();
@@ -662,7 +743,7 @@ namespace convert {
     template <typename MapT>
     struct NativeToJS_map
     {
-	ValueHandle operator()( MapT const & li ) const
+	v8::Handle<v8::Value> operator()( MapT const & li ) const
 	{
 	    typedef typename MapT::const_iterator IT;
 	    IT it( li.begin() );
@@ -685,7 +766,7 @@ namespace convert {
     struct JSToNative_list
     {
 	typedef ListT ResultType;
-	ResultType operator()( ValueHandle jv ) const
+	ResultType operator()( v8::Handle<v8::Value> jv ) const
 	{
 	    typedef typename ListT::const_iterator IT;
 	    typedef typename ListT::value_type VALT;
@@ -709,6 +790,81 @@ namespace convert {
     template <typename T>
     struct JSToNative< std::vector<T> > : JSToNative_list< std::vector<T> > {};
 
+
+    /**
+       A utility class for building up message strings, most notably
+       exception messages, using a mixture of native and JS message
+       data.
+
+       It is used like a std::ostream:
+
+       @code
+       StringBuffer msg;
+       msg << "Could not set property "
+           << "'" << propName
+           <<"' on object " << myJSObject << '!';
+       return v8::ThrowException(msg);
+       @endcode
+    */
+    class StringBuffer
+    {
+    private:
+        std::ostringstream os;
+    public:
+        /**
+           Initializes the message stream.
+        */
+        StringBuffer() : os()
+        {
+        }
+
+        /**
+           Empties out the message buffer. This invalidates any value
+           returned from previous calls to the (char const *)
+           operator.
+        */
+        void Clear()
+        {
+            this->os.str("");
+        }
+
+        /**
+           Returns a copy of the current message content.
+         */
+        std::string Content() const
+        {
+            return this->os.str();
+        }
+
+        /**
+           Converts the message state to a JS string.
+        */
+        inline operator v8::Handle<v8::Value>() const
+        {
+            return CastToJS<std::string>( this->os.str() );
+        }
+
+        /**
+           Appends to the message using CastFromJS<std::string>(t) 
+        */
+        template <typename T>
+        StringBuffer & operator<<( v8::Handle<T> const t )
+        {
+            this->os << CastFromJS<std::string>( t );
+            return *this;
+        }
+
+        /**
+           Appends t to the message via std::ostream<<.
+        */
+        template <typename T>
+        StringBuffer & operator<<( T const t)
+        {
+            this->os << t;
+            return *this;
+        }
+    };
+    
 }}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_CONVERT_H_INCLUDED */

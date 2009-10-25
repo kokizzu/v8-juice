@@ -44,7 +44,6 @@
 #include <v8.h>
 #include <string>
 #include <map>
-#include <set>
 
 /** @def v8_juice_BIND_ENABLE_DEBUG
 

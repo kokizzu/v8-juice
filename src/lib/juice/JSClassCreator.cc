@@ -114,7 +114,7 @@ namespace v8 { namespace juice {
 	return *this;
     }
 
-    JSClassCreator & JSClassCreator::Inherit( JSClassCreator & parent )
+    JSClassCreator & JSClassCreator::Inherit( JSClassCreator const & parent )
     {
 	return this->Inherit( parent.CtorTemplate() );
     }

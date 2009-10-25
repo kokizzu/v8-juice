@@ -242,7 +242,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T, typename RV>
         static Handle<Value> Call( RV (T::*MemFunc)(), Arguments const & argv )
         {
-            T * obj = CastToJS<T>( argv.This() );
+            T * obj = CastFromJS<T>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             return Call( obj, MemFunc, argv );
         }
@@ -412,6 +412,130 @@ namespace v8 { namespace juice { namespace convert {
 #include "forwarding-MemFuncForwarder.h" // generated specializations for MemFuncForwarder
 
     /**
+       Useless base instantiation. See TMemFuncForwarder<0> for the
+       docs.
+    */
+    template <typename T, int Arity_>
+    struct TMemFuncForwarder
+    {
+        enum { Arity = -1 };
+    };
+
+    /**
+       This type works exactly like MemFuncForwarder, but is
+       templatized on both T and the function arity, whereas
+       MemFuncForwarder is only templatized on arity.
+
+       All functions in this intereface correspond 1-to-1 to
+       MemFuncForwarder functions, and have the same signatures minus
+       the initial T template argument.
+    */
+    template <typename T>
+    struct TMemFuncForwarder<T,0>
+    {
+    public:
+        enum { Arity = 0 };
+        typedef typename TypeInfo<T>::Type Type;
+    private:
+        // WTF?? leads to compile errors: typedef MemFuncForwarder<Arity> Proxy;
+        typedef MemFuncForwarder<0> Proxy;
+    public:
+
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( Type * obj, RV (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::Call<Type,RV>( obj, MemFunc, argv );
+        }
+
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( RV (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::Call<Type,RV>( MemFunc, argv );
+        }
+        
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( Type const * obj, RV (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type,RV>( obj, MemFunc, argv );
+        }
+
+        template <typename RV>
+        static v8::Handle<v8::Value> Call( RV (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type,RV>( MemFunc, argv );
+        }
+
+        template <typename VoidType>
+        static v8::Handle<v8::Value> CallVoid( Type * obj, VoidType (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::CallVoid<Type,VoidType>( obj, MemFunc, argv );
+        }
+
+        static v8::Handle<v8::Value> Call( Type * obj, void (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::Call<Type>( obj, MemFunc, argv );
+        }
+
+        template <typename VoidType>
+        static v8::Handle<v8::Value> CallVoid( VoidType (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::CallVoid<VoidType>( MemFunc, argv );
+        }
+
+        static v8::Handle<v8::Value> Call( void (Type::*MemFunc)(), Arguments const & argv )
+        {
+            return Proxy::Call( MemFunc, argv );
+        }
+
+        template <typename VoidType>
+        static v8::Handle<v8::Value> CallVoid( Type const * obj, VoidType (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type,VoidType>( obj, MemFunc, argv );
+        }
+
+        static v8::Handle<v8::Value> Call( Type const * obj, void (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type>( obj, MemFunc, argv );
+        }
+
+        template <typename VoidType>
+        static v8::Handle<v8::Value> CallVoid( VoidType (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::CallVoid<Type,VoidType>( MemFunc, argv );
+        }
+
+        static v8::Handle<v8::Value> Call( void (Type::*MemFunc)() const, Arguments const & argv )
+        {
+            return Proxy::Call<Type>( MemFunc, argv );
+        }
+
+        template <typename RV, RV (Type::*MemFunc)() >
+        static v8::Handle<v8::Value> Invocable( Arguments const & argv )
+        {
+            return Proxy::Invocable<Type,RV,MemFunc>( argv );
+        }
+
+        template <typename RV, RV (Type::*MemFunc)() const >
+        static v8::Handle<v8::Value> Invocable( Arguments const & argv )
+        {
+            return Proxy::Invocable<Type,RV,MemFunc>( argv );
+        }
+
+        template <typename VoidType, VoidType (Type::*MemFunc)() >
+        static v8::Handle<v8::Value> InvocableVoid( Arguments const & argv )
+        {
+            return Proxy::InvocableVoid<Type,VoidType,MemFunc>( argv );
+        }
+
+        template <typename VoidType, VoidType (Type::*MemFunc)() const >
+        static v8::Handle<v8::Value> InvocableVoid( Arguments const & argv )
+        {
+            return Proxy::InvocableVoid<Type,VoidType,MemFunc>( argv );
+        }
+    };
+#include "forwarding-TMemFuncForwarder.h" // generated specializations for TMemFuncForwarder
+
+    /**
        A useless base instantiation. See FunctionForwarder<0> for the
        full docs.
     */
@@ -531,8 +655,9 @@ namespace v8 { namespace juice { namespace convert {
 #include "forwarding-FunctionForwarder.h" // generated specializations for MemFuncForwarder
 
     /**
-       Possibly a utility class, though it's utility is in question.
-
+       Possibly a utility class, though it's utility is in question,
+       this is a helper for using the FunctionForwarder and
+       MemFuncForwarder types.
 
        The following example binds the Unix sleep(3) function to a JS object:
 
@@ -554,6 +679,8 @@ namespace v8 { namespace juice { namespace convert {
     */
     class InvocationCallbackCreator
     // leads to function ambiguity: : public FunctionForwarder<0>, public MemFuncForwarder<0>...<N>
+    // as does   : public FunctionForwarder<0>, public FunctionForwarder<1>
+    // Damn.
     {
     public:
         /**
@@ -637,11 +764,62 @@ namespace v8 { namespace juice { namespace convert {
         */
         typedef MemFuncForwarder<9> M9;
     };
+
+    /**
+       This class is used just like InvocationCallbackCreator, but is
+       templatized on the type containing the member functions.
+    */
+    template <typename T>
+    class MemFuncInvocationCallbackCreator
+    {
+    public:
+        /**
+           InvocationCallback generator for member functions taking 0 arguments.
+        */
+        typedef TMemFuncForwarder<T,0> M0;
+        /**
+           InvocationCallback generator for member functions taking 1 argument.
+        */
+        typedef TMemFuncForwarder<T,1> M1;
+        /**
+           InvocationCallback generator for member functions taking 2 arguments.
+        */
+        typedef TMemFuncForwarder<T,2> M2;
+        /**
+           InvocationCallback generator for member functions taking 3 arguments.
+        */
+        typedef TMemFuncForwarder<T,3> M3;
+        /**
+           InvocationCallback generator for member functions taking 4 arguments.
+        */
+        typedef TMemFuncForwarder<T,4> M4;
+        /**
+           InvocationCallback generator for member functions taking 5 arguments.
+        */
+        typedef TMemFuncForwarder<T,5> M5;
+        /**
+           InvocationCallback generator for member functions taking 6 arguments.
+        */
+        typedef TMemFuncForwarder<T,6> M6;
+        /**
+           InvocationCallback generator for member functions taking 7 arguments.
+        */
+        typedef TMemFuncForwarder<T,7> M7;
+        /**
+           InvocationCallback generator for member functions taking 8 arguments.
+        */
+        typedef TMemFuncForwarder<T,8> M8;
+        /**
+           InvocationCallback generator for member functions taking 9 arguments.
+        */
+        typedef TMemFuncForwarder<T,9> M9;
+    };
+
     
     /**
        See InvocationCallbackToArgv for details.
     */
-    typedef ::v8::Handle< ::v8::Value > (*InvocationCallbackWithArray)( Handle<Object> self, int argc, Handle<Value> argv[] );
+    typedef ::v8::Handle< ::v8::Value > (*InvocationCallbackWithArray)( Handle<Object> self, int argc, v8::Handle<v8::Value> argv[] );
 
     /**
        A helper to allow re-use of certain JS/C++ functions. It's a bit of
@@ -687,7 +865,7 @@ namespace v8 { namespace juice { namespace convert {
 	*/
 	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
 	{
-	    typedef Handle<Value> HV;
+	    typedef v8::Handle<v8::Value> HV;
 	    if( skipArgN >= argv.Length() )
 	    { // Is this sensible? Should we throw instead? Hmm.
 		return proxy( argv.This(), 0, 0 );
@@ -699,7 +877,7 @@ namespace v8 { namespace juice { namespace convert {
 	    {
 		vec[pos] = argv[i];
 	    }
-            Handle<Value> * ar = vec.empty() ? &vec[0] : 0;
+            v8::Handle<v8::Value> * ar = vec.empty() ? &vec[0] : 0;
 	    return proxy( argv.This(), argc, ar );
 	}
     };
@@ -728,7 +906,417 @@ namespace v8 { namespace juice { namespace convert {
             return (self->*Func)( argv );
 	}
     };
-   
+
+    /**
+       A helper class for binding JS properties to native code, in particular
+       for when JS objects are bound to native T objects.
+
+       It contains utility functions to simplify the process of binding
+       JS properties to native member functions or native properties.
+       
+       Requirements:
+
+       - T must be of class type.
+
+       - JSToNative<T> must be implemented for T.
+
+       - TypeInfo<T>::NativeHandle must be usable in a boolean context
+       to determine whether the JS-to-Native converted object is null
+       or not.
+    */
+    template <typename T>
+    struct PropertyBinder
+    {
+        typedef typename TypeInfo<T>::Type Type;
+        typedef typename JSToNative<T>::ResultType NativeHandle;
+
+        /**
+           This template can be used as an argument to
+           v8::ObjectTemplate::SetAccessor()'s Getter parameter to
+           generically tie a native member variable to a named JS
+           property.
+
+           Requirements:
+
+           - Type must be convertible to NativeHandle via CastFromJS<T>().
+
+           - PropertyType must be convertible via CastToJS<PropertyType>().
+
+           If the underlying native This object cannot be found (that
+           is, if CastFromJS<T>() fails) then this routine will
+           trigger a JS exception.
+
+           Example:
+
+           Assume we have a native type Foo with a std::string member
+           called str. We can bind the member variable with:
+
+           \code
+           myObjectTemplate.SetAccessor("foo",
+           MemVarGetter<Foo,std::string,&Foo::str>,
+           MemVarSetter<Foo,std::string,&Foo::str> );
+           \endcode
+
+           In almost 10 years of C++ coding, this is the first time i've ever had
+           a use for a pointer-to-member.
+        */
+        template <typename PropertyType, PropertyType Type::*MemVar>
+        static v8::Handle<v8::Value> MemVarGetter(v8::Local<v8::String> property, const AccessorInfo &info)
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+            return CastToJS( (self->*MemVar) );
+        }
+
+        /**
+           This is the Setter counterpart of MemVarGetter(). See
+           that function for most of the details.
+
+           Requirements:
+
+           - MemVar must be an accessible member of Type.
+           - PropertyType must be convertible via CastFromJS<PropertyType>().
+
+           If the underlying native This object cannot be found then this
+           routine will trigger a JS exception, though it is currently
+           unclear whether this is actually legal in v8 (and difficult to
+           test, since the native bindings work so well ;).
+        */
+        template <typename PropertyType, PropertyType Type::*MemVar>
+        static void MemVarSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( self )
+            {
+                self->*MemVar = CastFromJS<PropertyType>( value );
+            }
+            else
+            {
+                // It is legal to do this from here?
+                ::v8::ThrowException(v8::String::New("Native member property setter could not access native This object!"));
+            }
+        }
+
+        /**
+           This template can be used as an argument to
+           v8::ObjectTemplate::SetAccessor()'s Getter parameter to
+           generically tie a static variable to a named JS property.
+
+           SharedVar must be pointer to a static variable and must not
+           be 0.
+
+           CastToJS<PropertyType> must be legal.
+        */
+        template <typename PropertyType, PropertyType const * SharedVar>
+        static v8::Handle<v8::Value> StaticVarGetter(v8::Local<v8::String> property, const AccessorInfo &info)
+        {
+            if( SharedVar )
+            {
+                return CastToJS<PropertyType>( *SharedVar );
+            }
+            else
+            {
+                return v8::ThrowException(v8::String::New("StaticVarGetter(): SharedVar is null!"));
+            }
+        }
+        /**
+           The setter counterpart of StaticVarGetter().
+
+           SharedVar must be pointer to a static variable and must not
+           be 0.
+
+           CastFromJS<PropertyType> must be legal.
+        */
+        template <typename PropertyType, PropertyType * SharedVar>
+        static void StaticVarSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
+        {
+            if( SharedVar )
+            {
+                *SharedVar = CastFromJS<PropertyType>( value );
+            }
+            else
+            {
+                v8::ThrowException(v8::String::New("StaticVarGetter(): SharedVar is null!"));
+            }
+        }
+
+        /**
+           Binds the given static variable to a JS property, such that
+           get/set access will go through
+           StaticVarGetter<VarType,SharedVar> and
+           StaticVarSetter<VarType,SharedVar>.
+        */
+        template <typename VarType, VarType * SharedVar>
+        static void BindStaticVar( char const * name,
+                                   v8::Handle<v8::ObjectTemplate> const & prototype,
+                                   v8::AccessControl settings = v8::PROHIBITS_OVERWRITING,
+                                   v8::PropertyAttribute attribute = v8::DontDelete
+                         )
+        {
+            if( ! prototype.IsEmpty() )
+            {
+                prototype->SetAccessor( v8::String::New(name),
+                                        StaticVarGetter<VarType,SharedVar>,
+                                        StaticVarSetter<VarType,SharedVar>,
+                                        v8::Handle< v8::Value >(),
+                                        settings,
+                                        attribute );
+            }
+        }
+
+        /**
+           Binds the given static variable to a JS property, such that
+           read access will go through
+           StaticVarGetter<VarType,SharedVar> and set access will be
+           ignored (it will not change SharedVar).
+        */
+        template <typename VarType, VarType const * SharedVar>
+        static void BindStaticVarRO( char const * name,
+                                     v8::Handle<v8::ObjectTemplate> const & prototype,
+                                     v8::AccessControl settings = v8::PROHIBITS_OVERWRITING,
+                                     v8::PropertyAttribute attribute = v8::DontDelete
+                         )
+        {
+            if( ! prototype.IsEmpty() )
+            {
+                prototype->SetAccessor( v8::String::New(name),
+                                        StaticVarGetter<VarType,SharedVar>,
+                                        0,
+                                        v8::Handle< v8::Value >(),
+                                        settings,
+                                        attribute );
+            }
+        }
+
+        
+        /**
+           Binds automatically-generated getter/setter functions to the given
+           member variable. See MemVarGetter() and MemVarSetter()
+           for the requirements of the templatized types.
+
+           If you only want to bind one of the getter OR the setter then
+           use the 5-argument variant of Set() instead and pass MemVarGetter
+           or MemVarGetter, as appropriate, to that function.
+        */
+        template <typename VarType, VarType Type::*MemVar>
+        static void BindMemVar( char const * name,
+                                v8::Handle<v8::ObjectTemplate> const & prototype,
+                                v8::AccessControl settings = v8::PROHIBITS_OVERWRITING,
+                                v8::PropertyAttribute attribute = v8::DontDelete
+                         )
+        {
+            if( ! prototype.IsEmpty() )
+            {
+                prototype->SetAccessor( v8::String::New(name),
+                                        MemVarGetter<VarType,MemVar>,
+                                        MemVarSetter<VarType,MemVar>,
+                                        v8::Handle< v8::Value >(),
+                                        settings,
+                                        attribute );
+            }
+        }
+
+        /**
+           Binds the given JS property to MemVar, such that read/get
+           operations will work but write/set operations will be
+           ignored (that is, will not affect the value returned by the
+           getter).
+        */
+        template <typename VarType, VarType Type::*MemVar>
+        static void BindMemVarRO( char const * name,
+                                  v8::Handle<v8::ObjectTemplate> const & prototype )
+        {
+            if( ! prototype.IsEmpty() )
+            {
+                prototype->SetAccessor( v8::String::New(name),
+                                        MemVarGetter<VarType,MemVar>,
+                                        0,
+                                        v8::Handle< v8::Value >(),
+                                        v8::PROHIBITS_OVERWRITING,
+                                        v8::DontDelete );
+            }
+        }
+        
+        /**
+           Implements the v8::AccessorGetter interface to bind a JS
+           member property to a native getter function. This function
+           can be used as the getter parameter to
+           v8::ObjectTemplate::SetAccessor().
+        */
+	template <typename RV, RV (Type::*Func)()>
+        static v8::Handle<v8::Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+            return convert::CastToJS( (self->*Func)() );
+        }
+        /**
+           Overload for const native getter functions.
+        */
+	template <typename RV, RV (Type::*Func)() const>
+        static v8::Handle<v8::Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+            return convert::CastToJS( (self->*Func)() );
+        }
+        /**
+            Implements v8::AccessorSetter interface to proxy a JS
+            member property through a native member setter function.
+
+            The RV parameter is ignored by the conversion, and does
+            not invoke a conversion operation.
+
+             This function can be used as the setter parameter to
+             v8::ObjectTemplate::SetAccessor().
+        */
+        template <typename RV, typename ArgT, RV (Type::*Func)(ArgT)>
+        static void PropSetterFunc(v8::Local< v8::String > property, v8::Local< v8::Value > value, const v8::AccessorInfo &info)
+        {
+            NativeHandle self = CastFromJS<Type>( info.This() );
+            if( ! self )
+            {
+                v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+                return;
+            }
+            (self->*Func)( CastFromJS<ArgT>( value ) );
+            return;
+        }
+
+        /**
+           Binds the given JS property to a pair of T member
+           functions, such that these functions will be called in
+           place of get/set operations for the property.
+           
+           The native member functions must follow conventional
+           accessor signatures:
+
+           - Getter: T1 getter() [const]
+           - Setter: [AnyType] setter( T2 )
+
+           For the setter, T1 may differ from T2. T1 may be void but
+           T2 may not be. Any return value from the setter is ignored
+           by the JS engine.
+
+           For the getter, an overload of this function is provided which
+           supports a non-const getter.
+         */
+        template <typename RV,
+                  RV (Type::*Getter)(),
+                  typename SetRV,
+                  typename ArgV,
+                  SetRV (Type::*Setter)(ArgV)
+            >
+        static void BindGetterSetter( char const * propName, v8::Handle<v8::ObjectTemplate> const & prototype )
+	{
+            if( ! prototype.IsEmpty() )
+                prototype->SetAccessor( v8::String::New( propName ),
+                                        PropGetterFunc<RV,Getter>,
+                                        PropSetterFunc<SetRV,ArgV,Setter>
+                                        );
+	}
+
+        /**
+           Overload to allow a const getter function. Member setter functions
+           are not, by nature, const.
+         */
+        template <typename RV,
+                  RV (Type::*Getter)() const,
+                  typename SetRV,
+                  typename ArgV,
+                  SetRV (Type::*Setter)(ArgV)
+            >
+        static void BindGetterSetter( char const * propName, v8::Handle<v8::ObjectTemplate> const & prototype )
+	{
+            if( ! prototype.IsEmpty() )
+                prototype->SetAccessor( v8::String::New( propName ),
+                                        PropGetterFunc<RV,Getter>,
+                                        PropSetterFunc<SetRV,ArgV,Setter>
+                                        );
+	}
+
+        /**
+           Binds the templatized getter function to the given JS property of the
+           given prototype object, such that JS-side read access to the property
+           will return the value of that member function.
+         */
+        template <typename RV, RV (Type::*Getter)()>
+        static void BindGetter( char const * propName, v8::Handle<v8::ObjectTemplate> const & prototype )
+	{
+	    prototype->SetAccessor( v8::String::New( propName ),
+                                   PropGetterFunc<RV,Getter> );
+	}
+
+        /**
+           Overload too support const getters.
+        */
+        template <typename RV, RV (Type::*Getter)() const>
+        static void BindGetter( char const * propName, v8::Handle<v8::ObjectTemplate> const & prototype )
+	{
+	    prototype->SetAccessor( v8::String::New( propName ),
+                                   PropGetterFunc<RV,Getter> );
+	}
+
+    };
+
+    /**
+       Must be specialized (or partially specialized) to be useful.
+
+       Requirements:
+
+       - (new T) must be legal, taking a number of arguments equal
+       to the Arity parametr.
+
+       - All arguments to the native ctor must be convertible
+       using CastFromJS().
+
+       - CastToJS<T>() must be legal (i.e. it must return an object
+       or throw).
+
+       This type is intended to assist in the creation of ctor
+       functions for JS-bound C++ classes.
+
+       They are used something like:
+
+       @code
+       T * x = 0;
+       if( argv.Length() < 1 ) x = CtorForwarder<T,0>::Ctor(argv);
+       else if( argv.Length() < 3 ) x = CtorForwarder<T,2>::Ctor<int,int>(argv);
+       ...
+       @endcode
+    */
+    template <typename T, int Arity_>
+    struct CtorForwarder
+    {
+        enum { Arity = Arity_ };
+        typedef typename TypeInfo<T>::Type Type;
+        typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Must be specialized.
+
+           For all specializations, the caller owns the returned
+           object.
+        */
+        static NativeHandle Ctor( v8::Arguments const & );
+    };
+
+    /**
+       Partial specialization for default constructors.
+     */
+    template <typename T>
+    struct CtorForwarder<T,0>
+    {
+        typedef typename TypeInfo<T>::Type Type;
+        typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Returns (new Type). The caller owns the returned object.
+        */
+        static NativeHandle Ctor( v8::Arguments const & )
+        {
+            return new Type;
+        }
+    };
+#include "forwarding-CtorForwarder.h" /* generated code for specializations taking 1+ args */
 }}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_FORWARDING_H_INCLUDED */

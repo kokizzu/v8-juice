@@ -448,15 +448,13 @@ namespace juice {
 	}
 
     private:
-        /** EXPERIMENTAL!
-
+        /**
             Internal implementation helper for BindPropToAccessors() and
             BindPropToGetter().
 
             Implements v8::AccessorGetter interface to proxy a given
             property through a WrappedType member function.
         */
-        // 
 	template <typename RV, RV (WrappedType::*Func)() const>
         static Handle<Value> propGetter( Local< String > /*ignored*/, const AccessorInfo & info )
         {
