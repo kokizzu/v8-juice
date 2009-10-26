@@ -276,7 +276,7 @@ Until then: here is a complete example of what the binding process itself looks 
 
 [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/sample/BoundNative/BoundNative.cpp BoundNative.cpp]
 
-(search that file for "bind_my_native")
+(search that file for "SetupClass" to jump to the relevant parts)
 
 And some JS code demonstrating it:
 
