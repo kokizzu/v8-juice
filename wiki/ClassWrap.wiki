@@ -94,7 +94,7 @@ struct Factory<BoundNative>
     : Factory_CtorForwarder<BoundNative,
         convert::TypeList<
             convert::CtorForwarder0<BoundNative>,
-            convert::CtorForwarder1<BoundNative,int>
+            convert::CtorForwarder1<BoundNative,int>,
             convert::CtorForwarder2<BoundNative,int,double>
         >
       >
