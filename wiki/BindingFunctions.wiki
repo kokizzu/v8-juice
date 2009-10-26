@@ -9,7 +9,7 @@
 
 The function forwarding API is an extension of the [ConvertingTypes type conversion API], and it will help to first understand the concepts described on that page before continuing with this topic.
 
-Most of this API was derived from functionality in the [ClassBinder] code, and may be familiar to anyone who's used that code. This code is, however, more generic, and can be used in conjunction with arbitrary class-binding approaches.
+Most of this API was derived from functionality in the [ClassBinder] code, and may be familiar to anyone who's used that code. This code is, however, more generic, and can be used in conjunction with arbitrary class-binding approaches (e.g. the newer ClassWrap API).
 
 The function binding API works using a very generic principal: convert arbitrary functions to `v8::InvocationCallback` instances, where `v8::InvocationCallback` is a v8 typedef which looks like:
 
