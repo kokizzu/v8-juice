@@ -1,7 +1,7 @@
 #summary Overview of the ClassWrap API
 #labels Topic-CPlusPlus,Phase-UserDocs
 
-*ACHTUNG: this page documents a new API and is far from complete.*
+*ACHTUNG: this page documents a new API and is far from complete.* The `ClassWrap` API was introduced on 20091025 - it is quite new and may still change significantly.
 
 <wiki:toc max_depth='3'/>
 
@@ -356,4 +356,3 @@ binding API.
 The complete test/demo code for !ClassWrap can be found here:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/BoundNative/BoundNative.cpp BoundNative.cpp]
-
