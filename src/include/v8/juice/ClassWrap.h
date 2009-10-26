@@ -1327,6 +1327,87 @@ namespace cw {
     public:
 
         /**
+           See v8::juice::convert::PropertyBinder::BindMemVar().
+        */
+        template <typename PropertyType, PropertyType Type::*MemVar>
+        void BindMemVar( char const * name )
+        {
+            PB::template BindMemVar<PropertyType,MemVar>( name, this->Prototype() );
+            return;
+        }
+
+        /**
+           See v8::juice::convert::PropertyBinder::BindMemVarRO().
+        */
+        template <typename PropertyType, PropertyType Type::*MemVar>
+        void BindMemVarRO( char const * name )
+        {
+            PB::template BindMemVarRO<PropertyType,MemVar>( name, this->Prototype() );
+            return;
+        }
+
+        /**
+           See v8::juice::convert::PropertyBinder::BindGetterSetter().
+        */
+        template <typename RV,
+                  RV (Type::*Getter)(),
+                  typename SetRV,
+                  typename ArgV,
+                  SetRV (Type::*Setter)(ArgV)
+            >
+        void BindGetterSetter( char const * propName )
+        {
+            return PB::template BindGetterSetter<RV,Getter,SetRV,ArgV,Setter>( propName, this->Prototype() );
+        }
+
+        /** Overload to support a const Getter. */
+        template <typename RV,
+                  RV (Type::*Getter)() const,
+                  typename SetRV,
+                  typename ArgV,
+                  SetRV (Type::*Setter)(ArgV)
+            >
+        void BindGetterSetter( char const * propName )
+        {
+            return PB::template BindGetterSetter<RV,Getter,SetRV,ArgV,Setter>( propName, this->Prototype() );
+        }
+        
+        /**
+           See v8::juice::convert::PropertyBinder::BindGetter().
+        */
+        template <typename RV, RV (Type::*Getter)()>
+        void BindGetter( char const * propName )
+	{
+            return PB::template BindGetter<RV,Getter>( propName, this->Prototype() );
+        }
+
+        /** Overload to support a const Getter. */
+        template <typename RV, RV (Type::*Getter)() const>
+        void BindGetter( char const * propName )
+	{
+            return PB::template BindGetter<RV,Getter>( propName, this->Prototype() );
+        }
+
+        /**
+           See v8::juice::convert::PropertyBinder::BindStaticVar().
+        */
+        template <typename VarType, VarType * SharedVar>
+        static void BindStaticVar( char const * name )
+        {
+            return PB::template BindStaticVar<VarType,SharedVale>( name );
+        }
+
+        /**
+           See v8::juice::convert::PropertyBinder::BindStaticVarRO().
+        */
+        template <typename VarType, VarType const * SharedVar>
+        static void BindStaticVarRO( char const * name )
+        {
+            return PB::template BindStaticVarRO<VarType,SharedVale>( name );
+        }
+        
+        
+        /**
            Destroys the given object by disconnecting its associated
            native object and calling the native destructor function
            for it.
@@ -1422,6 +1503,7 @@ namespace cw {
 #undef DBGOUT
     };
 
+#if !defined(DOXYGEN)
     namespace Detail
     {
         /**
@@ -1524,6 +1606,8 @@ namespace cw {
             }
         };
     }
+#endif // !DOXYGEN
+    
     /**
        A concrete ClassWrap factory implementation which binds one or more
        natve ctors, each requiring a different number of arguments.
