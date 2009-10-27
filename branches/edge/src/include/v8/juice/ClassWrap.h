@@ -791,7 +791,8 @@ namespace cw {
     template <typename T>
     struct ToNative :
         //ToNative_StaticCast<T>
-        ToNative_WithNativeSubclassCheck<T>
+        //ToNative_WithNativeSubclassCheck<T>
+        ToNative_Base<T>
     {};
 
     /**
