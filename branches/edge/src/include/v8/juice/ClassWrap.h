@@ -447,7 +447,7 @@ namespace cw {
        script-side.
     */
     template <typename T>
-    struct ToNative_SearchPrototypesForNative : Opt_Bool<false>
+    struct ToNative_SearchPrototypesForNative : Opt_Bool<true>
     {};
 
  
@@ -827,7 +827,7 @@ namespace cw {
             else
             {
                 typedef v8::juice::cw::ToNative<T>  Caster;
-                v8::Handle<Object> const jo( v8::Object::Cast( *h ) );
+                v8::Local<Object> const jo( v8::Object::Cast( *h ) );
                 return Caster::Value(jo);
             }
         }
