@@ -16,13 +16,21 @@
    // From global scope:
    #define CLASSWRAP_BOUND_TYPE MyType
    #define CLASSWRAP_BOUND_TYPE_NAME "MyType"
+   // OPTIONAL: #define CLASSWRAP_BOUND_TYPE_INHERITS BoundBaseClass
+   // ^^^^^ required if MyType sublcasses another bound native!
    #include <v8/juice/ClassWrap_JuiceBind.h>
    @endcode
 
    That will install these policies as the defaults for
    ClassWrap<CLASSWRAP_BOUND_TYPE>, and then CLASSWRAP_BOUND_TYPE and
    CLASSWRAP_BOUND_TYPE_NAME will be undefined (so that this file can
-   be directly included again).
+   be directly included again). Or a compile-time error might be triggered,
+   saying that cw::ToJS<T> must be specialized.
+
+   If MyType inherits from another bound type and CLASSWRAP_BOUND_TYPE_INHERITS
+   is NOT set then the ToJS<CLASSWRAP_BOUND_TYPE> policy will not work
+   properly (that is, converting from (T*) to JS will fail at runtime).
+
    
    Defining CLASSWRAP_BOUND_TYPE_NAME is optional, but if it is not done
    then one must provide his own ClassName<CLASSWRAP_BOUND_TYPE>
@@ -37,16 +45,17 @@
 
 
    If CLASSWRAP_BOUND_TYPE is defined:
-   
-   This file also sets up JSToNative specialization which use the
+
+   This file also sets up convert::JSToNative specialization which use the
    ToNative policy.
 
-   If the following policies will be customized by the client, the
-   specializations must visible from this file! i.e. they must be
-   defined before including this file.
+   If the following policies were customized by the INHERITED type,
+   the subclass must also implement them identically:
 
    - ToNative_SearchPrototypesForNative<T>
    - InternalFields<T> 
+
+   See ClassWrap-InheritOptions.h for one way to do that.
    
 */
 namespace v8 { namespace juice { namespace cw {
