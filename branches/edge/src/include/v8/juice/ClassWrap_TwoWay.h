@@ -15,13 +15,20 @@
    // From global scope:
    #define CLASSWRAP_BOUND_TYPE MyType
    #define CLASSWRAP_BOUND_TYPE_NAME "MyType"
-   #include <v8/juice/TwoWay.h>
+   // OPTIONAL: #define CLASSWRAP_BOUND_TYPE_INHERITS BoundBaseClass
+   #include <v8/juice/ClassWrap_TwoWay.h>
    @endcode
-
+   
    That will install these policies as the defaults for
    ClassWrap<CLASSWRAP_BOUND_TYPE>, and then CLASSWRAP_BOUND_TYPE and
    CLASSWRAP_BOUND_TYPE_NAME will be undefined (so that this file can
    be directly included again).
+
+
+   If MyType inherits from another bound type and CLASSWRAP_BOUND_TYPE_INHERITS
+   is NOT set then the ToJS<CLASSWRAP_BOUND_TYPE> policy will not work
+   properly (that is, converting from (T*) to JS will fail at runtime).
+
    
    Defining CLASSWRAP_BOUND_TYPE_NAME is optional, but if it is not done
    then one must provide his own ClassName<CLASSWRAP_BOUND_TYPE>
@@ -175,23 +182,28 @@ namespace v8 { namespace juice { namespace cw {
         static NativeHandle VoidToNative( void * x )
         {
             typedef Detail::ClassWrapMapper<T> Mapper;
+#if 1
             return Mapper::GetNative(x);
+            /**
+               The only works with inheritance if CLASSWRAP_BOUND_TYPE_INHERITS
+               is used!
+            */
+#else
+            if( ! x ) return 0;
+            else
+            {
+                NativeHandle y = Mapper::GetNative(x);
+                if( ! y )
+                {
+                    y = NativeInheritance<T>::CheckForSubclass(x);
+                    CERR << "VoidToNative( @"<<(void const *)x<<" ) subclass lookup got: @"<<(void const *)y<<"\n";
+                }
+                return y;
+            }
+#endif
         }
     };
 
-    /**
-       A concrete ToNative policy which uses an internal API
-       to extract, type-safely, native objects from JS object.
-
-       Requires:
-
-       - WeakWrap<T> == TwoWayBind_WeakWrap<T>
-    */
-//     template <typename T>
-//     struct TwoWayBind_ToNative
-//         : ToNative_Base<T, Extract_TwoWayBind<T> >
-//     {
-//     };
     
     template <typename T>
     struct TwoWayBind_ToJS
@@ -205,6 +217,10 @@ namespace v8 { namespace juice { namespace cw {
         {
             typedef Detail::ClassWrapMapper<T> Mapper;
             return Mapper::GetJSObject( nh );
+            /**
+               Only works with inheritance if CLASSWRAP_BOUND_TYPE_INHERITS
+               is used!
+            */
         }
     };
 
@@ -215,16 +231,14 @@ namespace v8 { namespace juice { namespace cw {
 namespace v8 { namespace juice { namespace cw {
 
     template <>
-    struct WeakWrap< CLASSWRAP_BOUND_TYPE > :
-        TwoWayBind_WeakWrap< CLASSWRAP_BOUND_TYPE > {};
+    struct ToNative<CLASSWRAP_BOUND_TYPE> :
+        ToNative_Base<CLASSWRAP_BOUND_TYPE>
+    {
+    };
 
     template <>
     struct Extract< CLASSWRAP_BOUND_TYPE > :
         TwoWayBind_Extract< CLASSWRAP_BOUND_TYPE > {};
-
-    template <>
-    struct ToJS< CLASSWRAP_BOUND_TYPE > :
-        TwoWayBind_ToJS< CLASSWRAP_BOUND_TYPE > {};
 
 #if defined(CLASSWRAP_BOUND_TYPE_NAME)
     template <>
@@ -237,9 +251,46 @@ namespace v8 { namespace juice { namespace cw {
     };
 #undef CLASSWRAP_BOUND_TYPE_NAME
 #endif
+
+    template <>
+    struct ToJS< CLASSWRAP_BOUND_TYPE > :
+        TwoWayBind_ToJS< CLASSWRAP_BOUND_TYPE > {};
+
+#if !defined(CLASSWRAP_BOUND_TYPE_INHERITS)
+    template <>
+    struct WeakWrap< CLASSWRAP_BOUND_TYPE > :
+        TwoWayBind_WeakWrap< CLASSWRAP_BOUND_TYPE > {};
+#else // We need to do some work to get ToJS and inheritance-based lookups working...
+    /**
+       Tells the bind system that objects of CLASSWRAP_BOUND_TYPE are also of
+       type CLASSWRAP_BOUND_TYPE_INHERITS
+    */
+    template <>
+    struct WeakWrap< CLASSWRAP_BOUND_TYPE >
+    {
+        typedef CLASSWRAP_BOUND_TYPE T;
+        typedef convert::TypeInfo<T>::Type Type;
+        typedef convert::TypeInfo<T>::NativeHandle NativeHandle;
+        typedef Detail::ClassWrapMapper<T> Mapper;
+        typedef WeakWrap<CLASSWRAP_BOUND_TYPE_INHERITS> WB;
+        static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf )
+        {
+            WB::Wrap( jsSelf, nativeSelf );
+            Mapper::Insert( jsSelf, nativeSelf );
+            return;
+        }
+        static void Unwrap( v8::Handle<v8::Object> const & jsSelf, NativeHandle nativeSelf )
+        {
+            WB::Unwrap( jsSelf, nativeSelf );
+            Mapper::Remove( nativeSelf );
+            return;
+        }
+    };
+#endif // CLASSWRAP_BOUND_TYPE_INHERITS
+
+
     
- 
- } // v8::juice::cw
+ } // namespace cw
 
 
     namespace convert
@@ -251,11 +302,18 @@ namespace v8 { namespace juice { namespace cw {
             typedef Cast::NativeHandle NativeHandle;
             v8::Handle<v8::Value> operator()( NativeHandle p ) const
             {
-                return p ? Cast::Value(p) : v8::Handle<v8::Value>();
+                if( p ) return Cast::Value(p);
+                else return v8::Handle<v8::Value>();
             }
         };
     }
 
 } } // namespace v8::juice
+
+
+#if defined(CLASSWRAP_BOUND_TYPE_INHERITS)
+#  undef CLASSWRAP_BOUND_TYPE_INHERITS
+#endif
+
 #include "ClassWrap-JSToNative.h" // will undefine CLASSWRAP_BOUND_TYPE
 #endif //CLASSWRAP_BOUND_TYPE
