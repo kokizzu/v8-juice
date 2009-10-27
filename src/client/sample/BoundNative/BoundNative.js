@@ -50,7 +50,14 @@ function dumpBoundNative(b,msg)
     print('b.overload() ==',b.overload());
     print('b.overload(3) ==',b.overload(3));
     print('b.overload(17,23.72) ==',b.overload(17,23.72));
-    print('b.overload(1,2,3) ==',b.overload(1,2,3,4,5));
+    print('b.overload(1,2,3,4,5) ==',b.overload(1,2,3,4,5));
+    if( b.getPtr )
+    {
+        var bp = b.getPtr(b);
+        print('b.getPtr() ==',bp);
+        if( ! bp ) throw new Error("ToJS<>::Value() apparently failed!");
+    }
+    else print("BoundNative::getPtr is not bound.");
     print(arguments.callee.bottom);
 }
 dumpBoundNative.top =    'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv';
