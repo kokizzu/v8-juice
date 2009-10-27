@@ -56,7 +56,7 @@ namespace juice {
    
 */
 namespace cw {
-
+    namespace convert = v8::juice::convert;
 #if !defined(DOXYGEN)
     namespace Detail
     {
@@ -447,7 +447,7 @@ namespace cw {
        script-side.
     */
     template <typename T>
-    struct ToNative_SearchPrototypesForNative : Opt_Bool<false>
+    struct ToNative_SearchPrototypesForNative : Opt_Bool<true>
     {};
 
  
@@ -795,45 +795,7 @@ namespace cw {
         ToNative_Base<T>
     {};
 
-    /**
-       This class can be used to create convert::JSToNative<T> specializations:
-
-       @code
-       namespace v8 { namespace juice { namespace convert {
-           template <>
-           struct JSToNative<MyType> : v8::juice::cw::JSToNativeImpl<T>
-           {};
-       } } }
-       @endcode
-    */
-    template <typename T>
-    struct JSToNativeImpl
-    {
-        /**
-           Required by JSToNative interface.
-         */
-        typedef typename convert::TypeInfo<T>::NativeHandle ResultType;
-        /**
-           If h is empty or not an Object then 0 is returned,
-           otherwise the result of ToNative<T>::Value() is
-           returned.
-        */
-        ResultType operator()( v8::Handle<v8::Value> const h ) const
-        {
-            if( h.IsEmpty() || !h->IsObject() )
-            {
-                return 0;
-            }
-            else
-            {
-                typedef v8::juice::cw::ToNative<T>  Caster;
-                v8::Handle<Object> const jo( v8::Object::Cast( *h ) );
-                return Caster::Value(jo);
-            }
-        }
-    };
-
-    
+  
     /**
        The ClassWrap policy type responsible for converting
        convert::TypeInfo<T>::NativeHandle to v8::Objects. The default
@@ -849,11 +811,13 @@ namespace cw {
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
         /**
-           Converts the given handle to a JS object. If it cannot it should
-           return an empty handle.
+           Converts the given handle to a JS object. If it cannot it
+           should return an empty handle. It may throw a JS exception
+           if a failed conversion is deemed to be a serious error, but
+           this is not generally recommended.
            
            TODO: determine whether throwing a JS exception from here is
-           reasonable.
+           really all that reasonable.
         */
         static v8::Handle<v8::Object> Value( NativeHandle )
         {
@@ -889,6 +853,11 @@ namespace cw {
            Factory::Destruct().
 
            Ownership of the objects is unchanged by calling this.
+
+           On error, this function may throw a native exception. If
+           that happens, ClassWrap will call
+           Factory<T>::Destruct(nativeSelf) to clean up, and will then
+           propagate the exception.
         */
         static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf )
         {
@@ -1209,6 +1178,12 @@ namespace cw {
            Makes a weak pointer from _self and sets obj as the N's internal field
            of _self, where N is InternalFields::NativeIndex. Returns the new
            weak pointer handle.
+
+           On error, this function may propagate a native
+           exception. If that happens, we will call
+           Factory::Destruct(nativeSelf) to clean up before
+           propagating the exception. This behaviour is a documented
+           part of the WeakWrap policy, so don't go changing it.
         */
 	static Persistent<Object> wrap_native( Handle<Object> _self, NativeHandle obj )
 	{
@@ -1217,7 +1192,17 @@ namespace cw {
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
 	    self->SetPointerInInternalField( InternalFields::NativeIndex, obj );
-            WeakWrap::Wrap( self, obj );
+            try
+            {
+                WeakWrap::Wrap( self, obj );
+            }
+            catch(...)
+            {
+                self.ClearWeak();
+                self->SetInternalField( InternalFields::NativeIndex, v8::Null() );
+                Factory::Destruct( _self, obj );
+                throw;
+            }
 	    return self;
 	}
 
@@ -1274,11 +1259,11 @@ namespace cw {
                 }
                 catch(std::exception const & ex)
                 {
-                    return ThrowException(String::New(ex.what()));
+                    return v8::ThrowException(v8::String::New(ex.what()));
                 }
                 catch(...)
                 {
-                    return ThrowException(String::New("Native constructor threw an unknown native exception!"));
+                    return v8::ThrowException(v8::String::New("Native constructor threw an unknown native exception type!"));
                 }
                 err = errstr.str();
             }
@@ -1293,7 +1278,7 @@ namespace cw {
 	    }
 	    if( ! obj )
 	    {
-		return v8::ThrowException(v8::String::New("Constructor failed for an unspecified reason!"));
+		return v8::ThrowException(v8::String::New("Native constructor failed for an unspecified reason!"));
 	    }
 	    return wrap_native( argv.This(), obj );
 	}
@@ -1667,6 +1652,7 @@ namespace cw {
 	}
     };
 
+//! internal convenience macro.
 #define CtorForwarder_ArgvCheck_Prep(N)    \
     if( ! Detail::Factory_CtorForwarder_Base<T>::argv_check( argv, N, errmsg ) ) return NativeHandle(0); \
         typedef convert::CtorForwarder<Type,N> CF
@@ -1762,6 +1748,78 @@ namespace cw {
     
 #undef CtorForwarder_ArgvCheck_Prep
 
+    /**
+       This class can be used to create
+       v8::juice::convert::JSToNative<T> specializations:
+
+       @code
+       namespace v8 { namespace juice { namespace convert {
+           template <>
+           struct JSToNative<MyType> : v8::juice::cw::JSToNativeImpl<T>
+           {};
+       } } }
+       @endcode
+    */
+    template <typename T>
+    struct JSToNativeImpl
+    {
+        /**
+           Required by JSToNative interface.
+         */
+        typedef typename convert::TypeInfo<T>::NativeHandle ResultType;
+        /**
+           If h is empty or not an Object then 0 is returned,
+           otherwise the result of ToNative<T>::Value() is
+           returned.
+        */
+        ResultType operator()( v8::Handle<v8::Value> const h ) const
+        {
+            if( h.IsEmpty() || !h->IsObject() )
+            {
+                return 0;
+            }
+            else
+            {
+                typedef v8::juice::cw::ToNative<T>  Caster;
+                v8::Local<Object> const jo( v8::Object::Cast( *h ) );
+                return Caster::Value(jo);
+            }
+        }
+    };
+
+    /**
+       This class can be used to create
+       v8::juice::convert::NativeToJS<T> specializations:
+
+       @code
+       namespace v8 { namespace juice { namespace convert {
+           template <>
+           struct NativeToJS<MyType> : v8::juice::cw::NativeToJSImpl<T>
+           {};
+       } } }
+       @endcode
+    */
+    template <typename T>
+    struct NativeToJSImpl
+    {
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Required by JSToNative interface.
+         */
+        typedef typename convert::TypeInfo<T>::NativeHandle ResultType;
+        /**
+           If h is empty or not an Object then 0 is returned,
+           otherwise the result of ToNative<T>::Value() is
+           returned.
+        */
+        v8::Handle<v8::Value> operator()( NativeHandle p ) const
+        {
+            typedef ToJS< T > Cast;
+            if( p ) return Cast::Value(p);
+            else return v8::Handle<v8::Value>();
+        }
+    };
+    
 
     /**
        HIGHLY EXPERIMENTAL!
