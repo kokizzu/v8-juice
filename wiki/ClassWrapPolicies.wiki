@@ -339,10 +339,52 @@ Currently only the
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassWrap_TwoWay.h TwoWay policy set]
 implements the internals needed to support this operation.
 
+= Conversion of Bound Types to/from JS/C++ =
 
-= Utility Functions and Types =
+The `ToNative` and `ToJS` policies describe, _for the ClassWrap API_,
+how to convert values to/from JS and C++ space. To plug these conversions
+in to the [ConvertingTypes core v8-juice type conversions framework] we must
+implement two template specializations required by that framework:
 
-TODO: describe the more useful ones here.
+{{{
+namespace v8 { namespace juice { namespace convert {
+
+template <> struct JSToNative<MyBoundType>
+   : v8::juice::cw::JSToNativeImpl<MyBoundType>
+{};
+
+template <> struct NativeToJS<MyBoundType>
+   : v8::juice::cw::NativeToJSImpl<MyBoundType>
+{};
+
+} } } // namespaces
+}}}
+
+That will route all `CastToJS<MyBoundType>()` and `CastFromJS<MyBoundType>()`
+calls through the appropriate binder policies to perform the conversion.
+
+HOWEVER, most policy sets will define `JSToNative<>`, and installing a custom
+copy in addition to one installed by a policy set will produce duplicate definition
+errors at compile time.
+
+Some (currently only one) policy sets _might_ implement `NativeToJS<>'
+as well, but the `ToJS` policy (the basis of the above specialization)
+necessarily requires policy-specific infrastructure, and there is no
+way to create a default implementation.
+
+It is simple to create a `JSToNative` specialization for a given type. Simply
+call the following from global-scope code:
+
+{{{
+// Call a macro:
+JUICE_CLASSWRAP_JSTONATIVE(MyBoundType)
+
+// Or the equivalent supermacro:
+#define CLASSWRAP_BOUND_TYPE MyBoundType
+#include <v8/juice/ClassWrap-JSToNative.h>
+// ^^^^ undefines CLASSWRAP_BOUND_TYPE!
+}}}
+
 
 = Concrete Policy Implementations =
 
@@ -395,15 +437,22 @@ documented in the header file:
 
 == !TwoWay ==
 
-This policy set provides type-safe JS-to-Native _and_ Native-to-JS
-conversions (no casts are used), but requires more memory per binding
+This policy set provides 100% type-safe (with _no_ casts) JS-to-Native
+_and_ Native-to-JS conversions, but requires more memory per binding
 than the other policies. However, it is also the only one which
-provides a working `ToJS` policy.
+provides a working `ToJS` policy, so it will be the policy of choice
+when we must convert from (`T*`) to JS (e.g. a bound function returns
+(`T*`)).
 
 This policy set is very easy to install for a given bound class, as
 documented in the header file:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassWrap_TwoWay.h TwoWay]
+
+
+= Utility Functions and Types =
+
+TODO: describe the more useful ones here.
 
 =Example of using !ClassWrap=
 
