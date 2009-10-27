@@ -90,7 +90,7 @@ public:
 namespace v8 { namespace juice {
     namespace cw
     {
-        //template <> struct DebugLevel<BoundNative> : Opt_Int<2> {};
+        template <> struct DebugLevel<BoundNative> : Opt_Int<2> {};
 
         template <>
         struct ToNative_SearchPrototypesForNative<BoundNative>
@@ -101,7 +101,6 @@ namespace v8 { namespace juice {
         struct AllowCtorWithoutNew<BoundNative>
             : Opt_Bool<false>
         {};
-
 
         template <>
         struct InternalFields<BoundNative>
@@ -169,23 +168,11 @@ namespace v8 { namespace juice { namespace cw
     {
     };
 
-#define XTPOLICY(P) template <> struct  P<BoundSub> :  P<BoundNative> {}
-    XTPOLICY(InternalFields);
-    XTPOLICY(ToNative_SearchPrototypesForNative);
-    //XTPOLICY(AllowCtorWithoutNew);
-#undef XTPOLICY
-
-    template <>
-    struct DebugLevel<BoundSub>
-        : Opt_Int<2>
-    {};
+    template <> struct DebugLevel<BoundSub> : Opt_Int<2> {};
 
     using namespace v8::juice;
     template <>
     struct Factory<BoundSub> :
-#if 0
-        Factory_CtorForwarder1<BoundSub,int>
-#else
     Factory_CtorForwarder<BoundSub,
                           convert::TypeList<
         convert::CtorForwarder0<BoundSub>,
@@ -193,39 +180,11 @@ namespace v8 { namespace juice { namespace cw
         convert::CtorForwarder2<BoundSub,int,double>
         >
     >
-#endif
     {};
 
-
-#if 0 && defined(USING_DEFAULT_POLICIES)
-    template <>
-    struct ClassName<BoundNative>
-    {
-        static char const * Value()
-        {
-            return "BoundNative";
-        }
-    };
-#endif
-
-//     // This is unfortunate. We need a way to automate this.
-//     template <>
-//     struct TwoWayBind_ToJS<BoundSub>
-//     {
-//     public:
-//         typedef typename convert::TypeInfo<BoundSub>::Type Type;
-//         typedef typename convert::TypeInfo<BoundSub>::NativeHandle NativeHandle;
-//         /**
-//         */
-//         static v8::Handle<v8::Value> Value( NativeHandle nh )
-//         {
-//             typedef TwoWayBind_ToJS<BoundNative> Base;
-//             BoundNative * n = Base::Value(nh);
-//             return n ? dynamic_cast<BoundSub*>(n) : 0;
-//         }
-//     };
-
-
+    /**
+       The rest of the policies will be set up via supermacros below.
+    */
 } } } // v8::juice::cw
 
 
@@ -277,13 +236,21 @@ namespace v8 { namespace juice { namespace cw
 #if !defined(USING_DEFAULT_POLICIES)
 #  define CLASSWRAP_BOUND_TYPE_NAME "BoundSub"
 #endif
-#if defined(USING_TWOWAY_POLICIES)
+#if defined(USING_TWOWAY_POLICIES) || defined(USING_JUICEBIND_POLICIES)
 #  define CLASSWRAP_BOUND_TYPE_INHERITS BoundNative
 #endif
+#include CLASSWRAP_POLICY_HEADER
+
+// Inherit some of the options policies for BoundSub
+#define CLASSWRAP_BOUND_TYPE BoundSub
+#define CLASSWRAP_BOUND_TYPE_INHERITS BoundNative
+#include <v8/juice/ClassWrap-InheritOptions.h>
+
+
+// And define BoundSub's JS-side name:      
 #if defined(USING_DEFAULT_POLICIES)
    JUICE_CLASSWRAP_CLASSNAME(BoundSub,"BoundSub")
 #endif
-#include CLASSWRAP_POLICY_HEADER
 
 
 /************************************************************************
@@ -292,7 +259,7 @@ namespace v8 { namespace juice { namespace cw
 
 BoundNative * BoundNative::getPtr()
 {
-#if 1
+#if 0
         typedef v8::juice::cw::Extract<BoundNative> XT;
         BoundNative const * x = XT::VoidToNative(this);
         CERR << "BoundNative::getPtr() this@"<<(void const *)this

@@ -100,10 +100,38 @@ namespace v8 { namespace juice { namespace cw {
 #if defined(CLASSWRAP_BOUND_TYPE)
 namespace v8 { namespace juice { namespace cw {
 
+#if !defined(CLASSWRAP_BOUND_TYPE_INHERITS)
     template <>
     struct WeakWrap< CLASSWRAP_BOUND_TYPE > :
         JuiceBind_WeakWrap< CLASSWRAP_BOUND_TYPE > {};
-
+#else // We need to do some work to get ToJS and inheritance-based lookups working...
+    /**
+       Tells the bind system that objects of CLASSWRAP_BOUND_TYPE are also of
+       type CLASSWRAP_BOUND_TYPE_INHERITS.
+    */
+    template <>
+    struct WeakWrap< CLASSWRAP_BOUND_TYPE >
+    {
+        typedef CLASSWRAP_BOUND_TYPE T;
+        typedef convert::TypeInfo<T>::Type Type;
+        typedef convert::TypeInfo<T>::NativeHandle NativeHandle;
+        typedef WeakWrap<CLASSWRAP_BOUND_TYPE_INHERITS> WB;
+        static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf )
+        {
+            WB::Wrap( jsSelf, nativeSelf );
+            v8::juice::bind::BindNative( nativeSelf );
+            return;
+        }
+        static void Unwrap( v8::Handle<v8::Object> const & jsSelf, NativeHandle nativeSelf )
+        {
+            WB::Unwrap( jsSelf, nativeSelf );
+            v8::juice::bind::UnbindNative( nativeSelf );
+            return;
+        }
+    };
+#undef CLASSWRAP_BOUND_TYPE_INHERITS
+#endif // CLASSWRAP_BOUND_TYPE_INHERITS
+    
     template <>
     struct Extract< CLASSWRAP_BOUND_TYPE > :
         JuiceBind_Extract< CLASSWRAP_BOUND_TYPE > {};
@@ -118,7 +146,7 @@ namespace v8 { namespace juice { namespace cw {
         }
     };
 #undef CLASSWRAP_BOUND_TYPE_NAME
-#endif
+#endif // CLASSWRAP_BOUND_TYPE_NAME
     
 } } } // namespaces
 #include <v8/juice/ClassWrap-JSToNative.h> // will undefine CLASSWRAP_BOUND_TYPE
