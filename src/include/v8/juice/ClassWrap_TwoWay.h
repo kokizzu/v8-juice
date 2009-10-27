@@ -185,8 +185,8 @@ namespace v8 { namespace juice { namespace cw {
 #if 1
             return Mapper::GetNative(x);
             /**
-               The only works with inheritance if CLASSWRAP_BOUND_TYPE_INHERITS
-               is used!
+               The only works with native inheritance if
+               CLASSWRAP_BOUND_TYPE_INHERITS is used!
             */
 #else
             if( ! x ) return 0;
@@ -231,14 +231,18 @@ namespace v8 { namespace juice { namespace cw {
 namespace v8 { namespace juice { namespace cw {
 
     template <>
-    struct ToNative<CLASSWRAP_BOUND_TYPE> :
-        ToNative_Base<CLASSWRAP_BOUND_TYPE>
+    struct ToNative< CLASSWRAP_BOUND_TYPE > :
+        ToNative_Base< CLASSWRAP_BOUND_TYPE >
     {
     };
 
     template <>
     struct Extract< CLASSWRAP_BOUND_TYPE > :
         TwoWayBind_Extract< CLASSWRAP_BOUND_TYPE > {};
+
+    template <>
+    struct ToJS< CLASSWRAP_BOUND_TYPE > :
+        TwoWayBind_ToJS< CLASSWRAP_BOUND_TYPE > {};
 
 #if defined(CLASSWRAP_BOUND_TYPE_NAME)
     template <>
@@ -252,9 +256,6 @@ namespace v8 { namespace juice { namespace cw {
 #undef CLASSWRAP_BOUND_TYPE_NAME
 #endif
 
-    template <>
-    struct ToJS< CLASSWRAP_BOUND_TYPE > :
-        TwoWayBind_ToJS< CLASSWRAP_BOUND_TYPE > {};
 
 #if !defined(CLASSWRAP_BOUND_TYPE_INHERITS)
     template <>
@@ -263,7 +264,7 @@ namespace v8 { namespace juice { namespace cw {
 #else // We need to do some work to get ToJS and inheritance-based lookups working...
     /**
        Tells the bind system that objects of CLASSWRAP_BOUND_TYPE are also of
-       type CLASSWRAP_BOUND_TYPE_INHERITS
+       type CLASSWRAP_BOUND_TYPE_INHERITS.
     */
     template <>
     struct WeakWrap< CLASSWRAP_BOUND_TYPE >
@@ -288,9 +289,8 @@ namespace v8 { namespace juice { namespace cw {
     };
 #endif // CLASSWRAP_BOUND_TYPE_INHERITS
 
-
     
- } // namespace cw
+} // namespace cw
 
 
     namespace convert
@@ -311,9 +311,10 @@ namespace v8 { namespace juice { namespace cw {
 } } // namespace v8::juice
 
 
-#if defined(CLASSWRAP_BOUND_TYPE_INHERITS)
-#  undef CLASSWRAP_BOUND_TYPE_INHERITS
-#endif
+// #if defined(CLASSWRAP_BOUND_TYPE_INHERITS)
+// #  include "ClassWrap-InheritOptions.h"
+// #  undef CLASSWRAP_BOUND_TYPE_INHERITS
+// #endif
 
 #include "ClassWrap-JSToNative.h" // will undefine CLASSWRAP_BOUND_TYPE
 #endif //CLASSWRAP_BOUND_TYPE
