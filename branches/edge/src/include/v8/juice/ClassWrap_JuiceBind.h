@@ -16,7 +16,7 @@
    // From global scope:
    #define CLASSWRAP_BOUND_TYPE MyType
    #define CLASSWRAP_BOUND_TYPE_NAME "MyType"
-   #include <v8/juice/JuiceBind.h>
+   #include <v8/juice/ClassWrap_JuiceBind.h>
    @endcode
 
    That will install these policies as the defaults for
