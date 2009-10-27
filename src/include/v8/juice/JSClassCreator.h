@@ -69,11 +69,15 @@ namespace juice {
  	JSClassCreator( JSClassCreator const & ); // not implemented
  	JSClassCreator & operator=( JSClassCreator const & ); // not implemented
 	bool hasTarget;
+        bool wasSealed;
     public:
 	/**
 	   Begins setting up a new JS class, as a member of the given target object,
 	   with the given class name and constructor function. The optionan internalFieldCount
 	   can be set here or by calling SetINternalFieldCount().
+
+           This class does NOT copy className - it is assumed to be a
+           constant/static string.
 	*/
 	JSClassCreator( char const * className,
 			Handle<Object> target,
@@ -161,7 +165,8 @@ namespace juice {
            a target object (e.g. your global object).
 	*/
 	Handle<Function> Seal();
-
+        /** Returns true if Seal() has been called on this object. */
+        bool IsSealed() const;
 	/**
 	   Creates a new instance of this class' represented type,
 	   using the constructor function set in the ctor.  This must
