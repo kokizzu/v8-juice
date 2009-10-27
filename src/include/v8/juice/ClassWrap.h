@@ -795,45 +795,7 @@ namespace cw {
         ToNative_Base<T>
     {};
 
-    /**
-       This class can be used to create convert::JSToNative<T> specializations:
-
-       @code
-       namespace v8 { namespace juice { namespace convert {
-           template <>
-           struct JSToNative<MyType> : v8::juice::cw::JSToNativeImpl<T>
-           {};
-       } } }
-       @endcode
-    */
-    template <typename T>
-    struct JSToNativeImpl
-    {
-        /**
-           Required by JSToNative interface.
-         */
-        typedef typename convert::TypeInfo<T>::NativeHandle ResultType;
-        /**
-           If h is empty or not an Object then 0 is returned,
-           otherwise the result of ToNative<T>::Value() is
-           returned.
-        */
-        ResultType operator()( v8::Handle<v8::Value> const h ) const
-        {
-            if( h.IsEmpty() || !h->IsObject() )
-            {
-                return 0;
-            }
-            else
-            {
-                typedef v8::juice::cw::ToNative<T>  Caster;
-                v8::Local<Object> const jo( v8::Object::Cast( *h ) );
-                return Caster::Value(jo);
-            }
-        }
-    };
-
-    
+  
     /**
        The ClassWrap policy type responsible for converting
        convert::TypeInfo<T>::NativeHandle to v8::Objects. The default
@@ -1667,6 +1629,7 @@ namespace cw {
 	}
     };
 
+//! internal convenience macro.
 #define CtorForwarder_ArgvCheck_Prep(N)    \
     if( ! Detail::Factory_CtorForwarder_Base<T>::argv_check( argv, N, errmsg ) ) return NativeHandle(0); \
         typedef convert::CtorForwarder<Type,N> CF
@@ -1762,6 +1725,78 @@ namespace cw {
     
 #undef CtorForwarder_ArgvCheck_Prep
 
+    /**
+       This class can be used to create
+       v8::juice::convert::JSToNative<T> specializations:
+
+       @code
+       namespace v8 { namespace juice { namespace convert {
+           template <>
+           struct JSToNative<MyType> : v8::juice::cw::JSToNativeImpl<T>
+           {};
+       } } }
+       @endcode
+    */
+    template <typename T>
+    struct JSToNativeImpl
+    {
+        /**
+           Required by JSToNative interface.
+         */
+        typedef typename convert::TypeInfo<T>::NativeHandle ResultType;
+        /**
+           If h is empty or not an Object then 0 is returned,
+           otherwise the result of ToNative<T>::Value() is
+           returned.
+        */
+        ResultType operator()( v8::Handle<v8::Value> const h ) const
+        {
+            if( h.IsEmpty() || !h->IsObject() )
+            {
+                return 0;
+            }
+            else
+            {
+                typedef v8::juice::cw::ToNative<T>  Caster;
+                v8::Local<Object> const jo( v8::Object::Cast( *h ) );
+                return Caster::Value(jo);
+            }
+        }
+    };
+
+    /**
+       This class can be used to create
+       v8::juice::convert::NativeToJS<T> specializations:
+
+       @code
+       namespace v8 { namespace juice { namespace convert {
+           template <>
+           struct NativeToJS<MyType> : v8::juice::cw::NativeToJSImpl<T>
+           {};
+       } } }
+       @endcode
+    */
+    template <typename T>
+    struct NativeToJSImpl
+    {
+        typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        /**
+           Required by JSToNative interface.
+         */
+        typedef typename convert::TypeInfo<T>::NativeHandle ResultType;
+        /**
+           If h is empty or not an Object then 0 is returned,
+           otherwise the result of ToNative<T>::Value() is
+           returned.
+        */
+        v8::Handle<v8::Value> operator()( NativeHandle p ) const
+        {
+            typedef ToJS< T > Cast;
+            if( p ) return Cast::Value(p);
+            else return v8::Handle<v8::Value>();
+        }
+    };
+    
 
     /**
        HIGHLY EXPERIMENTAL!
