@@ -30,12 +30,15 @@
    If MyType inherits from another bound type and CLASSWRAP_BOUND_TYPE_INHERITS
    is NOT set then the ToJS<CLASSWRAP_BOUND_TYPE> policy will not work
    properly (that is, converting from (T*) to JS will fail at runtime).
-
    
    Defining CLASSWRAP_BOUND_TYPE_NAME is optional, but if it is not done
    then one must provide his own ClassName<CLASSWRAP_BOUND_TYPE>
    specialization.
 
+   The only functional difference between this policy set and the default
+   policies is that the conversions from JS to native are guaranteed to be
+   type safe (no casts are done).
+   
    The following ClassWrap policies are set up:
 
    - WeakWrap
@@ -59,7 +62,7 @@
    
 */
 namespace v8 { namespace juice { namespace cw {
-    //namespace convert = v8::juice::convert;
+    namespace convert = v8::juice::convert;
     //using namespace v8::juice;
     /**
        A concrete WeakWrap policy which uses the v8::juice::bind
@@ -90,7 +93,7 @@ namespace v8 { namespace juice { namespace cw {
        from JS object.
     */
     template <typename T>
-    struct JuiceBind_Extract : ::v8::juice::cw::Extract_Base<T>
+    struct JuiceBind_Extract : Extract_Base<T>
     {
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
@@ -127,7 +130,7 @@ namespace v8 { namespace juice { namespace cw {
         typedef WeakWrap<CLASSWRAP_BOUND_TYPE_INHERITS> WB;
         static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf )
         {
-            WB::Wrap( jsSelf, nativeSelf );
+            WB::Wrap( jsSelf, nativeSelf );// register nativeSelf as-a T instance.
             v8::juice::bind::BindNative( nativeSelf );
             return;
         }
