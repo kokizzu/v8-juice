@@ -1,36 +1,36 @@
 #if !defined(DOXYGEN)
-// auto-generated [Sun Oct 25 22:22:13 2009] by maketypelist.pl
-struct TypeList_0 : TypeListBase<NilType,NilType> {};
+// auto-generated [Mon Oct 26 22:57:46 2009] by maketypelist.pl
+struct TypeList_0 : TypePair<NilType,NilType> {};
 
 template <class T1>
-struct TypeList_1 : TypeListBase<T1,NilType> {};
+struct TypeList_1 : TypePair<T1,NilType> {};
 
 template <class T1, class T2>
-struct TypeList_2 : TypeListBase<T1, TypeListBase<T2, NilType> > {};
+struct TypeList_2 : TypePair<T1, TypePair<T2, NilType> > {};
 
 template <class T1, class T2, class T3 >
-struct TypeList_3 : TypeListBase<T1, TypeList_2< T2, T3 > > {};
+struct TypeList_3 : TypePair<T1, TypeList_2< T2, T3 > > {};
 
 template <class T1, class T2, class T3, class T4 >
-struct TypeList_4 : TypeListBase<T1, TypeList_3< T2, T3, T4 > > {};
+struct TypeList_4 : TypePair<T1, TypeList_3< T2, T3, T4 > > {};
 
 template <class T1, class T2, class T3, class T4, class T5 >
-struct TypeList_5 : TypeListBase<T1, TypeList_4< T2, T3, T4, T5 > > {};
+struct TypeList_5 : TypePair<T1, TypeList_4< T2, T3, T4, T5 > > {};
 
 template <class T1, class T2, class T3, class T4, class T5, class T6 >
-struct TypeList_6 : TypeListBase<T1, TypeList_5< T2, T3, T4, T5, T6 > > {};
+struct TypeList_6 : TypePair<T1, TypeList_5< T2, T3, T4, T5, T6 > > {};
 
 template <class T1, class T2, class T3, class T4, class T5, class T6, class T7 >
-struct TypeList_7 : TypeListBase<T1, TypeList_6< T2, T3, T4, T5, T6, T7 > > {};
+struct TypeList_7 : TypePair<T1, TypeList_6< T2, T3, T4, T5, T6, T7 > > {};
 
 template <class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8 >
-struct TypeList_8 : TypeListBase<T1, TypeList_7< T2, T3, T4, T5, T6, T7, T8 > > {};
+struct TypeList_8 : TypePair<T1, TypeList_7< T2, T3, T4, T5, T6, T7, T8 > > {};
 
 template <class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9 >
-struct TypeList_9 : TypeListBase<T1, TypeList_8< T2, T3, T4, T5, T6, T7, T8, T9 > > {};
+struct TypeList_9 : TypePair<T1, TypeList_8< T2, T3, T4, T5, T6, T7, T8, T9 > > {};
 
 template <class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10 >
-struct TypeList_10 : TypeListBase<T1, TypeList_9< T2, T3, T4, T5, T6, T7, T8, T9, T10 > > {};
+struct TypeList_10 : TypePair<T1, TypeList_9< T2, T3, T4, T5, T6, T7, T8, T9, T10 > > {};
 
 template <class T1 = NilType, class T2 = NilType, class T3 = NilType, class T4 = NilType, class T5 = NilType, class T6 = NilType, class T7 = NilType, class T8 = NilType, class T9 = NilType, class T10 = NilType>
 struct TypeList : TypeList_10<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> {};
@@ -63,6 +63,6 @@ template <class T1>
 struct TypeList<T1, NilType, NilType, NilType, NilType, NilType, NilType, NilType, NilType, NilType> : TypeList_1<T1> {};
 
 template <>
-struct TypeList<> : TypeListBase<NilType,NilType> {};
+struct TypeList<> : TypePair<NilType,NilType> {};
 
 #endif // if !defined(DOXYGEN)
