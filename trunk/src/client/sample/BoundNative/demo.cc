@@ -77,7 +77,8 @@ int main(int argc, char * argv[])
         shell.SetupJuiceEnvironment();
         MyNative::SetupClass(shell.Context());
 #if TEST_CLASSWRAP2
-        BoundNative::SetupClass( shell.Global() );
+        //BoundNative::SetupClass( shell.Global() );
+        cw::RuntimeOps<BoundNative>::SetupBindings( shell.Global() );
 #endif
 
         bool run_shell = (argc == 1);

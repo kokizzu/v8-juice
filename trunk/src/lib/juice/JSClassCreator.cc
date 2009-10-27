@@ -10,11 +10,12 @@ namespace v8 { namespace juice {
 				    Handle<Object> target,
 				    v8::InvocationCallback ctor,
 				    int internalFieldCount )
-	: className(className),
+	: className(className ? className : "UnnamedClass"),
 	  target(target),
 	  ctorTmpl( FunctionTemplate::New(ctor) ),
 	  proto( ctorTmpl->PrototypeTemplate() ),
-	  hasTarget(true)
+	  hasTarget(true),
+          wasSealed(false)
     {
 	if( internalFieldCount > 0 )
 	{
@@ -80,8 +81,14 @@ namespace v8 { namespace juice {
 	return func;
     }
 
+    bool JSClassCreator::IsSealed() const
+    {
+        return this->wasSealed;
+    }
+
     Handle<Function> JSClassCreator::Seal()
     {
+        this->wasSealed = true;
 	// In my experience, if GetFunction() is called BEFORE setting up
 	// the Prototype object, v8 gets very unhappy (class member lookups don't work?).
 	if( this->hasTarget )

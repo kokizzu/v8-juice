@@ -50,7 +50,14 @@ function dumpBoundNative(b,msg)
     print('b.overload() ==',b.overload());
     print('b.overload(3) ==',b.overload(3));
     print('b.overload(17,23.72) ==',b.overload(17,23.72));
-    print('b.overload(1,2,3) ==',b.overload(1,2,3,4,5));
+    print('b.overload(1,2,3,4,5) ==',b.overload(1,2,3,4,5));
+    if( b.getPtr )
+    {
+        var bp = b.getPtr(b);
+        print('b.getPtr() ==',bp);
+        if( ! bp ) throw new Error("ToJS<>::Value() apparently failed!");
+    }
+    else print("BoundNative::getPtr is not bound.");
     print(arguments.callee.bottom);
 }
 dumpBoundNative.top =    'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv';
@@ -126,12 +133,21 @@ function testInheritance1()
     print(arguments.callee.name+"() ------------------------------------------");
     function MyClass()
     {
-        this.prototype = this.__proto__ = new BoundNative(193,242.424);
+        this.prototype = this.__proto__ = new BoundSub(193,242.424);
         this.prototype.constructor = MyClass;
         return this;
     }
-    MyClass.prototype = BoundNative;
+    MyClass.prototype = BoundSub;
 
+    if(1)
+    { // i can't seem to get overloading of inherited bound methods working:
+        MyClass.prototype.toString = function()
+        {
+            throw new Error("Finally! MyClass::toString() was called!");
+            return "[YourClass: "+this.__proto__.toString.call()+"]";
+        };
+    }
+    
     function YourClass()
     {
         this.prototype = this.__proto__ = new MyClass();
@@ -139,12 +155,12 @@ function testInheritance1()
         return this;
     }
     YourClass.prototype = MyClass;
-
+    
     
     var m = new MyClass();
-    dumpBoundNative(m,"This is m:");
     print("m instanceof BoundNative ==",m instanceof BoundNative);
     var y = new YourClass();
+    dumpBoundNative(y,"This is y:");
     print("y instanceof BoundNative ==",y instanceof BoundNative);
     print("m.ptr(y)",m.ptr(y));
     print("y.ptr(m)",y.ptr(m));

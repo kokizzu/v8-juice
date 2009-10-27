@@ -638,14 +638,14 @@ namespace convert {
     class ObjectPropSetter
     {
     private:
-	Handle< ::v8::Object > target;
+	v8::Handle< ::v8::Object > target;
     public:
 	/**
 	   Initializes this object to use the given array
 	   as its append target. Results are undefined if
 	   target is not a valid Object.
 	*/
-	explicit ObjectPropSetter( Handle< ::v8::Object > obj ) :target(obj)
+	explicit ObjectPropSetter( v8::Handle< v8::Object > obj ) :target(obj)
 	{}
 	~ObjectPropSetter(){}
 
@@ -653,7 +653,7 @@ namespace convert {
 	   Adds an arbitrary property to the target object.
 	*/
 	template <typename T>
-	ObjectPropSetter & operator()( Handle<Value> key, T const & v )
+	ObjectPropSetter & operator()( v8::Handle<v8::Value> key, T const & v )
 	{
 	    this->target->Set(key, CastToJS(v));
 	    return *this;
@@ -685,13 +685,22 @@ namespace convert {
            why.          
 	*/
 	template <typename T1, typename T2>
-	ObjectPropSetter & operator()( Handle<Value> key, Handle<Value> v )
+	ObjectPropSetter & operator()( v8::Handle<v8::Value> key, v8::Handle<v8::Value> v )
 	{
 	    return this->operator()( key, v );
 	}
 
+        /**
+           Adds the given function as a member of the target object.
+        */
+        ObjectPropSetter & operator()( char const * name, v8::InvocationCallback pf )
+        {
+            return this->operator()( name,
+                                     v8::FunctionTemplate::New(pf)->GetFunction() );
+        }
+        
 	/**
-	   Returns this object's
+	   Returns this object's JS object.
 	*/
 	Handle< ::v8::Object > Object() const
 	{
@@ -864,6 +873,7 @@ namespace convert {
             return *this;
         }
     };
+
     
 }}} /* namespaces */
 
