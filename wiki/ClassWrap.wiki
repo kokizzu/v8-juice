@@ -77,6 +77,9 @@ All of the policy classes must be specialized within the
 be left out of examples. The example code also assumes that
 `using namespace v8::juice` is in effect.
 
+For much more information about ClassWrap policies, see
+the ClassWrapPolicies page.
+
 == Factory policy ==
 
 The Factory policy's responsibilities are creating and destroying
