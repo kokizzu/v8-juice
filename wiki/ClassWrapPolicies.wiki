@@ -30,7 +30,7 @@ Functional policies each have a very specific role in the class
 binding process, and typically provide one (sometimes two) functions
 for performing their role.
 
-Most policies can use defaults, but two policies in particular cannot
+Most policies can use defaults, but three policies in particular cannot
 be defaulted (explained below).
 
 All examples in this page, unless noted otherwise, assume that the code
@@ -42,13 +42,13 @@ is in the `v8::juice::cw` namespace (where ClassWrap lives).
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassWrap.h in ClassWrap.h].
 
 
-= Options Policicies =
+= Options Policies =
 
 Options policies hold constant values which are used as toggles or ranges
 for various functional policies.
 
 
-== `InternalFields` ==
+== `InternalFields` Policy ==
 
 The `InternalFields` policy specifies two values: the number of "internal fields"
 (the v8 js-to-native mechanism) and the index of the internal field which holds
@@ -77,7 +77,7 @@ template <>
   struct InternalFields<Subclass> : InternalFields<BaseClass> {};
 }}}
 
-== `AllowCtorWithoutNew` ==
+== `AllowCtorWithoutNew` Policy ==
 
 This policy is a toggle for the internal (to !ClassWrap) native object
 construction process.
@@ -106,7 +106,7 @@ by making the call to "new" itself.
 The library does not support providing two different behaviours
 depending on whether "new" is used or not.
 
-== `ToNative_SearchPrototypesForNative` ==
+== `ToNative_SearchPrototypesForNative` Policy ==
 
 This boolean policy is used by some of the `ToNative` policies (described
 somewhere below) to specify whether or not they should traverse the
@@ -167,7 +167,7 @@ it is only needed if we need to pass (`T*`) _to_ JS space).
 
 Each factory is described in more detail below.
 
-== Class name ==
+== !ClassName Policy ==
 
 The !ClassName policy defines a bound class's JS-side name. It looks like:
 
@@ -190,7 +190,7 @@ which generates the above code.
 There is no sensible default implementation, but some policy sets
 provide this feature as part of their setup process.
 
-== `Factory` ==
+== `Factory` Policy ==
 
 The Factory policy's responsibilities are creating and destroying
 new instances of objects. It is one of the few policies for which
@@ -226,7 +226,7 @@ template <>
     struct Factory<MyType> : Factory_NewDelete<MyType> {};
 }}}
 
-== `WeakWrap` ==
+== `WeakWrap` Policy ==
 
 After a Factory policy creates a native object, the class binder
 passes the object via this interface to allow the policy to do
@@ -253,7 +253,7 @@ struct WeakWrap
 
 The default implementation does nothing, which is suitable for most cases.
 
-== `Extract` ==
+== `Extract` Policy ==
 
 This policy serves two purposes:
 
@@ -287,7 +287,7 @@ Design note: in fact, `VoidToNative()` should arguably be part of the
 `ToNative` interface. The the evolution of this API favoured it being
 in this class, however, for reasons i don't quite recall.
 
-== `ToNative` ==
+== `ToNative` Policy ==
 
 This policy is responsible for converting JS objects native objects.
 
@@ -313,7 +313,7 @@ clients should also look at the available concrete implementation for
 more information.
 
 
-== `ToJS` ==
+== `ToJS` Policy ==
 
 This policy is responsible for converting bound native objects to
 bound JS objects.  This is not possible for the generic case, and
@@ -346,11 +346,16 @@ TODO: describe the more useful ones here.
 
 = Concrete Policy Implementations =
 
-The library comes with enough parts to easily build your own policy sets.
-For the barest of features, the only two policies which are _required_ to be specialized
-by client code `ClassName` and `Factory`. The library also comes with base classes
-and "policy sets" (collections of cooperating policies) to make it easy to plug in
-a bound class with very little client-written code.
+The library comes with enough parts to easily build your own policy
+sets.  For our purposes, a "policy set" is a are collection of
+policies which work together to provide certain features above and
+beyond the basics necessary for binding.
+
+For the barest of features, the only two policies which are _required_
+to be specialized by client code `ClassName` and `Factory`. The
+library also comes with base classes and complete policy sets to make
+it easy to plug in a bound class with very little client-written code.
+Which policy set is used depends on the needs of the class.
 
 The following sections briefly describe some of the options.
 
@@ -363,25 +368,40 @@ Not all policies have default implementations. Notably:
 
   * `ClassName` must be implemented. (See the `JUICE_CLASSWRAP_CLASSNAME()` macro.)
   * `Factory` must be implemented, but there are several useful base classes which do all the work (specializations must simply subclass them).
+  * `ToJS` has no default but is never invoked unless some bound function/member/whatever must return (`T*`) to JS space.
+
+When starting work on a binding, it is simplest to use the defaults (except
+for those listed above). One can switch policies later if it is determined
+that certain features are necessary. For example, two-way conversions from/to
+JS/Native are currently provided only by the !TwoWay policy set (described below).
+That said, JS-to-native conversions are only needed if we have to pass (`T*`) to JS
+space (e.g. a bound function returns (`T*`)).
+
+Some properties of the default policy implementations:
+
+  * They internally use `static_cast<T*>(void*)` for conversions. This is fast, cheap, and surprisingly safe (but not infallibly so).
+  * As a happy accident, they avoid some of the inheritance-related problems which "deeper" (and type-safer) policy sets must internally account for.
 
 == !JuiceBind ==
 
-This policy set provides type-safe JS-to-Native conversions
+This policy set uses the v8::juice::bind API to provide type-safe JS-to-Native conversions
 (i.e., no casts are used), but requires a small amount of memory per bound
 object to maintain the void-to-T mappings.
 
-This policy set is very easy to install, as documented in the header file:
+This policy set is very easy to install for a given bound class, as
+documented in the header file:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassWrap_JuiceBind.h JuiceBind]
 
 == !TwoWay ==
 
 This policy set provides type-safe JS-to-Native _and_ Native-to-JS
-conversions (and no casts are used), but requires more memory per
-binding than the other policies. However, it is also the only one
-which provides a `ToJS` policy.
+conversions (no casts are used), but requires more memory per binding
+than the other policies. However, it is also the only one which
+provides a working `ToJS` policy.
 
-This policy set is very easy to install, as documented in the header file:
+This policy set is very easy to install for a given bound class, as
+documented in the header file:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassWrap_TwoWay.h TwoWay]
 
