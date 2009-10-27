@@ -60,23 +60,6 @@ namespace v8 { namespace juice { namespace convert {
         {
             enum { Value = 0 };
         };
-//         template <typename H>
-//         struct TypeListSizeImpl< cv::TypePair<H,cv::NilType> >
-//         {
-//             //enum { Value = TypeListSizeImpl<H>::Value };
-//             enum { Value = 1 };
-//         };
-//         template <>
-//         struct TypeListSizeImpl< cv::TypePair<cv::NilType,cv::NilType> >
-//         {
-//             enum { Value = 0 };
-//         };
-//         /** This specialization would only be called invalid typelists
-//             which use NilType IN the list.
-//         */
-//         template <typename T>
-//         struct TypeListSizeImpl< cv::TypePair<cv::NilType,T> >;
-
         template <typename H, typename T>
         struct TypeListSizeImpl< cv::TypePair<H,T> >
         {
@@ -90,20 +73,12 @@ namespace v8 { namespace juice { namespace convert {
     template <typename ListT>
     struct TypeListSize
     {
-        //typedef TypePair< typename ListT::Head, typename ListT::Tail > L;
         enum {
         /**
            The number of types in ListT.
         */
-        Value =
-#if 1
-        Detail::TypeListSizeImpl< typename ListT::Head >::Value
-        + TypeListSize< typename ListT::Tail >::Value
-        // + Detail::TypeListSizeImpl< typename ListT::Tail >::Value // WTF does this always eval to 1?
-#else
-        Detail::TypeListSizeImpl<L>::Value
-#endif
-        
+        Value = Detail::TypeListSizeImpl< typename ListT::Head >::Value
+                + TypeListSize< typename ListT::Tail >::Value
         };
     };
     /** Specialization for end-of-list. */

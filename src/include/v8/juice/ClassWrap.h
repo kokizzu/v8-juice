@@ -56,7 +56,7 @@ namespace juice {
    
 */
 namespace cw {
-
+    namespace convert = v8::juice::convert;
 #if !defined(DOXYGEN)
     namespace Detail
     {
@@ -811,11 +811,13 @@ namespace cw {
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
         /**
-           Converts the given handle to a JS object. If it cannot it should
-           return an empty handle.
+           Converts the given handle to a JS object. If it cannot it
+           should return an empty handle. It may throw a JS exception
+           if a failed conversion is deemed to be a serious error, but
+           this is not generally recommended.
            
            TODO: determine whether throwing a JS exception from here is
-           reasonable.
+           really all that reasonable.
         */
         static v8::Handle<v8::Object> Value( NativeHandle )
         {
@@ -851,6 +853,11 @@ namespace cw {
            Factory::Destruct().
 
            Ownership of the objects is unchanged by calling this.
+
+           On error, this function may throw a native exception. If
+           that happens, ClassWrap will call
+           Factory<T>::Destruct(nativeSelf) to clean up, and will then
+           propagate the exception.
         */
         static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf )
         {
@@ -1171,6 +1178,12 @@ namespace cw {
            Makes a weak pointer from _self and sets obj as the N's internal field
            of _self, where N is InternalFields::NativeIndex. Returns the new
            weak pointer handle.
+
+           On error, this function may propagate a native
+           exception. If that happens, we will call
+           Factory::Destruct(nativeSelf) to clean up before
+           propagating the exception. This behaviour is a documented
+           part of the WeakWrap policy, so don't go changing it.
         */
 	static Persistent<Object> wrap_native( Handle<Object> _self, NativeHandle obj )
 	{
@@ -1179,7 +1192,17 @@ namespace cw {
 	    Persistent<Object> self( Persistent<Object>::New(_self) );
 	    self.MakeWeak( obj, weak_callback );
 	    self->SetPointerInInternalField( InternalFields::NativeIndex, obj );
-            WeakWrap::Wrap( self, obj );
+            try
+            {
+                WeakWrap::Wrap( self, obj );
+            }
+            catch(...)
+            {
+                self.ClearWeak();
+                self->SetInternalField( InternalFields::NativeIndex, v8::Null() );
+                Factory::Destruct( _self, obj );
+                throw;
+            }
 	    return self;
 	}
 
@@ -1236,11 +1259,11 @@ namespace cw {
                 }
                 catch(std::exception const & ex)
                 {
-                    return ThrowException(String::New(ex.what()));
+                    return v8::ThrowException(v8::String::New(ex.what()));
                 }
                 catch(...)
                 {
-                    return ThrowException(String::New("Native constructor threw an unknown native exception!"));
+                    return v8::ThrowException(v8::String::New("Native constructor threw an unknown native exception type!"));
                 }
                 err = errstr.str();
             }
@@ -1255,7 +1278,7 @@ namespace cw {
 	    }
 	    if( ! obj )
 	    {
-		return v8::ThrowException(v8::String::New("Constructor failed for an unspecified reason!"));
+		return v8::ThrowException(v8::String::New("Native constructor failed for an unspecified reason!"));
 	    }
 	    return wrap_native( argv.This(), obj );
 	}

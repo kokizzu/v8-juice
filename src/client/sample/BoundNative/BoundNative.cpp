@@ -1,4 +1,6 @@
-// EXPERIMENTAL/INCOMPLETE!
+/************************************************************************
+Test/demo code for the v8::juice::cw::ClassWrap class binding mechanism.
+************************************************************************/
 #include <sstream>
 
 #include <v8/juice/ClassWrap.h>
@@ -11,9 +13,6 @@
 #include <iostream> /* only for debuggering */
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
-
-namespace v8 { namespace juice { namespace convert {
-} } } // namespace v8::juice::convert
 
 /** A class for testing ClasWrap. */
 struct BoundNative
@@ -87,6 +86,10 @@ public:
 
 };
 
+/************************************************************************
+Define certain ClassWrap policies which will not be installed by our
+property set macros.
+************************************************************************/
 namespace v8 { namespace juice {
     namespace cw
     {
@@ -104,7 +107,7 @@ namespace v8 { namespace juice {
 
         template <>
         struct InternalFields<BoundNative>
-            : InternalFields_Base<BoundNative>//,4,2>
+            : InternalFields_Base<BoundNative,4,2>
         {};
 
 #if 1
@@ -200,7 +203,15 @@ namespace v8 { namespace juice { namespace cw
 
 ////////////////////////////////////////////////////////////////////////
 // Set ONE of the following to a true value to select that ClassWrap
-// policy set:
+// policy set. Normally a binding only uses one policy, but for
+// test/development purposes, this particular case has three policy
+// sets.
+//  - Default: uses static_cast<T*>(void*) for conversions. Does
+//  nothing tricky vis-a-vis inheritance. Can only do JS-to-Native
+// conversions, not Native-to-JS.
+// - JuiceBind: provides type-safe conversions but can only do
+// JS-to-Native conversions, not Native-to-JS.
+// - TwoWay: provides type-safe conversions to and from JS.
 #if 0
 // #  warning "Using JuiceBind policies!"
 #  define USING_JUICEBIND_POLICIES
@@ -235,11 +246,11 @@ namespace v8 { namespace juice { namespace cw
 #define CLASSWRAP_BOUND_TYPE BoundSub
 #if !defined(USING_DEFAULT_POLICIES)
 #  define CLASSWRAP_BOUND_TYPE_NAME "BoundSub"
-#endif
-#if defined(USING_TWOWAY_POLICIES) || defined(USING_JUICEBIND_POLICIES)
+// #endif
+// #if defined(USING_TWOWAY_POLICIES) || defined(USING_JUICEBIND_POLICIES)
 #  define CLASSWRAP_BOUND_TYPE_INHERITS BoundNative
 #endif
-#include CLASSWRAP_POLICY_HEADER
+#include CLASSWRAP_POLICY_HEADER // undefines our CLASSWRAP_BOUND_xxx macros
 
 // Inherit some of the options policies for BoundSub
 #define CLASSWRAP_BOUND_TYPE BoundSub
