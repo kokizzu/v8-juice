@@ -1,10 +1,11 @@
 // EXPERIMENTAL/INCOMPLETE!
-#include <sstream>
 #include <v8/juice/static_assert.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/TypeList.h>
-#include <vector>
 
+#include <sstream>
+#include <stdexcept>
+#include <vector>
 
 #ifndef DBGSTREAM
 #include <iostream> /* only for debuggering */
@@ -1394,7 +1395,7 @@ namespace cw {
         template <typename VarType, VarType * SharedVar>
         static void BindStaticVar( char const * name )
         {
-            return PB::template BindStaticVar<VarType,SharedVale>( name );
+            return PB::template BindStaticVar<VarType,SharedVar>( name );
         }
 
         /**
@@ -1403,7 +1404,7 @@ namespace cw {
         template <typename VarType, VarType const * SharedVar>
         static void BindStaticVarRO( char const * name )
         {
-            return PB::template BindStaticVarRO<VarType,SharedVale>( name );
+            return PB::template BindStaticVarRO<VarType,SharedVar>( name );
         }
         
         
@@ -1759,6 +1760,142 @@ namespace cw {
     };
     
 #undef CtorForwarder_ArgvCheck_Prep
+
+
+    /**
+       HIGHLY EXPERIMENTAL!
+    
+       A base type for RuntimeOps classes.
+
+       ClassSetupFunc must run the C++ parts of the ClassWrap<T> binding
+       process, e.g. binding member functions and whatnot.
+
+       Requirements:
+
+       - Fetches the singleton ClassWrap<T> object via ClassWrap<T>::Instance().
+
+       - Runs any binding-related operations.
+
+       - Throws a _native_ exception on error.
+
+       - Should not add the class to the dest object - that is handled by
+       this API.
+
+       - It must NOT call Seal() on the ClassWrap<T> instance. That is
+       handled by this class the first time the bindings are set up.
+
+    */
+    template <typename T,
+              void (*ClassSetupFunc)( v8::Handle<v8::Object> dest )
+    //typename ClassSetupFunc
+        >
+    struct RuntimeOpsBase
+    {
+    protected:
+        /**
+           If ClassWrap<T>::Instance().IsSealed() then the wrapped
+           class is installed into globalObject. Otherwise it calls
+           ClassSetupFunc(ClassWrap<T>::Instance()) and then adds
+           the wrapped class in into globalObject.
+
+           globalObject gets a new member named ClassName<T>::Value().
+
+           Returns the constructor function for the new type.
+
+           It IS legal for this function to setup multiple classes,
+           which is the only reason why globalObj is provided at all.
+        */
+        static v8::Handle<v8::Function> _SetupBindings( v8::Handle<v8::Object> globalObj )
+        {
+            typedef ClassWrap<T> CW;
+            CW & b( CW::Instance() );
+            ClassSetupFunc( globalObj );
+            if( ! b.IsSealed() )
+            {
+                b.Seal();
+            }
+            return globalObj.IsEmpty()
+                ? b.CtorTemplate()->GetFunction()
+                : b.AddClassTo( globalObj );
+        }
+    };
+
+    /**
+       HIGHLY EXPERIMENTAL!
+
+       A concrete RuntimeOps implementation which calls ClassSetupFunc
+       in response to RuntimeOps<T>::SetupBindings().
+    */
+    template <typename T,
+              //typename ClassSetupFunc>
+              void (*ClassSetupFunc)( v8::Handle<v8::Object> )>
+    struct RuntimeOpsBasic : RuntimeOpsBase<T, ClassSetupFunc >
+    {
+    public:
+        /**
+           The default implementation throws a std::exception. But more generally
+           speaking:
+
+           If ClassWrap<T>::Instance().IsSealed() then the wrapped
+           class is installed into globalObject. Otherwise the class
+           binding bits must be run before adding the class to
+           globalObject.
+
+           globalObject gets a new member named
+           ClassName<T>::Value().
+
+           The return value must be the constructor function for the
+           class.
+        */
+        static v8::Handle<v8::Function> SetupBindings( ::v8::Handle< ::v8::Object> globalObj )
+        {
+            typedef RuntimeOpsBase<T, ClassSetupFunc > Base;
+            return Base::_SetupBindings( globalObj );
+        }
+    };
+
+    namespace Detail
+    {
+        /**
+           Throws a std::exception. Ot might trigger a compile-time
+           error. i'm still undecided. If it compiles with the
+           default specialization then you know the former is true,
+           else you know the latter is true.
+
+           For use with the default RuntimeOps implementation.
+
+           T is only parameterized so we can use ClassName<T>::Name().
+        */
+        template <typename T>
+        static void NoopSetup( v8::Handle<v8::Object> dest )
+        {
+#if 1
+            v8::juice::convert::StringBuffer sb;
+            sb << "v8::juice::cw::RuntimeOps<"<<ClassName<T>::Value()<<"> "
+               << "must be specialized to be useful!";
+            throw std::runtime_error( sb.Content().c_str() );
+#else
+            JUICE_STATIC_ASSERT(false,RuntimeOps_T_MustBeSpecialized);
+#endif
+        }
+    }
+    /**
+       HIGHLY EXPERIMENTAL!
+    
+       A ClassWrap policy responsible for running the ClassWrap
+       binding process. This gives users a common way to set up all
+       ClassWrap-bound classes.
+
+       This class MUST be specialized to be useful. RuntimeOpsBasic can
+       be used as a base to easily create specializations.
+    */
+    template <typename T>
+    struct RuntimeOps : RuntimeOpsBasic<T, Detail::NoopSetup<T> >
+    {
+    };
+    
+
+
 #undef DBGSTREAM   
 } } } // namespaces
 
