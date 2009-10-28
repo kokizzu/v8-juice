@@ -30,7 +30,7 @@ Users needing other license conditions may request them from the code author(s).
 
 ==Author==
 
-v8-juice's primary author is Stephan Beal (http://wanderinghorse.net/home/stephan/).
+v8-juice's primary author is Stephan Beal (http://wanderinghorse.net/home/stephan/). v8-juice user Rob Tsuk continues to offer insightful suggestions which lead to new features and improvements in older features.
 
 ==Project Stats==
 Provided by [http://www.ohloh.net Ohloh.net]:
