@@ -36,7 +36,7 @@ if( True ):
         'juice.cc',
         'JuiceShell.cc',
         'PathFinder.cc',
-        'PathFinder-js.cc',
+        'PathFinder-cw.cc',
         'plugin.cc',
         'time.cc',
         'mutex.cpp',
