@@ -1,7 +1,14 @@
 #ifndef V8_JUICE_TYPELIST_HPP_INCLUDED
 #define V8_JUICE_TYPELIST_HPP_INCLUDED
 
-namespace v8 { namespace juice { namespace convert {
+namespace v8 { namespace juice {
+/**
+   The tmp namespace contains code related to template metaprogramming,
+   a-la Alexandrescu's Loki library or Boost MPL.
+
+   All of it is independent of the core juice library.
+*/
+namespace tmp {
 
     /**
        A "null" type for use with TypeList.
@@ -13,14 +20,22 @@ namespace v8 { namespace juice { namespace convert {
     };
 
     /**
-       A base type for implementing a list of types, implemented
-       as a Typelist, as described by Alexandrescu in "Modern C++
-       Design". H may be any type. T must be either NilType (to mark the
-       end of the typelist) or a TypePair<...> (or strictly
+       A base type for implementing a list of types, implemented as a
+       Typelist, as described by Alexandrescu in "Modern C++
+       Design". H may be any type. T _must_ be either NilType (to mark
+       the end of the typelist) or a TypePair<...> (or strictly
        compatible).
 
        Client code will normally use the generated TypeList<> types
        instead of using this one directly.
+
+       Unlike Alexandrescu's Typelists, which are implemented
+       faithfully by this class, our TypeList type is parameterized
+       for some maximum number of arguments. This simplifies
+       client-side usage but imposes (A) a hard-coded maximum on the
+       number of items in the list and (B) another (internal) level of
+       indirection for implementing the typelist algorithms described
+       by Alexandrescu (length, index-of, etc.).
     */
     template <typename H, typename T>
     struct TypePair
@@ -47,25 +62,29 @@ namespace v8 { namespace juice { namespace convert {
 
     };
 
+#if !defined(DOXYGEN)
     namespace Detail
     {
-        namespace cv = v8::juice::convert;
+        namespace tmp = v8::juice::tmp;
+        /** Internal impl of tmp::TypeListSize. */
         template <typename T>
         struct TypeListSizeImpl
         {
             enum { Value = 1 };
         };
         template <>
-        struct TypeListSizeImpl<cv::NilType>
+        struct TypeListSizeImpl<tmp::NilType>
         {
             enum { Value = 0 };
         };
         template <typename H, typename T>
-        struct TypeListSizeImpl< cv::TypePair<H,T> >
+        struct TypeListSizeImpl< tmp::TypePair<H,T> >
         {
             enum { Value = 1 + TypeListSizeImpl<T>::Value };
         };
     }
+#endif
+
     /**
        A template metafunction to compute the length of a TypeList.
        ListT must conform to the TypePair interface.
@@ -81,6 +100,7 @@ namespace v8 { namespace juice { namespace convert {
                 + TypeListSize< typename ListT::Tail >::Value
         };
     };
+
     /** Specialization for end-of-list. */
     template <>
     struct TypeListSize<NilType>
@@ -88,11 +108,56 @@ namespace v8 { namespace juice { namespace convert {
         enum { Value = 0 };
     };
 
+    /** @struct TypeList
+        
+       The TypeList type is a quasi-variadic template type which is specialized to
+       take up to some compile-time limit (see V8_JUICE_TYPELIST_MAX_ARGS) of _types_
+       as arguments. All of the TypeList code is generated from a script.
+
+       TypeList is simply a TypePair type for which specializations
+       restructure the template arguments to conform to the TypePair
+       interface.
+    */
+
+
+
+#if !defined(DOXYGEN)
+    namespace Detail
+    {
+        namespace tmp = v8::juice::tmp;
+        /** Internal impl of tmp::TypeListIndexOf. */
+        template <typename T, unsigned char I> struct TypeAtImpl;
+        template <typename H, typename T>
+        struct TypeAtImpl< tmp::TypePair<H,T>,0>
+        {
+            typedef H Type;
+        };
+        template <typename H, typename T,unsigned char I>
+        struct TypeAtImpl< tmp::TypePair<H,T>, I>
+        {
+            typedef typename TypeAtImpl<T, I - 1>::Type Type;
+        };
+    }
+#endif
+
+    /**
+       A template metafunction to compute the length of a TypeList.
+       ListT must be a TypeList, or otherwise conform to the TypePair
+       interface.
+    */
+    template <typename ListT, unsigned char Index>
+    struct TypeAt
+    {
+        /**
+           The type at the given index in the list.
+        */
+        typedef typename Detail::TypeAtImpl< TypePair<typename ListT::Head, typename ListT::Tail>, Index>::Type Type;
+    };
     
 }}} // namespaces
 
 #ifndef V8_JUICE_TYPELIST_MAX_ARGS
-/**
+/** @def V8_JUICE_TYPELIST_MAX_ARGS
    Define V8_JUICE_TYPELIST_MAX_ARGS before including this file to set
    the maximum number of arguments which TypeList<> can accept. It
    defaults to "some reasonable number", and pre-generated versions
@@ -110,7 +175,7 @@ namespace v8 { namespace juice { namespace convert {
 #define V8_JUICE_TYPELIST_MAX_ARGS 10
 #endif
 #if !defined(DOXYGEN)
-namespace v8 { namespace juice { namespace convert {
+namespace v8 { namespace juice { namespace tmp {
 #if V8_JUICE_TYPELIST_MAX_ARGS < 6
 #  include "TypeList_05.h"
 #elif V8_JUICE_TYPELIST_MAX_ARGS < 11

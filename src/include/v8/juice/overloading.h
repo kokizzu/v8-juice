@@ -48,6 +48,7 @@ namespace v8 { namespace juice { namespace convert {
     namespace Detail
     {
 	namespace cv = v8::juice::convert;
+        namespace tmp = v8::juice::tmp;
         template <typename FWD>
         struct FwdInvocableOne
         {
@@ -72,7 +73,7 @@ namespace v8 { namespace juice { namespace convert {
            Internal dispatch end-of-list routine.
         */
         template <>
-        struct FwdInvocableOne<cv::NilType>
+        struct FwdInvocableOne<tmp::NilType>
         {
             static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
             {
@@ -107,7 +108,7 @@ namespace v8 { namespace juice { namespace convert {
            End-of-list specialization.
         */
         template <>
-        struct FwdInvocableList<cv::NilType>
+        struct FwdInvocableList<tmp::NilType>
         {
             static v8::Handle<v8::Value> Dispatch( v8::Arguments const & argv )
             {
