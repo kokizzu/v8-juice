@@ -3,13 +3,23 @@ function dumpPF(p,list)
 {
     if( !(p instanceof PathFinder) ) throw new Error("p is-not-a PathFinder! Type="+(typeof p));
     var li = (list instanceof Array) ? list : ['fossil','who','ls','nope','emacs','gcc'];
-    print("PathFinder:");
+    print('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv');
+    print("PathFinder:",p);
     print("\tPath =",p.pathArray);
     print("\tExtensions =",p.extensionsArray );
     for( k in li ) {
         var f = p.find(li[k]);
-	print('\tfind("'+li[k]+'") = ['+f+'], isAccessible =',p.isAccessible(f));
+	print('\tfind("'+li[k]+'") = ['+f+'], isAccessible =',PathFinder.isAccessible(f));
     }
+    print('getPathSeparator():',p.getPathSeparator(),'=== pathSeparator:',p.pathSeparator);
+    print('getPathArray():',p.getPathArray(),'=== pathArray:',p.pathArray);
+    print('getPathString():',p.getPathString()," ==== pathString:",p.pathString);
+    print('getExtensionsString():',p.getExtensionsString()," ==== extensionsString:",p.extensionsString);
+    print('getExtensionsArray():',p.getExtensionsArray()," ==== extensionsArray:",p.extensionsArray);
+    print('dirSeparator ==',p.dirSeparator);
+    print('PathFinder.isAccessible("/etc/hosts") ==',PathFinder.isAccessible("/etc/hosts"));
+    print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
+
 }
 function tryOne()
 {
@@ -21,11 +31,6 @@ function tryOne()
     p.extensionsString = ".hs:.lp";
     p.extensionsArray = ['.sh','.pl','.bash'];
     dumpPF(p);
-    print('getPathSeparator():',p.getPathSeparator(),'=== pathSeparator:',p.pathSeparator);
-    print('getPathArray():',p.getPathArray(),'=== pathArray:',p.pathArray);
-    print('getPathString():',p.getPathString()," ==== pathString:",p.pathString);
-    print('getExtensionsString():',p.getExtensionsString()," ==== extensionsString:",p.extensionsString);
-    print('getExtensionsArray():',p.getExtensionsArray()," ==== extensionsArray:",p.extensionsArray);
 }
 
 
