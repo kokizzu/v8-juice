@@ -21,10 +21,20 @@ v8::juice::cw binding mechanism.
 
 
 #define CLASSWRAP_BOUND_TYPE v8::juice::PathFinder
-#include <v8/juice/ClassWrap-JSToNative.h>
-JUICE_CLASSWRAP_CLASSNAME(v8::juice::PathFinder,"PathFinder")
-// #define CLASSWRAP_BOUND_TYPE v8::juice::PathFinder
-//#include <v8/juice/ClassWrap_JuiceBind.h>
+#if 0
+   // Default ClassWrap policy set.
+   JUICE_CLASSWRAP_CLASSNAME(v8::juice::PathFinder,"PathFinder");
+#  include <v8/juice/ClassWrap-JSToNative.h>
+#else
+#  define CLASSWRAP_BOUND_TYPE_NAME "PathFinder"
+#  if 0
+//#    warning "JUICEBIND!"
+#    include <v8/juice/ClassWrap_JuiceBind.h>
+#  else
+//#    warning "TWOWAY BIND!"
+#    include <v8/juice/ClassWrap_TwoWay.h>
+#  endif
+#endif
 
 #if !defined(CERR)
 #    include <iostream> /* only for debuggering */
@@ -40,7 +50,8 @@ namespace v8 { namespace juice { namespace cw {
 
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
-    
+
+    //! ClassWrap Factory<PathFinder> policy implementation.
     template <>
     struct Factory<PathFinder>
     {
@@ -50,6 +61,7 @@ namespace v8 { namespace juice { namespace cw {
         typedef PathFinder Type;
         //! Required by Factory interface.
 	typedef PathFinder * NativeHandle;
+    private:
         //! internal
         typedef std::set<NativeHandle> PFSet;
         /**
@@ -63,6 +75,7 @@ namespace v8 { namespace juice { namespace cw {
             static PFSet pf;
             return pf;
         }
+    public:
 	static NativeHandle Instantiate( Arguments const & argv,
                                          std::ostream & exceptionText)
 	{
@@ -117,19 +130,31 @@ namespace v8 { namespace juice { namespace cw {
 
 namespace v8 { namespace juice {
 
+    //! PathFinder.toString() impl.
     static v8::Handle<v8::Value> pf_is_accessible( v8::Arguments const & argv )
     {
         return convert::FwdToFunc( PathFinder::IsAccessible, argv );
     }
 
+    //! PathFinder.toString() impl.
+    static v8::Handle<v8::Value> pf_toString( v8::Arguments const & argv )
+    {
+        typedef PathFinder T;
+        T * p = convert::CastFromJS<T>( argv.This() );
+        convert::StringBuffer sb;
+        sb << "[object "<<cw::ClassName<T>::Value()<<"@"<<p<<"]";
+        return sb;
+    }
+    
     ::v8::Handle< ::v8::Value> SetupPathFinderClass( ::v8::Handle< ::v8::Object> target )
     {
         HandleScope scope;
-        typedef v8::juice::PathFinder N;
+        typedef PathFinder N;
         typedef cw::ClassWrap<N> CW;
         typedef convert::MemFuncInvocationCallbackCreator<N> MF;
         CW & cw( CW::Instance() );
 
+        cw.Set( "toString", pf_toString );
         cw.Set( "getPathSeparator", MF::M0::Invocable<std::string,&N::PathSeparator> );
         cw.Set( "setPathSeparator", MF::M1::Invocable<void,std::string const &,&N::PathSeparator> );
         cw.BindGetterSetter< std::string, &N::PathSeparator, void, std::string const &,&N::PathSeparator>( "pathSeparator" );
@@ -158,22 +183,31 @@ namespace v8 { namespace juice {
         cw.Set( "find", MF::M1::Invocable<std::string,std::string const &,&N::Find> );
         cw.Set( "clearCache", MF::M0::Invocable<void, &N::ClearCache> );
         cw.Set( "isEmpty", MF::M0::Invocable<bool, &N::IsEmpty> );
-        typedef convert::FunctionForwarder<1> FF;
-        cw.Set( "isAccessible", pf_is_accessible );
+        typedef convert::InvocationCallbackCreator ICC;
+        //cw.Set( "isAccessible", pf_is_accessible );
+        cw.Set( "isAccessible", ICC::F1::Invocable<bool,std::string const &,N::IsAccessible> );
         cw.Set( "dirSeparator", convert::CastToJS( N::DirSeparator() ), v8::ReadOnly );
+        //cw.Set( "dirSeparator", ICC::F0::Invocable<std::string,N::DirSeparator> );
 
         Handle<Function> ctor( cw.Seal() );
         cw.AddClassTo(target);
+        ctor->Set( JSTR("dirSeparator"), convert::CastToJS( N::DirSeparator() ), v8::ReadOnly );
+
+        v8::InvocationCallback IC;
+#define SET(K) ctor->Set( JSTR(K), v8::FunctionTemplate::New(IC)->GetFunction()  )
+        IC = ICC::F1::Invocable<bool,std::string const &,N::IsAccessible>;
+        SET("isAccessible");
+#undef SET
 
         if(0)
         { // some basic sanity checks...
             typedef cw::Extract<N> XT;
-            //v8::HandleScope hscope;
+            v8::HandleScope hscope;
             v8::Handle<v8::Object> jobj =
                 cw.NewInstance(0,0)
                 //ctor->NewInstance(0,0)
                 ;
-            N * bound = CW::ToNative::Value(jobj);
+            N const * bound = CW::ToNative::Value(jobj);
             CERR << "bound (void *) == @"<<(void const *)bound<<'\n';
             CERR << "bound (CastFromJS<N*>(jsObj)) == @"<<convert::CastFromJS<N*>( jobj )<<'\n';
             CERR << "bound (JSToNative<N>(jsObj)) == @"<<convert::JSToNative<N>()( jobj )<<'\n';
@@ -181,16 +215,10 @@ namespace v8 { namespace juice {
             CERR << "bound (cw::JSToNativeImpl<N>()(jsObj)) == @"<<cw::JSToNativeImpl<N>()( jobj )<<'\n';
             CERR << "bound (cw::JSToNativeImpl<N*>()(jsObj)) == @"<<cw::JSToNativeImpl<N*>()( jobj )<<'\n';
             CERR << "Extract: @"<<(void const *)XT::ExtractVoid(jobj,false)<<"\n";
-            N * np = convert::CastFromJS<N>( jobj );
+            N const * np = convert::CastFromJS<N>( jobj );
             CERR << "bound (CastFromJS<N>(jsObj)) == @"<<np<<'\n';
-            if( ! np )
-            {
-                throw std::runtime_error( "WHAT THE FUCKING FUCK IS HAPPENING HERE!?!?!?!?!" );
-                // an hour later: the JSToNative<N> specialization from the older wrapper was being linked in!!!!
-            }
             if( bound )
             {
-                //Handle<Value> = MFF::Call( obj, BoundNative::toString
                 void * exh = jobj->GetPointerFromInternalField(CW::InternalFields::NativeIndex);
                 CERR << "fetched void* == "<<(const void *)exh<<'\n';
             }
