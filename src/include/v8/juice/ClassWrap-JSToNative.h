@@ -27,33 +27,9 @@ namespace v8 { namespace juice { namespace convert {
        See NativeToJS<> for full details.
     */
     template <>
-    struct JSToNative< CLASSWRAP_BOUND_TYPE >
-        : cw::JSToNativeImpl< CLASSWRAP_BOUND_TYPE >
+    struct JSToNative< CLASSWRAP_BOUND_TYPE > :
+        v8::juice::cw::JSToNativeImpl< CLASSWRAP_BOUND_TYPE >
     {
-#if 0
-        typedef ::v8::juice::cw::ToNative< CLASSWRAP_BOUND_TYPE >  Cast;
-        typedef Cast::NativeHandle ResultType;
-        /**
-           If h is empty or !h->IsObject() then 0 is returned, else it
-           returns the result of passing that object to Cast::Value().
-
-           Achtung: even though this is really a convenience function,
-           all specializations should implement it, as this function
-           is 
-        */
-        ResultType operator()( Handle<Value> const & h ) const
-        {
-            if( h.IsEmpty() || !h->IsObject() )
-            {
-                return 0;
-            }
-            else
-            {
-                v8::Handle<v8::Object> const jo( v8::Object::Cast( *h ) );
-                return Cast::Value(jo);
-            }
-        }
-#endif
     };
 
 } } }
