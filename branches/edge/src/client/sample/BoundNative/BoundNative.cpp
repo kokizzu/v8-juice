@@ -93,7 +93,7 @@ property set macros.
 namespace v8 { namespace juice {
     namespace cw
     {
-        template <> struct DebugLevel<BoundNative> : Opt_Int<2> {};
+        template <> struct DebugLevel<BoundNative> : Opt_Int<3> {};
 
         template <>
         struct ToNative_SearchPrototypesForNative<BoundNative>
@@ -163,7 +163,7 @@ namespace v8 { namespace juice { namespace cw
     template <>
     struct Factory<BoundNative>
         : Factory_CtorForwarder<BoundNative,
-                                convert::TypeList<
+                                tmp::TypeList<
             convert::CtorForwarder0<BoundNative>,
             convert::CtorForwarder2<BoundNative,int,double>
             >
@@ -177,7 +177,7 @@ namespace v8 { namespace juice { namespace cw
     template <>
     struct Factory<BoundSub> :
     Factory_CtorForwarder<BoundSub,
-                          convert::TypeList<
+                          tmp::TypeList<
         convert::CtorForwarder0<BoundSub>,
         convert::CtorForwarder1<BoundSub,int>,
         convert::CtorForwarder2<BoundSub,int,double>
@@ -217,7 +217,7 @@ namespace v8 { namespace juice { namespace cw
 #  define USING_JUICEBIND_POLICIES
 #  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap_JuiceBind.h>
 #include CLASSWRAP_POLICY_HEADER
-#elif 1
+#elif 0
 // #  warning "Using TwoWay policies!"
 #  define USING_TWOWAY_POLICIES
 #  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap_TwoWay.h>
@@ -337,7 +337,7 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
     CW & cw( CW::Instance() );
     DBGOUT <<"Binding class "<<CW::ClassName::Value()<<"...\n";
     cw.Set("foo",String::New("this is foo"));
-    cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Call );
+    cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Invocable );
     typedef convert::InvocationCallbackCreator ICC;
     typedef convert::MemFuncInvocationCallbackCreator<N> ICM;
     cw.Set( "toString",
@@ -366,7 +366,7 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 #endif
     cw.Set( "overload",
             convert::OverloadInvocables<
-            convert::TypeList<
+            tmp::TypeList<
             convert::InvocableConstMemFunc0<N,bool,&N::overload>,
             //convert::InvocableFunction0<void,BoundNative_overload>,
             //convert::DiscardInvocableReturnVal<
@@ -504,16 +504,24 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 #endif
     if(0)
     {
-        typedef convert::TypeList<> LT0;
-        typedef convert::TypeList<int> LT1;
-        typedef convert::TypeList<LT0,LT1> LT2;
-        typedef convert::TypeList<LT0,LT1,LT2> LT3;
-#define X(TL) CERR << "convert::TypeListSize<"<<# TL<<">::Value == "<<convert::TypeListSize<TL>::Value<<'\n'
+        typedef tmp::TypeList<> LT0;
+        typedef tmp::TypeList<int> LT1;
+        typedef tmp::TypeList<LT0,LT1> LT2;
+        typedef tmp::TypeList<LT0,LT1,LT2> LT3;
+#define X(TL) CERR << "tmp::TypeListSize<"<<# TL<<">::Value == "<<tmp::TypeListSize<TL>::Value<<'\n'
         X(LT0);
         X(LT1);
         X(LT2);
         X(LT3);
 #undef X
+        
+        typedef tmp::TypeList< BoundNative, BoundSub > BTL;
+#define TY(N) tmp::TypeAt<BTL,N>::Type
+#define X(N) CERR <<"TypeAt< BTL,"<<N<<"> == "<<v8::juice::cw::ClassName< TY(N) >::Value() << '\n';
+        X(0); X(1);
+        //X(4);// should trigger compile error
+#undef X
+#undef T
     }
     DBGOUT <<"Binding done.\n";
     return;
