@@ -8,16 +8,11 @@ v8::juice::cw binding mechanism.
 #include <iostream>
 #include <set>
 
-#ifndef CERR
-#include <iostream> /* only for debuggering */
-#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
-#endif
-
 #include <v8.h>
 #include <v8/juice/PathFinder.h>
 #include <v8/juice/bind.h>
 #include <v8/juice/plugin.h>
-#include <v8/juice/cleanup.h>
+
 
 
 #include <v8/juice/ClassWrap.h>
@@ -31,6 +26,11 @@ JUICE_CLASSWRAP_CLASSNAME(v8::juice::PathFinder,"PathFinder")
 // #define CLASSWRAP_BOUND_TYPE v8::juice::PathFinder
 //#include <v8/juice/ClassWrap_JuiceBind.h>
 
+#if !defined(CERR)
+#    include <iostream> /* only for debuggering */
+#    define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#endif
+
 namespace {
     enum Internal { MagicExternalArgc = 1 /*must be 1 or else crash*/ };
     }
@@ -40,12 +40,17 @@ namespace v8 { namespace juice { namespace cw {
 
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
-
+    
     template <>
     struct Factory<PathFinder>
     {
+        //! Required by Factory interface.
+	static size_t const AllocatedMemoryCost = sizeof(PathFinder);
+        //! Required by Factory interface.
         typedef PathFinder Type;
+        //! Required by Factory interface.
 	typedef PathFinder * NativeHandle;
+        //! internal
         typedef std::set<NativeHandle> PFSet;
         /**
            All PathFinders which should be deleted by
@@ -58,7 +63,6 @@ namespace v8 { namespace juice { namespace cw {
             static PFSet pf;
             return pf;
         }
-	static size_t const AllocatedMemoryCost = sizeof(PathFinder);
 	static NativeHandle Instantiate( Arguments const & argv,
                                          std::ostream & exceptionText)
 	{
@@ -69,19 +73,21 @@ namespace v8 { namespace juice { namespace cw {
                 NativeHandle xp = bind::GetBoundNative<PathFinder>( ex->Value() );
 		if( xp )
 		{
-                    bind::UnbindNative( xp );
+                    bind::UnbindNative( xp ); // we don't need this anymore.
 		    return xp;
 		}
 		else
 		{
-		    exceptionText << "First argument to ctor failed type check!";
+		    exceptionText << "First argument to "
+                                  << ClassName<PathFinder>::Value()
+                                  << " ctor failed type check!";
 		    return 0;
 		}
 	    }
 	    std::string a0 = (argc>0) ? convert::JSToStdString(argv[0]) : "";
 	    std::string a1 = (argc>1) ? convert::JSToStdString(argv[1]) : "";
 	    std::string a2 = (argc>2) ? convert::JSToStdString(argv[2]) : ":";
-	    //CERR << ClassName()<< "(["<<a0<<"], ["<<a1<<"], ["<<a2<<"])\n";
+	    //CERR << ClassName<PathFinder>::Value()<< "(["<<a0<<"], ["<<a1<<"], ["<<a2<<"])\n";
 	    NativeHandle pf = new PathFinder( a0, a1, a2 );
 	    if( pf )
 	    {
@@ -92,14 +98,12 @@ namespace v8 { namespace juice { namespace cw {
 
 	static void Destruct( v8::Handle<v8::Object>, NativeHandle obj )
 	{
-            //CERR << "DTOR @"<<(void const *)obj<<"\n";
 	    if( obj )
 	    {
-                //bind::UnbindNative( obj, obj );
                 PFSet::iterator it = pfset().find(obj);
                 if( it != pfset().end() )
                 {
-                    //CERR << ClassName() << " dtor deleting on @"<<obj<<'\n';
+                    //CERR << ClassName<PathFinder>::Value() << " dtor deleting on @"<<obj<<'\n';
                     pfset().erase(it);
                     delete obj;
                 }
@@ -158,7 +162,6 @@ namespace v8 { namespace juice {
         cw.Set( "isAccessible", pf_is_accessible );
         cw.Set( "dirSeparator", convert::CastToJS( N::DirSeparator() ), v8::ReadOnly );
 
-        
         Handle<Function> ctor( cw.Seal() );
         cw.AddClassTo(target);
 
