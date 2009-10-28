@@ -1,0 +1,42 @@
+#summary One-sentence summary of this page.
+#labels Topic-Project,Featured
+
+=Welcome to v8-juice!=
+v8-juice (v8 (J)avaScript (U)serland (I)ntegratable (C)omponents (E)mporium) is a C++ library for extending the [http://code.google.com/p/v8 v8 JavaScript engine]. It includes components such as [Plugins a plugins API], [ConvertingTypes a type-conversion API], utilities for [CreatingJSClasses creating new JS-side classes from C++], and for [BindingFunctions binding near-arbitrary native functions to arbitrary JS objects]. It has extensive API documentation, and supplemental documentation can be found via the Wiki link at the top of this page.
+
+To any members of the Campbell Soup Company: i would really appreciate it if you guys [http://en.wikipedia.org/wiki/V8_(beverage) don't sue me over this project's name] :-D.  It's all in good fun! (And it took me 10 minutes to come up with a project name for which 'JUICE' is an appropriate acronym. So i beg you, please don't let that effort be in vain!)
+
+==Code/Project status==
+
+v8-juice is, at this point, primarily an experimentation ground, and not a product which aims to have a "1.0" release (it uses the release date as its version number). As the library is still very new (it was born in late February, 2009), it is still in a high state of flux and may contain any number of (possibly incompatible) changes between versions. That said, i like to keep my own client code working, and will try not to make any major changes which break things unless there is a good reason to do so. Also, the core library parts (primarily the [ConvertingTypes type conversions], which are the most-central component) are based off of [http://SpiderApe.sourceforge.net much older implementations i wrote for SpiderMonkey], and they've had a stable interface for some years now.
+
+==Related work==
+
+  * [http://code.google.com/p/cproxyv8/ cproxyv8] is very similar in purpose to v8-juice, and appears to provide largely the same feature set for binding C++ types to v8.
+  * [http://code.google.com/p/v8cgi/ v8cgi] encapsulates features for hosting web applications written in !JavaScript.
+  * [http://flusspferd.org/ Flusspferd] is a similar library written for use with the [https://developer.mozilla.org/en/SpiderMonkey SpiderMonkey JavaScript engine].
+
+==License==
+
+The code base contains code of several licenses:
+
+  * Most of the core library uses the same license as v8: the New BSD license
+  * Some of the core code is Public Domain and much of the code adopted from other source trees is Public Domain. Most future code will likely be Public Domain.
+  * [Plugins], which often use external libraries, may have arbitrary licenses. They are stored in their own source tree (outside of the main v8-juice sources) to avoid potential license contamination from viral licenses.
+
+The whole library _would_ be Public Domain, but Google Code neither recognizes nor allows Public Domain as a project license. Since v8-juice is an extension of v8, which has a BSD license, it is assumed that a BSD license will be acceptable to potential v8-juice users who have accepted v8's licensing terms.
+
+Users needing other license conditions may request them from the code author(s). Tip: for any v8-juice code where i'm the attributed author (Stephan Beal), you've got blanket permission to do whatever the hell you want to with your copy of the code (including re-licensing it). The exception to that is any code which necessarily adopts viral licensing conditions from 3rd-party libraries it uses, such as the [PluginReadline GNU Readline plugin].
+
+==Author==
+
+v8-juice's primary author is Stephan Beal (http://wanderinghorse.net/home/stephan/).
+
+==Project Stats==
+Provided by [http://www.ohloh.net Ohloh.net]:
+
+<wiki:gadget url="http://www.ohloh.net/p/v8-juice/widgets/project_cocomo.xml" height="240"  border="0" />
+
+<wiki:gadget url="http://www.ohloh.net/p/v8-juice/widgets/project_basic_stats.xml" height="220" border="1" />
+
+Those stats would appear, however, to be largely skewed. As of now (April 2009), the tree (including plugins) contains code which took less than a year of part-time work, and not the 9 years Ohloh calculates. (Maybe it's because i use the terribly efficient [http://www.xemacs.org XEmacs] as my editor.)
