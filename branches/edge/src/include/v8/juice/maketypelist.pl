@@ -27,19 +27,19 @@ sub generateNumbered($)
   my $max = shift @_;
   for( my $i = 0; $i <= $max; ++$i ) {
       if ( 0 == $i ) {
-          print "struct TypeList_0 : TypePair<NilType,NilType> {};\n";
+          print "struct TypeList_0 : TypeChain<NilType,NilType> {};\n";
           print "\n";
           next;
       }
       if ( 1 == $i ) {
           print "template <class T1>\n";
-          print "struct TypeList_1 : TypePair<T1,NilType> {};\n";
+          print "struct TypeList_1 : TypeChain<T1,NilType> {};\n";
           print "\n";
           next;
       }
       if ( 2 == $i ) {
           print "template <class T1, class T2>\n";
-          print "struct TypeList_2 : TypePair<T1, TypePair<T2, NilType> > {};\n";
+          print "struct TypeList_2 : TypeChain<T1, TypeChain<T2, NilType> > {};\n";
           print "\n";
           next;
       }
@@ -52,7 +52,7 @@ sub generateNumbered($)
 
       my $typenames = 'class '.join(', class ',@tlist);
       print "template <class T1, ".$typenames." >\n";
-      my $parent = "TypePair<T1, TypeList_".($i-1)."< ".$Tlist." > >";
+      my $parent = "TypeChain<T1, TypeList_".($i-1)."< ".$Tlist." > >";
       print "struct TypeList_".$i." : ".$parent." {};\n";
       print "\n";
   }
@@ -73,7 +73,7 @@ sub generateUnnumbered($)
 
       if ( 0 == $i ) {
           print "template <>\n";
-          print "struct TypeList<> : TypePair<NilType,NilType> {};\n";
+          print "struct TypeList<> : TypeChain<NilType,NilType> {};\n";
           print "\n";
           next;
       }
