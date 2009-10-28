@@ -23,7 +23,7 @@ namespace tmp {
        A base type for implementing a list of types, implemented as a
        Typelist, as described by Alexandrescu in "Modern C++
        Design". H may be any type. T _must_ be either NilType (to mark
-       the end of the typelist) or a TypePair<...> (or strictly
+       the end of the typelist) or a TypeChain<...> (or strictly
        compatible).
 
        Client code will normally use the generated TypeList<> types
@@ -38,25 +38,25 @@ namespace tmp {
        by Alexandrescu (length, index-of, etc.).
     */
     template <typename H, typename T>
-    struct TypePair
+    struct TypeChain
     {
 #if 0 // Artifact from older source tree. Might be useful later.
 	/**
 	   Subtypes of this type should not override the 'ListType'
 	   typedef, as it is used by the core lib to trick some
 	   overloads into working, such that subclasses of
-	   TypePair will be picked up by specializations for
-	   certain rules, as if they actually were a TypePair.
+	   TypeChain will be picked up by specializations for
+	   certain rules, as if they actually were a TypeChain.
 
 	   There might be exceptions to the no-override rule, but none
 	   come to mind.
 	*/
-	typedef TypePair ListType;
+	typedef TypeChain ListType;
 #endif
 	/* First Type in the list. */
 	typedef H Head;
 	/* Second type in the list. MUST be either NilType or a
-	   TypePair<>.
+	   TypeChain<>.
 	*/
 	typedef T Tail;
 
@@ -78,7 +78,7 @@ namespace tmp {
             enum { Value = 0 };
         };
         template <typename H, typename T>
-        struct TypeListSizeImpl< tmp::TypePair<H,T> >
+        struct TypeListSizeImpl< tmp::TypeChain<H,T> >
         {
             enum { Value = 1 + TypeListSizeImpl<T>::Value };
         };
@@ -87,7 +87,7 @@ namespace tmp {
 
     /**
        A template metafunction to compute the length of a TypeList.
-       ListT must conform to the TypePair interface.
+       ListT must conform to the TypeChain interface.
     */
     template <typename ListT>
     struct TypeListSize
@@ -114,8 +114,8 @@ namespace tmp {
        take up to some compile-time limit (see V8_JUICE_TYPELIST_MAX_ARGS) of _types_
        as arguments. All of the TypeList code is generated from a script.
 
-       TypeList is simply a TypePair type for which specializations
-       restructure the template arguments to conform to the TypePair
+       TypeList is simply a TypeChain type for which specializations
+       restructure the template arguments to conform to the TypeChain
        interface.
     */
 
@@ -128,12 +128,12 @@ namespace tmp {
         /** Internal impl of tmp::TypeListIndexOf. */
         template <typename T, unsigned char I> struct TypeAtImpl;
         template <typename H, typename T>
-        struct TypeAtImpl< tmp::TypePair<H,T>,0>
+        struct TypeAtImpl< tmp::TypeChain<H,T>,0>
         {
             typedef H Type;
         };
         template <typename H, typename T,unsigned char I>
-        struct TypeAtImpl< tmp::TypePair<H,T>, I>
+        struct TypeAtImpl< tmp::TypeChain<H,T>, I>
         {
             typedef typename TypeAtImpl<T, I - 1>::Type Type;
         };
@@ -142,7 +142,7 @@ namespace tmp {
 
     /**
        A template metafunction to compute the length of a TypeList.
-       ListT must be a TypeList, or otherwise conform to the TypePair
+       ListT must be a TypeList, or otherwise conform to the TypeChain
        interface.
     */
     template <typename ListT, unsigned char Index>
@@ -151,7 +151,7 @@ namespace tmp {
         /**
            The type at the given index in the list.
         */
-        typedef typename Detail::TypeAtImpl< TypePair<typename ListT::Head, typename ListT::Tail>, Index>::Type Type;
+        typedef typename Detail::TypeAtImpl< TypeChain<typename ListT::Head, typename ListT::Tail>, Index>::Type Type;
     };
     
 }}} // namespaces
