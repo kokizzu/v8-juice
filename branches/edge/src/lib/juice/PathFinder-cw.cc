@@ -51,7 +51,14 @@ namespace v8 { namespace juice { namespace cw {
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
 
-    //! ClassWrap Factory<PathFinder> policy implementation.
+    /**
+       ClassWrap Factory<PathFinder> policy implementation.
+
+       Reminder to self: we implement a custom factory instead of
+       using the constructor-forwarding factory so that we can do some
+       internal trickery to bind in some shared instances of the
+       class.
+    */
     template <>
     struct Factory<PathFinder>
     {
@@ -76,6 +83,9 @@ namespace v8 { namespace juice { namespace cw {
             return pf;
         }
     public:
+        /**
+           Constructor for JS PathFinder objects.
+        */
 	static NativeHandle Instantiate( Arguments const & argv,
                                          std::ostream & exceptionText)
 	{
