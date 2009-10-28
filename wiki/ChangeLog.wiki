@@ -10,6 +10,9 @@ are at the top. Dates written extra large are release dates. This contains only 
   * http://code.google.com/p/v8-juice/source/list
 
 ----
+*2009 Oct 28*
+  * Re-implemented the [PathFinderClass PathFinder class] using the [ClassWrap ClassWrap API]. The amount of code is about the same, but it's now trivial to swap out some of the back-end parts to make trade-offs for speed and memory consumption vs. type-safety and conversion features.
+
 *2009 Oct 25*
   * Added `CtorForwarder` class, which can pass on `v8::Arguments` objects to native constructors.
   * The new class binder ([ClassWrap]) can now bind a JS ctor to multiple overloaded native ctors.
