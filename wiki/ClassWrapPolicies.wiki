@@ -27,14 +27,14 @@ functional policies.  Option policies typically define only a single
 constant value (a boolean or integer), and that constant is used in
 enabling or disabling certain aspects of functional policies.
 Functional policies each have a very specific role in the class
-binding process, and typically provide one (sometimes two) functions
+binding process, and typically provide one function (sometimes two)
 for performing their role.
 
 Most policies can use defaults, but three policies in particular cannot
 be defaulted (explained below).
 
 All examples in this page, unless noted otherwise, assume that the code
-is in the `v8::juice::cw` namespace (where ClassWrap lives).
+is in the `v8::juice::cw` namespace (where !ClassWrap lives).
 
 == API Documentation ==
 
@@ -48,7 +48,7 @@ Options policies hold constant values which are used as toggles or ranges
 for various functional policies.
 
 
-== `InternalFields` Policy ==
+== `InternalFields` Option ==
 
 The `InternalFields` policy specifies two values: the number of "internal fields"
 (the v8 js-to-native mechanism) and the index of the internal field which holds
@@ -77,7 +77,7 @@ template <>
   struct InternalFields<Subclass> : InternalFields<BaseClass> {};
 }}}
 
-== `AllowCtorWithoutNew` Policy ==
+== `AllowCtorWithoutNew` Option ==
 
 This policy is a toggle for the internal (to !ClassWrap) native object
 construction process.
@@ -106,7 +106,7 @@ by making the call to "new" itself.
 The library does not support providing two different behaviours
 depending on whether "new" is used or not.
 
-== `ToNative_SearchPrototypesForNative` Policy ==
+== `ToNative_SearchPrototypesForNative` Option ==
 
 This boolean policy is used by some of the `ToNative` policies (described
 somewhere below) to specify whether or not they should traverse the
@@ -154,12 +154,12 @@ descriptions of each:
   * `Factory` is responsible for creating and destroying natives.
   * `Extract` is responsible for extracting (`void*`) data from bound JS objects.
   * `ToNative` converts (JS Object)-to-(T). Basically a thin wrapper around the `Extract` policy.
-  * `ToJS` converts (T)-to-(JS Object). This is not possible for the generic case, and there is no default implementation! (But it is not always needed.)
+  * `ToJS` converts (`T*`)-to-(JS Object). This is not possible for the generic case, and there is no default implementation! (But it is not always needed!)
   * `WeakWrap` may be used to customize the binding/unbinding process, e.g. doing/undoing custom native-to-JS mappings.
 
-All policies except `ToJS` and `Factory` have reasonable defaults
-which should work for the many common cases. The `Factory` policy is
-necessarily type-specific, but we have template classes which can
+All policies except `ToJS`, `ClassName`, and `Factory` have reasonable defaults
+which should work for the many common cases. The `Factory` and `ClassName` policies are
+necessarily type-specific, but we have class templates which can
 generate a Factory-compliant policy implementation from a list of
 native constructors. The `ToJS` policy does not have a default
 implementation because this cannot be done in the generic case (but
@@ -175,7 +175,7 @@ The !ClassName policy defines a bound class's JS-side name. It looks like:
 template <>
 struct ClassName<BoundNative>
 {
-    static char const * Value();
+    static char const * Value() { return "BoundNative"; }
 };
 }}}
 
@@ -185,7 +185,7 @@ Alternately, we can call the following macro from the global scope:
 JUICE_CLASSWRAP_CLASSNAME(BoundNative,"BoundNative");
 }}}
 
-which generates the above code.
+which generates something equivalent to the above code.
 
 There is no sensible default implementation, but some policy sets
 provide this feature as part of their setup process.
@@ -196,6 +196,8 @@ The Factory policy's responsibilities are creating and destroying
 new instances of objects. It is one of the few policies for which
 there is no default implementation. There are several base Factory
 types which we can use to install construction/destruction support.
+
+This policy looks like:
 
 {{{
 template <typename T>
@@ -226,6 +228,10 @@ template <>
     struct Factory<MyType> : Factory_NewDelete<MyType> {};
 }}}
 
+Note, however, that that requires a default constructor, and passes
+no arguments to the ctor. For arguments which take arguments,
+either implement a custom `Factory` or subclass `Factory_CtorForwarder`.
+
 == `WeakWrap` Policy ==
 
 After a Factory policy creates a native object, the class binder
@@ -243,7 +249,7 @@ struct WeakWrap
 {
     typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
 
-    // Called right after Factory<T>::Instantiate().
+    // Called soon after Factory<T>::Instantiate().
     static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf );
 
     // Called right before Factory<T>::Destruct().
@@ -258,7 +264,7 @@ The default implementation does nothing, which is suitable for most cases.
 This policy serves two purposes:
 
   * Fishing (`void*`) handles out of JS objects.
-  * Converting (`void*`) to null.
+  * Converting (`void*`) to (`T*`).
 
 {{{
 template <typename T>
@@ -281,7 +287,7 @@ to a native object. How it does that is up to the policy. The default
 implementation simply uses `static_cast<T*>(void*)`, which is (despite
 appearances) remarkably safe for the majority of use cases (and also
 incidentally avoids several pitfalls related to inheriting one bound
-class to another).
+class from another).
 
 Design note: in fact, `VoidToNative()` should arguably be part of the
 `ToNative` interface. The the evolution of this API favoured it being
@@ -295,7 +301,6 @@ In practice, this is simply a very thin wrapper around the `Extract`
 policy, but concrete implementations exists which do other stuff, like
 assist in certain lookups which are problematic when a JS class inherits
 a bound native class.
-
 
 This policy looks like:
 
@@ -318,9 +323,9 @@ more information.
 This policy is responsible for converting bound native objects to
 bound JS objects.  This is not possible for the generic case, and
 there is no default implementation! However, this operation is only
-needed if we bind to functions which return a native object, e.g.
+needed if we bind to functions (or members) which return a native object, e.g.
 `Foo * somefunc()`. It is not needed if (`Foo*`) will be passed
-as function arguments (that is handled by `ToNative`).
+as function arguments (that is handled by the `ToNative` policy).
 
 The policy's interface is:
 
@@ -361,9 +366,9 @@ template <> struct NativeToJS<MyBoundType>
 }}}
 
 That will route all `CastToJS<MyBoundType>()` and `CastFromJS<MyBoundType>()`
-calls through the appropriate binder policies to perform the conversion.
+calls through the appropriate !ClassWrap policy class to perform the conversion.
 
-HOWEVER, most policy sets will define `JSToNative<>`, and installing a custom
+However: most policy sets will define `JSToNative<>`, and installing a custom
 copy in addition to one installed by a policy set will produce duplicate definition
 errors at compile time.
 
