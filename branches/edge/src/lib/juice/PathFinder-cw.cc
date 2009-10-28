@@ -21,7 +21,7 @@ v8::juice::cw binding mechanism.
 
 
 #define CLASSWRAP_BOUND_TYPE v8::juice::PathFinder
-#if 0
+#if 1
    // Default ClassWrap policy set.
    JUICE_CLASSWRAP_CLASSNAME(v8::juice::PathFinder,"PathFinder");
 #  include <v8/juice/ClassWrap-JSToNative.h>
