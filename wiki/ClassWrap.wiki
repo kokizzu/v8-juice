@@ -95,7 +95,7 @@ bind to JS? Don't bother trying to decide - we'll bind all of them.
 template <>
 struct Factory<BoundNative>
     : Factory_CtorForwarder<BoundNative,
-        convert::TypeList<
+        tmp::TypeList<
             convert::CtorForwarder0<BoundNative>,
             convert::CtorForwarder1<BoundNative,int>,
             convert::CtorForwarder2<BoundNative,int,double>
