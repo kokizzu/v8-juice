@@ -398,7 +398,7 @@ namespace juice {
         template < Handle<Value> (WrappedType::*Func)( Arguments const & ) >
         ClassBinder & BindMemFunc( char const * name )
         {
-            this->Set(name, convert::InvocationCallbackMember<WrappedType,Func>::Call );
+            this->Set(name, convert::InvocationCallbackMember<WrappedType,Func>::Invocable );
             return *this;
         }
 

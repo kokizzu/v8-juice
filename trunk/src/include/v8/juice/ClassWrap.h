@@ -2,6 +2,7 @@
 #include <v8/juice/static_assert.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/TypeList.h>
+#include <v8/juice/JSClassCreator.h>
 
 #include <sstream>
 #include <stdexcept>
@@ -174,6 +175,14 @@ namespace cw {
 
         }
     };
+    template <typename T>
+    struct ClassName<T*> : ClassName<T> {};
+    template <typename T>
+    struct ClassName<T &> : ClassName<T> {};
+    template <typename T>
+    struct ClassName<T const &> : ClassName<T> {};
+    template <typename T>
+    struct ClassName<T const *> : ClassName<T> {};
 
     /**
        Convenience base type for InternalFields
@@ -437,9 +446,6 @@ namespace cw {
        the native if a JS class inherits the bound class, otherwise
        they are not generally needed.
 
-       See ToNative_StaticCast<> for a case which uses this
-       option.
-
        Note: in any case, cross-JS/Native inheritance has subtle
        gotchas and problems. Extra C++-side infrastructure (in the
        related ClassWrap policies) can get around some of these problems,
@@ -537,8 +543,10 @@ namespace cw {
     };
 
     /**
-       A concrete Extract implementation which uses
-       static_cast() to convert between (void*) and (T*).
+       A concrete Extract implementation which uses static_cast() to
+       convert between (void*) and (T*).  It takes a certain, but not
+       infallible, deal of care in ensuring that the (void*) is
+       actually a native object of the proper type.
     */
     template <typename T>
     struct Extract_StaticCast : Extract_Base<T>
@@ -742,21 +750,6 @@ namespace cw {
         }
     };
     
-    /**
-       A concrete ToNative<T> policy implementation which
-       uses static_cast<convert::TypeInfo<T>::NativeHandle>(void*) to
-       convert objects from JS to native space. It takes a certain,
-       but not infallible, deal of care in ensuring that the (void*)
-       is actually a native object of the proper type.
-
-       See the Value() member for more details, including the meaning
-       of the SearchPrototypesForNative_ parameter.
-    */
-    template <typename T>
-    struct ToNative_StaticCast
-        : ToNative_Base< T >
-    {
-    };
 
     /**
        A concrete ToNative policy class which uses
@@ -1543,7 +1536,7 @@ namespace cw {
            Internal dispatch end-of-list routine.
         */
         template <typename T>
-        struct CtorFwdDispatch<T,v8::juice::convert::NilType>
+        struct CtorFwdDispatch<T,v8::juice::tmp::NilType>
         {
             typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
             static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
@@ -1556,7 +1549,7 @@ namespace cw {
            one of several a bound native constructors, depending on
            on the argument count.
         
-           List MUST be a convert::TypeList< ... > containing ONLY
+           List MUST be a tmp::TypeList< ... > containing ONLY
            convert::CtorFowarderXXX implementations, where XXX is an
            integer value.
         */
@@ -1582,7 +1575,7 @@ namespace cw {
            End-of-list specialization.
         */
         template <typename T>
-        struct CtorFwdDispatchList<T,v8::juice::convert::NilType>
+        struct CtorFwdDispatchList<T,v8::juice::tmp::NilType>
         {
             typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
             static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg )
@@ -1601,7 +1594,7 @@ namespace cw {
 
        Usage:
 
-       CtorForwarderList _MUST_ be a v8::juice::TypeList of
+       CtorForwarderList _MUST_ be a v8::juice::tmp::TypeList of
        v8::juice::convert::CtorForwardXXX instances, where XXX is a
        number.
 
@@ -1616,7 +1609,7 @@ namespace cw {
        template <>
         struct Factory<MyClass> :
           Factory_CtorForwarder<MyClass,
-                              convert::TypeList<
+                              tmp::TypeList<
                               convert::CtorForwarder0<MyClass>,
                               convert::CtorForwarder2<MyClass,int,double>,
                               convert::CtorForwarder1<MyClass,int>
@@ -1780,12 +1773,20 @@ namespace cw {
             }
             else
             {
-                typedef v8::juice::cw::ToNative<T>  Caster;
+                typedef ToNative<T>  Caster;
                 v8::Local<Object> const jo( v8::Object::Cast( *h ) );
                 return Caster::Value(jo);
             }
         }
     };
+//     template <typename T>
+//     struct JSToNativeImpl<T*> : JSToNativeImpl<T> {};
+//     template <typename T>
+//     struct JSToNativeImpl<T const *> : JSToNativeImpl<T> {};
+//     template <typename T>
+//     struct JSToNativeImpl<T &> : JSToNativeImpl<T> {};
+//     template <typename T>
+//     struct JSToNativeImpl<T const &> : JSToNativeImpl<T> {};
 
     /**
        This class can be used to create

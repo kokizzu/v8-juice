@@ -67,6 +67,10 @@ namespace v8 { namespace juice { namespace convert {
            Must hold the number of arguments expected by this handler.
            In some special cases it may be negative, but not in the
            general case.
+
+           This _should_ be an enum instead of a static int, but when i
+           do that, the member is not found (don't understand why) in
+           many algorithms!
         */
         static const int Arity = 0;
     };
@@ -95,7 +99,7 @@ namespace v8 { namespace juice { namespace convert {
         {
             try
             {
-                return convert::CastToJS<RV>( f() );
+                return CastToJS<RV>( f() );
             }
             catch( std::exception const & ex )
             {
@@ -108,7 +112,7 @@ namespace v8 { namespace juice { namespace convert {
             return Undefined(); // cannot be reached.
         }
         template <typename Func>
-        static Handle<Value> Call( Func f, ::v8::Arguments const & argv )
+        static Handle<Value> Call( Func f, ::v8::Arguments const & /*ignored*/ )
         {
             return Call( f );
         }
@@ -181,7 +185,7 @@ namespace v8 { namespace juice { namespace convert {
        be deduced by the compiler.
     */
     template <typename ReturnT>
-    ::v8::Handle< ::v8::Value > FwdToFunc( ReturnT (*func)(), ::v8::Arguments const & argv )
+    ::v8::Handle< ::v8::Value > FwdToFunc( ReturnT (*func)(), ::v8::Arguments const & /*ignored*/ )
     {
         return FunctorForwarder<0,ReturnT>::Call( func );
     }
@@ -911,8 +915,8 @@ namespace v8 { namespace juice { namespace convert {
     typedef ::v8::Handle< ::v8::Value > (*InvocationCallbackWithArray)( Handle<Object> self, int argc, v8::Handle<v8::Value> argv[] );
 
     /**
-       A helper to allow re-use of certain JS/C++ functions. It's a bit of
-       a long story...
+       A helper to allow re-use of certain JS/C++ functions. It's a
+       bit of a long story...
 
        v8 defines the basic JS/C++ callback type as
        InvocationCallback, which takes a v8::Arguments list as its
@@ -931,14 +935,15 @@ namespace v8 { namespace juice { namespace convert {
        the WeakJSClassCreator:
 
        \code
-       myobj->Set(String::New("func"), InvocationCallbackToArgv<MyCallback>::Call );
+       myobj->Set(String::New("func"),
+          FunctionTemplate::New(InvocationCallbackToArgv<MyCallback>::Invocable)->GetFunction());
        \endcode
 
        This is of course less efficient than directly calling an
        InvocationCallback, because we must synthesize an array of
        Value handles.
 
-       The optional skipArgN parameter tells Call() than it should skip
+       The optional skipArgN parameter tells Invocable() than it should skip
        over the first N arguments in the list, which can be useful when
        stripping a first argument for personal use then passing on the
        rest of the args.
@@ -952,7 +957,7 @@ namespace v8 { namespace juice { namespace convert {
 	   greater than or equal to argv.Length() then
 	   proxy(argv.This(),0,0) is called.
 	*/
-	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
+	static ::v8::Handle< ::v8::Value > Invocable( ::v8::Arguments const & argv )
 	{
 	    typedef v8::Handle<v8::Value> HV;
 	    if( skipArgN >= argv.Length() )
@@ -972,9 +977,13 @@ namespace v8 { namespace juice { namespace convert {
     };
 
     /**
-       InvocationCallbackMember is a helper type for binding InvocationCallback-like
-       member functions. It requires that T be supported by CastFromJS(). The Func
-       template parameter is the member invocation callback which we want to proxy.
+       InvocationCallbackMember is a helper type for binding
+       InvocationCallback-like member functions. It requires that T be
+       supported by CastFromJS(). The Func template parameter is the
+       member invocation callback which we want to proxy.
+
+       Note that because bound objects are never const in a JS
+       context, the member function should not be const.
     */
     template <typename T,
               ::v8::Handle< ::v8::Value > (T::*Func)( ::v8::Arguments const & argv )
@@ -988,10 +997,10 @@ namespace v8 { namespace juice { namespace convert {
            exception, otherwise it returns the result of the proxied
            call.
 	*/
-	static ::v8::Handle< ::v8::Value > Call( ::v8::Arguments const & argv )
+	static ::v8::Handle< ::v8::Value > Invocable( ::v8::Arguments const & argv )
 	{
             T * self = CastFromJS<T>( argv.This() );
-            if( ! self ) return ThrowException(String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
+            if( ! self ) return v8::ThrowException(v8::String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
             return (self->*Func)( argv );
 	}
     };
@@ -1406,6 +1415,8 @@ namespace v8 { namespace juice { namespace convert {
             return new Type;
         }
     };
+
+    /** Identical to CtorForward<T,0>. */
     template <typename T>
     struct CtorForwarder0 : CtorForwarder<T,0>
     {
@@ -1431,7 +1442,7 @@ namespace v8 { namespace juice { namespace convert {
     template < int Arity_, v8::Handle<v8::Value> (*Func)( v8::Arguments const & ) >
     struct InvocableCallback
     {
-        static const int Arity = Arity_;
+        static const int Arity = Arity_; // if i make this an enum it is not found???
         /**
            If Arity is negative then it calls Func(argv). Otherwise it
            calls Func() only if argv.Length()==Arity, throwing a JS
