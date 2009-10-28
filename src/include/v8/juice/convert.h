@@ -379,7 +379,7 @@ namespace convert {
     template <typename JST>
     struct JSToNative
     {
-	typedef JST * ResultType;
+	typedef typename TypeInfo<JST>::NativeHandle ResultType;
 	ResultType operator()( v8::Handle<v8::Value> const & h ) const;
         // Must be specialized to be useful
     };
@@ -570,17 +570,35 @@ namespace convert {
 	typedef JSToNative<NT> F;
 	return F()( h );
     }
-
-    template <typename NT, typename VT>
-    typename JSToNative<NT>::ResultType CastFromJS( Handle< VT > const & h )
-    {
-	typedef JSToNative<NT> F;
-	return F()( h );
-    }
-
+// These seem to be unnecessary:
 //     template <typename NT>
-//     typename JSToNative<NT>::ResultType CastFromJS( ::v8::Local< ::v8::Value > const & h )
+//     typename JSToNative<NT>::ResultType CastFromJS( v8::Handle<v8::Object> const & h )
 //     {
+// #if defined(CERR)
+//         CERR << "CastFromJS(Object)\n";
+// #endif
+// 	//typedef JSToNative<NT> F;
+// 	//return F()( h );
+//         return CastFromJS<NT>( v8::Handle<v8::Value>(h) );
+//     }
+
+//     template <typename NT, typename VT>
+//     typename JSToNative<NT>::ResultType CastFromJS( Handle< VT > const & h )
+//     {
+// #if defined(CERR)
+//         CERR << "CastFromJS(Handle<T>)\n";
+// #endif
+// #if 0
+//  	typedef JSToNative<NT> F;
+//  	return F()( h );
+// #else
+//         return CastFromJS<NT>( v8::Handle<v8::Value>( h ) );
+// #endif
+//     }
+
+//    template <typename NT>
+//    typename JSToNative<NT>::ResultType CastFromJS( ::v8::Local< ::v8::Value > const & h )
+//    {
 // 	typedef JSToNative<NT> F;
 // 	return F()( h );
 //     }

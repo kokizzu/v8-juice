@@ -4,7 +4,7 @@ HEADERS =
 
 OBJECTS = $(addsuffix .o,\
 	PathFinder \
-	PathFinder-js \
+	PathFinder-cw \
 	cleanup \
 	convert \
 	plugin \
@@ -16,6 +16,7 @@ OBJECTS = $(addsuffix .o,\
 	time \
 	mutex \
 	)
+#	PathFinder-js
 
 ########################################################################
 # Build DLL...
