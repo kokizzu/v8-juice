@@ -176,7 +176,7 @@ namespace v8 { namespace juice { namespace cw {
         */
         static void Unwrap( v8::Handle<v8::Object> const & /*jsSelf*/, NativeHandle nativeSelf )
         {
-            typedef Detail::ClassWrapMapper<BoundNative> Mapper;
+            typedef Detail::ClassWrapMapper<T> Mapper;
             Mapper::Remove( nativeSelf );
             return;
         }
