@@ -225,7 +225,7 @@ namespace v8 { namespace juice { namespace convert {
        The Invocable() members can be used with
        v8::FunctionTemplate::New(FunctionForwarder<N>::Invocable<...>)
        to bind member functions to JS objects. For this to work,
-       CastFromJS<T>(argv.This()) must be able to return a native
+       CastFromJS<T*>(argv.This()) must be able to return a native
        "this" object to call the function on.
 
 
@@ -246,7 +246,18 @@ namespace v8 { namespace juice { namespace convert {
         {
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             //else if( argv.Length() < Arity ) return ThrowException(String::New("${callBase}::Call(): wrong argument count!"));
-            return CastToJS<RV>( (obj->*MemFunc)() );
+            try
+            {
+                return CastToJS<RV>( (obj->*MemFunc)() );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<0>::Call() Native function threw an unknown native exception type!"));
+            }
         }
 
         /**
@@ -259,7 +270,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T, typename RV>
         static Handle<Value> Call( RV (T::*MemFunc)(), Arguments const & argv )
         {
-            T * obj = CastFromJS<T>( argv.This() );
+            T * obj = CastFromJS<T*>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             return Call( obj, MemFunc, argv );
         }
@@ -271,7 +282,18 @@ namespace v8 { namespace juice { namespace convert {
         static Handle<Value> Call( T const * obj, RV (T::*MemFunc)() const, Arguments const & argv )
         {
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
-            return CastToJS<RV>( (obj->*MemFunc)() );
+            try
+            {
+                return CastToJS<RV>( (obj->*MemFunc)() );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<0>::Call() Native function threw an unknown native exception type!"));
+            }
         }
 
         /**
@@ -281,7 +303,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T, typename RV>
         static Handle<Value> Call( RV (T::*MemFunc)() const, Arguments const & argv )
         {
-            T const * obj = CastFromJS<T>( argv.This() );
+            T const * obj = CastFromJS<T*>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             return Call( obj, MemFunc, argv );
         }
@@ -320,7 +342,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T,typename VoidType>
         static Handle<Value> CallVoid( VoidType (T::*MemFunc)(), Arguments const & argv )
         {
-            T * obj = CastFromJS<T>( argv.This() );
+            T * obj = CastFromJS<T*>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             Call( obj, MemFunc, argv );
             return v8::Undefined();
@@ -369,7 +391,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T, typename VoidType>
         static Handle<Value> CallVoid( VoidType (T::*MemFunc)() const, Arguments const & argv )
         {
-            T const * obj = CastFromJS<T>( argv.This() );
+            T const * obj = CastFromJS<T*>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             Call( obj, MemFunc, argv );
             return v8::Undefined();
@@ -760,7 +782,7 @@ namespace v8 { namespace juice { namespace convert {
        jsObject->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(fp)->GetFunction() );
        @endcode
 
-       If jsObject can be converted to a (T*) via CastFromJS<T>() then the following will also work
+       If jsObject can be converted to a (T*) via CastFromJS<T*>() then the following will also work
        if (std::string T::toString()) is defined:
        
        @code
@@ -999,7 +1021,7 @@ namespace v8 { namespace juice { namespace convert {
 	*/
 	static ::v8::Handle< ::v8::Value > Invocable( ::v8::Arguments const & argv )
 	{
-            T * self = CastFromJS<T>( argv.This() );
+            T * self = CastFromJS<T*>( argv.This() );
             if( ! self ) return v8::ThrowException(v8::String::New("InvocationCallbackMember could not find native 'this' object in argv!"));
             return (self->*Func)( argv );
 	}
@@ -1036,12 +1058,12 @@ namespace v8 { namespace juice { namespace convert {
 
            Requirements:
 
-           - Type must be convertible to NativeHandle via CastFromJS<T>().
+           - Type must be convertible to NativeHandle via CastFromJS<NativeHandle>().
 
            - PropertyType must be convertible via CastToJS<PropertyType>().
 
            If the underlying native This object cannot be found (that
-           is, if CastFromJS<T>() fails) then this routine will
+           is, if CastFromJS<NativeHandle>() fails) then this routine will
            trigger a JS exception.
 
            Example:
@@ -1061,9 +1083,20 @@ namespace v8 { namespace juice { namespace convert {
         template <typename PropertyType, PropertyType Type::*MemVar>
         static v8::Handle<v8::Value> MemVarGetter(v8::Local<v8::String> property, const AccessorInfo &info)
         {
-            NativeHandle self = CastFromJS<Type>( info.This() );
+            NativeHandle self = CastFromJS<NativeHandle>( info.This() );
             if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
-            return CastToJS( (self->*MemVar) );
+            try
+            {
+                return CastToJS( (self->*MemVar) );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("Native member property getter threw an unknown native exception type!"));
+            }
         }
 
         /**
@@ -1083,14 +1116,13 @@ namespace v8 { namespace juice { namespace convert {
         template <typename PropertyType, PropertyType Type::*MemVar>
         static void MemVarSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
         {
-            NativeHandle self = CastFromJS<Type>( info.This() );
+            NativeHandle self = CastFromJS<NativeHandle>( info.This() );
             if( self )
             {
                 self->*MemVar = CastFromJS<PropertyType>( value );
             }
             else
             {
-                // It is legal to do this from here?
                 ::v8::ThrowException(v8::String::New("Native member property setter could not access native This object!"));
             }
         }
@@ -1103,19 +1135,12 @@ namespace v8 { namespace juice { namespace convert {
            SharedVar must be pointer to a static variable and must not
            be 0.
 
-           CastToJS<PropertyType> must be legal.
+           CastToJS<PropertyType>() must be legal.
         */
         template <typename PropertyType, PropertyType const * SharedVar>
         static v8::Handle<v8::Value> StaticVarGetter(v8::Local<v8::String> property, const AccessorInfo &info)
         {
-            if( SharedVar )
-            {
-                return CastToJS<PropertyType>( *SharedVar );
-            }
-            else
-            {
-                return v8::ThrowException(v8::String::New("StaticVarGetter(): SharedVar is null!"));
-            }
+            return CastToJS<PropertyType>( *SharedVar );
         }
         /**
            The setter counterpart of StaticVarGetter().
@@ -1128,14 +1153,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename PropertyType, PropertyType * SharedVar>
         static void StaticVarSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
         {
-            if( SharedVar )
-            {
-                *SharedVar = CastFromJS<PropertyType>( value );
-            }
-            else
-            {
-                v8::ThrowException(v8::String::New("StaticVarGetter(): SharedVar is null!"));
-            }
+            *SharedVar = CastFromJS<PropertyType>( value );
         }
 
         /**
@@ -1244,9 +1262,20 @@ namespace v8 { namespace juice { namespace convert {
 	template <typename RV, RV (Type::*Func)()>
         static v8::Handle<v8::Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
         {
-            NativeHandle self = CastFromJS<Type>( info.This() );
+            NativeHandle self = CastFromJS<NativeHandle>( info.This() );
             if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
-            return convert::CastToJS( (self->*Func)() );
+            try
+            {
+                return convert::CastToJS( (self->*Func)() );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("Native property getter function threw an unknown native exception type!"));
+            }
         }
         /**
            Overload for const native getter functions.
@@ -1254,9 +1283,20 @@ namespace v8 { namespace juice { namespace convert {
 	template <typename RV, RV (Type::*Func)() const>
         static v8::Handle<v8::Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
         {
-            NativeHandle self = CastFromJS<Type>( info.This() );
+            NativeHandle self = CastFromJS<NativeHandle>( info.This() );
             if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
-            return convert::CastToJS( (self->*Func)() );
+            try
+            {
+                return convert::CastToJS( (self->*Func)() );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("Native property getter function threw an unknown native exception type!"));
+            }
         }
         /**
             Implements v8::AccessorSetter interface to proxy a JS
@@ -1271,13 +1311,24 @@ namespace v8 { namespace juice { namespace convert {
         template <typename RV, typename ArgT, RV (Type::*Func)(ArgT)>
         static void PropSetterFunc(v8::Local< v8::String > property, v8::Local< v8::Value > value, const v8::AccessorInfo &info)
         {
-            NativeHandle self = CastFromJS<Type>( info.This() );
+            NativeHandle self = CastFromJS<NativeHandle>( info.This() );
             if( ! self )
             {
-                v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+                v8::ThrowException( v8::String::New( "Native member property setter could not access native This object!" ) );
                 return;
             }
-            (self->*Func)( CastFromJS<ArgT>( value ) );
+            else try
+            { 
+                (self->*Func)( CastFromJS<ArgT>( value ) );
+            }
+            catch( std::exception const & ex )
+            {
+                ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                ::v8::ThrowException( ::v8::String::New("Native property setter function threw an unknown native exception type!"));
+            }
             return;
         }
 
@@ -1368,7 +1419,7 @@ namespace v8 { namespace juice { namespace convert {
        - All arguments to the native ctor must be convertible
        using CastFromJS().
 
-       - CastToJS<T>() must be legal (i.e. it must return an object
+       - CastToJS<T*>() must be legal (i.e. it must return an object
        or throw).
 
        This type is intended to assist in the creation of ctor
@@ -1394,6 +1445,9 @@ namespace v8 { namespace juice { namespace convert {
 
            For all specializations, the caller owns the returned
            object.
+
+           On error the function may trigger a v8 exception
+           or if it likes.
         */
         static NativeHandle Ctor( v8::Arguments const & );
     };
@@ -1537,6 +1591,65 @@ namespace v8 { namespace juice { namespace convert {
     {
     };
 
+    /**
+       An InvocableInterface implementation which requires a
+       v8::InvocationCallback as an argument. It acts as a proxy
+       but catches native exceptions. See the Invocable() member
+       for details.
+
+       The Arity argument is part of the InvocableInterface.
+       When proxying "raw" InvocationCallbacks, this can be left
+       at its default. When proxying callback created by
+       other InvocableInterface types then this value should be
+       set to that type's Arity. Failing to do so may confuse
+       certain algorithms (notably OverloadInvocables<>).
+
+       If Arity is 0 or greater then this type enforces that the
+       argument count given to it is _exactly_ that number. If Arity
+       is negative then this type ignores the argument count of
+       the call.
+    */
+    template <v8::InvocationCallback CB,int Arity_ = -1>
+    struct InvocationCallbackCatcher
+    {
+        //! Required by InvocableInterface.
+        static const int Arity = Arity_;
+        /**
+           This type acts identically to the templatized function CB,
+           except: if CB() passes on a native exception, this type
+           converts it to a JS exception, then discards the native
+           exception.
+
+           Note that most, if not all of the other InvocableInterface
+           types perform native-to-JS exception conversion, so this
+           type is not necessary for use with them. It is intended for
+           use with "plain" v8::InvocationCallback implementations.
+        */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            if( (Arity>=0) && (argv.Length() != Arity) )
+            {
+                StringBuffer msg;
+                msg << argv.Callee()->GetName()
+                    << "() requires "<< Arity<< " arguments.";
+                return v8::ThrowException(msg);
+            }
+            try
+            { 
+                return CB( argv );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( CastToJS( ex.what() ) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("Exception::Invocable() caught unknown native exception type!"));
+            }
+        }
+    };
+
+    
 }}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_FORWARDING_H_INCLUDED */

@@ -14,6 +14,59 @@ Test/demo code for the v8::juice::cw::ClassWrap class binding mechanism.
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
 
+using namespace v8::juice::tmp;
+
+// An experiment ...
+template <unsigned char I,typename ListT>
+struct FuncParam;
+
+template <typename ListT>
+struct FuncParam<0,ListT>
+{
+};
+
+template <typename ListT>
+struct FuncParam<1,ListT>
+{
+    //typedef typename TypeAt<ListT,0>::Type Type1;
+    typedef typename ListT::Head Type1;
+};
+
+#define FUNCPARAM(N) template <typename ListT>          \
+    struct FuncParam<N,ListT> : FuncParam<N-1,ListT> {  \
+        typedef typename TypeAt<ListT,N-1>::Type Type ## N; \
+    }
+FUNCPARAM(2); FUNCPARAM(3);
+FUNCPARAM(4); FUNCPARAM(5);
+FUNCPARAM(6); FUNCPARAM(7);
+FUNCPARAM(8); FUNCPARAM(9);
+#undef FUNCPARAM
+
+template <typename ListT>
+struct ParamList : FuncParam< LengthOf<ListT>::Value, ListT >
+{
+    typedef ListT TypeList;
+    typedef typename ListT::Head Head;
+    typedef typename ListT::Tail Tail;
+    enum {
+    Length = LengthOf<ListT>::Value,
+    SizeIsValid = Assertion< (Length >= 0) >::Value
+    };
+    /**
+       Holds the type of the 1-based (NOT 0-based!) argument list.
+
+       I must be greater than 0 and less than Length or a compile-time
+       error will occur.
+    */
+    template <unsigned char I>
+    struct At : TypeAt<ListT,I-1>
+    {
+        enum { IndexIsValid = Assertion<
+               (I>0) && (I<=LengthOf<ListT>::Value)
+               >::Value };
+    };
+};
+
 /** A class for testing ClasWrap. */
 struct BoundNative
 {
@@ -47,12 +100,25 @@ public:
         DBGOUT << "BoundNative[@"<<(void const *)this<<"]->ptr("<<(void const *)b<<")\n";
         return 0 != b;
     }
+    void toss(std::string const & msg) const
+    {
+        const std::string e = "BoundNative::toss(): " + msg;
+        throw std::runtime_error(e.c_str());
+    }
     BoundNative * getPtr();
 #if 0
     {
         return this;
     }
 #endif
+    BoundNative & getRef()
+    {
+        return *this;
+    }
+    std::string aRef(BoundNative & other)
+    {
+        return other.toString();
+    }
     static size_t InstanceCount()
     {
         return instcount;
@@ -93,7 +159,7 @@ property set macros.
 namespace v8 { namespace juice {
     namespace cw
     {
-        template <> struct DebugLevel<BoundNative> : Opt_Int<3> {};
+        template <> struct DebugLevel<BoundNative> : Opt_Int<2> {};
 
         template <>
         struct ToNative_SearchPrototypesForNative<BoundNative>
@@ -217,7 +283,7 @@ namespace v8 { namespace juice { namespace cw
 #  define USING_JUICEBIND_POLICIES
 #  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap_JuiceBind.h>
 #include CLASSWRAP_POLICY_HEADER
-#elif 0
+#elif 1
 // #  warning "Using TwoWay policies!"
 #  define USING_TWOWAY_POLICIES
 #  define CLASSWRAP_POLICY_HEADER <v8/juice/ClassWrap_TwoWay.h>
@@ -321,6 +387,13 @@ v8::Handle<v8::Value> BoundNative_overload( v8::Arguments const & argv )
     msg << "BoundNative_overload("<<argv.Length()<<" Arguments)";
     return msg;
 }
+// Test case for convert::InvocationCallbackCatcher<>.
+v8::Handle<v8::Value> BoundNative_toss( v8::Arguments const & argv )
+{
+    const std::string e = "BoundNative_toss()";
+    throw std::runtime_error(e.c_str());
+    return v8::Undefined();
+}
 
 void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 {
@@ -340,45 +413,28 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
     cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Invocable );
     typedef convert::InvocationCallbackCreator ICC;
     typedef convert::MemFuncInvocationCallbackCreator<N> ICM;
-    cw.Set( "toString",
-            //ICC::M0::Invocable<N,std::string,&N::toString>
-            ICM::M0::Invocable<std::string,&N::toString>
-            );
-    cw.Set( "getInt",
-            //ICC::M0::Invocable<N,int,&N::getInt>
-            ICM::M0::Invocable<int,&N::getInt>
-            );
-    cw.Set( "setInt",
-            ICM::M1::Invocable<void,int,&N::setInt>
-            );
-    cw.Set( "ptr",
-            //ICC::M1::Invocable<N,bool,N const * ,&N::ptr>
-            ICM::M1::Invocable<bool,N const * ,&N::ptr>
-            //convert::TMemFuncForwarder<N,1>::Invocable<bool,N const * ,&N::ptr>
-            //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
-            );
+    cw.Set( "toString",ICM::M0::Invocable<std::string,&N::toString> );
+    cw.Set( "getInt",ICM::M0::Invocable<int,&N::getInt>);
+    cw.Set( "setInt", ICM::M1::Invocable<void,int,&N::setInt> );
+    cw.Set( "ptr", ICM::M1::Invocable<bool,N const * ,&N::ptr> );
 #if defined(USING_TWOWAY_POLICIES)
     // If JSToNative isn't specialized, we should get a compile-time error here:
-    cw.Set( "getPtr",
-            ICM::M0::Invocable<N*,&N::getPtr >
-            //ICC::M1::InvocableVoid<N,bool,N const * ,&N::ptr>
-            );
+    cw.Set( "getPtr", ICM::M0::Invocable<N*,&N::getPtr > );
+    cw.Set( "getRef", ICM::M0::Invocable<N&,&N::getRef > );
+    cw.Set( "aRef", ICM::M1::Invocable<std::string,N&,&N::aRef > );
 #endif
-    cw.Set( "overload",
-            convert::OverloadInvocables<
-            tmp::TypeList<
-            convert::InvocableConstMemFunc0<N,bool,&N::overload>,
-            //convert::InvocableFunction0<void,BoundNative_overload>,
-            //convert::DiscardInvocableReturnVal<
-              convert::InvocableMemFunc1<N,int,int,&N::overload>
-            //>
-            ,            
-            //convert::InvocableFunction1<int,int,BoundNative_overload>,
-            convert::InvocableMemFunc2<N,double,int,double,&N::overload>,
-            //convert::InvocableFunction2<double,int,double,BoundNative_overload>,
-            convert::InvocableCallback<-1, BoundNative_overload>
-            //convert::
-            > >::Invocable );
+    cw.Set( "toss",
+            //ICM::M1::Invocable<void,std::string const &,&N::toss >
+            convert::InvocationCallbackCatcher< BoundNative_toss >::Invocable
+            );
+
+    typedef tmp::TypeList<
+        convert::InvocableConstMemFunc0<N,bool,&N::overload>,
+        convert::InvocableMemFunc1<N,int,int,&N::overload>,
+        convert::InvocableMemFunc2<N,double,int,double,&N::overload>,
+        convert::InvocableCallback<-1, BoundNative_overload>
+        > OverloadsList;
+    cw.Set( "overload", convert::OverloadInvocables<OverloadsList>::Invocable );
     //typedef convert::PropertyBinder<N> PB;
     typedef CW::PB PB;
     v8::Handle<v8::ObjectTemplate> cwproto = cw.Prototype();
@@ -401,6 +457,7 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
         ;
 #define JFH v8::FunctionTemplate::New(FH)->GetFunction()
     cw.Set( "version", JFH );
+    cw.CtorTemplate()->Set( "version", convert::CastToJS(JFH) );
 
     FH = ICC::F1::Invocable<void,std::string const &,BoundNative_doSomething>;
     FH = ICC::F1::InvocableVoid<size_t,std::string const &,BoundNative_doSomething2>;
@@ -417,31 +474,52 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
                             convert::CastToJS(cw::ToNative_SearchPrototypesForNative<BoundNative>::Value) );
     FH = ICC::F1::Invocable<unsigned int,unsigned int,::sleep>;
     cw.Set( "sleep", JFH );
-#if 0
     v8::Handle<v8::Function> ctor = cw.Seal();
     cw.AddClassTo( dest );
-#endif
     // not yet possible:  PB::BindStaticVar<bool,&N::enableDebug>( "debug", ctor );
 
+    static const bool doDebug = (v8::juice::cw::DebugLevel<BoundNative>::Value > 2);
+    { ////////////////////////////////////////////////////////////////////////
+        // subclassing tests...
+        typedef BoundSub BS;
+        typedef cw::ClassWrap<BS> WBS;
+        WBS &b( WBS::Instance() );
+        //b.Inherit( cw );
+        b.InheritNative( cw );
+        //NativeSubtypeLookup<BoundNative>::RegisterSubclass<BS>();
+        //typedef cw::NativeInheritance<BoundNative> NIT;
+        //NIT::RegisterSubclass<BS>();
+
+        b.Seal();
+        b.AddClassTo(dest);
+
+        if( doDebug )
+        {
+            v8::Handle<Value> sj = b.NewInstance(0,0);
+            BS * s = convert::CastFromJS<BS>( sj );
+            DBGOUT << "BoundSub == "<<(void const *) s<<'\n';
+            if( s )
+            {
+                WBS::DestroyObject(sj);
+            }
+        }
+    }
+
+    
 #undef JFH
 
-#if 0
-    {
-        typedef cw::RuntimeOps<N>:: RO;
-        RO::InstallClass( dest );
-    }
-#endif
-    
-#if 1 // try to create a few objects for testing/sanity checking...
-    {
+    if(doDebug)
+    { // try to create a few objects for testing/sanity checking...
         //v8::HandleScope hscope;
         Handle<Object> jobj =
-            cw.NewInstance(0,0)
-            //ctor->NewInstance(0,0)
+            //cw.NewInstance(0,0)
+            ctor->NewInstance(0,0)
             ;
         N * bound = CW::ToNative::Value(jobj);
         DBGOUT << "bound (void *) == @"<<(void const *)bound<<'\n';
         DBGOUT << "bound (CastFromJS<T>(jsObj)) == @"<<convert::CastFromJS<N>( jobj )<<'\n';
+        N & boundRef = convert::CastFromJS<N&>( jobj );
+        DBGOUT << "Cast to ref apparently works: @"<<&boundRef<<'\n';
         if( bound )
         {
             //Handle<Value> = MFF::Call( obj, BoundNative::toString
@@ -476,52 +554,39 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
             DBGOUT << "JW::CastToJS::Value(jobj) == "<<convert::CastFromJS<std::string>(j2)<<'\n';
         }
 #endif
-
-        if(1)
-        { ////////////////////////////////////////////////////////////////////////
-            // subclassing tests...
-            typedef BoundSub BS;
-            typedef cw::ClassWrap<BS> WBS;
-            WBS &b( WBS::Instance() );
-            //b.Inherit( cw );
-            b.InheritNative( cw );
-            //NativeSubtypeLookup<BoundNative>::RegisterSubclass<BS>();
-            //typedef cw::NativeInheritance<BoundNative> NIT;
-            //NIT::RegisterSubclass<BS>();
-
-            b.Seal();
-            b.AddClassTo(dest);
-
-            v8::Handle<Value> sj = b.NewInstance(0,0);
-            BS * s = convert::CastFromJS<BS>( sj );
-            DBGOUT << "BoundSub == "<<(void const *) s<<'\n';
-            if( s )
-            {
-                WBS::DestroyObject(sj);
-            }
-        }
     }
-#endif
     if(0)
     {
         typedef tmp::TypeList<> LT0;
         typedef tmp::TypeList<int> LT1;
         typedef tmp::TypeList<LT0,LT1> LT2;
         typedef tmp::TypeList<LT0,LT1,LT2> LT3;
-#define X(TL) CERR << "tmp::TypeListSize<"<<# TL<<">::Value == "<<tmp::TypeListSize<TL>::Value<<'\n'
-        X(LT0);
-        X(LT1);
-        X(LT2);
-        X(LT3);
-#undef X
+        typedef tmp::TypeList<int,LT0,LT1,char,LT2> LT5;
+#define TLEN(TL) CERR << "tmp::LengthOf<"<<# TL<<">::Value == "<<tmp::LengthOf<TL>::Value<<'\n'
+        TLEN(LT0);
+        TLEN(LT1);
+        TLEN(LT2);
+        TLEN(LT3);
+        TLEN(LT5);
         
         typedef tmp::TypeList< BoundNative, BoundSub > BTL;
 #define TY(N) tmp::TypeAt<BTL,N>::Type
-#define X(N) CERR <<"TypeAt< BTL,"<<N<<"> == "<<v8::juice::cw::ClassName< TY(N) >::Value() << '\n';
+#define X(N) CERR <<"TypeAt< BTL,"<<N<<"> == "<<v8::juice::cw::ClassName< TY(N) >::Value() << '\n'
         X(0); X(1);
         //X(4);// should trigger compile error
 #undef X
 #undef T
+        typedef ParamList< BTL > PL;
+#define X(N) CERR <<"PL::Arg<"<<N<<"> == "<<v8::juice::cw::ClassName< PL::At<N>::Type >::Value() << '\n'
+        X(1); X(2);
+        //X(3); // should error
+        TLEN(PL::TypeList);
+        typedef ParamList< TypeList<> > EPL;
+        //EPL epl;
+        CERR << "EPL::Length == "<<EPL::Length<<'\n';
+        TLEN(EPL::TypeList);
+#undef TLEN
+        
     }
     DBGOUT <<"Binding done.\n";
     return;
