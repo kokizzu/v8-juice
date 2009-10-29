@@ -132,15 +132,50 @@ namespace convert {
 #endif
     };
 
+    /**
+       Specialization to treat (NT*) as (NT).
+    */
     template <typename NT>
     struct NativeToJS<NT *> : NativeToJS<NT> {};
-
+    /**
+       Specialization to treat (NT const *) as (NT*).
+    */
     template <typename NT>
-    struct NativeToJS<NT &> : NativeToJS<NT> {};
+    struct NativeToJS<NT const *> : NativeToJS<NT*> {};
 
+    /**
+       Specialization to treat (NT const &) as (NT).
+    */
     template <typename NT>
     struct NativeToJS<const NT &> : NativeToJS<NT> {};
 
+#if 0
+    /**
+       Specialization to treat (NT &) as (NT).
+    */
+    template <typename NT>
+    struct NativeToJS<NT &> : NativeToJS<NT> {};
+#else
+    /**
+       A specialization to convert from (T&) to JS.
+
+       Be very careful with this, and make sure that
+       NativeToJS<NT*> has its own specialization,
+       as this implementation uses that one as its
+       bases.
+    */
+    template <typename NT>
+    struct NativeToJS<NT &>
+    {
+	typedef typename TypeInfo<NT>::Type & ArgType;
+	v8::Handle<v8::Value> operator()( ArgType n ) const
+        {
+            typedef NativeToJS< typename TypeInfo<NT>::NativeHandle > Cast;
+            return Cast()( &n );
+        }
+    };
+#endif
+    
     template <>
     struct NativeToJS<void>
     {
@@ -322,6 +357,26 @@ namespace convert {
 	typedef NativeToJS<T> F;
 	return F()( v );
     }
+
+    /**
+       Overload which uses NativeToJS<T*>.
+    */
+    template <typename T>
+    v8::Handle<v8::Value> CastToJS( T * v )
+    {
+	typedef NativeToJS<T*> F;
+	return F()( v );
+    }
+
+    /**
+       Overload which uses NativeToJS<T const *>.
+    */
+    template <typename T>
+    v8::Handle<v8::Value> CastToJS( T const * v )
+    {
+	typedef NativeToJS<T const *> F;
+	return F()( v );
+    }
     
     /**
        Overload to avoid ambiguity in certain calls.
@@ -392,6 +447,32 @@ namespace convert {
     template <typename JST>
     struct JSToNative<JST const &> : JSToNative<JST> {};
 
+    /**
+       EXPERIMENTAL!!!!
+
+       A specialization to convert from JS to (T&). Beware, however,
+       that this operation must throw a native exeception if it fails,
+       because the only other other option is has is to dereference
+       null and crash your app.
+    */
+    template <typename JST>
+    struct JSToNative<JST &>
+    {
+	typedef typename TypeInfo<JST>::Type & ResultType;
+        //typedef JST & ResultType;
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
+        {
+            typedef JSToNative<JST*> Cast;
+            typedef typename Cast::ResultType NH;
+            NH n = Cast()( h );
+            if( ! n )
+            {
+                throw std::runtime_error("JSToNative<T&> could not get native pointer. Throwing to avoid dereferencing null!");
+            }
+            else return *n;
+        }
+    };
+    
 
     template <>
     struct JSToNative<v8::Handle<v8::Value> >
