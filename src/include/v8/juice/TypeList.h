@@ -66,21 +66,21 @@ namespace tmp {
     namespace Detail
     {
         namespace tmp = v8::juice::tmp;
-        /** Internal impl of tmp::TypeListSize. */
+        /** Internal impl of tmp::LengthOf. */
         template <typename T>
-        struct TypeListSizeImpl
+        struct LengthOfImpl
         {
             enum { Value = 1 };
         };
         template <>
-        struct TypeListSizeImpl<tmp::NilType>
+        struct LengthOfImpl<tmp::NilType>
         {
             enum { Value = 0 };
         };
         template <typename H, typename T>
-        struct TypeListSizeImpl< tmp::TypeChain<H,T> >
+        struct LengthOfImpl< tmp::TypeChain<H,T> >
         {
-            enum { Value = 1 + TypeListSizeImpl<T>::Value };
+            enum { Value = 1 + LengthOfImpl<T>::Value };
         };
     }
 #endif
@@ -90,20 +90,20 @@ namespace tmp {
        ListT must conform to the TypeChain interface.
     */
     template <typename ListT>
-    struct TypeListSize
+    struct LengthOf
     {
         enum {
         /**
            The number of types in ListT.
         */
-        Value = Detail::TypeListSizeImpl< typename ListT::Head >::Value
-                + TypeListSize< typename ListT::Tail >::Value
+        Value = Detail::LengthOfImpl< typename ListT::Head >::Value
+                + LengthOf< typename ListT::Tail >::Value
         };
     };
 
     /** Specialization for end-of-list. */
     template <>
-    struct TypeListSize<NilType>
+    struct LengthOf<NilType>
     {
         enum { Value = 0 };
     };
@@ -141,7 +141,7 @@ namespace tmp {
 #endif
 
     /**
-       A template metafunction to compute the length of a TypeList.
+       A template metafunction to type at a specific offset in a TypeList.
        ListT must be a TypeList, or otherwise conform to the TypeChain
        interface.
     */
