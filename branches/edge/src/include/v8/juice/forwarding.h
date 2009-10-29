@@ -1140,14 +1140,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename PropertyType, PropertyType const * SharedVar>
         static v8::Handle<v8::Value> StaticVarGetter(v8::Local<v8::String> property, const AccessorInfo &info)
         {
-            if( SharedVar )
-            {
-                return CastToJS<PropertyType>( *SharedVar );
-            }
-            else
-            {
-                return v8::ThrowException(v8::String::New("StaticVarGetter(): SharedVar is null!"));
-            }
+            return CastToJS<PropertyType>( *SharedVar );
         }
         /**
            The setter counterpart of StaticVarGetter().
@@ -1160,14 +1153,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename PropertyType, PropertyType * SharedVar>
         static void StaticVarSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
         {
-            if( SharedVar )
-            {
-                *SharedVar = CastFromJS<PropertyType>( value );
-            }
-            else
-            {
-                v8::ThrowException(v8::String::New("StaticVarGetter(): SharedVar is null!"));
-            }
+            *SharedVar = CastFromJS<PropertyType>( value );
         }
 
         /**
@@ -1605,6 +1591,61 @@ namespace v8 { namespace juice { namespace convert {
     {
     };
 
+    /**
+       An InvocableInterface implementation which requires a
+       v8::InvocationCallback as an argument. It acts as a proxy
+       but catches native exceptions. See the Invocable() member
+       for details.
+
+       The 2nd, 3rd, and 4th argument types may normally be defaulted,
+       but if they are not then ALL of them must be set. They are:
+
+       - ExceptionType is the base exception class. It is expected to be
+       catchable via (ExceptionType const &).
+
+       - ExceptionMessage is the return type for the message-fetching routine.
+
+       - What is the ExceptionType member function which returns an
+       ExceptionMessage object.
+    */
+    template <v8::InvocationCallback CB,
+              typename ExceptionType = std::exception,
+              typename ExceptionMessage = char const *,
+              ExceptionMessage (ExceptionType::*What)() const = &std::exception::what
+    >
+    struct InvocationCallbackCatcher
+    {
+        //! Required by InvocableInterface.
+        static const int Arity = -1;
+        /**
+           This type acts identically to the templatized function CB,
+           except: if CB() passes on a native exception, this type
+           converts it to a JS exception, then discards the native
+           exception.
+
+           Note that most, if not all of the other InvocableInterface
+           types perform native-to-JS exception conversion, so this
+           type is not necessary for use with them. It is intended for
+           use with "plain" v8::InvocationCallback implementations.
+        */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            try
+            { 
+                return CB( argv );
+            }
+            catch( ExceptionType const & ex )
+            {
+                return ::v8::ThrowException( CastToJS( (ex.*What)() ) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("Exception::Invocable() caught unknown native exception type!"));
+            }
+        }
+    };
+
+    
 }}} /* namespaces */
 
 #endif /* CODE_GOOGLE_COM_P_V8_V8_FORWARDING_H_INCLUDED */

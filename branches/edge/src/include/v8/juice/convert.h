@@ -126,6 +126,7 @@ namespace convert {
 #if defined(JUICE_STATIC_ASSERT)
         {
             JUICE_STATIC_ASSERT(false,NativeToJS_T_MustBeSpecialized);
+            return v8::Undefined();
         }
 #else
         ;
