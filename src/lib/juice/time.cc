@@ -193,13 +193,13 @@ namespace v8 { namespace juice {
         public:
             /** Timeout delay, in miliseconds. */
             uint32_t delay;
-            /** Set only by the ctor or copy ops. */
-            TimerLock::TimerIDType id;
             /**
                If true, the object is running via setInterval(),
                else setTimeout().
             */
             bool isInterval;
+            /** Set only by the ctor or copy ops. */
+            TimerLock::TimerIDType id;
             /** The Function/String handle passed as argv[0] to setTimeout(). */
             v8::Persistent<v8::Value> jv;
             /** The 'this' object (the global object) for making the
