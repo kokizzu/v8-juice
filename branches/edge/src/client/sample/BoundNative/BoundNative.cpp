@@ -508,7 +508,7 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
         typedef tmp::TypeList<int> LT1;
         typedef tmp::TypeList<LT0,LT1> LT2;
         typedef tmp::TypeList<LT0,LT1,LT2> LT3;
-#define X(TL) CERR << "tmp::TypeListSize<"<<# TL<<">::Value == "<<tmp::TypeListSize<TL>::Value<<'\n'
+#define X(TL) CERR << "tmp::LengthOf<"<<# TL<<">::Value == "<<tmp::LengthOf<TL>::Value<<'\n'
         X(LT0);
         X(LT1);
         X(LT2);
