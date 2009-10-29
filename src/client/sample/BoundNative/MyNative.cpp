@@ -35,7 +35,6 @@ v8::Handle<v8::Value> MyNative_destroy( v8::Arguments const & argv )
 {
     if(1)
     { // informational only: has no real effect:
-        int argc = argv.Length();
         MyNative * N = v8::juice::convert::CastFromJS<MyNative>( argv.This() );
         if( ! N ) return v8::ThrowException(v8::String::New("This object is not (or is no longer) a MyNative!"));
         CERR << "MyNative_destroy( @"<<(void const *)N<<" )\n";

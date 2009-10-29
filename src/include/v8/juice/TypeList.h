@@ -11,6 +11,19 @@ namespace v8 { namespace juice {
 namespace tmp {
 
     /**
+       An utmost most-based compile-time assertion template.
+       If Condition is false, an incomplete specialization of
+       this type is
+    */
+    template <bool Condition>
+    struct Assertion
+    {
+        enum { Value = 1 };
+    };
+    template <>
+    struct Assertion<false>;
+    
+    /**
        A "null" type for use with TypeList.
     */
     struct NilType
@@ -51,7 +64,7 @@ namespace tmp {
 	   There might be exceptions to the no-override rule, but none
 	   come to mind.
 	*/
-	typedef TypeChain ListType;
+	typedef TypeChain<H,T> ChainType;
 #endif
 	/* First Type in the list. */
 	typedef H Head;
@@ -66,21 +79,21 @@ namespace tmp {
     namespace Detail
     {
         namespace tmp = v8::juice::tmp;
-        /** Internal impl of tmp::TypeListSize. */
+        /** Internal impl of tmp::LengthOf. */
         template <typename T>
-        struct TypeListSizeImpl
+        struct LengthOfImpl
         {
             enum { Value = 1 };
         };
         template <>
-        struct TypeListSizeImpl<tmp::NilType>
+        struct LengthOfImpl<tmp::NilType>
         {
             enum { Value = 0 };
         };
         template <typename H, typename T>
-        struct TypeListSizeImpl< tmp::TypeChain<H,T> >
+        struct LengthOfImpl< tmp::TypeChain<H,T> >
         {
-            enum { Value = 1 + TypeListSizeImpl<T>::Value };
+            enum { Value = 1 + LengthOfImpl<T>::Value };
         };
     }
 #endif
@@ -90,20 +103,20 @@ namespace tmp {
        ListT must conform to the TypeChain interface.
     */
     template <typename ListT>
-    struct TypeListSize
+    struct LengthOf
     {
         enum {
         /**
            The number of types in ListT.
         */
-        Value = Detail::TypeListSizeImpl< typename ListT::Head >::Value
-                + TypeListSize< typename ListT::Tail >::Value
+        Value = Detail::LengthOfImpl< typename ListT::Head >::Value
+                + LengthOf< typename ListT::Tail >::Value
         };
     };
 
     /** Specialization for end-of-list. */
     template <>
-    struct TypeListSize<NilType>
+    struct LengthOf<NilType>
     {
         enum { Value = 0 };
     };
@@ -127,6 +140,11 @@ namespace tmp {
         namespace tmp = v8::juice::tmp;
         /** Internal impl of tmp::TypeListIndexOf. */
         template <typename T, unsigned char I> struct TypeAtImpl;
+        template <int I>
+        struct TypeAtImpl< tmp::NilType,I>
+        {
+            typedef NilType Type;
+        };
         template <typename H, typename T>
         struct TypeAtImpl< tmp::TypeChain<H,T>,0>
         {
@@ -136,12 +154,18 @@ namespace tmp {
         struct TypeAtImpl< tmp::TypeChain<H,T>, I>
         {
             typedef typename TypeAtImpl<T, I - 1>::Type Type;
+        private:
+            typedef tmp::TypeChain<H,T> Chain;
+            enum {
+            Length = tmp::LengthOf<Chain>::Value,
+            SizeIsValid = tmp::Assertion< (I<Length) >::Value
+            };
         };
     }
 #endif
 
     /**
-       A template metafunction to compute the length of a TypeList.
+       A template metafunction to type at a specific offset in a TypeList.
        ListT must be a TypeList, or otherwise conform to the TypeChain
        interface.
     */
@@ -152,6 +176,7 @@ namespace tmp {
            The type at the given index in the list.
         */
         typedef typename Detail::TypeAtImpl< TypeChain<typename ListT::Head, typename ListT::Tail>, Index>::Type Type;
+        //typedef typename Detail::TypeAtImpl< typename ListT::ChainType, Index>::Type Type;
     };
     
 }}} // namespaces
