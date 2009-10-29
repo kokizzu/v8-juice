@@ -56,6 +56,9 @@ function dumpBoundNative(b,msg)
         var bp = b.getPtr(b);
         print('b.getPtr() ==',bp);
         if( ! bp ) throw new Error("ToJS<>::Value() apparently failed!");
+        print('b.getRef() ==',b.getRef());
+        print('b.aRef(b) ==',b.aRef(b));
+        //print('b.aRef(0) ==',b.aRef(0));
     }
     else print("BoundNative::getPtr is not bound.");
     print(arguments.callee.bottom);
