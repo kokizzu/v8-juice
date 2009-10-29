@@ -818,7 +818,6 @@ namespace cw {
         }
     };
 
-
     /**
        The ClassWrap policy class responsible for doing optional
        class-specific binding-related work as part of the JS/Native
@@ -1823,7 +1822,7 @@ namespace cw {
     
 
     /**
-       HIGHLY EXPERIMENTAL!
+       HIGHLY EXPERIMENTAL! DON'T USE!
     
        A base type for RuntimeOps classes.
 
@@ -1855,10 +1854,9 @@ namespace cw {
         /**
            If ClassWrap<T>::Instance().IsSealed() then the wrapped
            class is installed into globalObject. Otherwise it calls
-           ClassSetupFunc(ClassWrap<T>::Instance()) and then adds
-           the wrapped class in into globalObject.
-
-           globalObject gets a new member named ClassName<T>::Value().
+           ClassSetupFunc(ClassWrap<T>::Instance()) and then calls the
+           ClassSetupFunc() to install the class into the object (it
+           may install arbitrary functionality into the object).
 
            Returns the constructor function for the new type.
 
@@ -1874,14 +1872,12 @@ namespace cw {
             {
                 b.Seal();
             }
-            return globalObj.IsEmpty()
-                ? b.CtorTemplate()->GetFunction()
-                : b.AddClassTo( globalObj );
+            return b.CtorTemplate()->GetFunction();
         }
     };
 
     /**
-       HIGHLY EXPERIMENTAL!
+       HIGHLY EXPERIMENTAL! DON'T USE!
 
        A concrete RuntimeOps implementation which calls ClassSetupFunc
        in response to RuntimeOps<T>::SetupBindings().
@@ -1893,16 +1889,11 @@ namespace cw {
     {
     public:
         /**
-           The default implementation throws a std::exception. But more generally
-           speaking:
+           The default implementation throws a std::exception. But
+           more generally speaking:
 
-           If ClassWrap<T>::Instance().IsSealed() then the wrapped
-           class is installed into globalObject. Otherwise the class
-           binding bits must be run before adding the class to
-           globalObject.
-
-           globalObject gets a new member named
-           ClassName<T>::Value().
+           This routine is responsible for installing any bindings it
+           would like into the given object.
 
            The return value must be the constructor function for the
            class.
@@ -1940,7 +1931,7 @@ namespace cw {
         }
     }
     /**
-       HIGHLY EXPERIMENTAL!
+       HIGHLY EXPERIMENTAL! DON'T USE!
     
        A ClassWrap policy responsible for running the ClassWrap
        binding process. This gives users a common way to set up all
