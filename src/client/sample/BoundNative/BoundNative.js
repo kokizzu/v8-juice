@@ -58,7 +58,33 @@ function dumpBoundNative(b,msg)
         if( ! bp ) throw new Error("ToJS<>::Value() apparently failed!");
         print('b.getRef() ==',b.getRef());
         print('b.aRef(b) ==',b.aRef(b));
-        //print('b.aRef(0) ==',b.aRef(0));
+        var ex = null;
+        try
+        {
+            print('b.aRef(0) ==',b.aRef(0));
+        }
+        catch(e)
+        {
+            ex = e;
+            print("Caught expected exception: ",e);
+        }
+        if( ! ex )
+        {
+            throw new Error("That call to aRef(0) should have thrown!");
+        }
+        try
+        {
+            b.toss("Tossing an exception!");
+        }
+        catch(e)
+        {
+            ex = e;
+            print("Caught expected exception: ",e);
+        }
+        if( ! ex )
+        {
+            throw new Error("That call to toss() should have thrown!");
+        }
     }
     else print("BoundNative::getPtr is not bound.");
     print(arguments.callee.bottom);
@@ -248,6 +274,7 @@ testNativeSubclass();
 
 print("BoundNative.supportsInheritance ==",BoundNative.supportsInheritance);
 print("BoundNative.debug ==",BoundNative.debug);
+print("BoundNative.version() ==",BoundNative.version());
 print("BoundNative.prototype.debug ==",BoundNative.prototype.debug);
 print('BoundNative.instanceCount() ==',BoundNative.instanceCount());
 print("Done! You win!");

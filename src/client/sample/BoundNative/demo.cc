@@ -145,7 +145,10 @@ int main(int argc, char * argv[])
             return 66;
         }
 #if TEST_CLASSWRAP2
-        CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
+        if( BoundNative::enableDebug )
+        {
+            CERR << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
+        }
 #endif
     } // holder scope
 
