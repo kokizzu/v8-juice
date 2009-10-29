@@ -12,10 +12,8 @@ toc2_export V8JUICE_VERSION_DOTTED=$(echo ${PACKAGE_VERSION} | perl -pe 's|(\d\d
 
 toc2_export v8_juice_CONFIG_PURE_ISO=${pure_iso-0}
 
-if [[ x0 != x${v8_juice_CONFIG_PURE_ISO} ]]; then
-    toc2_test user_is_stephan_beal
-    # ^^^ don't ask. Must come before gnu_cpp_tools test.
-fi
+toc2_test user_is_stephan_beal
+# ^^^ don't ask. Must come before gnu_cpp_tools test.
 
 toc2_test_require gnu_cpp_tools
 
