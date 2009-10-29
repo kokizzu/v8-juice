@@ -259,7 +259,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T, typename RV>
         static Handle<Value> Call( RV (T::*MemFunc)(), Arguments const & argv )
         {
-            T * obj = CastFromJS<T>( argv.This() );
+            T * obj = CastFromJS<T*>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             return Call( obj, MemFunc, argv );
         }
@@ -281,7 +281,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T, typename RV>
         static Handle<Value> Call( RV (T::*MemFunc)() const, Arguments const & argv )
         {
-            T const * obj = CastFromJS<T>( argv.This() );
+            T const * obj = CastFromJS<T*>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             return Call( obj, MemFunc, argv );
         }
@@ -320,7 +320,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T,typename VoidType>
         static Handle<Value> CallVoid( VoidType (T::*MemFunc)(), Arguments const & argv )
         {
-            T * obj = CastFromJS<T>( argv.This() );
+            T * obj = CastFromJS<T*>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             Call( obj, MemFunc, argv );
             return v8::Undefined();
@@ -369,7 +369,7 @@ namespace v8 { namespace juice { namespace convert {
         template <typename T, typename VoidType>
         static Handle<Value> CallVoid( VoidType (T::*MemFunc)() const, Arguments const & argv )
         {
-            T const * obj = CastFromJS<T>( argv.This() );
+            T const * obj = CastFromJS<T*>( argv.This() );
             if( ! obj ) return ThrowException(String::New("MemFuncForwarder<0>::Call(): Native object is null!"));
             Call( obj, MemFunc, argv );
             return v8::Undefined();

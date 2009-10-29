@@ -74,7 +74,7 @@ struct MemFuncForwarder<${count}>
     template <typename T, typename RV, ${aTDecl}>
     static Handle<Value> Call( RV (T::*MemFunc)(${aTParam}), Arguments const & argv )
     {
-        T * obj = CastFromJS<T>( argv.This() );
+        T * obj = CastFromJS<T*>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
 	return Call( obj, MemFunc, argv );
@@ -92,7 +92,7 @@ struct MemFuncForwarder<${count}>
     template <typename T, typename RV, ${aTDecl}>
     static Handle<Value> Call( RV (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
     {
-        T const * obj = CastFromJS<T>( argv.This() );
+        T const * obj = CastFromJS<T*>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
 	return Call( obj, MemFunc, argv );
@@ -115,7 +115,7 @@ struct MemFuncForwarder<${count}>
     template <typename T, typename VoidType, ${aTDecl}>
     static Handle<Value> CallVoid( VoidType (T::*MemFunc)(${aTParam}), Arguments const & argv )
     {
-        T * obj = CastFromJS<T>( argv.This() );
+        T * obj = CastFromJS<T*>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
 	Call( obj, MemFunc, argv );
@@ -145,7 +145,7 @@ struct MemFuncForwarder<${count}>
     template <typename T, typename VoidType, ${aTDecl} >
     static Handle<Value> CallVoid( VoidType (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
     {
-        T const * obj = CastFromJS<T>( argv.This() );
+        T const * obj = CastFromJS<T*>( argv.This() );
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
 	Call( obj, MemFunc, argv );
