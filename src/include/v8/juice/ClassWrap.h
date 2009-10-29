@@ -172,7 +172,7 @@ namespace cw {
         {
             JUICE_STATIC_ASSERT(false,
                                 ClassName_MustBeSpecialized);
-
+            return 0;
         }
     };
     template <typename T>
@@ -514,7 +514,7 @@ namespace cw {
         {
             if( jo.IsEmpty() ) return 0;
             typedef InternalFields<T> IFT;
-            { static bool inited = (Detail::assert_internal_fields<IFT>(),true); }
+            { static bool inited = (Detail::assert_internal_fields<IFT>(),true); (void)inited;}
             void * ext = 0;
             if( jo->InternalFieldCount() == IFT::Count )
             // ^^^^ TODO: consider using >= instead of ==, so subclasses can use larger lists.
@@ -633,7 +633,8 @@ namespace cw {
 #endif
             typedef typename convert::TypeInfo<SubT>::NativeHandle STH;
             const STH y = 0;
-            const NativeHandle x = y;
+            NativeHandle x;
+            x = y;
             /** ^^^ if your compiler led you here then SubT does not derive from T! */
             list().insert( pf );
         }
@@ -815,6 +816,7 @@ namespace cw {
         static v8::Handle<v8::Object> Value( NativeHandle )
         {
             JUICE_STATIC_ASSERT(false,T_ToJS_CannotWorkForTheGeneralCase);
+            return v8::Handle<v8::Object>();
         }
     };
 
@@ -1471,7 +1473,8 @@ namespace cw {
             {// static type check
                 typedef typename ClassWrap<ParentT>::NativeHandle PH;
                 NativeHandle n = 0;
-                PH p = n;
+                PH p;
+                p = n;
                 /** ^^^ If your compiler brought you here, T does not inherit from ParentT. */
             }
             this->JSClassCreator::Inherit( p );
