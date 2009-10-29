@@ -15,6 +15,8 @@ Test/demo code for the v8::juice::cw::ClassWrap class binding mechanism.
 #endif
 
 using namespace v8::juice::tmp;
+
+// An experiment ...
 template <unsigned char I,typename ListT>
 struct FuncParam;
 
@@ -97,6 +99,11 @@ public:
     {
         DBGOUT << "BoundNative[@"<<(void const *)this<<"]->ptr("<<(void const *)b<<")\n";
         return 0 != b;
+    }
+    void toss(std::string const & msg) const
+    {
+        const std::string e = "BoundNative::toss(): " + msg;
+        throw std::runtime_error(e.c_str());
     }
     BoundNative * getPtr();
 #if 0
@@ -380,6 +387,13 @@ v8::Handle<v8::Value> BoundNative_overload( v8::Arguments const & argv )
     msg << "BoundNative_overload("<<argv.Length()<<" Arguments)";
     return msg;
 }
+// Test case for convert::InvocationCallbackCatcher<>.
+v8::Handle<v8::Value> BoundNative_toss( v8::Arguments const & argv )
+{
+    const std::string e = "BoundNative_toss()";
+    throw std::runtime_error(e.c_str());
+    return v8::Undefined();
+}
 
 void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 {
@@ -409,6 +423,11 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
     cw.Set( "getRef", ICM::M0::Invocable<N&,&N::getRef > );
     cw.Set( "aRef", ICM::M1::Invocable<std::string,N&,&N::aRef > );
 #endif
+    cw.Set( "toss",
+            //ICM::M1::Invocable<void,std::string const &,&N::toss >
+            convert::InvocationCallbackCatcher< BoundNative_toss >::Invocable
+            );
+
     typedef tmp::TypeList<
         convert::InvocableConstMemFunc0<N,bool,&N::overload>,
         convert::InvocableMemFunc1<N,int,int,&N::overload>,
@@ -438,6 +457,7 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
         ;
 #define JFH v8::FunctionTemplate::New(FH)->GetFunction()
     cw.Set( "version", JFH );
+    cw.CtorTemplate()->Set( "version", convert::CastToJS(JFH) );
 
     FH = ICC::F1::Invocable<void,std::string const &,BoundNative_doSomething>;
     FH = ICC::F1::InvocableVoid<size_t,std::string const &,BoundNative_doSomething2>;
@@ -535,7 +555,7 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
         }
 #endif
     }
-    if(1)
+    if(0)
     {
         typedef tmp::TypeList<> LT0;
         typedef tmp::TypeList<int> LT1;
