@@ -1597,26 +1597,23 @@ namespace v8 { namespace juice { namespace convert {
        but catches native exceptions. See the Invocable() member
        for details.
 
-       The 2nd, 3rd, and 4th argument types may normally be defaulted,
-       but if they are not then ALL of them must be set. They are:
+       The Arity argument is part of the InvocableInterface.
+       When proxying "raw" InvocationCallbacks, this can be left
+       at its default. When proxying callback created by
+       other InvocableInterface types then this value should be
+       set to that type's Arity. Failing to do so may confuse
+       certain algorithms (notably OverloadInvocables<>).
 
-       - ExceptionType is the base exception class. It is expected to be
-       catchable via (ExceptionType const &).
-
-       - ExceptionMessage is the return type for the message-fetching routine.
-
-       - What is the ExceptionType member function which returns an
-       ExceptionMessage object.
+       If Arity is 0 or greater then this type enforces that the
+       argument count given to it is _exactly_ that number. If Arity
+       is negative then this type ignores the argument count of
+       the call.
     */
-    template <v8::InvocationCallback CB,
-              typename ExceptionType = std::exception,
-              typename ExceptionMessage = char const *,
-              ExceptionMessage (ExceptionType::*What)() const = &std::exception::what
-    >
+    template <v8::InvocationCallback CB,int Arity_ = -1>
     struct InvocationCallbackCatcher
     {
         //! Required by InvocableInterface.
-        static const int Arity = -1;
+        static const int Arity = Arity_;
         /**
            This type acts identically to the templatized function CB,
            except: if CB() passes on a native exception, this type
@@ -1630,13 +1627,20 @@ namespace v8 { namespace juice { namespace convert {
         */
         static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
         {
+            if( (Arity>=0) && (argv.Length() != Arity) )
+            {
+                StringBuffer msg;
+                msg << argv.Callee()->GetName()
+                    << "() requires "<< Arity<< " arguments.";
+                return v8::ThrowException(msg);
+            }
             try
             { 
                 return CB( argv );
             }
-            catch( ExceptionType const & ex )
+            catch( std::exception const & ex )
             {
-                return ::v8::ThrowException( CastToJS( (ex.*What)() ) );
+                return ::v8::ThrowException( CastToJS( ex.what() ) );
             }
             catch( ... )
             {
