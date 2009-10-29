@@ -1,7 +1,7 @@
 #summary Overview of the ClassWrap API
 #labels Topic-CPlusPlus,Phase-UserDocs
 
-*ACHTUNG: this page documents a new API and is far from complete.* The `ClassWrap` API was introduced on 20091025 - it is quite new and may still change significantly.
+*ACHTUNG:* The `ClassWrap` API was introduced on 20091025 - it is quite new and may still change significantly over time.
 
 <wiki:toc max_depth='3'/>
 
@@ -176,7 +176,7 @@ b.Set( "getInt",
 }}}
 
 The `ICM` class is a utility class which saves a few bytes of typing.
-The `ICM::M0` to `ICM::M9`, and `ICM:F0` to `ICM::F9` are
+`ICM::M0` to `ICM::M9` are
 convenience typedefs for assisting in binding member (thus the M)
 functions taking the given number of arguments.
 
@@ -189,7 +189,7 @@ b.Set( "sleep",
        ICC::F1::Invocable<unsigned int,unsigned int,::sleep> );
 }}}
 
-This templates _create_ functions which implement the `v8::InvocableCallback`
+These templates _create_ functions which implement the `v8::InvocableCallback`
 interface. The generated functions use the [ConvertingTypes type conversion API]
 to convert their arguments from their native counterparts and convert
 the return value to a native value (or JS `undefined` for `void` return types).
@@ -199,7 +199,7 @@ the return value to a native value (or JS `undefined` for `void` return types).
 We can bind native member variables to JS space, such that all
 get/set access is directed through the native variables. Alternately,
 we can bind JS properties to native getter/setter functions, such that
-all access to the property goes through those accessors.
+all JS access to the property goes through those native accessors.
 
 This requires a slightly different approach than binding
 functions:
@@ -228,7 +228,7 @@ PB::BindMemVarRO<double,
                  ( "publicPropertyRO", cwproto );
 }}}
 
-(TODO: add convenience funcs for those in the !ClassWrap interface.)
+(TODO: adjust the above demonstration to user the newer !ClassWrap member API for such bindings.)
 
 We can also bind JS properties to static variables, using `PB::BindStaticVar()`.
 
