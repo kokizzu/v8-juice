@@ -96,7 +96,7 @@ namespace v8 { namespace juice { namespace cw {
                 NativeHandle xp = bind::GetBoundNative<PathFinder>( ex->Value() );
 		if( xp )
 		{
-                    bind::UnbindNative( xp ); // we don't need this anymore.
+                    bind::UnbindNative( xp ); // we don't need this anymore, but WeakWrap policy might re-bind it.
 		    return xp;
 		}
 		else
@@ -107,6 +107,7 @@ namespace v8 { namespace juice { namespace cw {
 		    return 0;
 		}
 	    }
+            // TODO: add array arg support.
 	    std::string a0 = (argc>0) ? convert::JSToStdString(argv[0]) : "";
 	    std::string a1 = (argc>1) ? convert::JSToStdString(argv[1]) : "";
 	    std::string a2 = (argc>2) ? convert::JSToStdString(argv[2]) : ":";
@@ -139,12 +140,6 @@ namespace v8 { namespace juice { namespace cw {
 
 
 namespace v8 { namespace juice {
-
-    //! PathFinder.toString() impl.
-    static v8::Handle<v8::Value> pf_is_accessible( v8::Arguments const & argv )
-    {
-        return convert::FwdToFunc( PathFinder::IsAccessible, argv );
-    }
 
     //! PathFinder.toString() impl.
     static v8::Handle<v8::Value> pf_toString( v8::Arguments const & argv )
@@ -187,14 +182,12 @@ namespace v8 { namespace juice {
         cw.Set( "setExtensionsString", MF::M1::Invocable<size_t,std::string const &,&N::Extensions> );
         cw.BindGetterSetter< std::string, &N::ExtensionsString, size_t, std::string const &,&N::Extensions>( "extensionsString" );
 
-
         cw.Set( "addPathString", MF::M1::Invocable<void,std::string const &,&N::AddPath> );
         cw.Set( "addExtensionString", MF::M1::Invocable<void,std::string const &,&N::AddExtension> );
         cw.Set( "find", MF::M1::Invocable<std::string,std::string const &,&N::Find> );
         cw.Set( "clearCache", MF::M0::Invocable<void, &N::ClearCache> );
         cw.Set( "isEmpty", MF::M0::Invocable<bool, &N::IsEmpty> );
         typedef convert::InvocationCallbackCreator ICC;
-        //cw.Set( "isAccessible", pf_is_accessible );
         cw.Set( "isAccessible", ICC::F1::Invocable<bool,std::string const &,N::IsAccessible> );
         cw.Set( "dirSeparator", convert::CastToJS( N::DirSeparator() ), v8::ReadOnly );
         //cw.Set( "dirSeparator", ICC::F0::Invocable<std::string,N::DirSeparator> );
@@ -204,7 +197,7 @@ namespace v8 { namespace juice {
         ctor->Set( JSTR("dirSeparator"), convert::CastToJS( N::DirSeparator() ), v8::ReadOnly );
 
         v8::InvocationCallback IC;
-#define SET(K) ctor->Set( JSTR(K), v8::FunctionTemplate::New(IC)->GetFunction()  )
+#define SET(K) ctor->Set( JSTR(K), convert::CastToJS(IC) )
         IC = ICC::F1::Invocable<bool,std::string const &,N::IsAccessible>;
         SET("isAccessible");
 #undef SET
@@ -238,8 +231,8 @@ namespace v8 { namespace juice {
         // Set up some shared instances:
 	Handle<Object> shared = Object::New();
 	ctor->Set(JSTR("shared"),shared);
-        ctor->Set(JSTR("isAccessible"), FunctionTemplate::New(pf_is_accessible)->GetFunction() );
 
+        if(1)
 	{
 	    // Install an instance wrapping the v8::juice::plugin::PluginsPath() shared object:
             PathFinder * pf = &::v8::juice::plugin::PluginsPath();
