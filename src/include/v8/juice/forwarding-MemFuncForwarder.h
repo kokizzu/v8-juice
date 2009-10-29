@@ -14,7 +14,18 @@ struct MemFuncForwarder<1>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<1>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0>
     static Handle<Value> Call( RV (T::*MemFunc)( A0), Arguments const & argv )
@@ -31,7 +42,18 @@ struct MemFuncForwarder<1>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<1>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0>
@@ -48,7 +70,18 @@ struct MemFuncForwarder<1>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<1>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0>
@@ -78,7 +111,18 @@ struct MemFuncForwarder<1>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<1>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0 >
@@ -168,7 +212,18 @@ struct MemFuncForwarder<2>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<2>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0,  typename A1>
     static Handle<Value> Call( RV (T::*MemFunc)( A0, A1), Arguments const & argv )
@@ -185,7 +240,18 @@ struct MemFuncForwarder<2>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<2>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0,  typename A1>
@@ -202,7 +268,18 @@ struct MemFuncForwarder<2>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<2>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1>
@@ -232,7 +309,18 @@ struct MemFuncForwarder<2>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<2>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1 >
@@ -322,7 +410,18 @@ struct MemFuncForwarder<3>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<3>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2>
     static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2), Arguments const & argv )
@@ -339,7 +438,18 @@ struct MemFuncForwarder<3>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<3>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2>
@@ -356,7 +466,18 @@ struct MemFuncForwarder<3>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<3>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2>
@@ -386,7 +507,18 @@ struct MemFuncForwarder<3>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<3>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2 >
@@ -476,7 +608,18 @@ struct MemFuncForwarder<4>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<4>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3>
     static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3), Arguments const & argv )
@@ -493,7 +636,18 @@ struct MemFuncForwarder<4>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<4>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3>
@@ -510,7 +664,18 @@ struct MemFuncForwarder<4>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<4>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3>
@@ -540,7 +705,18 @@ struct MemFuncForwarder<4>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<4>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3 >
@@ -630,7 +806,18 @@ struct MemFuncForwarder<5>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<5>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
     static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4), Arguments const & argv )
@@ -647,7 +834,18 @@ struct MemFuncForwarder<5>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<5>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
@@ -664,7 +862,18 @@ struct MemFuncForwarder<5>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<5>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
@@ -694,7 +903,18 @@ struct MemFuncForwarder<5>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<5>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
@@ -784,7 +1004,18 @@ struct MemFuncForwarder<6>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<6>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
     static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5), Arguments const & argv )
@@ -801,7 +1032,18 @@ struct MemFuncForwarder<6>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<6>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
@@ -818,7 +1060,18 @@ struct MemFuncForwarder<6>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<6>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
@@ -848,7 +1101,18 @@ struct MemFuncForwarder<6>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<6>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
@@ -938,7 +1202,18 @@ struct MemFuncForwarder<7>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<7>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
     static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6), Arguments const & argv )
@@ -955,7 +1230,18 @@ struct MemFuncForwarder<7>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<7>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
@@ -972,7 +1258,18 @@ struct MemFuncForwarder<7>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<7>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
@@ -1002,7 +1299,18 @@ struct MemFuncForwarder<7>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<7>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
@@ -1092,7 +1400,18 @@ struct MemFuncForwarder<8>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<8>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
     static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7), Arguments const & argv )
@@ -1109,7 +1428,18 @@ struct MemFuncForwarder<8>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<8>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
@@ -1126,7 +1456,18 @@ struct MemFuncForwarder<8>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<8>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
@@ -1156,7 +1497,18 @@ struct MemFuncForwarder<8>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<8>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
@@ -1246,7 +1598,18 @@ struct MemFuncForwarder<9>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<9>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
     static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8), Arguments const & argv )
@@ -1263,7 +1626,18 @@ struct MemFuncForwarder<9>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<9>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
@@ -1280,7 +1654,18 @@ struct MemFuncForwarder<9>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<9>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
@@ -1310,7 +1695,18 @@ struct MemFuncForwarder<9>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<9>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
@@ -1400,7 +1796,18 @@ struct MemFuncForwarder<10>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(  CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<10>::Call() Native function threw an unknown native exception type!"));
+        }
     }
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
     static Handle<Value> Call( RV (T::*MemFunc)( A0, A1, A2, A3, A4, A5, A6, A7, A8, A9), Arguments const & argv )
@@ -1417,7 +1824,18 @@ struct MemFuncForwarder<10>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<10>::Call() Native function threw an unknown native exception type!"));
+        }
     }
 
     template <typename T, typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
@@ -1434,7 +1852,18 @@ struct MemFuncForwarder<10>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<10>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
@@ -1464,7 +1893,18 @@ struct MemFuncForwarder<10>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): Native object is null!"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("MemFuncForwarder::Call(): wrong argument count!"));
-	(obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) );
+        try
+        {
+            (obj->*MemFunc)( CastFromJS< A0 >(argv[0]), CastFromJS< A1 >(argv[1]), CastFromJS< A2 >(argv[2]), CastFromJS< A3 >(argv[3]), CastFromJS< A4 >(argv[4]), CastFromJS< A5 >(argv[5]), CastFromJS< A6 >(argv[6]), CastFromJS< A7 >(argv[7]), CastFromJS< A8 >(argv[8]), CastFromJS< A9 >(argv[9]) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("MemFuncForwarder<10>::Call() Native function threw an unknown native exception type!"));
+        }
 	return Undefined();
     }
     template <typename T,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >

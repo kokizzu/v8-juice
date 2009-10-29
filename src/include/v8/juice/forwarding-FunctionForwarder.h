@@ -21,7 +21,6 @@ struct FunctionForwarder<1>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<1>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0 >
@@ -98,7 +97,6 @@ struct FunctionForwarder<2>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<2>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0,  typename A1 >
@@ -175,7 +173,6 @@ struct FunctionForwarder<3>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<3>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0,  typename A1,  typename A2 >
@@ -252,7 +249,6 @@ struct FunctionForwarder<4>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<4>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3 >
@@ -329,7 +325,6 @@ struct FunctionForwarder<5>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<5>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
@@ -406,7 +401,6 @@ struct FunctionForwarder<6>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<6>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
@@ -483,7 +477,6 @@ struct FunctionForwarder<7>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<7>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
@@ -560,7 +553,6 @@ struct FunctionForwarder<8>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<8>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
@@ -637,7 +629,6 @@ struct FunctionForwarder<9>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<9>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
@@ -714,7 +705,6 @@ struct FunctionForwarder<10>
         {
             return ::v8::ThrowException( ::v8::String::New("FunctionForwarder<10>::Call() Native function threw an unknown native exception type!"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >

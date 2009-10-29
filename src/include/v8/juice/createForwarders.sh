@@ -54,6 +54,7 @@ function makeMemFuncForwarder()
 {
     local err_native_is_null="MemFuncForwarder::Call(): Native object is null!"
     local err_too_few_args="MemFuncForwarder::Call(): wrong argument count!"
+    local err_native_exception="MemFuncForwarder<${count}>::Call() Native function threw an unknown native exception type!"
 cat <<EOF
 /**
 A helper class for forwarding JS arguments to member functions
@@ -69,7 +70,18 @@ struct MemFuncForwarder<${count}>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
-	return CastToJS<RV>( (obj->*MemFunc)( ${castCalls} ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)( ${castCalls} ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("${err_native_exception}"));
+        }
     }
     template <typename T, typename RV, ${aTDecl}>
     static Handle<Value> Call( RV (T::*MemFunc)(${aTParam}), Arguments const & argv )
@@ -86,7 +98,18 @@ struct MemFuncForwarder<${count}>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
-	return CastToJS<RV>( (obj->*MemFunc)(${castCalls} ) );
+        try
+        {
+            return CastToJS<RV>( (obj->*MemFunc)(${castCalls} ) );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("${err_native_exception}"));
+        }
     }
 
     template <typename T, typename RV, ${aTDecl}>
@@ -103,7 +126,18 @@ struct MemFuncForwarder<${count}>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
-	(obj->*MemFunc)(${castCalls} );
+        try
+        {
+            (obj->*MemFunc)(${castCalls} );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("${err_native_exception}"));
+        }
 	return Undefined();
     }
     template <typename T, ${aTDecl}>
@@ -133,7 +167,18 @@ struct MemFuncForwarder<${count}>
     {
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
-	(obj->*MemFunc)(${castCalls} );
+        try
+        {
+            (obj->*MemFunc)(${castCalls} );
+        }
+        catch( std::exception const & ex )
+        {
+            return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+        }
+        catch( ... )
+        {
+            return ::v8::ThrowException( ::v8::String::New("${err_native_exception}"));
+        }
 	return Undefined();
     }
     template <typename T, ${aTDecl} >
@@ -430,7 +475,6 @@ struct FunctionForwarder<${count}>
         {
             return ::v8::ThrowException( ::v8::String::New("${err_exception}"));
         }
-        return Undefined(); // cannot be reached.
     }
 
     template < typename VoidType, ${aTDecl} >
