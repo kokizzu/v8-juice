@@ -28,8 +28,9 @@ The class can be added to a JS engine by calling `v8::juice::SetupPathFinderClas
 || `int` || `setExtensionsString( String )`  || Set list of search extensions as a delimited string. e.g. `setExtensionsString(".exe:.bat:.com")` ||
 || `void` || `addPathString( String )`  || Adds a dir (or delimited list) to the search path. e.g. `addPathString("/usr/local/bin:/home/me/bin")` ||
 || `void` || `addExtensionString( String )`  || Adds an extension (or delimited list) to the extensions search list. ||
-|| `String` || `find( String basename )`  || Searches for the given file. It will search through all combinations of path+name+extension to try to find the file. ||
+|| `string` || `baseName(string)` || (Added 20091030) Returns the part of the given filename after the last directory separator. Also a class ("static") method. ||
 || `void` || `clearCache()` || Clears the internal file lookup cache which is used by `find()`. ||
+|| `String` || `find( String basename )`  || Searches for the given file. It will search through all combinations of path+name+extension to try to find the file. ||
 || `bool` || `isEmpty()` || Returns true only if this object has no path/search information. ||
 || `bool` || `isAccessible(string)` || Returns true if the given filename is accessible (readable). This is both a static and per-instance function. ||
 || *Type* || *Properties* (read-write) || *Notes* ||
@@ -40,7 +41,6 @@ The class can be added to a JS engine by calling `v8::juice::SetupPathFinderClas
 || `string` || `pathString` || See `get/setPathString()` ||
 || *Type* || *Properties* (read-only) || *Notes* ||
 || `string` || `dirSeparator` (read-only) || The platform-specific character used to separate directory names in a path. This is `\` on Windows and `/` everywhere else. ||
-
 *ACHTUNG:* Note that because the values in a !PathFinder object are internally native types, it is not possible to directly change them via JS objects. e.g. `obj.pathArray.push('/home')` _will have no effect_, as the object returned from `pathArray` is necessarily a _copy_ of the native data. Thus holding references to them will not work as expected.
 
 The various properties and functions with the suffixes `Array` and `String` (e.g. `pathArray` and `pathString`) can be used like so:
