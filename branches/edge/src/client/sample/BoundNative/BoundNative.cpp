@@ -598,6 +598,10 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
         CERR << "EPL::Length == "<<EPL::Length<<'\n';
         TLEN(EPL::TypeList);
 #undef TLEN
+
+#define IFELSE(B) tmp::IfElse< B, BoundNative, BoundSub >::Type
+        CERR << "IE<true>::Type == "<<cw::ClassName< IFELSE(true) >::Value()<<'\n';
+        CERR << "IE<false>::Type == "<<cw::ClassName< IFELSE(false) >::Value()<<'\n';
         
     }
     DBGOUT <<"Binding done.\n";
