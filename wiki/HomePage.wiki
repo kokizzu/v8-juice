@@ -1,4 +1,4 @@
-#summary One-sentence summary of this page.
+#summary v8-juice project introduction page
 #labels Topic-Project,Featured
 
 =Welcome to v8-juice!=
