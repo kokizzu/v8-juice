@@ -1,35 +1,15 @@
 #ifndef V8_JUICE_TYPELIST_HPP_INCLUDED
 #define V8_JUICE_TYPELIST_HPP_INCLUDED
 
+#include "tmp.h" // base metatemplate stuff
 namespace v8 { namespace juice {
-/**
-   The tmp namespace contains code related to template metaprogramming,
-   a-la Alexandrescu's Loki library or Boost MPL.
-
-   All of it is independent of the core juice library.
-*/
 namespace tmp {
 
     /**
-       An utmost most-based compile-time assertion template.
-       If Condition is false, an incomplete specialization of
-       this type is
-    */
-    template <bool Condition>
-    struct Assertion
-    {
-        enum { Value = 1 };
-    };
-    template <>
-    struct Assertion<false>;
-    
-    /**
-       A "null" type for use with TypeList.
+       A "null" type for use in marking the end of a TypeList.
     */
     struct NilType
     {
-	/** This typedef is used by the Rules API. */
-	typedef NilType type;
     };
 
     /**
@@ -109,8 +89,12 @@ namespace tmp {
         /**
            The number of types in ListT.
         */
-        Value = Detail::LengthOfImpl< typename ListT::Head >::Value
-                + LengthOf< typename ListT::Tail >::Value
+        Value =
+        Detail::LengthOfImpl< typename ListT::Head >::Value
+              + LengthOf< typename ListT::Tail >::Value
+        // WTF does this not work? Detail::LengthOfImpl< TypeChain<typename ListT::Head, typename ListT::Tail > >::Value
+        // nor this? Detail::LengthOfImpl< typename ListT::Head >::Value
+        //      + Detail::LengthOfImpl< typename ListT::Tail >::Value
         };
     };
 
@@ -176,9 +160,8 @@ namespace tmp {
            The type at the given index in the list.
         */
         typedef typename Detail::TypeAtImpl< TypeChain<typename ListT::Head, typename ListT::Tail>, Index>::Type Type;
-        //typedef typename Detail::TypeAtImpl< typename ListT::ChainType, Index>::Type Type;
     };
-    
+
 }}} // namespaces
 
 #ifndef V8_JUICE_TYPELIST_MAX_ARGS
@@ -196,6 +179,15 @@ namespace tmp {
    a different number. The main template instantiations will be
    different for code generated with a different maximum arg count.
    So pick a number and stick with it.
+
+
+   Maintenance note: we don't expect to have more than 4-6 types in
+   the lists for most v8-juice use cases (passing function argument
+   type info around), and 10 would be a fairly extreme case. Thus the
+   default value forV8_JUICE_TYPELIST_MAX_ARGS is fairly low.
+
+   Maintenance note: the script for generating the TypeList_NN.h files
+   is in the source repo with TypeList.h, called maketypelist.pl.
 */
 #define V8_JUICE_TYPELIST_MAX_ARGS 10
 #endif
@@ -208,10 +200,26 @@ namespace v8 { namespace juice { namespace tmp {
 #elif V8_JUICE_TYPELIST_MAX_ARGS < 16
 #    include "TypeList_15.h"
 #else
-#    error V8_JUICE_TYPELIST_MAX_ARGS is too high. See the docs above this code for details.
+#    error "V8_JUICE_TYPELIST_MAX_ARGS is too high. See the docs above this code for details."
 #endif
 }}} // namespaces
 #endif
 #undef V8_JUICE_TYPELIST_MAX_ARGS
+
+
+namespace v8 { namespace juice { namespace tmp {
+
+    /**
+       A metatemplate who's Type member resolves to IF if Cond is
+       true, or ELSE if Cond is false. Its Value member evaluates
+       to 1 or 0, accordingly.
+    */
+    template <bool Cond, typename IF, typename ELSE>
+    struct IfElse : TypeAt< TypeChain<IF, TypeChain<ELSE,NilType> >, Cond ? 0 : 1 >
+    {
+        enum { Value = Cond ? 1 : 0 };
+    };
+
+}}} // v8::juice::tmp
 
 #endif // V8_JUICE_TYPELIST_HPP_INCLUDED
