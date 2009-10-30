@@ -585,27 +585,42 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
         TLEN(LT3);
         TLEN(LT5);
         
-        typedef tmp::TypeList< BoundNative, BoundSub > BTL;
+        typedef tmp::TypeList< BoundNative, BoundSub, BoundNative, BoundSub > BTL;
 #define TY(N) tmp::TypeAt<BTL,N>::Type
 #define X(N) CERR <<"TypeAt< BTL,"<<N<<"> == "<<v8::juice::cw::ClassName< TY(N) >::Value() << '\n'
-        X(0); X(1);
-        //X(4);// should trigger compile error
+        X(0); X(1); X(2); X(3);
+        //X( tmp::LengthOf<BTL>::Value );// should trigger compile error
 #undef X
 #undef T
         typedef ParamList< BTL > PL;
 #define X(N) CERR <<"PL::Arg<"<<N<<"> == "<<v8::juice::cw::ClassName< PL::At<N>::Type >::Value() << '\n'
-        X(1); X(2);
-        //X(3); // should error
+        X(1); X(2); X(3); X(4);
+        //X( PL::Length ); // should error
         TLEN(PL::TypeList);
         typedef ParamList< TypeList<> > EPL;
-        //EPL epl;
         CERR << "EPL::Length == "<<EPL::Length<<'\n';
         TLEN(EPL::TypeList);
-#undef TLEN
 
 #define IFELSE(B) tmp::IfElse< B, BoundNative, BoundSub >::Type
         CERR << "IE<true>::Type == "<<cw::ClassName< IFELSE(true) >::Value()<<'\n';
         CERR << "IE<false>::Type == "<<cw::ClassName< IFELSE(false) >::Value()<<'\n';
+#undef IFLSE
+
+        typedef tmp::BoolVal<true> TRU;
+        typedef tmp::BoolVal<false> FLS;
+        typedef tmp::TypeList<
+        //FLS
+        //TRU
+        //TRU,TRU,TRU,TRU
+        //FLS,FLS
+        //FLS,FLS,FLS,TRU
+        FLS,FLS,FLS,tmp::SameType<int,int>
+        > VL;
+        TLEN(VL);
+        CERR << "Or<VL>::Value =="<<tmp::Or<VL>::Value<<'\n';
+        CERR << "And<VL>::Value =="<<tmp::And<VL>::Value<<'\n';
+        
+#undef TLEN
         
     }
     DBGOUT <<"Binding done.\n";
