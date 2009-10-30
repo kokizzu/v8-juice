@@ -642,6 +642,50 @@ namespace convert {
     struct JSToNative<char const *> : JSToNative<std::string> {};
 #endif
 
+
+
+#if !defined(V8_JUICE_CONVERT_ENABLE_ULONG_KLUDGE)
+/** @def V8_JUICE_CONVERT_ENABLE_ULONG_KLUDGE
+
+This macro is a kludge/workaround (hopefully temporary) for use in
+cases where (unsigned long int) is:
+
+1) The same type as the platforms pointer type.
+2) Somehow NOT the same as one of the standard uintNN_t types.
+3) It used in CastToJS() or CastFromJS() calls.
+
+If all of those are the case, this macro should be set to a true value
+before including this file. i hope to find a portable way to add this
+fix without forcing a duplicate definition on platforms where
+condition (2) is not met.
+
+*/
+#define V8_JUICE_CONVERT_ENABLE_ULONG_KLUDGE 0
+#endif
+#if V8_JUICE_CONVERT_ENABLE_ULONG_KLUDGE
+    /**
+       Kludge for a weird conversion case which isn't picked up by one
+       of the other uintNN_t specializations. i strongly suspect that this
+       will cause duplicate definition errors on some platforms (maybe
+       only 64-bit?).
+    */
+    template <>
+    struct NativeToJS<unsigned long int> : NativeToJS_int_big<unsigned long int> {};
+    /** See NativeToJS<unsigned long int> for the explanation. */
+    template <>
+    struct JSToNative<unsigned long int>
+    {
+	typedef unsigned long int ResultType;
+	ResultType operator()( v8::Handle<v8::Value> const & h ) const
+	{
+	    return h->IsNumber()
+		? static_cast<ResultType>(h->IntegerValue())
+		: 0;
+	}
+    };
+#endif
+
+    
     /**
        Converts h to an object of type NT, using JSToNative<NT> to do
        the conversion.
