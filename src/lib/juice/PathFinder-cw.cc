@@ -189,6 +189,7 @@ namespace v8 { namespace juice {
         cw.Set( "isEmpty", MF::M0::Invocable<bool, &N::IsEmpty> );
         typedef convert::InvocationCallbackCreator ICC;
         cw.Set( "isAccessible", ICC::F1::Invocable<bool,std::string const &,N::IsAccessible> );
+        cw.Set( "baseName", ICC::F1::Invocable<std::string,std::string const &,N::BaseName> );
         cw.Set( "dirSeparator", convert::CastToJS( N::DirSeparator() ), v8::ReadOnly );
         //cw.Set( "dirSeparator", ICC::F0::Invocable<std::string,N::DirSeparator> );
 
@@ -200,6 +201,8 @@ namespace v8 { namespace juice {
 #define SET(K) ctor->Set( JSTR(K), convert::CastToJS(IC) )
         IC = ICC::F1::Invocable<bool,std::string const &,N::IsAccessible>;
         SET("isAccessible");
+        IC = ICC::F1::Invocable<std::string,std::string const &,N::BaseName>;
+        SET("baseName");
 #undef SET
 
         if(0)
