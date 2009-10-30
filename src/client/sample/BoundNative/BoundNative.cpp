@@ -555,6 +555,18 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
         }
 #endif
     }
+
+#if 1 && defined(V8_JUICE_CONVERT_ENABLE_ULONG_KLUDGE) && V8_JUICE_CONVERT_ENABLE_ULONG_KLUDGE
+ // test Rob's ulong bug:
+    {
+        typedef unsigned long UL;
+        UL ul; ul = 3;
+        v8::Handle<Value> lv = convert::CastToJS( ul );
+        UL ul2; ul2 = convert::CastFromJS<UL>( lv );
+    }
+#endif
+    
+
     if(0)
     {
         typedef tmp::TypeList<> LT0;

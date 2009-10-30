@@ -9,6 +9,7 @@ c-bins.list := BoundNative
 
 BoundNative.BIN.OBJECTS := demo.o MyNative.o
 #$(error x=$(V8_LDFLAGS))
+demo.o: CPPFLAGS+=-DV8_JUICE_CONVERT_ENABLE_ULONG_KLUDGE=1
 BoundNative.BIN.LDADD = $(LIBV8JUICE_CLIENT_INTREE_LDADD) $(V8_LDFLAGS)
 #$(error BoundNative.BIN.LDADD=$(BoundNative.BIN.LDADD))
 # package.install.bins := $(BoundNative.BIN)
