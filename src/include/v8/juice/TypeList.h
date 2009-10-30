@@ -115,21 +115,6 @@ namespace tmp {
         enum { Value = 0 };
     };
 
-    /** @struct TypeList
-        
-       The TypeList type is a quasi-variadic template type which is specialized to
-       take up to some compile-time limit (see V8_JUICE_TYPELIST_MAX_ARGS) of _types_
-       as arguments. All of the TypeList code is generated from a script.
-
-       TypeList is simply a TypeChain<> type for which specializations
-       restructure the template arguments to conform to the TypeChain<>
-       interface. For algorithms which specifically require a
-       TypeChain<> as a template argument (for specialization purposes),
-       use TypeList::ChainType to "convert" the TypeList to a
-       TypeChain<>.
-    */
-
-
     template <typename ListT, unsigned char Index>
     struct TypeAt;
 #if !defined(DOXYGEN)
@@ -228,21 +213,44 @@ namespace tmp {
 */
 #define V8_JUICE_TYPELIST_MAX_ARGS 10
 #endif
-#if !defined(DOXYGEN)
 namespace v8 { namespace juice { namespace tmp {
+    /** @struct TypeList<>
+        
+       The TypeList type is a quasi-variadic template type which is specialized to
+       take up to some compile-time limit (see V8_JUICE_TYPELIST_MAX_ARGS) of _types_
+       as arguments. All of the TypeList code is generated from a script.
+
+       TypeList is simply a TypeChain<> type for which specializations
+       restructure the template arguments to conform to the TypeChain
+       interface. For algorithms which specifically require a
+       TypeChain as a template argument (for specialization purposes),
+       use TypeList::ChainType to "convert" the TypeList to a
+       TypeChain.
+    */
 #if V8_JUICE_TYPELIST_MAX_ARGS < 6
-#    include "TypeList_05.h"
+// template <class T1, class T2, class T3, class T4, class T5>
+// struct TypeList; // only here so Doxygen will list this type
+#  define V8_JUICE_TYPELIST_HEADER "TypeList_05.h"
 #elif V8_JUICE_TYPELIST_MAX_ARGS < 11
-#    include "TypeList_10.h"
+// template <class T1, class T2, class T3, class T4, class T5,
+//           class T6, class T7, class T8, class T9, class T10>
+// struct TypeList; // only here so Doxygen will list this type
+#  define V8_JUICE_TYPELIST_HEADER "TypeList_10.h"
 #elif V8_JUICE_TYPELIST_MAX_ARGS < 16
-#    include "TypeList_15.h"
+// template <class T1, class T2, class T3, class T4, class T5,
+//           class T6, class T7, class T8, class T9, class T10,
+//           class T11, class T12, class T13, class T14, class T15>
+// struct TypeList; // only here so Doxygen will list this type
+#  define V8_JUICE_TYPELIST_HEADER "TypeList_15.h"
 #else
 #    error "V8_JUICE_TYPELIST_MAX_ARGS is too high. See the docs above this code for details."
 #endif
-}}} // namespaces
-#endif
+
+#include V8_JUICE_TYPELIST_HEADER
+#undef V8_JUICE_TYPELIST_HEADER
 #undef V8_JUICE_TYPELIST_MAX_ARGS
 
+}}} // namespaces
 
 namespace v8 { namespace juice { namespace tmp {
 
