@@ -7,12 +7,16 @@ namespace tmp {
 
     /**
        A "null" type for use in marking the end of a TypeList.
+       It must not appear in a TypeList (or TypeChain) anywhere
+       other than the end (or after the end, in the case of
+       TypeList).
     */
     struct NilType
     {
     };
 
-    /**
+    /** @struct TypeChain
+
        A base type for implementing a list of types, implemented as a
        Typelist, as described by Alexandrescu in "Modern C++
        Design". H may be any type. T _must_ be either NilType (to mark
@@ -23,29 +27,29 @@ namespace tmp {
        instead of using this one directly.
 
        Unlike Alexandrescu's Typelists, which are implemented
-       faithfully by this class, our TypeList type is parameterized
-       for some maximum number of arguments. This simplifies
-       client-side usage but imposes (A) a hard-coded maximum on the
-       number of items in the list and (B) another (internal) level of
-       indirection for implementing the typelist algorithms described
-       by Alexandrescu (length, index-of, etc.).
+       faithfully (with one small addition) by this class, our
+       TypeList type is parameterized for some maximum number of
+       arguments. This simplifies client-side usage but imposes (A) a
+       hard-coded maximum on the number of items in the list and (B)
+       another (internal) level of indirection for implementing the
+       typelist algorithms described by Alexandrescu (length,
+       index-of, etc.).
     */
     template <typename H, typename T>
     struct TypeChain
     {
-#if 0 // Artifact from older source tree. Might be useful later.
 	/**
-	   Subtypes of this type should not override the 'ListType'
+	   Subtypes of this type should not override the ChainType
 	   typedef, as it is used by the core lib to trick some
 	   overloads into working, such that subclasses of
 	   TypeChain will be picked up by specializations for
 	   certain rules, as if they actually were a TypeChain.
 
 	   There might be exceptions to the no-override rule, but none
-	   come to mind.
+	   come to mind. If it is overridden, it _must_ be-a
+	   TypeChain<> type.
 	*/
 	typedef TypeChain<H,T> ChainType;
-#endif
 	/* First Type in the list. */
 	typedef H Head;
 	/* Second type in the list. MUST be either NilType or a
@@ -54,6 +58,9 @@ namespace tmp {
 	typedef T Tail;
 
     };
+
+    template <typename ListT>
+    struct LengthOf;
 
 #if !defined(DOXYGEN)
     namespace Detail
@@ -73,7 +80,10 @@ namespace tmp {
         template <typename H, typename T>
         struct LengthOfImpl< tmp::TypeChain<H,T> >
         {
-            enum { Value = 1 + LengthOfImpl<T>::Value };
+            enum { Value = 1 +
+                   //LengthOfImpl<T>::Value
+                   LengthOf<T>::Value
+            };
         };
     }
 #endif
@@ -111,13 +121,17 @@ namespace tmp {
        take up to some compile-time limit (see V8_JUICE_TYPELIST_MAX_ARGS) of _types_
        as arguments. All of the TypeList code is generated from a script.
 
-       TypeList is simply a TypeChain type for which specializations
-       restructure the template arguments to conform to the TypeChain
-       interface.
+       TypeList is simply a TypeChain<> type for which specializations
+       restructure the template arguments to conform to the TypeChain<>
+       interface. For algorithms which specifically require a
+       TypeChain<> as a template argument (for specialization purposes),
+       use TypeList::ChainType to "convert" the TypeList to a
+       TypeChain<>.
     */
 
 
-
+    template <typename ListT, unsigned char Index>
+    struct TypeAt;
 #if !defined(DOXYGEN)
     namespace Detail
     {
@@ -134,21 +148,31 @@ namespace tmp {
         {
             typedef H Type;
         };
+        /** Special case for empty list. */
+        template <unsigned char I>
+        struct TypeAtImpl< tmp::TypeChain<tmp::NilType,tmp::NilType>, I >
+        {
+            typedef NilType Type;
+        };
         template <typename H, typename T,unsigned char I>
         struct TypeAtImpl< tmp::TypeChain<H,T>, I>
         {
-            typedef typename TypeAtImpl<T, I - 1>::Type Type;
+            typedef typename
+            //TypeAtImpl<T, I - 1>::Type
+            TypeAt<T,I-1>::Type
+            Type;
         private:
-            typedef tmp::TypeChain<H,T> Chain;
             enum {
-            Length = tmp::LengthOf<Chain>::Value,
+            Length = tmp::LengthOf< tmp::TypeChain<H,T> >::Value,
+            /** If your compiler led you here then I is out of range. */
             SizeIsValid = tmp::Assertion< (I<Length) >::Value
             };
         };
     }
 #endif
 
-    /**
+    /** @struct TypeAt
+        
        A template metafunction to type at a specific offset in a TypeList.
        ListT must be a TypeList, or otherwise conform to the TypeChain
        interface.
@@ -159,8 +183,21 @@ namespace tmp {
         /**
            The type at the given index in the list.
         */
-        typedef typename Detail::TypeAtImpl< TypeChain<typename ListT::Head, typename ListT::Tail>, Index>::Type Type;
+        typedef typename 
+        //Detail::TypeAtImpl< TypeChain<typename ListT::Head, typename ListT::Tail>, Index>::Type
+        Detail::TypeAtImpl< typename ListT::ChainType, Index>::Type
+        Type;
     };
+    /** Specialization for end of list. */
+    template <unsigned char Index>
+    struct TypeAt<NilType,Index>
+    {
+        /**
+           The type at the given index in the list.
+        */
+        typedef NilType Type;
+    };
+
 
 }}} // namespaces
 
@@ -194,7 +231,7 @@ namespace tmp {
 #if !defined(DOXYGEN)
 namespace v8 { namespace juice { namespace tmp {
 #if V8_JUICE_TYPELIST_MAX_ARGS < 6
-#  include "TypeList_05.h"
+#    include "TypeList_05.h"
 #elif V8_JUICE_TYPELIST_MAX_ARGS < 11
 #    include "TypeList_10.h"
 #elif V8_JUICE_TYPELIST_MAX_ARGS < 16
@@ -220,6 +257,120 @@ namespace v8 { namespace juice { namespace tmp {
         enum { Value = Cond ? 1 : 0 };
     };
 
+
+    
+    template < typename ListT >
+    struct Or;
+#if !defined(DOXYGEN)
+    namespace Detail
+    {
+        namespace tmp = v8::juice::tmp;
+        /** Internal impl of tmp::TypeListIndexOf. */
+        template <typename T> struct OrImpl
+        {
+            enum { Value = T::Value };
+        };
+        template <>
+        struct OrImpl< tmp::NilType >
+        {
+            enum { Value = 0 };
+        };
+//         template <typename H>
+//         struct OrImpl< tmp::TypeChain<H,tmp::NilType> >
+//         {
+//             enum { Value = OrImpl<H>::Value };
+//         };
+        /** Special case for empty list. */
+        template <>
+        struct OrImpl< tmp::TypeChain<tmp::NilType,tmp::NilType> > : tmp::BoolVal<false>
+        {};
+
+        template <typename H, typename T>
+        struct OrImpl< tmp::TypeChain<H,T> >
+        {
+            enum { Value =
+                   ((OrImpl<H>::Value || Or<T>::Value) ? 1 : 0)
+            };
+        };
+    }
+#endif
+    /** @struct Or
+
+       Metatemplate whos Value is true if any item in ListT is a
+       metafunction with a true Value.
+
+       ListT must be TypeChain-complaint and must contain only types
+       which contain a bool-evaluable Value member.
+
+       As a special case, an empty list evaluates to false.
+    */
+    template < typename ListT >
+    struct Or
+    {
+        enum { Value =
+               //Detail::OrImpl< TypeChain< typename ListT::Head, typename ListT::Tail > >::Value
+               Detail::OrImpl< typename ListT::ChainType >::Value
+        };
+    };
+    /** Specialization for end of list. */
+    template <>
+    struct Or<NilType> : BoolVal<false>
+    {
+    };
+
+    template < typename ListT >
+    struct And;
+#if !defined(DOXYGEN)
+    namespace Detail
+    {
+        namespace tmp = v8::juice::tmp;
+        /** Internal impl of tmp::TypeListIndexOf. */
+        template <typename T> struct AndImpl
+        {
+            enum { Value = T::Value };
+        };
+        template <>
+        struct AndImpl< tmp::NilType >
+        {
+            enum { Value = 1 };
+        };
+        //! Special case for empty list.
+        template <>
+        struct AndImpl< tmp::TypeChain<tmp::NilType,tmp::NilType> > : tmp::BoolVal<false>
+        {};
+        template <typename H, typename T>
+        struct AndImpl< tmp::TypeChain<H,T> >
+        {
+            enum { Value =
+                   ((AndImpl<H>::Value && And<T>::Value) ? 1 : 0)
+            };
+        };
+    }
+#endif
+    /** @struct And
+
+       Metatemplate whos Value is true if ListT contains only
+       metafunctions with a true Value, else false.
+
+       ListT must be TypeChain-complaint and must contain only
+       types which contain a bool-evaluable Value member.
+
+       As a special case, an empty list evaluates to false.
+    */
+    template < typename ListT >
+    struct And
+    {
+        enum { Value =
+               //Detail::AndImpl< TypeChain< typename ListT::Head, typename ListT::Tail > >::Value
+               Detail::AndImpl< typename ListT::ChainType >::Value
+        };
+    };
+    /** Specialization for end of list. */
+    template <> struct And<NilType> : BoolVal<true>
+    {
+    };
+    
+    
 }}} // v8::juice::tmp
 
 #endif // V8_JUICE_TYPELIST_HPP_INCLUDED
