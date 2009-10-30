@@ -20,8 +20,7 @@ namespace tmp {
        A base type for implementing a list of types, implemented as a
        Typelist, as described by Alexandrescu in "Modern C++
        Design". H may be any type. T _must_ be either NilType (to mark
-       the end of the typelist) or a TypeChain<...> (or strictly
-       compatible).
+       the end of the typelist) or another TypeChain.
 
        Client code will normally use the generated TypeList<> types
        instead of using this one directly.
@@ -214,7 +213,7 @@ namespace tmp {
 #define V8_JUICE_TYPELIST_MAX_ARGS 10
 #endif
 namespace v8 { namespace juice { namespace tmp {
-    /** @struct TypeList<>
+    /** @struct TypeList
         
        The TypeList type is a quasi-variadic template type which is specialized to
        take up to some compile-time limit (see V8_JUICE_TYPELIST_MAX_ARGS) of _types_
