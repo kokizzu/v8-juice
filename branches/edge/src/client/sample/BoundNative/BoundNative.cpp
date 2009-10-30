@@ -50,7 +50,7 @@ struct ParamList : FuncParam< LengthOf<ListT>::Value, ListT >
     typedef typename ListT::Tail Tail;
     enum {
     Length = LengthOf<ListT>::Value,
-    SizeIsValid = Assertion< (Length >= 0) >::Value
+    _SizeIsValid = Assertion< (Length >= 0) >::Value
     };
     /**
        Holds the type of the 1-based (NOT 0-based!) argument list.
@@ -59,7 +59,10 @@ struct ParamList : FuncParam< LengthOf<ListT>::Value, ListT >
        error will occur.
     */
     template <unsigned char I>
-    struct At : TypeAt<ListT,I-1>
+    struct At : TypeAt<ListT,
+                       Assertion< (I>0) && (I<=LengthOf<ListT>::Value) >::Value
+    ? I-1 : 0
+                       >
     {
         enum { IndexIsValid = Assertion<
                (I>0) && (I<=LengthOf<ListT>::Value)
@@ -556,7 +559,8 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 #endif
     }
 
-#if 1 && defined(V8_JUICE_CONVERT_ENABLE_ULONG_KLUDGE) && V8_JUICE_CONVERT_ENABLE_ULONG_KLUDGE
+#define ENABLE_MY_TESTS 0
+#if ENABLE_MY_TESTS
  // test Rob's ulong bug:
     {
         typedef unsigned long UL;
@@ -567,7 +571,7 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 #endif
     
 
-    if(0)
+    if(ENABLE_MY_TESTS)
     {
         typedef tmp::TypeList<> LT0;
         typedef tmp::TypeList<int> LT1;
