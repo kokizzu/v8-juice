@@ -1,5 +1,5 @@
 #if !defined(DOXYGEN)
-// auto-generated [Mon Oct 26 22:57:46 2009] by maketypelist.pl
+// auto-generated [Fri Oct 30 20:39:23 2009] by maketypelist.pl
 struct TypeList_0 : TypeChain<NilType,NilType> {};
 
 template <class T1>
@@ -18,7 +18,7 @@ template <class T1, class T2, class T3, class T4, class T5 >
 struct TypeList_5 : TypeChain<T1, TypeList_4< T2, T3, T4, T5 > > {};
 
 template <class T1 = NilType, class T2 = NilType, class T3 = NilType, class T4 = NilType, class T5 = NilType>
-struct TypeList : TypeList_05<T1, T2, T3, T4, T5> {};
+struct TypeList : TypeList_5<T1, T2, T3, T4, T5> {};
 
 template <class T1, class T2, class T3, class T4>
 struct TypeList <T1, T2, T3, T4, NilType> : TypeList_4<T1, T2, T3, T4> {};
