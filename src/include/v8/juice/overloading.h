@@ -134,10 +134,14 @@ namespace v8 { namespace juice { namespace convert {
        And a static const integer value called Arity, which must specify the
        expected number of arguments, or be negative specify that the function
        accepts any number.
+
+       In other words, all entries in FwdList must implement the
+       InvocableInterface.
     */
     template < typename FwdList >
     struct OverloadInvocables
     {
+        // arguable: static const Arity = -1;
         /**
            Tries to dispatch argv to one of the bound functions defined
            in FwdList, based on the number of arguments in argv and
