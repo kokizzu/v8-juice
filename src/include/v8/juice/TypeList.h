@@ -178,7 +178,7 @@ namespace tmp {
         typedef typename Detail::TypeAtImpl< TypeChain<typename ListT::Head, typename ListT::Tail>, Index>::Type Type;
         //typedef typename Detail::TypeAtImpl< typename ListT::ChainType, Index>::Type Type;
     };
-    
+
 }}} // namespaces
 
 #ifndef V8_JUICE_TYPELIST_MAX_ARGS
@@ -213,5 +213,21 @@ namespace v8 { namespace juice { namespace tmp {
 }}} // namespaces
 #endif
 #undef V8_JUICE_TYPELIST_MAX_ARGS
+
+
+namespace v8 { namespace juice { namespace tmp {
+
+    /**
+       A metatemplate who's Type member resolves to IF if Cond is
+       true, or ELSE if Cond is false. Its Value member evaluates
+       to 1 or 0, accordingly.
+    */
+    template <bool Cond, typename IF, typename ELSE>
+    struct IfElse : TypeAt< TypeList_2<IF,ELSE>, Cond ? 0 : 1 >
+    {
+        enum { Value = Cond ? 1 : 0 };
+    };
+
+}}} // v8::juice::tmp
 
 #endif // V8_JUICE_TYPELIST_HPP_INCLUDED
