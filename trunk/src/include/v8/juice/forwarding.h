@@ -1414,7 +1414,7 @@ namespace v8 { namespace juice { namespace convert {
        Requirements:
 
        - (new T) must be legal, taking a number of arguments equal
-       to the Arity parametr.
+       to the Arity parameter.
 
        - All arguments to the native ctor must be convertible
        using CastFromJS().
@@ -1568,7 +1568,7 @@ namespace v8 { namespace juice { namespace convert {
                 if( argv.Length() != Arity )
                 {
                     StringBuffer msg;
-                    msg << "InvocableCallbackVoid<>::InvocableVoid(): "
+                    msg << "DiscardInvocableReturnVal<>::Invocable(): "
                         << argv.Callee()->GetName()
                         << "() was passed "<<argv.Length()<<" arguments, but "
                         << "expects "<< Arity<<"!\n";
@@ -1598,8 +1598,8 @@ namespace v8 { namespace juice { namespace convert {
        for details.
 
        The Arity argument is part of the InvocableInterface.
-       When proxying "raw" InvocationCallbacks, this can be left
-       at its default. When proxying callback created by
+       When proxying "raw" InvocationCallbacks, this should be
+       set to -1. When proxying callback created by
        other InvocableInterface types then this value should be
        set to that type's Arity. Failing to do so may confuse
        certain algorithms (notably OverloadInvocables<>).
@@ -1608,8 +1608,13 @@ namespace v8 { namespace juice { namespace convert {
        argument count given to it is _exactly_ that number. If Arity
        is negative then this type ignores the argument count of
        the call.
+
+       Note that most, if not all of the other InvocableInterface
+       types perform native-to-JS exception conversion, so this
+       type is not necessary for use with them. It is intended for
+       use with "plain" v8::InvocationCallback implementations.
     */
-    template <v8::InvocationCallback CB,int Arity_ = -1>
+    template <int Arity_,  v8::InvocationCallback CB>
     struct InvocationCallbackCatcher
     {
         //! Required by InvocableInterface.
@@ -1619,11 +1624,6 @@ namespace v8 { namespace juice { namespace convert {
            except: if CB() passes on a native exception, this type
            converts it to a JS exception, then discards the native
            exception.
-
-           Note that most, if not all of the other InvocableInterface
-           types perform native-to-JS exception conversion, so this
-           type is not necessary for use with them. It is intended for
-           use with "plain" v8::InvocationCallback implementations.
         */
         static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
         {
@@ -1649,6 +1649,116 @@ namespace v8 { namespace juice { namespace convert {
         }
     };
 
+    namespace Detail
+    {
+	namespace cv = v8::juice::convert;
+        namespace tmp = v8::juice::tmp;
+        template <typename FWD>
+        struct FwdInvocableOne
+        {
+            static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+            {
+                if( (FWD::Arity<0) || (FWD::Arity == argv.Length()) )
+                {
+                    return FWD::Invocable( argv );
+                }
+                else
+                {
+                    cv::StringBuffer msg;
+                    msg << "FwdInvocableOne<>::Invocable(): "
+                        << argv.Callee()->GetName()
+                        << "() called with "<<argv.Length()<<" arguments, "
+                        << "but requires "<<FWD::Arity<<"!\n";
+                    return v8::ThrowException(msg);
+                }
+            }
+        };
+        /**
+           Internal dispatch end-of-list routine.
+        */
+        template <>
+        struct FwdInvocableOne<tmp::NilType>
+        {
+            static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+            {
+                return v8::ThrowException(v8::String::New("FwdInvocableOne<> end-of-list specialization should not have been called!"));
+            }
+        };
+
+        /**
+           FwdList must be-a TypeList of FuncOverloadForwardXXX classes,
+           where XXX is an integer value (the function arity).
+
+        */
+        template <typename List>
+        struct FwdInvocableList
+        {
+            static v8::Handle<v8::Value> Dispatch( v8::Arguments const & argv )
+            {
+                typedef typename List::Head FWD;
+                typedef typename List::Tail Tail;
+                if( (FWD::Arity == argv.Length()) || (FWD::Arity<0) )
+                {
+                    return FwdInvocableOne< FWD >::Invocable( argv );
+                }
+                {
+                    return FwdInvocableList< Tail >::Dispatch(argv);
+                }
+                return v8::Undefined(); // can't get this far.
+            }
+        };
+
+        /**
+           End-of-list specialization.
+        */
+        template <>
+        struct FwdInvocableList<tmp::NilType>
+        {
+            static v8::Handle<v8::Value> Dispatch( v8::Arguments const & argv )
+            {
+                StringBuffer msg;
+                msg << "FwdInvocableList<>::Dispatch() there is no overload for "
+                    << argv.Callee()->GetName()
+                    << "() taking "<<argv.Length()<<" arguments!\n";
+                return v8::ThrowException( msg );
+            }
+        };
+
+    }
+    /**
+       A helper class which allows us to dispatch to multiple
+       overloaded native functions from JS, depending on the argument
+       count.
+
+       FwdList must be-a TypeList containing elements which have
+       the following function:
+
+       static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv );
+
+       And a static const integer value called Arity, which must specify the
+       expected number of arguments, or be negative specify that the function
+       accepts any number.
+
+       In other words, all entries in FwdList must implement the
+       InvocableInterface.
+    */
+    template < typename FwdList >
+    struct OverloadInvocables
+    {
+        // arguable: static const Arity = -1;
+        /**
+           Tries to dispatch argv to one of the bound functions defined
+           in FwdList, based on the number of arguments in argv and
+           the Arity 
+
+           Implements the v8::InvocationCallback interface.
+        */
+        static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
+        {
+            typedef Detail::FwdInvocableList<FwdList> X;
+            return X::Dispatch( argv );
+        }
+    };
     
 }}} /* namespaces */
 

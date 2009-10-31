@@ -1826,10 +1826,11 @@ namespace cw {
 
     /**
        HIGHLY EXPERIMENTAL! DON'T USE!
-    
-       A base type for RuntimeOps classes.
 
-       ClassSetupFunc must run the C++ parts of the ClassWrap<T> binding
+       This class defines an (optional) interface for installing class
+       bindings for ClassWrap-bound types.
+       
+       SetupBindings() must run the C++ parts of the ClassWrap<T> binding
        process, e.g. binding member functions and whatnot.
 
        Requirements:
@@ -1847,48 +1848,8 @@ namespace cw {
        handled by this class the first time the bindings are set up.
 
     */
-    template <typename T,
-              void (*ClassSetupFunc)( v8::Handle<v8::Object> dest )
-    //typename ClassSetupFunc
-        >
-    struct RuntimeOpsBase
-    {
-    protected:
-        /**
-           If ClassWrap<T>::Instance().IsSealed() then the wrapped
-           class is installed into globalObject. Otherwise it calls
-           ClassSetupFunc(ClassWrap<T>::Instance()) and then calls the
-           ClassSetupFunc() to install the class into the object (it
-           may install arbitrary functionality into the object).
-
-           Returns the constructor function for the new type.
-
-           It IS legal for this function to setup multiple classes,
-           which is the only reason why globalObj is provided at all.
-        */
-        static v8::Handle<v8::Function> _SetupBindings( v8::Handle<v8::Object> globalObj )
-        {
-            typedef ClassWrap<T> CW;
-            CW & b( CW::Instance() );
-            ClassSetupFunc( globalObj );
-            if( ! b.IsSealed() )
-            {
-                b.Seal();
-            }
-            return b.CtorTemplate()->GetFunction();
-        }
-    };
-
-    /**
-       HIGHLY EXPERIMENTAL! DON'T USE!
-
-       A concrete RuntimeOps implementation which calls ClassSetupFunc
-       in response to RuntimeOps<T>::SetupBindings().
-    */
-    template <typename T,
-              //typename ClassSetupFunc>
-              void (*ClassSetupFunc)( v8::Handle<v8::Object> )>
-    struct RuntimeOpsBasic : RuntimeOpsBase<T, ClassSetupFunc >
+    template <typename T>
+    struct Installer
     {
     public:
         /**
@@ -1898,55 +1859,14 @@ namespace cw {
            This routine is responsible for installing any bindings it
            would like into the given object.
 
-           The return value must be the constructor function for the
-           class.
+           On error a native exception should be thrown.
         */
-        static v8::Handle<v8::Function> SetupBindings( ::v8::Handle< ::v8::Object> globalObj )
-        {
-            typedef RuntimeOpsBase<T, ClassSetupFunc > Base;
-            return Base::_SetupBindings( globalObj );
-        }
+        static void SetupBindings( ::v8::Handle< ::v8::Object> globalObj );
     };
 
     namespace Detail
     {
-        /**
-           Throws a std::exception. Ot might trigger a compile-time
-           error. i'm still undecided. If it compiles with the
-           default specialization then you know the former is true,
-           else you know the latter is true.
-
-           For use with the default RuntimeOps implementation.
-
-           T is only parameterized so we can use ClassName<T>::Name().
-        */
-        template <typename T>
-        static void NoopSetup( v8::Handle<v8::Object> dest )
-        {
-#if 1
-            v8::juice::convert::StringBuffer sb;
-            sb << "v8::juice::cw::RuntimeOps<"<<ClassName<T>::Value()<<"> "
-               << "must be specialized to be useful!";
-            throw std::runtime_error( sb.Content().c_str() );
-#else
-            JUICE_STATIC_ASSERT(false,RuntimeOps_T_MustBeSpecialized);
-#endif
-        }
     }
-    /**
-       HIGHLY EXPERIMENTAL! DON'T USE!
-    
-       A ClassWrap policy responsible for running the ClassWrap
-       binding process. This gives users a common way to set up all
-       ClassWrap-bound classes.
-
-       This class MUST be specialized to be useful. RuntimeOpsBasic can
-       be used as a base to easily create specializations.
-    */
-    template <typename T>
-    struct RuntimeOps : RuntimeOpsBasic<T, Detail::NoopSetup<T> >
-    {
-    };
     
 
 

@@ -21,6 +21,7 @@ my $COUNT = @ARGV ? $ARGV[0] : 10;
 if( $COUNT !~ /^\d+$/ ) {
     die "Usage: $0 NUMBER\n";
 }
+$COUNT =~ s/^(0+)?//;
 print "// auto-generated [".localtime()."] by $0\n";
 sub generateNumbered($)
 {

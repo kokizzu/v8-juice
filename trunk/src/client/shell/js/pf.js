@@ -9,7 +9,7 @@ function dumpPF(p,list)
     print("\tExtensions =",p.extensionsArray );
     for( k in li ) {
         var f = p.find(li[k]);
-	print('\tfind("'+li[k]+'") = ['+f+'], isAccessible =',PathFinder.isAccessible(f));
+	print('\tfind("'+li[k]+'") = ['+f+'], isAccessible =',PathFinder.isAccessible(f),' baseName =',PathFinder.baseName(f));
     }
     print('getPathSeparator():',p.getPathSeparator(),'=== pathSeparator:',p.pathSeparator);
     print('getPathArray():',p.getPathArray(),'=== pathArray:',p.pathArray);
