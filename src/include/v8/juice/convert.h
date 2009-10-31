@@ -140,10 +140,18 @@ namespace convert {
     template <typename NT>
     struct NativeToJS<NT *> : NativeToJS<NT> {};
     /**
-       Specialization to treat (NT const *) as (NT*).
+       Specialization to treat (NT const *) as (NT).
     */
     template <typename NT>
-    struct NativeToJS<NT const *> : NativeToJS<NT*> {};
+    struct NativeToJS<NT const *> : NativeToJS<NT> {};
+//     {
+//         typedef typename TypeInfo<NT>::Type const * ArgType;
+// 	v8::Handle<v8::Value> operator()( ArgType n ) const
+//         {
+//             typedef NativeToJS<NT*> Proxy;
+//             return Proxy()( n );
+//         }
+//     };
 
     /**
        Specialization to treat (NT const &) as (NT).
@@ -357,25 +365,25 @@ namespace convert {
 	return F()( v );
     }
 
-    /**
-       Overload which uses NativeToJS<T*>.
-    */
-    template <typename T>
-    v8::Handle<v8::Value> CastToJS( T * v )
-    {
-	typedef NativeToJS<T*> F;
-	return F()( v );
-    }
+//     /**
+//        Overload which take a pointer argument.
+//     */
+//     template <typename T>
+//     v8::Handle<v8::Value> CastToJS( T const * v )
+//     {
+// 	typedef NativeToJS<T> F;
+// 	return F()( v );
+//     }
 
-    /**
-       Overload which uses NativeToJS<T const *>.
-    */
-    template <typename T>
-    v8::Handle<v8::Value> CastToJS( T const * v )
-    {
-	typedef NativeToJS<T const *> F;
-	return F()( v );
-    }
+//     /**
+//        Overload which uses NativeToJS<T const *>.
+//     */
+//     template <typename T>
+//     v8::Handle<v8::Value> CastToJS( T const * v )
+//     {
+// 	typedef NativeToJS<T const *> F;
+// 	return F()( v );
+//     }
     
     /**
        Overload to avoid ambiguity in certain calls.
