@@ -27,6 +27,14 @@ Where to start:
 
 The wiki pages on the home page should be informative to new users. Aside
 from that, there are tons of API docs here amongst the humble header files.
+
+The more significant header files are:
+
+- juice.h = the main library header.
+- convert.h = JS to/from Native conversion routines and types.
+- forwarding.h = (member) function binding utilities.
+- TypeList.h = TypeList-related metaprogramming tools.
+- tmp.h = base template metaprogramming tools.
 */
 namespace {}
 
