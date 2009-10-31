@@ -230,11 +230,12 @@ namespace v8 { namespace juice { namespace cw {
     public:
         typedef typename convert::TypeInfo<T>::Type Type;
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
+        typedef const Type * ArgType; // const'ing NativeHandle isn't working for me?
         /**
            Returns the JS object associated with nh, or an empty handle if
            none is found.
         */
-        static v8::Handle<v8::Value> Value( NativeHandle nh )
+        static v8::Handle<v8::Value> Value( ArgType nh )
         {
             typedef Detail::ClassWrapMapper<T> Mapper;
             return Mapper::GetJSObject( nh );
