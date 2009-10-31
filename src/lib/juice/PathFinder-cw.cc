@@ -45,7 +45,19 @@ namespace {
     enum Internal { MagicExternalArgc = 1 /*must be 1 or else crash*/ };
     }
 
-namespace v8 { namespace juice { namespace cw {
+namespace v8 { namespace juice {
+
+    //! PathFinder.toString() impl.
+    static v8::Handle<v8::Value> pf_toString( v8::Arguments const & argv )
+    {
+        typedef PathFinder T;
+        T * p = convert::CastFromJS<T>( argv.This() );
+        convert::StringBuffer sb;
+        sb << "[object "<<cw::ClassName<T>::Value()<<"@"<<p<<"]";
+        return sb;
+    }
+    
+namespace cw {
     using namespace ::v8::juice;
 
 #define JSTR(X) String::New(X)
@@ -135,75 +147,120 @@ namespace v8 { namespace juice { namespace cw {
 	}
     };
 
+    template <>
+    struct Installer<PathFinder>
+    {
+    public:
+        /**
+           Installs the bindings for PathFinder into the given object.
+        */
+        static void SetupBindings( ::v8::Handle< ::v8::Object> target )
+        {
+            SetupPathFinderClass(target);
+        }
+    };
     
 }}} // namespaces
 
 
 namespace v8 { namespace juice {
 
-    //! PathFinder.toString() impl.
-    static v8::Handle<v8::Value> pf_toString( v8::Arguments const & argv )
-    {
-        typedef PathFinder T;
-        T * p = convert::CastFromJS<T>( argv.This() );
-        convert::StringBuffer sb;
-        sb << "[object "<<cw::ClassName<T>::Value()<<"@"<<p<<"]";
-        return sb;
-    }
-    
     ::v8::Handle< ::v8::Value> SetupPathFinderClass( ::v8::Handle< ::v8::Object> target )
     {
-        HandleScope scope;
+        using namespace v8;
+        using namespace v8::juice;
+        v8::HandleScope scope;
         typedef PathFinder N;
         typedef cw::ClassWrap<N> CW;
         typedef convert::MemFuncInvocationCallbackCreator<N> MF;
         CW & cw( CW::Instance() );
 
-        cw.Set( "toString", pf_toString );
-        cw.Set( "getPathSeparator", MF::M0::Invocable<std::string,&N::PathSeparator> );
-        cw.Set( "setPathSeparator", MF::M1::Invocable<void,std::string const &,&N::PathSeparator> );
-        cw.BindGetterSetter< std::string, &N::PathSeparator, void, std::string const &,&N::PathSeparator>( "pathSeparator" );
-
-        cw.Set( "getPathString", MF::M0::Invocable<std::string,&N::PathString> );
-        cw.Set( "setPathString", MF::M1::Invocable<size_t,std::string const &,&N::Path> );
-        cw.BindGetterSetter< std::string, &N::PathString, size_t, std::string const &,&N::Path>( "pathString" );
-
+        typedef convert::InvocationCallbackCreator ICC;
+        v8::InvocationCallback isAccessible = ICC::F1::Invocable<bool,std::string const &,N::IsAccessible>;
+        v8::InvocationCallback baseName = ICC::F1::Invocable<std::string,std::string const &,N::BaseName>;
+        
         typedef N::StringList SL;
         typedef SL const & SLCR;
-        cw.Set( "getPathArray", MF::M0::Invocable<SL,&N::Path> );
-        cw.Set( "setPathArray", MF::M1::Invocable<size_t,SLCR,&N::Path> );
+        struct FuncInfo
+        {
+            char const * name;
+            v8::InvocationCallback func;
+        }  FuncList[] =
+        {
+        { "addExtensionString", MF::M1::Invocable<void,std::string const &,&N::AddExtension> },
+        { "addPathString", MF::M1::Invocable<void,std::string const &,&N::AddPath> },
+        { "baseName", baseName },
+        { "clearCache", MF::M0::Invocable<void, &N::ClearCache> },
+        { "find", MF::M1::Invocable<std::string,std::string const &,&N::Find> },
+        { "isAccessible", isAccessible },
+        { "isEmpty", MF::M0::Invocable<bool, &N::IsEmpty> },
+        { "getPathSeparator", MF::M0::Invocable<std::string,&N::PathSeparator> },
+        { "setPathSeparator", MF::M1::Invocable<void,std::string const &,&N::PathSeparator> },
+        { "getPathString", MF::M0::Invocable<std::string,&N::PathString> },
+        { "setPathString", MF::M1::Invocable<size_t,std::string const &,&N::Path> },
+        { "getPathArray", MF::M0::Invocable<SL,&N::Path> },
+        { "setPathArray", MF::M1::Invocable<size_t,SLCR,&N::Path> },
+        { "getExtensionsArray", MF::M0::Invocable<SL,&N::Extensions> },
+        { "setExtensionsArray", MF::M1::Invocable<size_t,SLCR,&N::Extensions> },
+        { "getExtensionsString", MF::M0::Invocable<std::string,&N::ExtensionsString> },
+        { "setExtensionsString", MF::M1::Invocable<size_t,std::string const &,&N::Extensions> },
+        { "toString", pf_toString},
+        {0,0}
+        };
+        ////////////////////////////////////////////////////////////////////////
+        // Bind instance functions:
+        for( FuncInfo * f = FuncList; f->name; ++f )
+        {
+            cw.Set( f->name, f->func );
+        }
+        ////////////////////////////////////////////////////////////////////////
+        // Bind instance properties:
+        cw.BindGetterSetter< std::string, &N::PathSeparator, void, std::string const &,&N::PathSeparator>( "pathSeparator" );
+        cw.BindGetterSetter< std::string, &N::PathString, size_t, std::string const &,&N::Path>( "pathString" );
         cw.BindGetterSetter< SL, &N::Path, size_t, SLCR,&N::Path>( "pathArray" );
-        
-        cw.Set( "getExtensionsArray", MF::M0::Invocable<SL,&N::Extensions> );
-        cw.Set( "setExtensionsArray", MF::M1::Invocable<size_t,SLCR,&N::Extensions> );
         cw.BindGetterSetter< SL, &N::Extensions, size_t, SLCR,&N::Extensions>( "extensionsArray" );
-
-        cw.Set( "getExtensionsString", MF::M0::Invocable<std::string,&N::ExtensionsString> );
-        cw.Set( "setExtensionsString", MF::M1::Invocable<size_t,std::string const &,&N::Extensions> );
         cw.BindGetterSetter< std::string, &N::ExtensionsString, size_t, std::string const &,&N::Extensions>( "extensionsString" );
-
-        cw.Set( "addPathString", MF::M1::Invocable<void,std::string const &,&N::AddPath> );
-        cw.Set( "addExtensionString", MF::M1::Invocable<void,std::string const &,&N::AddExtension> );
-        cw.Set( "find", MF::M1::Invocable<std::string,std::string const &,&N::Find> );
-        cw.Set( "clearCache", MF::M0::Invocable<void, &N::ClearCache> );
-        cw.Set( "isEmpty", MF::M0::Invocable<bool, &N::IsEmpty> );
-        typedef convert::InvocationCallbackCreator ICC;
-        cw.Set( "isAccessible", ICC::F1::Invocable<bool,std::string const &,N::IsAccessible> );
-        cw.Set( "baseName", ICC::F1::Invocable<std::string,std::string const &,N::BaseName> );
         cw.Set( "dirSeparator", convert::CastToJS( N::DirSeparator() ), v8::ReadOnly );
-        //cw.Set( "dirSeparator", ICC::F0::Invocable<std::string,N::DirSeparator> );
 
+        //////////////////////////////////////////////////////////////
+        // Seal the class:
         Handle<Function> ctor( cw.Seal() );
+        // ^^^^^^^ reminder: starting now, changes made to the prototype will have no effect.
+        // At least, v8 seems to work that way.
         cw.AddClassTo(target);
-        ctor->Set( JSTR("dirSeparator"), convert::CastToJS( N::DirSeparator() ), v8::ReadOnly );
 
-        v8::InvocationCallback IC;
-#define SET(K) ctor->Set( JSTR(K), convert::CastToJS(IC) )
-        IC = ICC::F1::Invocable<bool,std::string const &,N::IsAccessible>;
-        SET("isAccessible");
-        IC = ICC::F1::Invocable<std::string,std::string const &,N::BaseName>;
-        SET("baseName");
-#undef SET
+        //////////////////////////////////////////////////////////////
+        // Bind class ("static") properties/funcs:
+        ctor->Set( JSTR("dirSeparator"), convert::CastToJS( N::DirSeparator() ), v8::ReadOnly );
+        ctor->Set( JSTR("isAccessible"), convert::CastToJS( isAccessible ) );
+        ctor->Set( JSTR("baseName"), convert::CastToJS( baseName ) );
+
+        //////////////////////////////////////////////////////////////
+        // Set up some shared instances:
+        {
+            Handle<Object> shared = Object::New();
+            ctor->Set(JSTR("shared"),shared);
+
+            if(1)
+            {
+                // Install an instance wrapping the v8::juice::plugin::PluginsPath() shared object:
+                PathFinder * pf = &::v8::juice::plugin::PluginsPath();
+                Handle<Value> pfex( External::New( pf ) );
+                bind::BindNative( pf, pf );
+                Handle<Object> pfobj = cw.NewInstance( MagicExternalArgc, &pfex );
+                shared->Set(String::New("plugins"), pfobj );
+            }
+
+            if(1)
+            {
+                // Includes includes path:
+                PathFinder * pf = &::v8::juice::ScriptsPath();
+                Handle<Value> pfex( External::New( pf ) );
+                bind::BindNative( pf, pf );
+                Handle<Object> pfobj = cw.NewInstance( MagicExternalArgc, &pfex );
+                shared->Set(String::New("include"), pfobj );
+            }
+        }
 
         if(0)
         { // some basic sanity checks...
@@ -228,33 +285,9 @@ namespace v8 { namespace juice {
                 void * exh = jobj->GetPointerFromInternalField(CW::InternalFields::NativeIndex);
                 CERR << "fetched void* == "<<(const void *)exh<<'\n';
             }
+            cw.DestroyObject( jobj );
         }
-
-#if 1
-        // Set up some shared instances:
-	Handle<Object> shared = Object::New();
-	ctor->Set(JSTR("shared"),shared);
-
-        if(1)
-	{
-	    // Install an instance wrapping the v8::juice::plugin::PluginsPath() shared object:
-            PathFinder * pf = &::v8::juice::plugin::PluginsPath();
-	    Handle<Value> pfex( External::New( pf ) );
-            bind::BindNative( pf, pf );
-	    Handle<Object> pfobj = cw.NewInstance( MagicExternalArgc, &pfex );
-	    shared->Set(String::New("plugins"), pfobj );
-	}
-
-	if(1)
-	{
-	    // Includes includes path:
-            PathFinder * pf = &::v8::juice::ScriptsPath();
-	    Handle<Value> pfex( External::New( pf ) );
-            bind::BindNative( pf, pf );
-	    Handle<Object> pfobj = cw.NewInstance( MagicExternalArgc, &pfex );
-	    shared->Set(String::New("include"), pfobj );
-	}
-#endif
+        
 	return target;
     }
 #undef JSTR
