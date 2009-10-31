@@ -349,9 +349,6 @@ namespace convert {
 
     /**
        "Casts" v to a JS value using NativeToJS<T>.
-
-       TODO: use template metaprogramming to figure out the
-       exact parameter type, instead of using (T const &).
     */
     template <typename T>
     v8::Handle<v8::Value> CastToJS( T const & v )
@@ -440,18 +437,19 @@ namespace convert {
 	ResultType operator()( v8::Handle<v8::Value> const & h ) const;
         // Must be specialized to be useful
     };
+    /** Specialization to treat (JST*) as JST. */
     template <typename JST>
     struct JSToNative<JST *> : JSToNative<JST> {};
 
+    /** Specialization to treat (JST const *) as (JST *). */
     template <typename JST>
     struct JSToNative<JST const *> : JSToNative<JST> {};
 
+    /** Specialization to treat (JST const &) as (JST). */
     template <typename JST>
     struct JSToNative<JST const &> : JSToNative<JST> {};
 
     /**
-       EXPERIMENTAL!!!!
-
        A specialization to convert from JS to (T&). Beware, however,
        that this operation must throw a native exeception if it fails,
        because the only other other option is has is to dereference
@@ -461,7 +459,6 @@ namespace convert {
     struct JSToNative<JST &>
     {
 	typedef typename TypeInfo<JST>::Type & ResultType;
-        //typedef JST & ResultType;
 	ResultType operator()( v8::Handle<v8::Value> const & h ) const
         {
             typedef JSToNative<JST*> Cast;
@@ -475,27 +472,46 @@ namespace convert {
         }
     };
     
-
-    template <>
-    struct JSToNative<v8::Handle<v8::Value> >
+    /** Specialization which passes on v8 Handles as-is. */
+    template <typename T>
+    struct JSToNative<v8::Handle<T> >
     {
-	typedef v8::Handle<v8::Value> ResultType;
-	ResultType operator()( v8::Handle<v8::Value> const & h ) const
+	typedef v8::Handle<T> ResultType;
+	ResultType operator()( v8::Handle<T> const & h ) const
 	{
 	    return h;
 	}
     };
 
+    /** Specialization which passes on v8 local Handles as-is. */
+    template <typename T>
+    struct JSToNative<v8::Local<T> >
+    {
+	typedef v8::Local<T> ResultType;
+	ResultType operator()( v8::Local<T> const & h ) const
+	{
+	    return h;
+	}
+    };
+
+    /**
+       An X-to-void specialization which we cannot use in the generic
+       case due to the syntactic limitations of void.
+    */
     template <>
     struct JSToNative<void>
     {
 	typedef void ResultType;
-	ResultType operator()( v8::Handle<v8::Value> const & h ) const
+	ResultType operator()( ... ) const
 	{
 	    return;
 	}
     };
 
+    /**
+       A very arguable specialization which tries to extract
+       convert a JS value to native (void*) via v8::External.
+    */
     template <>
     struct JSToNative<void *>
     {
@@ -507,6 +523,8 @@ namespace convert {
 	}
     };
 
+
+    /** Specialization to convert JS values to int16_t. */
     template <>
     struct JSToNative<int16_t>
     {
@@ -519,6 +537,7 @@ namespace convert {
 	}
     };	
 
+    /** Specialization to convert JS values to uint16_t. */
     template <>
     struct JSToNative<uint16_t>
     {
@@ -531,6 +550,7 @@ namespace convert {
 	}
     };
 
+    /** Specialization to convert JS values to int32_t. */
     template <>
     struct JSToNative<int32_t>
     {
@@ -544,6 +564,7 @@ namespace convert {
 	}
     };
 
+    /** Specialization to convert JS values to uint32_t. */
     template <>
     struct JSToNative<uint32_t>
     {
@@ -557,6 +578,7 @@ namespace convert {
     };
 
 
+    /** Specialization to convert JS values to int64_t. */
     template <>
     struct JSToNative<int64_t>
     {
@@ -569,6 +591,7 @@ namespace convert {
 	}
     };
 
+    /** Specialization to convert JS values to uint64_t. */
     template <>
     struct JSToNative<uint64_t>
     {
@@ -581,6 +604,7 @@ namespace convert {
 	}
     };
 
+    /** Specialization to convert JS values to double. */
     template <>
     struct JSToNative<double>
     {
@@ -593,6 +617,7 @@ namespace convert {
 	}
     };
 
+    /** Specialization to convert JS values to bool. */
     template <>
     struct JSToNative<bool>
     {
@@ -603,6 +628,7 @@ namespace convert {
 	}
     };
 
+    /** Specialization to convert JS values to std::string. */
     template <>
     struct JSToNative<std::string>
     {
@@ -788,7 +814,7 @@ namespace convert {
        set("propOne", CastToJS(32) )
           ("propTwo", ... )
 	  (32, ... )
-	  ("func1", CastToJS( anInvocationCallback ) ) // "should" work
+	  ("func1", CastToJS( anInvocationCallback ) )
 	  ;
        \endcode
     */
@@ -927,17 +953,42 @@ namespace convert {
     template <typename KeyT,typename ValT>
     struct NativeToJS< std::map<KeyT,ValT> > : NativeToJS_map< std::map<KeyT,ValT> > {};
 
+    /**
+       A base class for JSToNative<SomeStdListType>
+       specializations. ListT must be compatible with std::list and
+       std::vector, namely:
 
-    template <typename ListT>
+       - Must support push_back( ListT::value_type ).
+
+       - Must define value_type typedef or the second template
+       argument must be specified for this template.
+
+       It is technically legal for ValueType to differ from
+       ListT::value_type if
+       ListT::push_back(JSToNative<ValueType>::ResultType) is
+       legal. e.g. if ListT is std::vector<double> and we want to
+       truncate the values we could use, e.g. int32_t as the
+       ValueType.
+    */
+    template <typename ListT, typename ValueType = typename ListT::value_type>
     struct JSToNative_list
     {
 	typedef ListT ResultType;
+        /**
+           Converts jv to a ListT object.
+
+           If jv->IsArray() then the returned object is populated from
+           jv, otherwise the returned object is empty. Since it is
+           legal for an array to be empty, it is not generically
+           possible to know if this routine got an empty Array object
+           or a non-Array object.
+        */
 	ResultType operator()( v8::Handle<v8::Value> jv ) const
 	{
-	    typedef typename ListT::const_iterator IT;
-	    typedef typename ListT::value_type VALT;
+	    //typedef typename ListT::value_type VALT;
+            typedef ValueType VALT;
 	    ListT li;
-	    if( ! jv->IsArray() ) return li;
+	    if( jv.IsEmpty() || ! jv->IsArray() ) return li;
 	    Handle<Array> ar( Array::Cast(*jv) );
 	    uint32_t ndx = 0;
 	    for( ; ar->Has(ndx); ++ndx )
@@ -989,7 +1040,7 @@ namespace convert {
            returned from previous calls to the (char const *)
            operator.
         */
-        void Clear()
+        inline void Clear()
         {
             this->os.str("");
         }
@@ -997,7 +1048,7 @@ namespace convert {
         /**
            Returns a copy of the current message content.
          */
-        std::string Content() const
+        inline std::string Content() const
         {
             return this->os.str();
         }
@@ -1014,7 +1065,7 @@ namespace convert {
            Appends to the message using CastFromJS<std::string>(t) 
         */
         template <typename T>
-        StringBuffer & operator<<( v8::Handle<T> const t )
+        inline StringBuffer & operator<<( v8::Handle<T> const t )
         {
             this->os << CastFromJS<std::string>( t );
             return *this;
@@ -1024,7 +1075,7 @@ namespace convert {
            Appends t to the message via std::ostream<<.
         */
         template <typename T>
-        StringBuffer & operator<<( T const t)
+        inline StringBuffer & operator<<( T const t)
         {
             this->os << t;
             return *this;
