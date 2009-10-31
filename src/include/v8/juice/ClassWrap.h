@@ -1,4 +1,8 @@
-// EXPERIMENTAL/INCOMPLETE!
+#if !defined(V8_JUICE_CLASSWRAP_H_INCLUDED)
+#define V8_JUICE_CLASSWRAP_H_INCLUDED
+/************************************************************************
+  ClassWrap is one approach to binding C++ classes to JS...
+************************************************************************/
 #include <v8/juice/static_assert.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/TypeList.h>
@@ -7,6 +11,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
+#include <set>
 
 #ifndef DBGSTREAM
 #include <iostream> /* only for debuggering */
@@ -813,7 +818,7 @@ namespace cw {
            TODO: determine whether throwing a JS exception from here is
            really all that reasonable.
         */
-        static v8::Handle<v8::Object> Value( NativeHandle )
+        static v8::Handle<v8::Object> Value( const NativeHandle )
         {
             JUICE_STATIC_ASSERT(false,T_ToJS_CannotWorkForTheGeneralCase);
             return v8::Handle<v8::Object>();
@@ -1806,23 +1811,21 @@ namespace cw {
     struct NativeToJSImpl
     {
         typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
-        /**
-           Required by JSToNative interface.
-         */
-        typedef typename convert::TypeInfo<T>::NativeHandle ResultType;
+        //typedef T * NativeHandle;
+        typedef T const * ArgType; // const'ing NativeHandle isn't working form me?
+        //typedef const typename convert::TypeInfo<T>::NativeHandle ArgType;
         /**
            If h is empty or not an Object then 0 is returned,
-           otherwise the result of ToNative<T>::Value() is
+           otherwise the result of ToJS<T>::Value(p) is
            returned.
         */
-        v8::Handle<v8::Value> operator()( NativeHandle p ) const
+        v8::Handle<v8::Value> operator()( ArgType p ) const
         {
             typedef ToJS< T > Cast;
             if( p ) return Cast::Value(p);
             else return v8::Handle<v8::Value>();
         }
     };
-    
 
     /**
        HIGHLY EXPERIMENTAL! DON'T USE!
@@ -1864,12 +1867,6 @@ namespace cw {
         static void SetupBindings( ::v8::Handle< ::v8::Object> globalObj );
     };
 
-    namespace Detail
-    {
-    }
-    
-
-
 #undef DBGSTREAM   
 } } } // namespaces
 
@@ -1896,3 +1893,5 @@ namespace cw {
            { static char const * Value() {return Name;} };      \
        } } }
 
+
+#endif // V8_JUICE_CLASSWRAP_H_INCLUDED
