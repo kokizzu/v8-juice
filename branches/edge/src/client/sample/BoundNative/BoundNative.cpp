@@ -5,7 +5,6 @@ Test/demo code for the v8::juice::cw::ClassWrap class binding mechanism.
 
 #include <v8/juice/ClassWrap.h>
 #include <v8/juice/forwarding.h>
-#include <v8/juice/overloading.h>
 
 #include <unistd.h> // sleep(3)
 
@@ -224,12 +223,6 @@ namespace v8 { namespace juice { namespace cw
 {
 
     template <>
-    struct RuntimeOps<BoundNative> :
-        RuntimeOpsBasic<BoundNative, &BoundNative::SetupClass >
-    {
-    };
-
-    template <>
     struct Factory<BoundNative>
         : Factory_CtorForwarder<BoundNative,
                                 tmp::TypeList<
@@ -254,6 +247,19 @@ namespace v8 { namespace juice { namespace cw
     >
     {};
 
+    template <>
+    struct Installer<BoundNative>
+    {
+    public:
+        /**
+           Installs the bindings for PathFinder into the given object.
+        */
+        static void SetupBindings( ::v8::Handle< ::v8::Object> target )
+        {
+            BoundNative::SetupClass(target);
+        }
+    };
+    
     /**
        The rest of the policies will be set up via supermacros below.
     */
@@ -428,7 +434,7 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 #endif
     cw.Set( "toss",
             //ICM::M1::Invocable<void,std::string const &,&N::toss >
-            convert::InvocationCallbackCatcher< BoundNative_toss >::Invocable
+            convert::InvocationCallbackCatcher< -1, BoundNative_toss >::Invocable
             );
 
     typedef tmp::TypeList<
