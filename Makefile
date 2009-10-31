@@ -54,3 +54,6 @@ nobuild:
 endif
 # end built-tree check.
 ########################################################################
+
+dox:
+	$(MAKE) -C doc/doxygen doxygen
