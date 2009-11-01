@@ -359,3 +359,7 @@ binding API.
 The complete test/demo code for !ClassWrap can be found here:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/BoundNative/BoundNative.cpp BoundNative.cpp]
+
+The PathFinder class also, as of late October 2009, uses !ClassWrap:
+
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-cw.cc PathFinder-cw.cc]
