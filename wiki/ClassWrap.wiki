@@ -307,7 +307,7 @@ bound `MyClass` object.
 
 _HOWEVER_, there is another caveat: in the above specific case, we "should"
 give JS an explicit handle to the newly-created object or we risk it getting
-garbage collected because the native member conversions to not store a
+garbage collected because the native member conversions do not store a
 reference to the new object in JS space (only in native space). Thus it is
 possible, in the above example, that calling `o1.buddy` in a "get" context
 would return null or an empty object if GC is called between the assignment
@@ -360,6 +360,6 @@ The complete test/demo code for !ClassWrap can be found here:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/BoundNative/BoundNative.cpp BoundNative.cpp]
 
-The PathFinder class also, as of late October 2009, uses !ClassWrap:
+The [PathFinderClass PathFinder] class also, as of late October 2009, uses !ClassWrap:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-cw.cc PathFinder-cw.cc]
