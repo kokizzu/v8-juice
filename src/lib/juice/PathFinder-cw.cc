@@ -9,32 +9,16 @@ v8::juice::cw binding mechanism.
 #include <set>
 
 #include <v8.h>
-#include <v8/juice/PathFinder.h>
+#include <v8/juice/PathFinder-cw.h>
 #include <v8/juice/bind.h>
 #include <v8/juice/plugin.h>
 
 
 
-#include <v8/juice/ClassWrap.h>
 //#include <v8/juice/ClassWrap_JuiceBind.h>
 // #include <v8/juice/ClassWrap_TwoWay.h>
 
 
-#define CLASSWRAP_BOUND_TYPE v8::juice::PathFinder
-#if 1
-   // Default ClassWrap policy set.
-   JUICE_CLASSWRAP_CLASSNAME(v8::juice::PathFinder,"PathFinder");
-#  include <v8/juice/ClassWrap-JSToNative.h>
-#else
-#  define CLASSWRAP_BOUND_TYPE_NAME "PathFinder"
-#  if 0
-//#    warning "JUICEBIND!"
-#    include <v8/juice/ClassWrap_JuiceBind.h>
-#  else
-//#    warning "TWOWAY BIND!"
-#    include <v8/juice/ClassWrap_TwoWay.h>
-#  endif
-#endif
 
 #if !defined(CERR)
 #    include <iostream> /* only for debuggering */
@@ -43,25 +27,48 @@ v8::juice::cw binding mechanism.
 
 namespace {
     enum Internal { MagicExternalArgc = 1 /*must be 1 or else crash*/ };
-    }
-
-namespace v8 { namespace juice {
-
     //! PathFinder.toString() impl.
     static v8::Handle<v8::Value> pf_toString( v8::Arguments const & argv )
     {
+        using namespace v8::juice;
         typedef PathFinder T;
         T * p = convert::CastFromJS<T>( argv.This() );
         convert::StringBuffer sb;
         sb << "[object "<<cw::ClassName<T>::Value()<<"@"<<p<<"]";
         return sb;
     }
+
+} // anon namespace
+
+namespace v8 { namespace juice {
+
     
 namespace cw {
     using namespace ::v8::juice;
 
 #define JSTR(X) String::New(X)
 #define TOSS(X) ThrowException(JSTR(X))
+
+    
+    //! internal
+    typedef std::set<Factory<PathFinder>::NativeHandle> PFSet;
+    /**
+       All PathFinders which should be deleted by
+       this type (that depends on how the ctor is called)
+       are added here. Only dtors called for these objects
+       will trigger a delete.
+    */
+    static PFSet & pfset()
+    {
+        static PFSet pf;
+        return pf;
+    }
+
+
+    char const * ClassName<PathFinder>::Value()
+    {
+        return "PathFinder";
+    }
 
     /**
        ClassWrap Factory<PathFinder> policy implementation.
@@ -71,94 +78,59 @@ namespace cw {
        internal trickery to bind in some shared instances of the
        class.
     */
-    template <>
-    struct Factory<PathFinder>
+    Factory<PathFinder>::NativeHandle
+    Factory<PathFinder>::Instantiate( Arguments const & argv,
+                                      std::ostream & exceptionText)
     {
-        //! Required by Factory interface.
-	static size_t const AllocatedMemoryCost = sizeof(PathFinder);
-        //! Required by Factory interface.
-        typedef PathFinder Type;
-        //! Required by Factory interface.
-	typedef PathFinder * NativeHandle;
-    private:
-        //! internal
-        typedef std::set<NativeHandle> PFSet;
-        /**
-           All PathFinders which should be deleted by
-           this type (that depends on how the ctor is called)
-           are added here. Only dtors called for these objects
-           will trigger a delete.
-        */
-        static PFSet & pfset()
-        {
-            static PFSet pf;
-            return pf;
+        const int argc = argv.Length();
+        if( (MagicExternalArgc == argc) && argv[0]->IsExternal() )
+        { // assume arg is an externally-owned/shared PathFinder instance
+            Local<External> ex( External::Cast( *argv[0] ) );
+            NativeHandle xp = bind::GetBoundNative<PathFinder>( ex->Value() );
+            if( xp )
+            {
+                bind::UnbindNative( xp ); // we don't need this anymore, but cw::WeakWrap policy might re-bind it.
+                return xp;
+            }
+            else
+            {
+                exceptionText << "First argument to "
+                              << ClassName<PathFinder>::Value()
+                              << " ctor failed type check!";
+                return 0;
+            }
         }
-    public:
-        /**
-           Constructor for JS PathFinder objects.
-        */
-	static NativeHandle Instantiate( Arguments const & argv,
-                                         std::ostream & exceptionText)
-	{
-	    const int argc = argv.Length();
-	    if( (MagicExternalArgc == argc) && argv[0]->IsExternal() )
-	    { // assume arg is an externally-owned/shared PathFinder instance
-		Local<External> ex( External::Cast( *argv[0] ) );
-                NativeHandle xp = bind::GetBoundNative<PathFinder>( ex->Value() );
-		if( xp )
-		{
-                    bind::UnbindNative( xp ); // we don't need this anymore, but WeakWrap policy might re-bind it.
-		    return xp;
-		}
-		else
-		{
-		    exceptionText << "First argument to "
-                                  << ClassName<PathFinder>::Value()
-                                  << " ctor failed type check!";
-		    return 0;
-		}
-	    }
-            // TODO: add array arg support.
-	    std::string a0 = (argc>0) ? convert::JSToStdString(argv[0]) : "";
-	    std::string a1 = (argc>1) ? convert::JSToStdString(argv[1]) : "";
-	    std::string a2 = (argc>2) ? convert::JSToStdString(argv[2]) : ":";
-	    //CERR << ClassName<PathFinder>::Value()<< "(["<<a0<<"], ["<<a1<<"], ["<<a2<<"])\n";
-	    NativeHandle pf = new PathFinder( a0, a1, a2 );
-	    if( pf )
-	    {
-                pfset().insert( pf );
-	    }
-	    return pf;
-	}
+        // TODO: add array arg support.
+        std::string a0 = (argc>0) ? convert::JSToStdString(argv[0]) : "";
+        std::string a1 = (argc>1) ? convert::JSToStdString(argv[1]) : "";
+        std::string a2 = (argc>2) ? convert::JSToStdString(argv[2]) : ":";
+        //CERR << ClassName<PathFinder>::Value()<< "(["<<a0<<"], ["<<a1<<"], ["<<a2<<"])\n";
+        NativeHandle pf = new PathFinder( a0, a1, a2 );
+        if( pf )
+        {
+            pfset().insert( pf );
+        }
+        return pf;
+    }
 
-	static void Destruct( v8::Handle<v8::Object>, NativeHandle obj )
-	{
-	    if( obj )
-	    {
-                PFSet::iterator it = pfset().find(obj);
-                if( it != pfset().end() )
-                {
-                    //CERR << ClassName<PathFinder>::Value() << " dtor deleting on @"<<obj<<'\n';
-                    pfset().erase(it);
-                    delete obj;
-                }
-	    }
-	}
-    };
-
-    template <>
-    struct Installer<PathFinder>
+    void Factory<PathFinder>::Destruct( v8::Handle<v8::Object>, NativeHandle obj )
     {
-    public:
-        /**
-           Installs the bindings for PathFinder into the given object.
-        */
-        static void SetupBindings( ::v8::Handle< ::v8::Object> target )
+        if( obj )
         {
-            SetupPathFinderClass(target);
+            PFSet::iterator it = pfset().find(obj);
+            if( it != pfset().end() )
+            {
+                //CERR << ClassName<PathFinder>::Value() << " dtor deleting on @"<<obj<<'\n';
+                pfset().erase(it);
+                delete obj;
+            }
         }
-    };
+    }
+
+    void Installer<PathFinder>::SetupBindings( ::v8::Handle< ::v8::Object> target )
+    {
+        SetupPathFinderClass(target);
+    }
     
 }}} // namespaces
 
@@ -174,7 +146,17 @@ namespace v8 { namespace juice {
         typedef cw::ClassWrap<N> CW;
         typedef convert::MemFuncInvocationCallbackCreator<N> MF;
         CW & cw( CW::Instance() );
-
+        if( cw.IsSealed() )
+        {
+            /**
+               ASSUME that it was us who did the sealing. We return
+               here because changes made to the prototype after the
+               first time GetFunction() is called on the prototype
+               template appear to have no effect.
+            */
+            cw.AddClassTo(target);
+            return target;
+        }
         typedef convert::InvocationCallbackCreator ICC;
         v8::InvocationCallback isAccessible = ICC::F1::Invocable<bool,std::string const &,N::IsAccessible>;
         v8::InvocationCallback baseName = ICC::F1::Invocable<std::string,std::string const &,N::BaseName>;
@@ -285,6 +267,11 @@ namespace v8 { namespace juice {
                 void * exh = jobj->GetPointerFromInternalField(CW::InternalFields::NativeIndex);
                 CERR << "fetched void* == "<<(const void *)exh<<'\n';
             }
+#if 1 // only if using the TwoWay policy set
+            {
+                //v8::Handle<v8::Value> check = convert::CastToJS(bound);
+            }
+#endif       
             cw.DestroyObject( jobj );
         }
         

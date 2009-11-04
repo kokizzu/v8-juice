@@ -1,6 +1,6 @@
 #include <v8/juice/JuiceShell.h>
-#include <v8/juice/PathFinder.h>
 #include <v8/juice/convert.h>
+#include <v8/juice/PathFinder-cw.h>
 
 #include <v8/juice/sprintf.h>
 #include <v8/juice/plugin.h>
@@ -129,7 +129,8 @@ namespace juice {
         BIND("clearInterval", v8::juice::clearInterval);
         BIND("print", PrintToCout);
 #undef BIND
-        v8::juice::SetupPathFinderClass( this->impl->global );
+        //v8::juice::SetupPathFinderClass( this->impl->global );
+        v8::juice::cw::Installer<PathFinder>::SetupBindings( this->impl->global );
     }
 
     void JuiceShell::SetExecuteErrorReporter( ErrorMessageReporter r )
