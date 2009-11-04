@@ -1,12 +1,12 @@
-#ifndef s11n_net_V8_PLUGIN_PATHFINDER_HPP_INCLUDED
-#define s11n_net_V8_PLUGIN_PATHFINDER_HPP_INCLUDED
+#ifndef V8_JUICE_PATHFINDER_H_INCLUDED
+#define V8_JUICE_PATHFINDER_H_INCLUDED
 // Author: stephan beal <stephan@s11n.net>
 // License: Public Domain
 
 #include <string>
 #include <list>
 #include <map>
-#include <v8.h> // only for SetupPathFinderClass()
+#include <v8.h>
 namespace v8 { namespace juice {
 
     /**
@@ -56,7 +56,7 @@ namespace v8 { namespace juice {
 	/**
 	   Creates object with the given path/extension/separator list.
 	*/
-	PathFinder( const std::string & path = std::string(), const std::string & ext = std::string(), const std::string & pathsep = ":" );
+	explicit PathFinder( const std::string & path = std::string(), const std::string & ext = std::string(), const std::string & pathsep = ":" );
 
 	virtual ~PathFinder();
 
@@ -246,4 +246,4 @@ namespace v8 { namespace juice {
 
 }} // namespaces
 
-#endif // s11n_net_V8_PLUGIN_PATHFINDER_HPP_INCLUDED
+#endif // V8_JUICE_PATHFINDER_H_INCLUDED
