@@ -211,19 +211,31 @@ namespace convert {
 	    return Integer::New( static_cast<int32_t>(v) );
 	}
     };
+    /**
+       Base implementation for "small" unsigned integer conversions
+       (<=32 bits).
+    */
+    template <typename IntegerT>
+    struct NativeToJS_uint_small
+    {
+	v8::Handle<v8::Value> operator()( IntegerT v ) const
+	{
+	    return Integer::New( static_cast<uint32_t>(v) );
+	}
+    };
 #endif // if !defined(DOXYGEN)
 
     template <>
     struct NativeToJS<int16_t> : NativeToJS_int_small<int16_t> {};
 
     template <>
-    struct NativeToJS<uint16_t> : NativeToJS_int_small<uint16_t> {};
+    struct NativeToJS<uint16_t> : NativeToJS_uint_small<uint16_t> {};
 
     template <>
     struct NativeToJS<int32_t> : NativeToJS_int_small<int32_t> {};
 
     template <>
-    struct NativeToJS<uint32_t> : NativeToJS_int_small<uint32_t> {};
+    struct NativeToJS<uint32_t> : NativeToJS_uint_small<uint32_t> {};
 
 #if !defined(DOXYGEN)
     /**
