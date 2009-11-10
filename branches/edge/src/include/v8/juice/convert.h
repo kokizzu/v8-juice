@@ -655,8 +655,14 @@ namespace convert {
 	typedef std::string ResultType;
 	ResultType operator()( v8::Handle<v8::Value> const & h ) const
 	{
-	    String::AsciiValue asc( h );
-	    return std::string( *asc ? *asc : "" );
+            static const std::string emptyString;
+	    v8::String::Utf8Value utf8String( h );
+            const char* s = *utf8String;
+            if (s)
+            {
+		return std::string(s, utf8String.length());
+            }
+            return emptyString;
 	}
     };
 
