@@ -945,6 +945,7 @@ namespace juice {
 	static void weak_callback(Persistent< Value > pv, void * nobj)
 	{
 	    //CERR << "weak callback @"<<nobj<<"\n";
+            HandleScope handle_scope;
 	    Local<Object> jobj( Object::Cast(*pv) );
 	    if( jobj->InternalFieldCount() != (FieldCount) ) return; // how to warn about this?
 	    Local<Value> lv( jobj->GetInternalField(NativeFieldIndex) );
