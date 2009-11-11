@@ -233,7 +233,7 @@ filesystem will be lost. The in-memory FS can be copied to disk using
 
 You can use the `whio.InStream` methods `gzipTo()` and `ungzipTo()` to (de)compress an arbitrary stream from/to the EFS.
 
-For example, let's compress a copy of `/etc/hosts` into a EFS:
+For example, let's compress a copy of `/etc/hosts` into an EFS:
 
 {{{
 // Assume fs is an opened WhEfs object
@@ -243,7 +243,6 @@ var fz = fs.openPseudofile("/etc/hosts.gz",true);
 fz.truncate(0); // in case it already had content.
 var ostr = new whio.OutStream(fz);
 istr.gzipTo(ostr);
-print('gzip rc =',rc);
 istr.close();
 ostr.close();
 fz.close();
