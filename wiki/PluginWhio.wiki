@@ -365,10 +365,13 @@ It is trivial to re-implement the `print()` function so that it writes to an out
 {{{
 function print()
 {
-   ... for each argument, call print.stream.write(...) ...
+   print.stream.write( Array.prototype.slice.apply( arguments, [0] ).join(" ") + "\n" );
+   print.stream.flush();
 }
 print.stream = new whio.OutStream('/dev/stdout'); // or whatever
 }}}
+
+Now any calls to `print()` will use the proxy output stream.
 
 ==Don't forget to flush==
 
