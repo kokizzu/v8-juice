@@ -10,6 +10,10 @@ are at the top. Dates written extra large are release dates. This contains only 
   * http://code.google.com/p/v8-juice/source/list
 
 ----
+*2009 Nov 9*
+  * `JSToNative<std::string>` now treats strings as UTF8 instead of ASCII. (Thanks go to Rob Tsuk.)
+  * `NativeToJS<uint32_t>` now behaves properly. (Thanks go to Steven Grafton.)
+
 *2009 Oct 28*
   * Re-implemented the [PathFinderClass PathFinder class] using the [ClassWrap ClassWrap API]. The amount of code is about the same, but it's now trivial to swap out some of the back-end parts to make trade-offs for speed and memory consumption vs. type-safety and conversion features.
 
