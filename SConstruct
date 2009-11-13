@@ -40,7 +40,8 @@ if( True ):
         'plugin.cc',
         'time.cc',
         'mutex.cpp',
-        'whprintf.c'
+        'whprintf.c',
+        'StringTokenizer.cc'
         ]]
     print("Creating static juice lib...");
     env.StaticLibrary(libjuice_libname,my_src)

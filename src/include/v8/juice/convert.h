@@ -502,6 +502,9 @@ namespace convert {
 	    return h;
 	}
     };
+//     template <typename T>
+//     struct JSToNative<v8::Handle<T> const &> : JSToNative< v8::Handle<T> >
+//     {};
 
     /** Specialization which passes on v8 local Handles as-is. */
     template <typename T>
@@ -750,6 +753,28 @@ namespace convert {
         unsigned long >::Type > : JSToNative<uint64_t>
     {
     };
+
+    /**
+       See the equivalent NativeToJS kludge for unsigned long.
+    */
+    template <>
+    struct NativeToJS< v8::juice::tmp::IfElse< v8::juice::tmp::SameType<long,int64_t>::Value,
+                                               Detail::UselessConversionType<long>,
+                                               long >::Type >
+    : v8::juice::convert::NativeToJS_int_big<int64_t>
+    {
+    };
+    /**
+       See the equivalent JSToNative kludge for unsigned long.
+    */
+    template <>
+    struct JSToNative< v8::juice::tmp::IfElse<
+        v8::juice::tmp::SameType<long,int64_t>::Value,
+        Detail::UselessConversionType<long>,
+        long >::Type > : JSToNative<int64_t>
+    {
+    };
+
     
     /**
        Converts h to an object of type NT, using JSToNative<NT> to do
@@ -813,21 +838,6 @@ namespace convert {
     static const JSToNative<bool> JSToBool = JSToNative<bool>();
     /** Convenience instance of JSToNative. */
     static const JSToNative<std::string> JSToStdString = JSToNative<std::string>();
-
-    /**
-       Adds these script-side features to the given target object:
-
-       Functions:
-
-       - escape_js_string(string) escapes its argument as a JS string and returns it.
-
-       - quote_js_string(string) like escape_js_string(), but also adds quotes around
-       the returned value.
-
-       - sprintf(), as described in v8-sprintf.h.
-    */
-    ::v8::Handle< ::v8::Value > SetupAddon( ::v8::Handle< ::v8::Object > target );
-				       
 
     /**
        A utility to append entries to a JS array.
@@ -1096,6 +1106,12 @@ namespace convert {
             this->os << CastFromJS<std::string>( t );
             return *this;
         }
+//         template <typename T>
+//         inline StringBuffer & operator<<( v8::Local<T> const t )
+//         {
+//             this->os << CastFromJS<std::string>( t );
+//             return *this;
+//         }
 
         /**
            Appends t to the message via std::ostream<<.
@@ -1108,7 +1124,11 @@ namespace convert {
         }
     };
 
-    
-}}} /* namespaces */
+    /** Outputs sb.Content() to os and returns os. */
+    inline std::ostream & operator<<( std::ostream & os, v8::juice::convert::StringBuffer const & sb )
+    {
+        return os << sb.Content();
+    }
 
+}}} /* namespaces */
 #endif /* CODE_GOOGLE_COM_P_V8_V8_CONVERT_H_INCLUDED */

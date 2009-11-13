@@ -64,8 +64,8 @@ namespace juice {
     private:
 	char const * className;
 	Handle<Object> target;
-	Handle<FunctionTemplate> ctorTmpl;
-	Handle<ObjectTemplate> proto;
+	Persistent<FunctionTemplate> ctorTmpl;
+	Persistent<ObjectTemplate> proto;
  	JSClassCreator( JSClassCreator const & ); // not implemented
  	JSClassCreator & operator=( JSClassCreator const & ); // not implemented
 	bool hasTarget;

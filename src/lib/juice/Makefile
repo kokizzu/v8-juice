@@ -15,6 +15,7 @@ OBJECTS = $(addsuffix .o,\
 	jssprintf \
 	time \
 	mutex \
+	StringTokenizer \
 	)
 #	PathFinder-js
 
