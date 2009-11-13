@@ -6,17 +6,17 @@
 #include <v8/juice/ClassBinder.h>
 
 
-static int my_forwarded_func()
+int my_forwarded_func()
 {
     CERR << "my_forwarded_func()!\n";
     return 42;
 }
-static int my_forwarded_func3(int x,int y,int z)
+int my_forwarded_func3(int x,int y,int z)
 {
     CERR << "my_forwarded_func3()!\n";
     return x + y + z;
 }
-static void my_void_forwarded_func(int x)
+void my_void_forwarded_func(int x)
 {
     CERR << "my_void_forwarded_func("<<x<<")!\n";
 }
