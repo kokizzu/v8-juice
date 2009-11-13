@@ -710,9 +710,7 @@ namespace cw {
        
        ToNative_SearchPrototypesForNative<T>::Value
        internally is used as the second parameter to
-       ExtractPolicy::ExtractVoid(), so a specialization of that
-       policy must (if used at all) appear before this type is
-       instantiated.
+       ExtractPolicy::ExtractVoid().
     */
     template <typename T>
     struct ToNative_Base
@@ -1343,7 +1341,7 @@ namespace cw {
             >
         void BindGetterSetter( char const * propName )
         {
-            return PB::template BindGetterSetter<RV,Getter,SetRV,ArgV,Setter>( propName, this->Prototype() );
+            PB::template BindGetterSetter<RV,Getter,SetRV,ArgV,Setter>( propName, this->Prototype() );
         }
 
         /** Overload to support a const Getter. */
@@ -1355,7 +1353,7 @@ namespace cw {
             >
         void BindGetterSetter( char const * propName )
         {
-            return PB::template BindGetterSetter<RV,Getter,SetRV,ArgV,Setter>( propName, this->Prototype() );
+            PB::template BindGetterSetter<RV,Getter,SetRV,ArgV,Setter>( propName, this->Prototype() );
         }
         
         /**
@@ -1364,32 +1362,32 @@ namespace cw {
         template <typename RV, RV (Type::*Getter)()>
         void BindGetter( char const * propName )
 	{
-            return PB::template BindGetter<RV,Getter>( propName, this->Prototype() );
+            PB::template BindGetter<RV,Getter>( propName, this->Prototype() );
         }
 
         /** Overload to support a const Getter. */
         template <typename RV, RV (Type::*Getter)() const>
         void BindGetter( char const * propName )
 	{
-            return PB::template BindGetter<RV,Getter>( propName, this->Prototype() );
+            PB::template BindGetter<RV,Getter>( propName, this->Prototype() );
         }
 
         /**
            See v8::juice::convert::PropertyBinder::BindStaticVar().
         */
         template <typename VarType, VarType * SharedVar>
-        static void BindStaticVar( char const * name )
+        void BindStaticVar( char const * name )
         {
-            return PB::template BindStaticVar<VarType,SharedVar>( name );
+            PB::template BindStaticVar<VarType,SharedVar>( name, this->Prototype() );
         }
 
         /**
            See v8::juice::convert::PropertyBinder::BindStaticVarRO().
         */
         template <typename VarType, VarType const * SharedVar>
-        static void BindStaticVarRO( char const * name )
+        void BindStaticVarRO( char const * name )
         {
-            return PB::template BindStaticVarRO<VarType,SharedVar>( name );
+            PB::template BindStaticVarRO<VarType,SharedVar>( name, this->Prototype() );
         }
         
         

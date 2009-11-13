@@ -9,10 +9,11 @@
 #include "whprintf.h"
 #include <v8/juice/convert.h>
 #include <v8/juice/ToSource.h>
+#include <v8/juice/StringTokenizer.h>
 
-// #ifndef CERR
-// #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
-// #endif
+#ifndef CERR
+#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#endif
 // #ifndef COUT
 // #define COUT std::cout << __FILE__ << ":" << std::dec << __LINE__ << " : "
 // #endif
@@ -208,4 +209,46 @@ namespace v8 { namespace juice {
     }
 
 
+    v8::Handle<v8::Object> GetNamespaceObject( v8::Handle<v8::Object> top, char const * ns )
+    {
+        typedef v8::Handle<v8::Object> HO;
+        if( top.IsEmpty() )
+        {
+            v8::ThrowException(String::New("GetNamespaceObject() requires an Object as its first parameter."));
+            return HO();
+        }
+        StringTokenizer tok;
+        tok.Tokenize( ns, ".:/" );
+        if( ! tok.HasTokens() )
+        {
+            return HO();
+        }
+        HO nso;
+        HO at = top;
+        while( tok.HasTokens() )
+        {
+            char const * key = tok.NextToken();
+            if( !key || !*key ) continue; // accomodate "::"
+            v8::Local<v8::String> jkey( v8::String::New(key) );
+            v8::Local<v8::Value> jv = at->Get( jkey );
+            if( jv.IsEmpty() || ! jv->IsObject() )
+            {
+                nso = Object::New();
+#if 1
+                if( ! at->Set( jkey, nso ) )
+                { // ^^^^ i'm GUESSING on what the return value means. It's not documented in v8 :(.
+                    convert::StringBuffer msg;
+                    msg << "GetNamespaceObject(Object,"<<ns<<") was not able to set the property '"<<key<<"'.";
+                    v8::ThrowException(msg);
+                    return HO();
+                }
+#endif
+                at = nso;
+                continue;
+            }
+            at = nso = HO( v8::Object::Cast(*jv) );
+        }
+        return nso;
+    }
+    
 }}
