@@ -14,12 +14,6 @@ v8::juice::cw binding mechanism.
 #include <v8/juice/plugin.h>
 
 
-
-//#include <v8/juice/ClassWrap_JuiceBind.h>
-// #include <v8/juice/ClassWrap_TwoWay.h>
-
-
-
 #if !defined(CERR)
 #    include <iostream> /* only for debuggering */
 #    define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
@@ -46,8 +40,7 @@ namespace v8 { namespace juice {
 namespace cw {
     using namespace ::v8::juice;
 
-#define JSTR(X) String::New(X)
-#define TOSS(X) ThrowException(JSTR(X))
+#define JSTR(X) v8::String::New(X)
 
     
     //! internal
@@ -129,7 +122,7 @@ namespace cw {
 
     void Installer<PathFinder>::SetupBindings( ::v8::Handle< ::v8::Object> target )
     {
-        SetupPathFinderClass(target);
+        v8::juice::SetupPathFinderClass(target);
     }
     
 }}} // namespaces
@@ -267,9 +260,9 @@ namespace v8 { namespace juice {
                 void * exh = jobj->GetPointerFromInternalField(CW::InternalFields::NativeIndex);
                 CERR << "fetched void* == "<<(const void *)exh<<'\n';
             }
-#if 1 // only if using the TwoWay policy set
+#if 0 // only if using the TwoWay policy set
             {
-                //v8::Handle<v8::Value> check = convert::CastToJS(bound);
+                v8::Handle<v8::Value> check = convert::CastToJS(bound);
             }
 #endif       
             cw.DestroyObject( jobj );
@@ -278,5 +271,4 @@ namespace v8 { namespace juice {
 	return target;
     }
 #undef JSTR
-#undef TOSS
 }} // namespaces
