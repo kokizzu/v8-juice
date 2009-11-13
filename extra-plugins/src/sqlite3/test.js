@@ -1,4 +1,4 @@
-load_plugin('v8-juice-sqlite3');
+loadPlugin('v8-juice-sqlite3');
 var my = {db:0,stmt:0};
 my.db = sqlite3_open("my.db");
 print("Using sqlite3 version",sqlite3_libversion());
