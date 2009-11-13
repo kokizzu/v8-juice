@@ -89,35 +89,56 @@ public:
         DBGOUT << "~PosixFILE()@"<<(void const *)this<<'\n';
         this->close();
     }
+    std::string name() const
+    {
+        return this->fname;
+    }
+    std::string mode() const
+    {
+        return this->fmode;
+    }
     void close()
     {
         if( this->fh )
         {
             DBGOUT << "~PosixFILE()@"<<(void const *)this<<"->close()\n";
+            this->flush();
             ::fclose( this->fh );
             this->fh = 0;
         }
     }
-    /** Destroys this object via the JS engine.
-        Returns true if it can destroy this object,
-        else false. If this object was not created
-        via ClassWrap<PosixFILE>::Instance().NewInstance()
-        (or equivalent) then destruction will fail.
+    /**
+       Destroys this object via the JS engine.  Returns true if it can
+       destroy this object, else false. If this object was not created
+       via ClassWrap<PosixFILE>::Instance().NewInstance() (or
+       equivalent) then destruction will fail.
+
+       After this call, this object must not be used.
     */
     bool destroy();
+
     int eof()
     {
         return this->fh ? ::feof(this->fh) : 0;
     }
+
     int error()
     {
         return this->fh ? ::ferror(this->fh) : 0;
     }
+
     void clearerr()
     {
         if( this->fh ) ::clearerr(this->fh);
     }
 
+    int truncate( int64_t off )
+    {
+        return this->fh
+            ? ftruncate( this->fileno(), off )
+            : -1;
+    }
+    
     uint64_t size()
     {
         int64_t pos = this->tell();
@@ -165,27 +186,33 @@ public:
     {
         return fsync( this->fileno() );
     }
+
     int datasync()
     {
         return fdatasync( this->fileno() );
     }
+
     int flush()
     {
         return fflush( this->fh );
     }
+
     int64_t seek( int64_t off, int whence )
     {
         return ::fseek( this->fh, off, whence );
     }
+
     /** Equivalent to seek(off,SEEK_SET). */
     int64_t seek( int64_t off )
     {
         return this->seek( off, SEEK_SET );
     }
+
     void rewind()
     {
         if( this->fh) ::rewind( this->fh );
     }
+
     int64_t tell()
     {
         return ::ftell( this->fh );
@@ -196,17 +223,30 @@ public:
     {
         return errno;
     }
+    /** Sets errno and returns errno's previous value. */
     int cerrno( int e )
     {
-        return errno = e;
+        int x = errno;
+        errno = e;
+        return x;
     }
 
+    int unlink()
+    {
+        return ::unlink( this->fname.c_str() );
+    }
+
+    /** toString() for JS. */
     std::string toString() const;
+
+    /**
+       Installs this class' bindings into dest.
+    */
     static void SetupBindings( v8::Handle<v8::Object> dest );
 private:
     /**
        Only for use in JS/(FILE*) conversion routines.
-     */
+    */
     FILE * handle()
     {
         return this->fh;
@@ -219,7 +259,7 @@ private:
 // Set up our ClassWrap policies...
 namespace v8 { namespace juice { namespace cw
 {
-
+   
     template <> struct DebugLevel<PosixFILE> : Opt_Int<2> {};
 
     template <>
@@ -243,28 +283,13 @@ namespace v8 { namespace juice { namespace cw
     {};
 
     template <>
-    struct Installer<PosixFILE>
-    {
-    public:
-        /**
-           Installs the bindings for PathFinder into the given object.
-        */
-        static void SetupBindings( ::v8::Handle< ::v8::Object> target )
-        {
-            PosixFILE::SetupBindings(target);
-        }
-    };
-    
-    template <>
-    struct ToNative< PosixFILE > :
-        ToNative_Base< PosixFILE >
-    {
-    };
-
-    template <>
     struct Extract< PosixFILE > :
         TwoWayBind_Extract< PosixFILE > {};
 
+    template <>
+    struct ToNative< PosixFILE > :
+        ToNative_Base< PosixFILE > {};
+    
     template <>
     struct ToJS< PosixFILE > :
         TwoWayBind_ToJS< PosixFILE > {};
@@ -277,6 +302,7 @@ namespace v8 { namespace juice { namespace cw
             return "FILE";
         }
     };
+
     template <>
     struct WeakWrap< PosixFILE >
     {
@@ -298,6 +324,19 @@ namespace v8 { namespace juice { namespace cw
         }
     };
 
+    template <>
+    struct Installer<PosixFILE>
+    {
+    public:
+        /**
+           Installs the bindings for PathFinder into the given object.
+        */
+        static void SetupBindings( ::v8::Handle< ::v8::Object> target )
+        {
+            PosixFILE::SetupBindings(target);
+        }
+    };
+    
 } } } // v8::juice::cw
 
 bool PosixFILE::enableDebug = v8::juice::cw::DebugLevel<PosixFILE>::Value > 2;
@@ -346,8 +385,10 @@ namespace v8 { namespace juice { namespace convert
 bool PosixFILE::destroy()
 {
     typedef v8::juice::cw::ClassWrap<PosixFILE> CW;
+    this->close();
     return CW::DestroyObject( v8::juice::convert::CastToJS( this ) );
 }
+
 std::string PosixFILE::toString() const
 {
     std::ostringstream os;
@@ -441,6 +482,25 @@ size_t PosixFILE_fwrite( std::string const & s, FILE * f )
     return PosixFILE_fwrite( s, s.size(), 1, f );
 }
 
+int PosixFILE_unlink( std::string const & s )
+{
+    return ::unlink( s.c_str() );
+}
+
+int PosixFILE_ftruncate( v8::Handle<v8::Value> const & h, int64_t off )
+{
+    PosixFILE * pf = v8::juice::convert::CastFromJS<PosixFILE>( h );
+    if( pf ) return pf->truncate(off);
+    else return ::ftruncate( v8::juice::convert::JSToInt32(h), off );
+}
+
+int PosixFILE_fsync( v8::Handle<v8::Value> const & h )
+{
+    PosixFILE * pf = v8::juice::convert::CastFromJS<PosixFILE>( h );
+    if( pf ) return pf->sync();
+    else return ::fsync( v8::juice::convert::JSToInt32(h) );
+}
+
 /**
    Sets up the Posix FILE-related bindings.
 
@@ -465,11 +525,13 @@ size_t PosixFILE_fwrite( std::string const & s, FILE * f )
    - string fread( int sizeEach, int count, FILE )
    - string fread( int bytes, FILE )
    - int fseek(FILE,int,int)
-   - int fsync(int)
+   - int fsync(FILE | int)
+   - int ftruncate(FILE | int, int)
    - int fwrite( string src, int sizeEach, int howMany, FILE )
    - int fwrite( string src, int bytes, FILE )
    - int fwrite( string src, FILE )
    - void rewind(FILE)
+   - int unlink( string )
 
    Properties (read-only):
 
@@ -520,9 +582,13 @@ void PosixFILE::SetupBindings( v8::Handle<v8::Object> dest )
         .Set( "size", ICM::M0::Invocable<uint64_t,&N::size> )
         .Set( "sync", ICM::M0::Invocable<int,&N::sync> )
         .Set( "tell", ICM::M0::Invocable<int64_t,&N::tell> )
+        .Set( "truncate", ICM::M1::Invocable<int,int64_t,&N::truncate> )
         .Set( "toString", ICM::M0::Invocable<std::string,&N::toString> )
+        .Set( "unlink", ICM::M0::Invocable<int,&N::unlink> )
         .Set( "write", convert::OverloadInvocables<WriteList>::Invocable )
         ;
+    cw.BindGetter<std::string,&N::name>("name");
+    cw.BindGetter<std::string,&N::mode>("mode");
     cw.BindGetterSetter<int,&N::cerrno,int,int,&N::cerrno>("errno");
     cw.BindStaticVar<bool,&N::enableDebug>( "debug" );
     v8::Handle<v8::Function> ctor = cw.Seal();
@@ -536,17 +602,6 @@ void PosixFILE::SetupBindings( v8::Handle<v8::Object> dest )
 
     cb = ICC::F1::Invocable<void,FILE*,::clearerr>;
     F("clearerr");
-
-#if 0
-    typedef tmp::TypeList<
-        convert::InvocableFunction0<int,Posix_cerrno>,
-        convert::InvocableFunction1<int,int,Posix_cerrno>
-        > ErrnoList;
-    cb = convert::OverloadInvocables<ErrnoList>::Invocable;
-#elif 0
-    cb = convert::InvocableFunction0<int,Posix_cerrno>::Invocable;
-#endif
-    //F("errno"); // reminder: we cannot apply an AccessorGetter to a non-JS-template Object
 
     cb =ICC::F1::Invocable<bool,v8::Handle<v8::Value> const &,CW::DestroyObject>;
     F("fclose");
@@ -585,9 +640,16 @@ void PosixFILE::SetupBindings( v8::Handle<v8::Object> dest )
     cb = ICC::F3::Invocable<int,FILE*,long,int,::fseek>;
     F("fseek");
 
-    cb = ICC::F1::Invocable<int,int,::fsync>;
+    cb = ICC::F1::Invocable<int,v8::Handle<v8::Value> const &,PosixFILE_fsync>;
     F("fsync");
 
+    cb = ICC::F2::Invocable<int,v8::Handle<v8::Value> const &,int64_t,::PosixFILE_ftruncate>;
+    F("ftruncate");
+
+    cb = ICC::F1::Invocable<int,std::string const &,::PosixFILE_unlink>;
+    F("unlink");
+
+    
     typedef tmp::TypeList<
         convert::InvocableFunction2<size_t,std::string const &,FILE*,PosixFILE_fwrite>,
         convert::InvocableFunction3<size_t,std::string const &,size_t,FILE*,PosixFILE_fwrite>,
