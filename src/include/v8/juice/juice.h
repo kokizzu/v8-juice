@@ -116,6 +116,43 @@ namespace juice {
     */
     std::string StringJSQuote( std::string const & s );
 
+    /**
+       Searches for a sub-object of the given object, creating it if
+       needed. It is intended to be used like this:
+
+       @code
+       Handle<Object> ns = GetNamespaceObject( myGlobalObject, "foo.bar" );
+       @endcode
+
+       myGlobalObject is the top-most object in which to search for
+       the namespace (e.g. the current global object).
+
+       If myGlobalObject does not contain an object property named 'foo' then it is
+       created, otherwise it is used as-is for the next search... If foo contains
+       no a object named 'bar' then myGlobalObject.foo.bar is created.
+       
+       The ns parameter is a formatted string containing one or more
+       object names making up the namespace.  The object names may be
+       separated by '.', '/', or ':', so all of the following are
+       legal and have the same meaning:
+
+       - foo.bar.com
+       - foo/bar::com
+       - foo::bar::com
+       
+
+       The returned object will be an empty handle on error or the
+       last object in the namespace list. Error conditions include:
+
+       - !top->IsObject()
+       - ns does not have any tokens.
+
+       The intent is to allow multiple add-on classes/modules to use a
+       common namespace for storing their features without having to
+       know whether it's been created or not yet.
+    */
+    v8::Handle<v8::Object> GetNamespaceObject( v8::Handle<v8::Object> top, char const * ns );
+    
 
 }} // namespace
 
