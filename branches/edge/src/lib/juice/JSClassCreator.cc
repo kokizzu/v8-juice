@@ -12,8 +12,8 @@ namespace v8 { namespace juice {
 				    int internalFieldCount )
 	: className(className ? className : "UnnamedClass"),
 	  target(target),
-	  ctorTmpl( FunctionTemplate::New(ctor) ),
-	  proto( ctorTmpl->PrototypeTemplate() ),
+	  ctorTmpl( Persistent<FunctionTemplate>::New( FunctionTemplate::New(ctor) ) ),
+	  proto( Persistent<ObjectTemplate>::New( ctorTmpl->PrototypeTemplate() ) ),
 	  hasTarget(true),
           wasSealed(false)
     {
@@ -28,8 +28,8 @@ namespace v8 { namespace juice {
 				    int internalFieldCount )
 	: className(className),
 	  target(),
-	  ctorTmpl( FunctionTemplate::New(ctor) ),
-	  proto( ctorTmpl->PrototypeTemplate() ),
+	  ctorTmpl( Persistent<FunctionTemplate>::New( FunctionTemplate::New(ctor) ) ),
+	  proto( Persistent<ObjectTemplate>::New( ctorTmpl->PrototypeTemplate() ) ),
 	  hasTarget(false)
     {
 	if( internalFieldCount > 0 )
