@@ -710,9 +710,7 @@ namespace cw {
        
        ToNative_SearchPrototypesForNative<T>::Value
        internally is used as the second parameter to
-       ExtractPolicy::ExtractVoid(), so a specialization of that
-       policy must (if used at all) appear before this type is
-       instantiated.
+       ExtractPolicy::ExtractVoid().
     */
     template <typename T>
     struct ToNative_Base
