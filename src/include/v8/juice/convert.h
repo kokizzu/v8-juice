@@ -502,6 +502,9 @@ namespace convert {
 	    return h;
 	}
     };
+//     template <typename T>
+//     struct JSToNative<v8::Handle<T> const &> : JSToNative< v8::Handle<T> >
+//     {};
 
     /** Specialization which passes on v8 local Handles as-is. */
     template <typename T>
@@ -750,6 +753,28 @@ namespace convert {
         unsigned long >::Type > : JSToNative<uint64_t>
     {
     };
+
+    /**
+       See the equivalent NativeToJS kludge for unsigned long.
+    */
+    template <>
+    struct NativeToJS< v8::juice::tmp::IfElse< v8::juice::tmp::SameType<long,int64_t>::Value,
+                                               Detail::UselessConversionType<long>,
+                                               long >::Type >
+    : v8::juice::convert::NativeToJS_int_big<int64_t>
+    {
+    };
+    /**
+       See the equivalent JSToNative kludge for unsigned long.
+    */
+    template <>
+    struct JSToNative< v8::juice::tmp::IfElse<
+        v8::juice::tmp::SameType<long,int64_t>::Value,
+        Detail::UselessConversionType<long>,
+        long >::Type > : JSToNative<int64_t>
+    {
+    };
+
     
     /**
        Converts h to an object of type NT, using JSToNative<NT> to do
