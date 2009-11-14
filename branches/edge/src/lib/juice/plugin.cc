@@ -2,7 +2,7 @@
 #include <v8/juice/PathFinder.h>
 #include <v8/juice/Phoenix.h>
 #include <sstream>
-
+#include "mutex.hpp"
 /**
    Set to 1 to use a no-op plugin (non-)loader (just for testing
    purposes, or when no plugin loader is implemented for this platform).
@@ -85,6 +85,8 @@ namespace plugin {
     Handle< Value > LoadPlugin( std::string const & modname,
 				Handle< Object > target )
     {
+        static v8::juice::mutex Mu;
+        v8::juice::mutex_sentry locker(Mu);
 	LoadPluginScope sentry(target);
 	std::string errmsg;
 	std::string fn( open( modname, errmsg ) );
