@@ -9,7 +9,7 @@ var xmlar = [
              "name='child'>subnode text",
              "</sub></root>"
              ];
-var xml = "<root a='b' c='d'><sub name='child'>subnode text</sub></root>";
+//var xml = xmlar.join("");
 
 function startNode(ud,name,attr)
 {
@@ -39,15 +39,15 @@ function testOne()
     ex.userData = "hi, world";
     print('ex =',ex);
     var rc;
-    if(1)
-    {
-        rc = ex.parse( xml, true );
+    if(0)
+    { // parse all in one go
+        rc = ex.parse( xmlar.join(""), true );
     }
     else
-    {
+    { // parse incrementally
         for( var i = 0; i < xmlar.length; ++i )
         {
-            ex.parse( xmlar[i], i == (xmlar.length-1));
+            rc = ex.parse( xmlar[i], i == (xmlar.length-1));
         }
     }
     print( "parse rc =",rc);
@@ -57,8 +57,23 @@ function testOne()
 
 testOne();
 
+/**
+   Converts the given XML to an object tree with this structure:
 
-function xmlToObject(xml)
+   {
+     name:'NodeName',
+     attr:{key/val pairs of XML element attributes},
+     children:[ ... nested objects ... ],
+     cdata:string_of_char_data_from_xml_node
+   }
+
+   The cdata, attr, and children fields will be missing if the node has
+   no cdata, attributes, or children.
+
+   On error it throws. On success the root object in the tree
+   is returned.
+*/
+function XMLToObject(xml)
 {
     var p = new ExpatParser();
     var state = {
@@ -91,7 +106,8 @@ function xmlToObject(xml)
     };
     p.charHandler = function(ud,text,len)
     {
-        ud.cur.cdata = text;
+        if( ! ud.cur.cdata ) ud.cur.cdata = "";
+        ud.cur.cdata += text;
     };
     var rc = false;
     try
@@ -135,8 +151,8 @@ function testTwo()
         ;
     print(banner.start);
     print( arguments.callee.name+"()" );
-    var xo = xmlToObject(x);
-    print('xmlToObject ==',JSON.stringify(xo,undefined,4));
+    var xo = XMLToObject(x);
+    print('XMLToObject ==',JSON.stringify(xo,undefined,4));
     print(banner.end);
 }
 testTwo()

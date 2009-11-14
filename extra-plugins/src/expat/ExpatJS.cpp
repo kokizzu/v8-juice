@@ -54,11 +54,14 @@ namespace v8 { namespace juice { namespace expat {
 
         void reset()
         {
-            if( this->ps )
+            if( ! this->ps )
             {
-                XML_ParserFree( this->ps );
+                this->ps = XML_ParserCreate(NULL);
             }
-            this->ps = XML_ParserCreate(NULL);
+            else
+            {
+                XML_ParserReset( this->ps, NULL );
+            }
             XML_SetElementHandler( this->ps, start_node, end_node );
             XML_SetCharacterDataHandler( this->ps, char_handler );
             XML_SetUserData( this->ps, this );
@@ -171,12 +174,12 @@ namespace v8 { namespace juice { namespace expat {
                 << XML_ErrorString(XML_GetErrorCode(this->impl->ps))
                 << ": input=["<<part<<"]";
             TOSSV(msg);
-            XML_ParserReset( this->impl->ps, NULL );
+            this->impl->reset();
             rc = false;
         }
         if( finished )
         {
-            XML_ParserReset( this->impl->ps, NULL );
+            this->impl->reset();
         }
         return rc;
     }
