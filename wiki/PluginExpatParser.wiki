@@ -146,8 +146,8 @@ ex.charHandler = function charHandler(ud,text,len)
 // line-by-line reading...
 var xmlar = [
              "<root a='b' c='d'><sub ",
-             "name='child'>subnode text",
-             "</sub></root>"
+             "name='child'>subnode ",
+             "text</sub></root>"
              ];
 if(0) // parse all in one go
 {
@@ -164,7 +164,7 @@ ex.destroy();
 }}}
 
 
-That might produce output similar to:
+That produces output similar to:
 
 {{{
 startNode: root
@@ -172,7 +172,8 @@ attr [a] = b
 attr [c] = d
 startNode: sub
 attr [name] = child
-charHandler: [subnode text]
+charHandler: [subnode ]
+charHandler: [text]
 endNode: sub userData = hi, world
 endNode: root userData = hi, world
 }}}
