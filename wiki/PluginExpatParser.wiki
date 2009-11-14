@@ -83,7 +83,7 @@ to handle the data however the client wishes.
 libexpat itself can do much more than these few things, and any missing
 features may be added to this API as the need arises.
 
-The callbacks are described below. Results are undefined if any of these callbacks is
+The callbacks are described below. Results are undefined if any of these callbacks are
 set to a non-Function value.
 
 === `startNode()` ===
