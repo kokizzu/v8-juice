@@ -1854,9 +1854,6 @@ namespace cw {
     {
     public:
         /**
-           The default implementation throws a std::exception. But
-           more generally speaking:
-
            This routine is responsible for installing any bindings it
            would like into the given object.
 
