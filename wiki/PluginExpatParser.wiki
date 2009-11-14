@@ -1,6 +1,8 @@
 #summary JS API reference for ExpatParser class
 #labels Topic-JS-API,Phase-UserDocs
 
+*See also:* [Plugins]
+
 <wiki:toc max_depth='3'/>
 
 = XML Parser Plugin (a.k.a. !ExpatParser) =
@@ -19,7 +21,9 @@ from XML input.
 
 == Loading from JS ==
 
-Simply do:
+Install the plugin by following the instructions on the [Plugins] page.
+
+Then simply do:
 
 {{{
 loadPlugin('v8-juice-ExpatParser');
