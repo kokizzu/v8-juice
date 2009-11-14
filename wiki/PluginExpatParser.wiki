@@ -28,7 +28,7 @@ loadPlugin('v8-juice-ExpatParser');
 == Loading from C++ ==
 
 The class can be added to a JS engine by linking in
-[http://code.google.com/p/v8-juice/extra-plugins/src/expat the relevant code]
+[http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/expat the relevant code]
 into your app and calling `v8::juice::expat::ExpatJS::SetupBindings()`.
 
 
