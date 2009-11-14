@@ -975,7 +975,6 @@ namespace convert {
 	{
 	    typedef typename MapT::const_iterator IT;
 	    IT it( li.begin() );
-	    size_t sz = li.size();
 	    Handle<Object> rv( Object::New() );
 	    for( int i = 0; li.end() != it; ++it, ++i )
 	    {
