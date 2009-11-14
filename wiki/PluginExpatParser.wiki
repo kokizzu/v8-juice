@@ -8,10 +8,14 @@
 Added 20091114.
 
 This plugin provides a JS class called !ExpatParser which allows the client to
-parse XML using [http://libexpat.sf.net libexpat] as the back-end.
+parse XML using [http://libexpat.sf.net libexpat] as the back-end. It is fed
+its input by the client, and thus it is not tied to reading one specific type
+of input stream, nor does it require buffering the entire input before parsing.
 
 This XML parser is event-driven. It reads XML input incrementally and calls
 client-specified callbacks when it encounters various parts of the XML tree.
+This approach makes it relatively simple to create language-specific object trees
+from XML input.
 
 == Loading from JS ==
 
@@ -65,16 +69,16 @@ the parser on an error or when it finishes a parse. It is only necessary to use 
 if, while incrementally reading/parsing input, you decide to abort the parsing process and
 discard all input.
 
-== Callbacks ==
+== Event Callbacks ==
 
-The parser passes information to the client via callback routines. The events it handles are:
+The parser passes information to the client via callback routines. It does so for the following cases:
 
   * Opening an XML node.
   * Closing an XML node.
   * Reading CDATA from within an XML node.
 
 At those points in the parsing process, libexpat will trigger the client-supplied callback
-to handle the data however he wishes.
+to handle the data however the client wishes.
 
 libexpat itself can do much more than these few things, and any missing
 features may be added to this API as the need arises.
@@ -114,6 +118,7 @@ rather than assign over it.
 Here's all there is to know:
 
 {{{
+loadPlugin('v8-juice-ExpatParser');
 
 var ex = new ExpatParser();
 ex.userData = "hi, world";
