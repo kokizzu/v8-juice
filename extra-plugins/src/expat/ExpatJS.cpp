@@ -96,13 +96,17 @@ namespace v8 { namespace juice { namespace cw {
 
     void WeakWrap<ExpatJS>::Wrap( v8::Persistent<v8::Object> const & jsSelf, ExpatJS * nativeSelf )
     {
+#if V8_JUICE_EXPAT_USE_TWOWAY_WRAP
         WeakWrapBase::Wrap( jsSelf, nativeSelf );
+#endif
         nativeSelf->impl->jself = jsSelf;
     }
 
     void WeakWrap<ExpatJS>::Unwrap( v8::Handle<v8::Object> const & jsSelf, ExpatJS * nativeSelf )
     {
+#if V8_JUICE_EXPAT_USE_TWOWAY_WRAP
         WeakWrapBase::Unwrap( jsSelf, nativeSelf );
+#endif
         nativeSelf->impl->jself.Clear();
     }
 
@@ -236,7 +240,7 @@ namespace v8 { namespace juice { namespace expat {
     }
     v8::Handle<v8::Value> CharHandlerNoop( v8::Arguments const & argv )
     {
-        CERR << "charHandler() should be re-implemented!\n";
+        //CERR << "charHandler() should be re-implemented!\n";
         return v8::Undefined();
     }
     static void XMLCALL char_handler( void * ud, const char * txt, int len )

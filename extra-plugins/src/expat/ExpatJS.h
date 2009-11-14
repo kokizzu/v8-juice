@@ -4,8 +4,25 @@
 #include <expat.h>
 #include <v8.h>
 #include <v8/juice/ClassWrap.h>
-#include <v8/juice/ClassWrap_TwoWay.h>
+/** @def V8_JUICE_EXPAT_USE_TWOWAY_WRAP
 
+    Set V8_JUICE_EXPAT_USE_TWOWAY_WRAP to a true value to enable
+    "two-way" class binding (with conversions for JS-to-Native and
+    Native-to-JS). This is only needed if native ExpatJS objects will
+    be passed back to JS via, e.g., function return values.
+
+    Using the TwoWay wrapper increases the memory cost of each parser
+    and is a tad bit slower than not using it.
+*/
+#define V8_JUICE_EXPAT_USE_TWOWAY_WRAP 0
+#if V8_JUICE_EXPAT_USE_TWOWAY_WRAP
+#include <v8/juice/ClassWrap_TwoWay.h>
+#endif
+
+/**
+   The expat namespaces houses a libexpat-based XML parser class for
+   binding to JS.
+*/
 namespace v8 { namespace juice { namespace expat {
 
     /** Internal implementation detail. */
@@ -135,11 +152,22 @@ namespace v8 { namespace juice {  namespace cw {
         typedef ExpatJS * NativeHandle;
         static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf );
         static void Unwrap( v8::Handle<v8::Object> const & jsSelf, NativeHandle nativeSelf );
+#if V8_JUICE_EXPAT_USE_TWOWAY_WRAP
     private:
         typedef TwoWayBind_WeakWrap<ExpatJS> WeakWrapBase;
-
+#endif
     };
 
+    template <>
+    struct Installer<ExpatJS>
+    {
+        /** Installs the ExpatJS class into the given object. */
+        static void SetupBindings( ::v8::Handle< ::v8::Object> target )
+        {
+            v8::juice::expat::ExpatJS::SetupBindings(target);
+        }
+    };
+#if V8_JUICE_EXPAT_USE_TWOWAY_WRAP
     template <>
     struct Extract< ExpatJS > :
         TwoWayBind_Extract< ExpatJS > {};
@@ -151,24 +179,17 @@ namespace v8 { namespace juice {  namespace cw {
     template <>
     struct ToJS< ExpatJS > :
         TwoWayBind_ToJS< ExpatJS > {};
-    template <>
-    struct Installer<ExpatJS>
-    {
-        /** Installs the ExpatJS class into the given object. */
-        static void SetupBindings( ::v8::Handle< ::v8::Object> target )
-        {
-            v8::juice::expat::ExpatJS::SetupBindings(target);
-        }
-    };
+#endif
     
 } // namespace cw
 namespace convert
 {
     using v8::juice::expat::ExpatJS;
+#if V8_JUICE_EXPAT_USE_TWOWAY_WRAP
     template <>
     struct NativeToJS< ExpatJS > : v8::juice::cw::NativeToJSImpl< ExpatJS >
     {};
-
+#endif
     template <>
     struct JSToNative< ExpatJS > : v8::juice::cw::JSToNativeImpl< ExpatJS >
     {};

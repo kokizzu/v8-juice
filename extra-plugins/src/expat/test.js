@@ -6,8 +6,8 @@ var banner = {
         };
 var xmlar = [
              "<root a='b' c='d'><sub ",
-             "name='child'>subnode text",
-             "</sub></root>"
+             "name='child'>subnode ",
+             "text</sub></root>"
              ];
 //var xml = xmlar.join("");
 
