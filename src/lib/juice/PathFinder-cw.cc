@@ -34,10 +34,7 @@ namespace {
 
 } // anon namespace
 
-namespace v8 { namespace juice {
-
-    
-namespace cw {
+namespace v8 { namespace juice { namespace cw {
     using namespace ::v8::juice;
 
 #define JSTR(X) v8::String::New(X)
