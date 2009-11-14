@@ -30,7 +30,6 @@ libjuice_libname = 'v8-juice'
 if( True ):
     my_src = [os.path.join('#/src/lib/juice/', x) for x in [
         'cleanup.cc',
-        'convert.cc',
         'JSClassCreator.cc',
         'jssprintf.cc',
         'juice.cc',
