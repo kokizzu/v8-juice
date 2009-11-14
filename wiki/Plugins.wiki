@@ -11,6 +11,7 @@ List of current plugins:
 
   * An object-oriented [PluginNCurses ncurses wrapper].
   * A minimalistic [PluginReadline GNU Readline/BSD Editline wrapper]
+  * An event-driven [PluginExpatParser XML parser]
   * [PluginSQLite3 sqlite3 bindings]
   * [PluginStringFuncs supplemental string functions] (e.g. for escaping and quoting strings).
   * [PluginWhio i/o device and stream classes], with an optional [PluginWhefs embedded filesystem component].

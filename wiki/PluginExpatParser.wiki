@@ -1,0 +1,173 @@
+#summary JS API reference for ExpatParser class
+#labels Topic-JS-API,Phase-UserDocs
+
+<wiki:toc max_depth='3'/>
+
+= XML Parser Plugin (a.k.a. !ExpatParser) =
+
+Added 20091114.
+
+This plugin provides a JS class called !ExpatParser which allows the client to
+parse XML using [http://libexpat.sf.net libexpat] as the back-end.
+
+This XML parser is event-driven. It reads XML input incrementally and calls
+client-specified callbacks when it encounters various parts of the XML tree.
+
+== Loading from JS ==
+
+Simply do:
+
+{{{
+loadPlugin('v8-juice-ExpatParser');
+}}}
+
+== Loading from C++ ==
+
+The class can be added to a JS engine by linking in
+[http://code.google.com/p/v8-juice/extra-plugins/src/expat the relevant code]
+into your app and calling `v8::juice::expat::ExpatJS::SetupBindings()`.
+
+
+= JS API =
+
+|| *Return type* || *Name/Signature* || *Notes* ||
+|| `ExpatParser` || `new ExpatParser()` || Creates a new parser object. ||
+|| `bool` || `parse(string input,bool finished)` || See below for details. ||
+|| `void` || `reset()` || Re-initializes the XML parser state. Not normally necessary, as `parse()` does this. ||
+|| `void` || `destroy()` || Destroys the parser object, freeing all of its resources. Calling this is optional, but has the benefit of freeing up resources immediately, rather than waiting on the garbage collector. ||
+|| *Type* || *Properties* (read-write) || *Notes* ||
+|| `Function` || `startNode(userData,string name,Object attr)` || Called when an XML node is opened. ||
+|| `Function` || `endNode(userData,string name)` || Called when an XML node is closed. ||
+|| `Function` || `charHandler(userData,string data,int dataLength)` || Called when CDATA is read. ||
+|| `any` || `userData` || This is passed as the first argument to all of the event callbacks. ||
+
+The various `Function` properties should be set by the client (see
+below for more details). The default implementations do nothing - they
+ignore any input.
+
+==`parse()`==
+
+The `parse()` function can be used to parse an XML string all at once or incrementally.
+If the XML passed to it is complete, the second argument must be true. If the XML
+is being read incrementally, the second argument should be false for all iterations
+_except the last one_. The last call to `parse()` should pass true as the final
+parameter so that expat knows that it can then try to make sense of the accumulated
+input.
+
+This function throws an exception if parsing fails, as this is the only way it can report
+the location (in the XML) of the error.
+
+== `reset()` ==
+
+`reset()` re-initializes the internal parser state. The event callbacks and whatnot all
+remain the same, but any accumulated parsing is discared. The `parse()` function resets
+the parser on an error or when it finishes a parse. It is only necessary to use this function
+if, while incrementally reading/parsing input, you decide to abort the parsing process and
+discard all input.
+
+== Callbacks ==
+
+The parser passes information to the client via callback routines. The events it handles are:
+
+  * Opening an XML node.
+  * Closing an XML node.
+  * Reading CDATA from within an XML node.
+
+At those points in the parsing process, libexpat will trigger the client-supplied callback
+to handle the data however he wishes.
+
+libexpat itself can do much more than these few things, and any missing
+features may be added to this API as the need arises.
+
+The callbacks are described below. Results are undefined if any of these callbacks is
+set to a non-Function value.
+
+=== `startNode()` ===
+
+`startNode()` is called when an XML node is opened. It is passed:
+
+  * `userData` = the parser's `userData` property.
+  * `string name` = the name of the XML node.
+  * `Object attr` = key/value pairs of the XML node's attributes.
+
+=== `endNode()` ===
+
+`endNode()` is called when an XML node is closed. It is passed:
+
+  * `userData` = the parser's `userData` property.
+  * `string name` = the name of the XML node.
+
+=== `charHandler()` ===
+
+`charHandler()` is called when XML CDATA is parsed. It is passed:
+
+  * `userData` = the parser's `userData` property.
+  * `string text` = the character data.
+  * `int length` = the length of the character data, in bytes.
+
+Be aware that this might be called multiple times for one XML node, so
+if you are accumulating it somewhere be sure to _append_ the new data,
+rather than assign over it.
+
+=Examples=
+
+Here's all there is to know:
+
+{{{
+
+var ex = new ExpatParser();
+ex.userData = "hi, world";
+ex.startNode = function startNode(ud,name,attr)
+{
+    print("startNode:",name);
+    for( var k in attr )
+    {
+        print("attr ["+k+"] =",attr[k]);
+    }
+};
+
+ex.endNode = function endNode(ud,name)
+{
+    print("endNode:",name,'userData =',ud);
+};
+
+ex.charHandler = function charHandler(ud,text,len)
+{
+    print("charHandler: ["+text+"]");
+};
+
+
+// Some arbitrary XML input. Here we're simulating
+// line-by-line reading...
+var xmlar = [
+             "<root a='b' c='d'><sub ",
+             "name='child'>subnode text",
+             "</sub></root>"
+             ];
+if(0) // parse all in one go
+{
+    ex.parse( xmlar.join(""), true );
+}
+else // parse incrementally
+{
+    for( var i = 0; i < xmlar.length; ++i )
+    {
+        rc = ex.parse( xmlar[i], i == (xmlar.length-1));
+    }
+}
+ex.destroy();
+}}}
+
+
+That might produce output similar to:
+
+{{{
+startNode: root
+attr [a] = b
+attr [c] = d
+startNode: sub
+attr [name] = child
+charHandler: [subnode text]
+endNode: sub userData = hi, world
+endNode: root userData = hi, world
+}}}
