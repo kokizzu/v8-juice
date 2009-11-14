@@ -93,6 +93,6 @@ namespace v8 { namespace juice {  namespace cw {
         static void SetupBindings( ::v8::Handle< ::v8::Object> target );
     };
 
-} } } // v8::juice
+} } } // v8::juice::cw
 
 #endif // V8_JUICE_PATHFINDER_CW_H_INCLUDED
