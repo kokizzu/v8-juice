@@ -94,3 +94,12 @@ if( True ):
             ]]
     my_ld = ['sqlite3']
     buildPlugin('sqlite3',my_src,my_ld)
+
+########################################################################
+# ExpatParser plugin    
+if( True ):
+    my_src = [os.path.join('#/src/expat/', x) for x in [
+            'ExpatJS.cpp'
+            ]]
+    my_ld = ['expat']
+    buildPlugin('ExpatParser',my_src,my_ld)
