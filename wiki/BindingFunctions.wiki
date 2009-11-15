@@ -1,8 +1,6 @@
 #summary Binding near-arbitrary functions to JS objects.
 #labels Phase-UserDocs,Topic-CPlusPlus
 
-*Achtung:* this code is currently (20091021) not in the public API, but will be made public by the end of October, possibly November, 2009. Until it is moved into the trunk, this API may change at any given moment.
-
 <wiki:toc max_depth=3/>
 
 = Introduction =
