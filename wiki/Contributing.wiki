@@ -28,5 +28,5 @@ Other than that, i'm pretty much open to anything.
 
 So far they include:
   * [http://wanderinghorse.net/home/stephan Stephan Beal] is the primary architect and author.
-  * Rob Tsuk has made several suggestions which led to new features or fundamental improvements.
+  * Rob Tsuk has contributed several fixes and made a number of suggestions which led to new features or fundamental improvements.
   * The folks at http://groups.google.com/group/v8-users have been very helpful in all things related to v8.
