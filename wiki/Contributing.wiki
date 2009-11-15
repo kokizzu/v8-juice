@@ -5,7 +5,8 @@
 
 = Contributing to v8-juice =
 
-Anyone is welcomed to contribute to this project - just get in touch. Coders, documenters, commentors, code reviewers, bug submitters, etc.... they're all welcomed. Even marketing people and armchair code analysts.
+Anyone is welcomed to contribute to this project - just
+[http://wanderinghorse.net/home/stephan get in touch]. Coders, documenters, commentors, code reviewers, bug submitters, etc.... they're all welcomed. Even marketing people and armchair code analysts.
 
 Particular areas where help is currently sought are:
 
