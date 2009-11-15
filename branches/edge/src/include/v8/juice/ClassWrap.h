@@ -1601,14 +1601,16 @@ namespace cw {
 
        CtorForwarderList _MUST_ be a v8::juice::tmp::TypeList of
        v8::juice::convert::CtorForwardXXX instances, where XXX is a
-       number.
+       number. They must also all take a different number of
+       arguments, as we can only differentiate the calls from JS based
+       on the argument count and not their types.
 
        This class is used like so:
 
        Assume we have the JS-bound class MyClass and that it has 3 constructors:
        MyClass(), MyClass(int), and MyClass(int,double).
 
-       We can bind those with:
+       We can set up the ClassWrap factory for those with:
        
        @code
        template <>
