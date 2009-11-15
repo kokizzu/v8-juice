@@ -10,6 +10,9 @@ are at the top. Dates written extra large are release dates. This contains only 
   * http://code.google.com/p/v8-juice/source/list
 
 ----
+==2009 Nov 15==
+  * It's about time for a new release.
+
 *2009 Nov 14*
   * Added an [PluginExpatParser XML parser plugin].
 
