@@ -65,13 +65,15 @@ input.
 This function throws an exception if parsing fails, as this is the only way it can report
 the location (in the XML) of the error.
 
+On a successful `parse()`, or if `parse()` throws an exception, the parser state is automatically re-set (using `reset()`) so that it can start working on new input.
+
+Note that because `parse()` throws an exception on any parsing error, its return value is largely irrelevant.
+
 == `reset()` ==
 
 `reset()` re-initializes the internal parser state. The event callbacks and whatnot all
 remain the same, but any accumulated parsing is discared. The `parse()` function resets
-the parser on an error or when it finishes a parse. It is only necessary to use this function
-if, while incrementally reading/parsing input, you decide to abort the parsing process and
-discard all input.
+the parser on an error or when it finishes a parse. It is only necessary to use this function if, while incrementally reading/parsing input, you decide to abort the parsing process and discard all input.
 
 == Event Callbacks ==
 
@@ -115,7 +117,11 @@ set to a non-Function value.
 
 Be aware that this might be called multiple times for one XML node, so
 if you are accumulating it somewhere be sure to _append_ the new data,
-rather than assign over it.
+rather than assign over it. It will be called multiple times for one node
+when:
+
+  * Parsing incrementally, and the data spans more than one chunk.
+  * The CDATA is interspersed between child XML nodes.
 
 =Examples=
 
@@ -181,3 +187,5 @@ charHandler: [text]
 endNode: sub userData = hi, world
 endNode: root userData = hi, world
 }}}
+
+Notice that `charHandler` is called twice for the one CDATA block. This is because the CDATA spans input lines and are are parsing incrementally. In such a case it is important to _append_ the CDATA if accumulating it internally in the callback, rather than over-writing data from previous calls on the same XML node.
