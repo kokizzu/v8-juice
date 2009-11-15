@@ -30,6 +30,8 @@ The following configuration options are often helpful or necessary:
   * `--enable-debug` turns on debugging options and tries to link against `libv8_g` instead of `libv8` (but will use the latter if it can't find the former).
   * `--help` shows many more options which you'll never need.
   * `--disable-plugins` makes the plugin loading features no-ops and disables the build of the core plugins. Plugins are automatically disabled if neither `-ldl` or `-lltdl` are found. Specific plugins might not get compiled because their plugin-specific prerequisites are not met (e.g. libsqlite3 or libncurses).
+  * `--enable-warn` turns on the `-Wall` compilation flag.
+  * `--enable-werror` turns on the `-Werror` compilation flag.
 
 See SourceTreeOverview for info on how the tree is laid out.
 
