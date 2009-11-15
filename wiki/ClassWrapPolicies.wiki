@@ -92,7 +92,7 @@ struct AllowCtorWithoutNew
 };
 }}}
 
-And it specifies where the following JS code is equivalent:
+And it specifies whether the following JS code is equivalent:
 
 {{{
 var a = new MyType();
