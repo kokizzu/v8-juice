@@ -9,7 +9,7 @@
 #if !defined(CLASSWRAP_BOUND_TYPE) || !defined(CLASSWRAP_BOUND_TYPE_INHERITS)
 #  error "CLASSWRAP_BOUND_TYPE and CLASSWRAP_BOUND_TYPE_INHERITS must be defined before including this file!"
 #endif
-
+/** */ // just to avoid doxygen adding the above docs to the v8 namespace!
 namespace v8 { namespace juice { namespace cw {
 
 template <>
