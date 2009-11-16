@@ -12,33 +12,33 @@ var xmlar = [
 
 var banner = {
     start:'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>',
-        end:'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+      end:'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
         };
-function startNode(ud,name,attr)
-{
-    print("startNode:",name);
-    for( var k in attr )
-    {
-        print("\tattr ["+k+"] =",attr[k]);
-    }
-}
-function endNode(ud,name)
-{
-    print("endNode:",name,'userData =',ud);
-}
-function charHandler(ud,text,len)
-{
-    print("charHandler: ["+text+"]");
-}
 
 function testOne()
 {
     print(banner.start);
     print( arguments.callee.name+"()" );
     var ex = new ExpatParser();
-    ex.startNode = startNode;
-    ex.endNode = endNode;
-    ex.charHandler = charHandler;
+    ex.startNode = function startNode(ud,name,attr)
+    {
+        print("startNode:",name);
+        for( var k in attr )
+        {
+            print("\tattr ["+k+"] =",attr[k]);
+        }
+    };
+
+    ex.endNode = function endNode(ud,name)
+    {
+        print("endNode:",name,'userData =',ud);
+    };
+
+    ex.charHandler = function charHandler(ud,text,len)
+    {
+        print("charHandler: ["+text+"]");
+    };
+    //ex.charHandler = "should disable charHandler";
     ex.userData = "hi, world!";
     print('ex =',ex);
     var rc;

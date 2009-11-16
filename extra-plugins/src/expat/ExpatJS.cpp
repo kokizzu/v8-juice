@@ -26,15 +26,20 @@ namespace cw {
 }
 namespace expat {
     namespace cv = v8::juice::convert;
+    /** Forwards XML StartNode events to JS space. ud MUST be-a (ExpatJS::Impl*). */
     static void XMLCALL start_node( void * ud, const char * name, const char ** attr );
+    /** Forwards XML EndNode events to JS space. ud MUST be-a (ExpatJS::Impl*). */
     static void XMLCALL end_node( void * ud, const char * );
+    /** Forwards XML CharHandler events to JS space. ud MUST be-a (ExpatJS::Impl*). */
     static void XMLCALL char_handler( void * ud, const char * txt, int len );
-    static v8::Handle<v8::Value> StartNodeNoop( v8::Arguments const & argv );
-    static v8::Handle<v8::Value> EndNodeNoop( v8::Arguments const & argv );
-    static v8::Handle<v8::Value> CharHandlerNoop( v8::Arguments const & argv );
+    /** No-op event handler. */
+//     static v8::Handle<v8::Value> NoopEventHandler( v8::Arguments const & argv )
+//     {
+//         return v8::Undefined();
+//     }
 
     /**
-       Holder for names of standard callback functions.
+       Holder for names of standard callback functions and data.
     */
     struct Strings
     {
@@ -50,24 +55,14 @@ namespace expat {
     
     struct ExpatJS::Impl
     {
+        /** libexpat parser object. */
         XML_Parser ps;
-        typedef std::map<char const *, PFuncHnd> CBMap;
-        CBMap cb;
+        /** The JS-side 'this' object for the ExpatJS object holding this object. */
         v8::Handle<v8::Object> jself; // we assume this is Persistent elsewhere
-        PValHnd udata;
         Impl()
             : ps(0),
-              cb(),
-              jself(),
-              udata(v8::Undefined())
+              jself()
         {
-#define PF(X) PFuncHnd::New( v8::FunctionTemplate::New(X)->GetFunction() )
-#define SF(Name,Func) cb[Name] = PF(Func)
-            SF("startNode", StartNodeNoop);
-            SF("endNode", EndNodeNoop );
-            SF("charHandler",CharHandlerNoop);
-#undef SF
-#undef PF
             this->reset();
             //CERR << "Impl() @"<<(void const *)this<<'\n';
         }
@@ -76,12 +71,17 @@ namespace expat {
             //CERR << "~Impl() @"<<(void const *)this<<'\n';
             XML_ParserFree(ps);
         }
+        /**
+            Returns jself->Get(Strings::userData), or v8::Undefined()
+            if it is not set.
+        */
         v8::Handle<v8::Value> userData()
         {
             const v8::Handle<v8::Value> rc = this->jself->Get( JSTR(Strings::userData) );
             if( rc.IsEmpty() ) return v8::Undefined();
             else return rc;
         }
+        /** Initializes or resets this->ps. */
         void reset()
         {
             if( ! this->ps )
@@ -115,7 +115,18 @@ namespace expat {
                 TOSSV(msg);
                 return;
             }
-            this->cb[n] = PFuncHnd::New( FuncHnd( v8::Function::Cast(*func) ) );
+            this->jself->Set( JSTR(n), FuncHnd( v8::Function::Cast(*func) ) );
+        }
+        /**
+           Gets the handler callback function associated with n, or an
+           empty handle if n is not set or is not-a Function.
+        */
+        FuncHnd getHandler( char const * n )
+        {
+            ValHnd const h = this->jself->Get( JSTR(n) );
+            return (!h.IsEmpty() && h->IsFunction() )
+                ? FuncHnd( v8::Function::Cast(*h) )
+                : FuncHnd();
         }
     };
 
@@ -162,6 +173,7 @@ namespace v8 { namespace juice { namespace expat {
     {
         this->impl->reset();
     }
+
     bool ExpatJS::Parse( std::string const & chunk, bool finished )
     {
         if( chunk.empty() ) return true;
@@ -174,26 +186,23 @@ namespace v8 { namespace juice { namespace expat {
         {
             rc = false;
             cv::StringBuffer msg;
-            msg << "Parse error at line "
+            msg << "XML parse error at input line "
                 << XML_GetCurrentLineNumber(this->impl->ps)
                 << ": "
                 << XML_ErrorString(XML_GetErrorCode(this->impl->ps))
-                << ": input=["<<chunk<<"]";
+                //<< ": input=["<<chunk<<"]"
+                << '.'
+                ;
             TOSSV(msg);
             this->impl->reset();
         }
-        if( finished )
+        if( rc && finished )
         {
             this->impl->reset();
         }
         return rc;
     }
     
-    static v8::Handle<v8::Value> StartNodeNoop( v8::Arguments const & argv )
-    {
-        //CERR << "StartNodeNoop() should be re-implemented!\n";
-        return v8::Undefined();
-    }
 
     static void XMLCALL start_node( void * ud, const char * name, const char ** attr )
     {
@@ -201,7 +210,8 @@ namespace v8 { namespace juice { namespace expat {
         ExpatJS::Impl * impl;
         impl = static_cast<ExpatJS::Impl *>( ud );
         //if( impl->startNode.IsEmpty() ) return;
-        PFuncHnd cb = impl->cb[Strings::startNode];
+        FuncHnd const & cb = impl->getHandler(Strings::startNode);
+        if( cb.IsEmpty() ) return;
         typedef std::map< std::string, std::string > MapT;
         v8::Handle<v8::Object> oattr;
         char const * key = 0;
@@ -227,17 +237,11 @@ namespace v8 { namespace juice { namespace expat {
         cb->Call( impl->jself, avlen, av );
     }
 
-    static v8::Handle<v8::Value> EndNodeNoop( v8::Arguments const & argv )
-    {
-        //CERR << "EndNodeNoop() should be re-implemented!\n";
-        return v8::Undefined();
-    }
-
     static void XMLCALL end_node( void * ud, const char * name )
     {
         ExpatJS::Impl * impl;
         impl = static_cast<ExpatJS::Impl *>( ud );
-        PFuncHnd cb = impl->cb[Strings::endNode];
+        FuncHnd const & cb = impl->getHandler(Strings::endNode);
         if( cb.IsEmpty() ) return;
         enum { avlen = 2 };
         ValHnd av[avlen] = {
@@ -247,17 +251,11 @@ namespace v8 { namespace juice { namespace expat {
         cb->Call( impl->jself, avlen, av );
     }
 
-    static v8::Handle<v8::Value> CharHandlerNoop( v8::Arguments const & argv )
-    {
-        //CERR << "charHandler() should be re-implemented!\n";
-        return v8::Undefined();
-    }
-
     static void XMLCALL char_handler( void * ud, const char * txt, int len )
     {
         ExpatJS::Impl * impl;
         impl = static_cast<ExpatJS::Impl *>( ud );
-        PFuncHnd cb = impl->cb[Strings::charHandler];
+        FuncHnd const & cb = impl->getHandler(Strings::charHandler);
         if( cb.IsEmpty() ) return;
         enum { avlen = 3 };
         ValHnd av[avlen] = {
@@ -268,18 +266,18 @@ namespace v8 { namespace juice { namespace expat {
         cb->Call( impl->jself, avlen, av );
     }
 
-    template <char const *&PropName>
-    v8::Handle<v8::Value> ExpatJS::jsCBGetter()
-    {
-        Impl::CBMap::const_iterator it = this->impl->cb.find( PropName );
-        if( this->impl->cb.end() == it ) return v8::Undefined();
-        return it->second;
-    }
-    template <char const *&PropName>
-    void ExpatJS::jsCBSetter( v8::Handle<v8::Value> const & v )
-    {
-        this->impl->setHandler( PropName, v );
-    }
+//     template <char const *&PropName>
+//     v8::Handle<v8::Value> ExpatJS::jsCBGetter()
+//     {
+//         Impl::CBMap::const_iterator it = this->impl->cb.find( PropName );
+//         if( this->impl->cb.end() == it ) return v8::Undefined();
+//         return it->second;
+//     }
+//     template <char const *&PropName>
+//     void ExpatJS::jsCBSetter( v8::Handle<v8::Value> const & v )
+//     {
+//         this->impl->setHandler( PropName, v );
+//     }
 
     v8::Handle<v8::Value> ExpatJS::SetupBindings( v8::Handle<v8::Object> target )
     {
@@ -294,18 +292,31 @@ namespace v8 { namespace juice { namespace expat {
         typedef convert::InvocationCallbackCreator ICC;
         typedef convert::MemFuncInvocationCallbackCreator<N> ICM;
 
-        //cw.BindGetterSetter<ValHnd,&N::startNode,void,ValHnd,&N::startNode>(Strings::startNode);
 #define GETSET(Name) \
         cw.BindGetterSetter< \
             ValHnd, &N::jsCBGetter<Name>, \
             void, ValHnd const &, &N::jsCBSetter<Name> \
             >(Name);
-        GETSET(Strings::startNode);
-        GETSET(Strings::endNode);
-        GETSET(Strings::charHandler);
+//         GETSET(Strings::startNode);
+//         GETSET(Strings::endNode);
+//         GETSET(Strings::charHandler);
 #undef GETSET
-        cw.Prototype()->Set( JSTR(Strings::userData), v8::Undefined() );
+
+        {
+            v8::Handle<v8::ObjectTemplate> proto = cw.Prototype();
+            proto->Set( JSTR(Strings::userData), v8::Undefined() );
+#if 0
+#define FN(X) FuncHnd( v8::FunctionTemplate::New(X)->GetFunction() )
+#define CB(Name) proto->Set( Strings::Name, FN(NoopEventHandler) )
+            CB(startNode);
+            CB(endNode);
+            CB(charHandler);
+#undef CB
+#undef PF
+#endif
+        }
         
+
 #define JF v8::FunctionTemplate::New(cb)->GetFunction()
 #define F(X) cw.Set( X, JF )
         v8::InvocationCallback cb;

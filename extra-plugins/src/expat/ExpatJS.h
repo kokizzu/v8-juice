@@ -107,8 +107,8 @@ namespace v8 { namespace juice { namespace expat {
         static v8::Handle<v8::Value> SetupBindings( v8::Handle<v8::Object> target );
     private:
         // JS property Getter/Setter proxies:
-        template <char const *&PropName> v8::Handle<v8::Value> jsCBGetter();
-        template <char const *&PropName> void jsCBSetter( v8::Handle<v8::Value> const & );
+//         template <char const *&PropName> v8::Handle<v8::Value> jsCBGetter();
+//         template <char const *&PropName> void jsCBSetter( v8::Handle<v8::Value> const & );
         friend class v8::juice::cw::WeakWrap<ExpatJS>;
         Impl * impl;
     };
