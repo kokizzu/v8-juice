@@ -20,13 +20,11 @@
 #endif
 
 /**
-   The expat namespaces houses a libexpat-based XML parser class for
+   The expat namespace houses a libexpat-based XML parser class for
    binding to JS.
 */
 namespace v8 { namespace juice { namespace expat {
 
-    /** Internal implementation detail. */
-    struct ExpatImpl;
 
     /**
        Class for binding basic libexpat functionality to JS.
@@ -72,6 +70,8 @@ namespace v8 { namespace juice { namespace expat {
     class ExpatJS
     {
     public:
+        /** Internal implementation detail. */
+        struct Impl;
         ExpatJS();
         ~ExpatJS();
 
@@ -101,24 +101,16 @@ namespace v8 { namespace juice { namespace expat {
         void Reset();
         
         /**
-           For internal use only, but in the public API because
-           several of our non-member bound functions need access to
-           it.
+           Adds the JS/C++ bindings for this class to the given target.
+           Returns target, for reasons lost unto history.
         */
-        ExpatImpl * impl;
-
         static v8::Handle<v8::Value> SetupBindings( v8::Handle<v8::Object> target );
     private:
-        void setStartNode( v8::Handle<v8::Value> func );
-        v8::Handle<v8::Value> getStartNode() const;
-        void setEndNode( v8::Handle<v8::Value> func );
-        v8::Handle<v8::Value> getEndNode() const;
-        void setCharHandler( v8::Handle<v8::Value> func );
-        v8::Handle<v8::Value> getCharHandler() const;
-        void userData( v8::Handle<v8::Value> func );
-        v8::Handle<v8::Value> userData() const;
-
-        friend class v8::juice::cw::Installer<ExpatJS>;
+        // JS property Getter/Setter proxies:
+        template <char const *&PropName> v8::Handle<v8::Value> jsCBGetter();
+        template <char const *&PropName> void jsCBSetter( v8::Handle<v8::Value> const & );
+        friend class v8::juice::cw::WeakWrap<ExpatJS>;
+        Impl * impl;
     };
 } } }
 

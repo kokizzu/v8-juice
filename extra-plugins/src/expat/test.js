@@ -1,22 +1,25 @@
 loadPlugin('v8-juice-ExpatParser');
 
+
+/**
+  XML test input. Here we are simulating input read incrementally in chunks.
+ */
+var xmlar = [
+             "<root a='b' c='d'><sub \n",
+             "name='child'>subnode ",
+             "text</sub></root>"
+             ];
+
 var banner = {
     start:'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>',
         end:'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
         };
-var xmlar = [
-             "<root a='b' c='d'><sub ",
-             "name='child'>subnode ",
-             "text</sub></root>"
-             ];
-//var xml = xmlar.join("");
-
 function startNode(ud,name,attr)
 {
     print("startNode:",name);
     for( var k in attr )
     {
-        print("attr ["+k+"] =",attr[k]);
+        print("\tattr ["+k+"] =",attr[k]);
     }
 }
 function endNode(ud,name)
@@ -36,7 +39,7 @@ function testOne()
     ex.startNode = startNode;
     ex.endNode = endNode;
     ex.charHandler = charHandler;
-    ex.userData = "hi, world";
+    ex.userData = "hi, world!";
     print('ex =',ex);
     var rc;
     if(0)
@@ -55,13 +58,12 @@ function testOne()
     print(banner.end);
 };
 
-testOne();
 
 /**
    Converts the given XML to an object tree with this structure:
 
    {
-     name:'NodeName',
+     tag:'NodeName',
      attr:{key/val pairs of XML element attributes},
      children:[ ... nested objects ... ],
      cdata:string_of_char_data_from_xml_node
@@ -77,14 +79,14 @@ function XMLToObject(xml)
 {
     var p = new ExpatParser();
     var state = {
-    root:null,
-    stack:[],
-    cur:null
+        root:null, // root node
+        stack:[], // node stack
+        cur:null // current node
     };
     p.userData = state;
     p.startNode = function(ud,name,attr)
     {
-        var o = {name:name};
+        var o = {tag:name};
         if( ! ud.root ) ud.root = o;
         if( ud.cur )
         {
@@ -109,16 +111,15 @@ function XMLToObject(xml)
         if( ! ud.cur.cdata ) ud.cur.cdata = "";
         ud.cur.cdata += text;
     };
-    var rc = false;
     try
     {
-        rc = p.parse( xml, true );
+        p.parse( xml, true );
     }
     finally
     {
         p.destroy();
     }
-    return rc ? state.root : undefined;
+    return state.root;
 }
 
 function testTwo()
@@ -149,6 +150,7 @@ function testTwo()
  	+"</deep>"
         +"</somenode>"
         ;
+    x = xmlar.join("");
     print(banner.start);
     print( arguments.callee.name+"()" );
     var xo = XMLToObject(x);
@@ -156,3 +158,4 @@ function testTwo()
     print(banner.end);
 }
 testTwo()
+testOne();
