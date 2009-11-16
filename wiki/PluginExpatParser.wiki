@@ -50,8 +50,7 @@ into your app and calling `v8::juice::expat::ExpatJS::SetupBindings()`.
 || `any` || `userData` || This is passed as the first argument to all of the event callbacks. ||
 
 The various `Function` properties should be set by the client (see
-below for more details). The default implementations do nothing - they
-ignore any input.
+below for more details).
 
 ==`parse()`==
 
@@ -79,9 +78,9 @@ the parser on an error or when it finishes a parse. It is only necessary to use 
 
 The parser passes information to the client via callback routines. It does so for the following cases:
 
-  * Opening an XML node.
-  * Closing an XML node.
-  * Reading CDATA from within an XML node.
+  * Opening an XML node. Callback name = `startNode`.
+  * Closing an XML node. Callback name = `endNode`.
+  * Reading CDATA from within an XML node. Callback name = `charHandler`.
 
 At those points in the parsing process, libexpat will trigger the client-supplied callback
 to handle the data however the client wishes.
@@ -89,8 +88,11 @@ to handle the data however the client wishes.
 libexpat itself can do much more than these few things, and any missing
 features may be added to this API as the need arises.
 
-The callbacks are described below. Results are undefined if any of these callbacks are
-set to a non-Function value.
+If any of these callbacks are not set, or are set to non-Function
+values, then they will not be called (that is, those events will be
+ignored).
+
+The callbacks are described below.
 
 === `startNode()` ===
 
