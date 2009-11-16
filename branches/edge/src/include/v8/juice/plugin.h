@@ -50,6 +50,11 @@ namespace plugin {
 
        Thread safety notes:
 
+       As of v8-juice version 20091114, this function locks a global
+       mutex so that multiple threads may load plugins safely.
+
+       For versions older than 20091114:
+       
        The process which enables plugins to "back-feed" information
        into the running JS engine is not strictly thread-safe. That
        is, if multiple threads call LoadPlugin() at once, the plugins
