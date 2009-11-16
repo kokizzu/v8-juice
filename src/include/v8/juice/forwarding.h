@@ -1077,8 +1077,8 @@ namespace v8 { namespace juice { namespace convert {
            MemVarSetter<Foo,std::string,&Foo::str> );
            \endcode
 
-           In almost 10 years of C++ coding, this is the first time i've ever had
-           a use for a pointer-to-member.
+           In 10 years of C++ coding, this is the first time i've ever
+           had a use for a pointer-to-member.
         */
         template <typename PropertyType, PropertyType Type::*MemVar>
         static v8::Handle<v8::Value> MemVarGetter(v8::Local<v8::String> property, const AccessorInfo &info)

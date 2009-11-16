@@ -50,6 +50,11 @@ namespace plugin {
 
        Thread safety notes:
 
+       As of v8-juice version 20091114, this function locks a global
+       mutex so that multiple threads may load plugins safely.
+
+       For versions older than 20091114:
+       
        The process which enables plugins to "back-feed" information
        into the running JS engine is not strictly thread-safe. That
        is, if multiple threads call LoadPlugin() at once, the plugins
@@ -305,7 +310,7 @@ namespace plugin {
 
     */
 #define V8_JUICE_PLUGIN_STATIC_INIT(INIT_FUNC) \
-    static bool INIT_FUNC ## _v8_plugin_static_initializer  = (::v8::juice::plugin::Detail::PluginStaticInit(INIT_FUNC),true)
+    static const bool INIT_FUNC ## _v8_plugin_static_initializer  = (::v8::juice::plugin::Detail::PluginStaticInit(INIT_FUNC),true)
 
 
 }}} // namespaces

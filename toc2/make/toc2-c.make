@@ -50,7 +50,7 @@ endif
 define toc2.call.compile-o-c
   @$(call toc2.bins.mkdep.rule-c,$(1).d,$(2))
   @$(call toc2.call.setx-unless-quiet,"COMPILE C [$(2)] ..."); \
-    $(COMPILE.c) $(INCLUDES) -o $(1) $(2)
+    $(COMPILE.c) -o $(1) $(2)
 endef
 %.o: %.c $(toc2.bins.mkdep)
 	@$(call toc2.call.compile-o-c,$@,$<)
@@ -72,14 +72,14 @@ endef
 define toc2.call.compile-o-c++
   @$(call toc2.bins.mkdep.rule-c,$(1).d,$(2))
   @$(call toc2.call.setx-unless-quiet,"COMPILE C++ [$(2)] ..."); \
-    $(COMPILE.cpp) $(INCLUDES) -o $(1) $(2)
+    $(COMPILE.cpp) -o $(1) $(2)
 endef
 ########################################################################
 # Uses toc3.call.compile-o-c++ to compile $@ from $<.
 %.o: %.cpp $(toc2.bins.mkdep) $(toc2.makefile.c)
 	@$(call toc2.call.compile-o-c++,$@,$<)
-########################################################################
-# Uses toc3.call.compile-o-c++ to compile $@ from $<.
+%.o: %.cc $(toc2.bins.mkdep) $(toc2.makefile.c)
+	@$(call toc2.call.compile-o-c++,$@,$<)
 %.o: %.c++ $(toc2.bins.mkdep) $(toc2.makefile.c)
 	@$(call toc2.call.compile-o-c++,$@,$<)
 toc2.clean_files += *.d# i hate this wildcard here, but i don't see a way around it right now

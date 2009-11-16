@@ -6,7 +6,6 @@ OBJECTS = $(addsuffix .o,\
 	PathFinder \
 	PathFinder-cw \
 	cleanup \
-	convert \
 	plugin \
 	juice \
 	JSClassCreator \
