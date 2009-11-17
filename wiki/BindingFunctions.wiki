@@ -268,14 +268,14 @@ It is not necessary (though it is legal) to use `InvocableVoid` instead of `Invo
 
 = Examples =
 
-*Achtung:* The type/function names still aren't finalized. Once they are, i'll post some examples.
+Here are some a complete example of what the binding process itself looks like:
 
-Until then: here is a complete example of what the binding process itself looks like (in fact, this is the main development/test class):
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/BoundNative/BoundNative.cpp BoundNative.cpp]
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/PosixFILE/PosixFILE.cpp PosixFILEcpp]
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-cw.cc PathFinder.cc] and [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/PathFinder-cw.h PathFinder-cw.h]
 
-[http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/sample/BoundNative/BoundNative.cpp BoundNative.cpp]
+Search those files for "Instance()" to find the relevant parts.
 
-(search that file for "SetupClass" to jump to the relevant parts)
+Here's some JS code demonstrating the `BoundNative` class from the above list:
 
-And some JS code demonstrating it:
-
-[http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/sample/BoundNative/BoundNative.js BoundNative.js]
+[http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/BoundNative/BoundNative.js BoundNative.js]
