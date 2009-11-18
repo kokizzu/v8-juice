@@ -7,7 +7,7 @@
 
 = Curl Plugin =
 
-Added 20091118.
+*Achtung: this is new code (added 20091118) and the interface may still change significantly.*
 
 This plugin provides a JS class called !Curl which allows the client to
 perform certain operations on URLs using the
