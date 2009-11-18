@@ -195,7 +195,7 @@ writeFunction() 1063 of 1063 bytes
 c.easyPerform() rc = 0
 [object Curl@0x8b763f0] = {
   "opt": {
-    "url": "http://code.google.com/p/v8-juice/wiki/HomePage",
+    "url": "http://code.google.com/p/v8-juice/wiki/PluginCurl",
     "userAgent": "Google Chrome, kind of.",
     "writeData": {
       "count": 13
