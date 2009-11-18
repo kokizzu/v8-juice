@@ -5,7 +5,7 @@
 
 <wiki:toc max_depth='3'/>
 
-= Curl Plugin
+= Curl Plugin =
 
 Added 20091118.
 
@@ -46,30 +46,29 @@ table list the `opt` options and their curl counterparts (which are documented
 
 || *Property* || *Curl Counterpart* || *Notes* ||
 || `string url` || `CURL_URL` || The URL to read from/write to. ||
-|| `int port` || `CURL_PORT` || default port number to use. ||
-|| `function writeFunction(data,readLength,userData)` || `CURL_WRITEFUNCTION` || See below. ||
-|| `any writeData` || `CURL_WRITEDATA` || Passed as last argument to `writeFunction()` ||
-|| `function headerFunction(data,readLength,userData)` || `CURL_HEADERFUNCTION` || See below. ||
-|| `bool verbose` || `CURLOPT_VERBOSE` || If true, libcurl sends debugging info to stderr. ||
-|| `bool failOnError` || `CURLOPT_FAILONERROR` ||
+|| `int connectionTimeout` || `CURLOPT_CONNECTIONTIMEOUT` || ||
+|| `bool crlf` || `CURLOPT_CRLF` || ||
+|| `int bufferSize` || `CURLOPT_BUFFERSIZE` || ||
+|| `bool failOnError` || `CURLOPT_FAILONERROR` || ||
+|| `bool followLocation` || `CURLOPT_FOLLOWLOCATION` || ||
 || `bool header` || `CURLOPT_HEADER` || ||
-|| `string userAgent` || `CURLOPT_USERAGENT` || ||
-|| `string proxy` || `CURLOPT_PROXY` || ||
-|| `int proxyPort` || `CURLOPT_PROXYPORT` || ||
-|| `string noProxy` || `CURLOPT_NOPROXY` || ||
+|| `function headerFunction(data,readLength,userData)` || `CURL_HEADERFUNCTION` || See below. ||
 || `string interface` || `CURLOPT_INTERFACE` || ||
 || `bool noBody` || `CURLOPT_NOBODY` || ||
-|| `bool crlf` || `CURLOPT_CRLF` || ||
+|| `string noProxy` || `CURLOPT_NOPROXY` || ||
+|| `int port` || `CURL_PORT` || default port number to use. ||
+|| `string proxy` || `CURLOPT_PROXY` || ||
+|| `int proxyPort` || `CURLOPT_PROXYPORT` || ||
 || `string range` || `CURLOPT_RANGE` || ||
 || `int maxRedirs` || `CURLOPT_MAXREDIRS` || ||
-|| `bool followLocation` || `CURLOPT_FOLLOWLOCATION` || ||
-|| `int connectionTimeout` || `CURLOPT_CONNECTIONTIMEOUT` || ||
 || `int timeout` || `CURLOPT_TIMEOUT` || ||
 || `int timeoutMS` || `CURLOPT_TIMEOUT_MS` || ||
-|| `int bufferSize` || `CURLOPT_BUFFERSIZE` || ||
+|| `string userAgent` || `CURLOPT_USERAGENT` || ||
 || `string userName` || `CURLOPT_USERNAME` || ||
 || `string userPwd` || `CURLOPT_USERPWD` || ||
-
+|| `bool verbose` || `CURLOPT_VERBOSE` || If true, libcurl sends debugging info to stderr.  ||
+|| `any writeData` || `CURL_WRITEDATA` || Passed as last argument to `writeFunction()` ||
+|| `function writeFunction(data,readLength,userData)` || `CURL_WRITEFUNCTION` || See below. ||
 
 The various properties can either be set like:
 
@@ -161,7 +160,7 @@ headerFunction() 40 of 40 bytes: [Expires: Fri, 01 Jan 1990 00:00:00 GMT]
 headerFunction() 42 of 42 bytes: [Cache-Control: no-cache, must-revalidate]
 headerFunction() 40 of 40 bytes: [Content-Type: text/html; charset=UTF-8]
 headerFunction() 33 of 33 bytes: [X-Content-Type-Options: nosniff]
-headerFunction() 152 of 152 bytes: [Set-Cookie: PREF=ID=4f2a9007345167de:TM=1258506706:LM=1258506706:S=ud_cU82-E7ZztKnB; expires=Fri, 18-Nov-2011 01:11:46 GMT; path=/; domain=.google.com]
+headerFunction() 152 of 152 bytes: [Set-Cookie: PREF=ID=4f2a9007345167de:TM=1258506706:LM=1258506706:S=ud_cU82-E7ZztKnB; <...snip...>]
 headerFunction() 18 of 18 bytes: [Server: codesite]
 headerFunction() 21 of 21 bytes: [X-XSS-Protection: 0]
 headerFunction() 28 of 28 bytes: [Transfer-Encoding: chunked]
