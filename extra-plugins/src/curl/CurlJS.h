@@ -87,7 +87,7 @@ namespace v8 { namespace juice { namespace curl {
 
        - string interface = CURLOPT_INTERFACE
 
-       - bool nobody = CURLOPT_NOBODY
+       - bool noBody = CURLOPT_NOBODY
 
        - bool crlf = CURLOPT_CRLF
 

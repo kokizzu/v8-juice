@@ -36,7 +36,6 @@ function testOne()
         placeholder:undefined
     };
     //c.url = "http://wh";
-    print(c,'=',JSON.stringify(c,undefined,2));
     var rc = c.easyPerform();
     print( "c.easyPerform() rc =",rc);
     print( "count =",c.opt.writeData.count);
@@ -46,7 +45,7 @@ function testOne()
         print('\t',typeof c[k], k );
     }
 
-    print( c,'=', JSON.stringify(c) );
+    print(c,'=',JSON.stringify(c,undefined,2));
     var c2 =
         //new Curl();
         //new Curl({ url:"http://yahoo.com" })
