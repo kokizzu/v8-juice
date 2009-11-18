@@ -17,13 +17,23 @@
 #if V8_JUICE_CURL_USE_TWOWAY_WRAP
 #include <v8/juice/ClassWrap_TwoWay.h>
 #endif
-
+#include <curl/curl.h>
 /**
    The curl namespace houses a libcurl-based XML parser class for
    binding to JS.
 */
 namespace v8 { namespace juice { namespace curl {
 
+    class CurlOptions
+    {
+    public:
+        explicit CurlOptions( CURL * );
+        ~CurlOptions();
+        v8::Handle<v8::Object> jself;
+        v8::Handle<v8::Object> props();
+        v8::Handle<v8::Value> toString() const;
+        CURL * handle;
+    };
 
     /**
        Class for binding basic libcurl functionality to JS.
@@ -76,16 +86,20 @@ namespace v8 { namespace juice { namespace curl {
         Impl * impl;
 
         v8::Handle<v8::Value> toString() const;
+
+        int setOption( int curlID, v8::Handle<v8::Value> const & val );
     private:
         friend class v8::juice::cw::WeakWrap<CurlJS>;
     };
 
+    
 } } }
 
 ////////////////////////////////////////////////////////////////////////
 // Declare v8::juice::cw parts of the CurlJS binding...
 namespace v8 { namespace juice {  namespace cw {
     using v8::juice::curl::CurlJS;
+    using v8::juice::curl::CurlOptions;
     /**
        ClassWrap ClassName policy specialization for
        v8::juice::curl::CurlJS.
@@ -135,6 +149,7 @@ namespace v8 { namespace juice {  namespace cw {
             v8::juice::curl::CurlJS::SetupBindings(target);
         }
     };
+
 #if V8_JUICE_CURL_USE_TWOWAY_WRAP
     template <>
     struct Extract< CurlJS > :
@@ -148,11 +163,44 @@ namespace v8 { namespace juice {  namespace cw {
     struct ToJS< CurlJS > :
         TwoWayBind_ToJS< CurlJS > {};
 #endif
+
+    template <>
+    struct ClassName<CurlOptions>
+    {
+        static char const * Value()
+        {
+            return "CurlOptions";
+        }
+    };
+    template <>
+    struct Factory<CurlOptions>
+    {
+        typedef convert::TypeInfo<CurlOptions>::Type Type;
+        typedef convert::TypeInfo<CurlOptions>::NativeHandle NativeHandle;
+	static NativeHandle Instantiate( Arguments const &  argv, std::ostream & errmsg );
+	static void Destruct( v8::Handle<v8::Object> /*ignored*/, NativeHandle obj );
+        static const size_t AllocatedMemoryCost = sizeof(Type);
+    };
+    template <>
+    struct ToNative< CurlOptions > :
+        ToNative_Base< CurlOptions > {};
+    template <>
+    struct WeakWrap<CurlOptions>
+    {
+        typedef CurlOptions * NativeHandle;
+        static void Wrap( v8::Persistent<v8::Object> const & jsSelf, NativeHandle nativeSelf );
+        static void Unwrap( v8::Handle<v8::Object> const & jsSelf, NativeHandle nativeSelf );
+#if V8_JUICE_CURL_USE_TWOWAY_WRAP
+    private:
+        typedef TwoWayBind_WeakWrap<CurlOptions> WeakWrapBase;
+#endif
+    };
     
 } // namespace cw
 namespace convert
 {
     using v8::juice::curl::CurlJS;
+    using v8::juice::curl::CurlOptions;
 #if V8_JUICE_CURL_USE_TWOWAY_WRAP
     template <>
     struct NativeToJS< CurlJS > : v8::juice::cw::NativeToJSImpl< CurlJS >
@@ -160,6 +208,9 @@ namespace convert
 #endif
     template <>
     struct JSToNative< CurlJS > : v8::juice::cw::JSToNativeImpl< CurlJS >
+    {};
+    template <>
+    struct JSToNative< CurlOptions > : v8::juice::cw::JSToNativeImpl< CurlOptions >
     {};
 
 } } } // namespaces
