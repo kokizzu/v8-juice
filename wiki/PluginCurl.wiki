@@ -51,10 +51,12 @@ into your app and calling `v8::juice::expat::CurlJS::SetupBindings()`.
 || `void` || `destroy()` || Destroys the object, freeing all of its resources. Calling this is optional, but has the benefit of freeing up resources immediately, rather than waiting on the garbage collector. ||
 || `int` || `setOpt(int CurlOptionID,mixed value)` || See below. Returns 0 on success (meaning libcurl accepted the value). ||
 || `int` || `setOpt(Object options)` || See below. Returns number of properties set. ||
+|| `int` || `addOpt(Object options)` || Like `setOpt(object)`, but does not clear the options list. ||
 
-Each `Curl` object has a number of options which control how libcurl handles
-data. The following table list the options (in alphabetical order) and
-their libcurl counterparts (which are documented
+Each `Curl` object has a number of options which control how libcurl
+handles data. These options are set using `setOpt()`. The following
+table list the options (in alphabetical order) and their libcurl
+counterparts (which are documented
 [http://curl.haxx.se/libcurl/c/curl_easy_setopt.html at the libcurl site]).
 
 || *Property* || *Curl Counterpart* || *Notes* ||
@@ -91,9 +93,6 @@ All of the supported `CURLOPT_xxx` constants are available in JS space via `Curl
 The various option properties can be set like:
 
 {{{
-// As a property:
-mycurl.verbose = true;
-
 // Using libcurl notation:
 mycurl.setOpt( Curl.OPT_VERBOSE, true );
 
@@ -101,28 +100,28 @@ mycurl.setOpt( Curl.OPT_VERBOSE, true );
 mycurl.setOpt( { verbose:true, url:'http://code.google.com' } );
 }}}
 
-In the second form, the first argument must be `Curl.OPT_XXX`,
+In the first form, the first argument must be `Curl.OPT_XXX`,
 which corresponds to one of the `CURLOPT_XXX` constants listed above.
 (FIXME: it _should_ also accept the string form of the option.)
 
 The changes are applied immediately, but not all have any effect if
 changed after a connection is established (by calling `easyPerform()`).
 
-Curl options properties set directly on a `Curl` object are
-non-enumerable.  That means they will not show up when doing,
-e.g. (`for(var k in myCurlObj)`). This is by design.  To get the
-options values, use `myCurlObj.opt.optionName`. *However*, if you
-_assign_ to that variable directly then the settings will not be
-applied to the underlying curl routines. (This is a bug, but v8's
-get/set interceptor interface won't let me do this they way i would
-like to.)
+To fetch the options values, use
+`myCurlObj.opt.optionName`. *However*, if you _assign_ to that
+variable directly then the settings will not be applied to the
+underlying curl routines. _Never_ re-assign the `opt` property itself
+- that will cause the internals to use a different options object! 
+(Those last two behaviours are bugs, but v8's get/set interceptor
+interface won't let me do this they way i would like to.)
 
 Also beware that passing an object to `setOpt()` will replace the
-internal list of options but will not "undo" any options previously set
-on the object. e.g. if you call `myCurl.url=...` and then call
-`myCurl.setOpt({})`, the url property will be erased from the `myCurl`
-object but the underlying libcurl connection will still use it until
-another value is set.
+internal list of options but will not "undo" any options previously
+set on the object. e.g. if you call `myCurl.setOpt(Curl.OPT_URL,...)`
+and then call `myCurl.setOpt({})`, the url property will be erased
+from the `myCurl` object (because it is not in the new options) but
+the underlying libcurl connection will still use it until another
+value is set.
 
 == Callback routines ==
 

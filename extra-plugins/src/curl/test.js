@@ -43,17 +43,8 @@ function testTwo()
 {
     var c = new Curl();
     print( "Curl obj =",JSON.stringify( c, undefined, 2 ) );
-    print('opt =',c.opt);
-    c.port = 80;
-    c.url = "http://wh";
-    c.timeout = 17;
-    c.headerFunction = function headerFunction(data,len,ud)
-    {
-        print(arguments.callee.name+"()",data.length,"of",len,"bytes:","["+data.substring(0,data.length-2)+"]");
-        return data.length;
-    };
     c.setOpt({
-        verbose:true,
+        //verbose:true,
         port:80,
         url:"http://s11n",
         writeFunction:function writeFunction(data,len,ud)
@@ -63,12 +54,17 @@ function testTwo()
             return data.length;
         },
         writeData:{count:0},
+        headerFunction:function headerFunction(data,len,ud)
+        {
+            print(arguments.callee.name+"()",data.length,"of",len,"bytes:","["+data.substring(0,data.length-2)+"]");
+            return data.length;
+        },
+        headerData:{count:0},
         userAgent:"v8-juice-curl",
         placeholder:null
     });
-    
-    print( "port =",c.port);
-    print( "timeout =",c.timeout);
+    print( "port =",c.opt.port);
+    print( "timeout =",c.opt.timeout);
     var rc = c.easyPerform();
     print("perform rc =",rc);
     print("Curl obj =",JSON.stringify(c,undefined,2));
@@ -79,6 +75,7 @@ function testThree()
 {
     var c = new Curl();
     var o = {
+        url:'http://wh',
         port:80,
         timeout:11,
         connectionTimeout:17,
@@ -87,31 +84,32 @@ function testThree()
             print(arguments.callee.name+"()",data.length,"of",len,"bytes:","["+data.substring(0,data.length-2)+"]");
             return data.length;
         },
-        headerData:{count:0}
+        headerData:{count:0},
+        placeholder:null
     };
+    rc = c.setOpt(o);
+    print( "setOpt RC =",rc);
     var rc = c.setOpt( Curl.OPT_CRLF, 0 )
     print( "setOpt RC =",rc);
-    c.url = 'http://wh';
-    rc = c.setOpt(o);
     rc = c.setOpt( Curl.OPT_USERAGENT, "v8-juice" );
     print( "setOpt RC =",rc);
-    c.url = 'http://s11n';
-    print('c.url ==',c.url);
-
-    c.writeFunction =function writeFunction(data,len,ud)
+    var rc = c.setOpt( Curl.OPT_URL, 'http://localhost' )
+    print( "setOpt RC =",rc);
+    print('c.opt.url ==',c.opt.url);
+    c.setOpt( Curl.OPT_WRITEFUNCTION, function writeFunction(data,len,ud)
     {
         print(arguments.callee.name+"()",data.length,"of",len,"bytes");
         ++ud.count;
         return data.length;
-    };
-    c.writeData = {count:0};
+    } );
+    c.setOpt( Curl.OPT_WRITEDATA, {count:0} );
 
     print( "c =",JSON.stringify(c,undefined,2));
     c.easyPerform();
     c.destroy();
 }
 //testOne();
-//testTwo();
-testThree();
+testTwo();
+//testThree();
 
 
