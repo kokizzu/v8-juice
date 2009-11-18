@@ -216,6 +216,17 @@ namespace v8 { namespace juice { namespace curl {
                 return check;
             }
 
+            /**
+               Reminder: we set all of these here because
+               we cannot catch them when they are set like:
+
+               myCurlObj.opt.xxx = yyy;
+
+               to do that we need to intercept both myCurlObj.opt
+               get/set and need a proxy class in place of
+               myCurlObj.opt.
+            */
+
             this->applyStringOpt( CURLOPT_INTERFACE, Strings::optInterface );
             this->applyStringOpt( CURLOPT_RANGE, Strings::optRange );
             this->applyStringOpt( CURLOPT_PROXY, Strings::optProxy );
@@ -317,44 +328,27 @@ namespace v8 { namespace juice { namespace cw {
     CurlJS * Factory<CurlJS>::Instantiate( v8::Arguments const &  argv, std::ostream & errmsg )
     {
         const int argc = argv.Length();
-        CurlJS * rc = 0;
-        if( 0 == argc ) rc = new CurlJS;
-        else if( argc > 1 )
+        if( argc > 1 )
         {
-            errmsg << CurlJS::ClassName() << "(arg): arg must be a String (URL) or options Object.";
+            errmsg << CurlJS::ClassName() << "(): expects (), (string url), or (Object options).";
+            return 0;
         }
-#if 1
-        rc = new CurlJS();
-        argv.This()->SetHiddenValue( JSTR(Strings::ctorArg), argv[0] );
-#else
-        /**
-           We can't do ctor(String url | object Options) properly here
-           because at this point in the process rc is not bound to
-           JS...
+        CurlJS * rc = new CurlJS;
+        if( argc )
+        {
+            argv.This()->SetHiddenValue( JSTR(Strings::ctorArg), argv[0] );
+            /**
+               We can't do ctor(String url | object Options) properly here
+               because at this point in the process rc is not bound to
+               JS...
 
-           To do this we'd have to stuff a property into argv.This()
-           and handle it in WeakWrap().
-        */
-        else
-        {
-            v8::Handle<v8::Object> jThis = argv.This();
-            // ^^^^ this is likely to break if this type is subclassed.
-            rc = new CurlJS();
-            v8::Handle< v8::Value > jv = argv[0];
-            if( jv->IsObject() )
-            {
-                v8::Handle< v8::Object > jo( v8::Object::Cast(*jv) );
-                jThis->Set( JSTR(Strings::optObj), jo );
-            }
-            else
-            {
-                v8::Handle<v8::Object> jopt( v8::Object::Cast( *(jThis->Get(JSTR(Strings::optObj)) ) ) );
-                jopt->Set( JSTR(Strings::optURL), jv );
-            }
+               To do this we have to stuff a property into argv.This()
+               and handle it in WeakWrap().
+            */
         }
-#endif   
         return rc; 
     }
+
     void Factory<CurlJS>::Destruct( v8::Handle<v8::Object> /*ignored*/, NativeHandle obj )
     {
         delete obj;
@@ -381,8 +375,6 @@ namespace v8 { namespace juice { namespace cw {
                 impl->jself->Set( JSTR(Strings::optURL), ctorArg );
             }
         }
-        //nativeSelf->impl->opt(); //kludge to initialize .opt object!
-        //argv.This()->Set( JSTR(Strings::ctorArg), argv[0] );
     }
 
     void WeakWrap<CurlJS>::Unwrap( v8::Handle<v8::Object> const & jsSelf, CurlJS * nativeSelf )
@@ -392,9 +384,6 @@ namespace v8 { namespace juice { namespace cw {
 #endif
         nativeSelf->impl->jself.Clear();
     }
-
-    
-
     
 } } } // v8::juice::cw
 
