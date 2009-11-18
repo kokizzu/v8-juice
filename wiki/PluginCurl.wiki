@@ -15,6 +15,16 @@ perform certain operations on URLs using the
 
 Currently only reading of URLs is supported.
 
+== WARNINGS ==
+
+*Do not try to use this API to load binary data.* It is not possible to pass
+binary data to JS without the overhead of transporting the data from C++ to
+JS as an Array of integers, which would have a _huge_ memory cost.
+
+When a v8 string is created and it contains any "high bits" (anything non-ASCII),
+v8 assumes (IIRC) UTF16 and acts accordingly, and this will fail miserably if the data
+is not exactly the assumed format.
+
 == Loading from JS ==
 
 Install the plugin by following the instructions on the [Plugins] page. It requires
@@ -37,21 +47,21 @@ into your app and calling `v8::juice::expat::CurlJS::SetupBindings()`.
 
 || *Return type* || *Name/Signature* || *Notes* ||
 || `Curl` || `new Curl([string url | object options])` || Creates a new parser object. ||
-|| `int` || `easyPerform()` || Analog to `curl_easy_perform()` ||
+|| `int` || `easyPerform()` || Analog to `curl_easy_perform()`. ||
 || `void` || `destroy()` || Destroys the object, freeing all of its resources. Calling this is optional, but has the benefit of freeing up resources immediately, rather than waiting on the garbage collector. ||
 
-Each object has a member called `opt` which holds the curl-related options. The following
-table list the `opt` options and their curl counterparts (which are documented
+Each `Curl` object has a member called `opt` which holds the curl-related options. The following
+table list the `opt` options (in alphabetical order) and their libcurl counterparts (which are documented
 [http://curl.haxx.se/libcurl/c/curl_easy_setopt.html at the libcurl site]):
 
 || *Property* || *Curl Counterpart* || *Notes* ||
-|| `string url` || `CURL_URL` || The URL to read from/write to. ||
-|| `int connectionTimeout` || `CURLOPT_CONNECTIONTIMEOUT` || ||
 || `bool crlf` || `CURLOPT_CRLF` || ||
 || `int bufferSize` || `CURLOPT_BUFFERSIZE` || ||
+|| `int connectionTimeout` || `CURLOPT_CONNECTIONTIMEOUT` || ||
 || `bool failOnError` || `CURLOPT_FAILONERROR` || ||
 || `bool followLocation` || `CURLOPT_FOLLOWLOCATION` || ||
 || `bool header` || `CURLOPT_HEADER` || ||
+|| `any headerData` || `CURL_HEADERDATA` || Passed as last argument to `headerFunction()` ||
 || `function headerFunction(data,readLength,userData)` || `CURL_HEADERFUNCTION` || See below. ||
 || `string interface` || `CURLOPT_INTERFACE` || ||
 || `bool noBody` || `CURLOPT_NOBODY` || ||
@@ -63,6 +73,7 @@ table list the `opt` options and their curl counterparts (which are documented
 || `int maxRedirs` || `CURLOPT_MAXREDIRS` || ||
 || `int timeout` || `CURLOPT_TIMEOUT` || ||
 || `int timeoutMS` || `CURLOPT_TIMEOUT_MS` || ||
+|| `string url` || `CURL_URL` || The URL to read from/write to. ||
 || `string userAgent` || `CURLOPT_USERAGENT` || ||
 || `string userName` || `CURLOPT_USERNAME` || ||
 || `string userPwd` || `CURLOPT_USERPWD` || ||
@@ -86,11 +97,12 @@ but there is a subtle difference. When using the first approach, the
 settings are only passed on to libcurl when `easyPerform()` is
 called. Options set directly on the `Curl` object will be passed on to
 libcurl immediately (but not all have any effect if changed after a
-connection is established). The reason for this difference is our
+connection is established!). The reason for this difference is our
 inability to hook in to the accessors of the `opt` object (it can be
-done, but would require a significant amount of effort).
+done, but would require a significant amount of effort, requiring a custom
+bound native class for the opt object).
 
-Curl options properties set directly on a Curl object are
+Curl options properties set directly on a `Curl` object are
 non-enumerable.  That means they will not show up when doing,
 e.g. (`for(var k in myCurlObj)`). This is by design.
 
@@ -102,14 +114,15 @@ read. They take three arguments:
 
   * The data read in, as a string object.
   * The real length of the read-in data.
-  * The Curl object's `opt.writeData` value (because this is how the native API does it).
+  * The `Curl` object's `opt.writeData` value (because this is how the native API does it).
 
 Note that it is not safe to pass binary data into v8, so if you
 fetched binary data then the `.length` property of the read-in data
 will differ from the second paremeter's value. In such a case, there
 are no guarantees that the data is valid - it might have been
-corrupted via v8's string conversion routines (which automatically
-assume UTF16 (IIRC) if any high bits are set in the input data).
+corrupted via v8's string conversion routines.
+
+When the `headerFunction()` is called, it is passed a single header line (a complete header entry), but that line has a trailing `\r\n` on it, which should be stripped by the caller. It is not stripped by the wrapper because doing so would cause confusion with the `length` parameter (and we do not adjust to account for the two extra stripped characters that because it would falsify any byte count calculations done by the client).
 
 = Example =
 
@@ -130,7 +143,8 @@ assume UTF16 (IIRC) if any high bits are set in the input data).
         //header:true,
         headerFunction:function headerFunction(data,len,ud)
         {
-            print(arguments.callee.name+"()",data.length,"of",len,"bytes:","["+data.substring(0,data.length-2)+"]");
+            print(arguments.callee.name+"()",data.length,"of",len,
+                  "bytes:","["+data.substring(0,data.length-2)+"]");
             ++ud.count;
             return data.length;
         },
@@ -160,7 +174,7 @@ headerFunction() 40 of 40 bytes: [Expires: Fri, 01 Jan 1990 00:00:00 GMT]
 headerFunction() 42 of 42 bytes: [Cache-Control: no-cache, must-revalidate]
 headerFunction() 40 of 40 bytes: [Content-Type: text/html; charset=UTF-8]
 headerFunction() 33 of 33 bytes: [X-Content-Type-Options: nosniff]
-headerFunction() 152 of 152 bytes: [Set-Cookie: PREF=ID=4f2a9007345167de:TM=1258506706:LM=1258506706:S=ud_cU82-E7ZztKnB; <...snip...>]
+headerFunction() 152 of 152 bytes: [Set-Cookie: PREF=ID=4f2a9007345<...snip...>;]
 headerFunction() 18 of 18 bytes: [Server: codesite]
 headerFunction() 21 of 21 bytes: [X-XSS-Protection: 0]
 headerFunction() 28 of 28 bytes: [Transfer-Encoding: chunked]
@@ -179,23 +193,23 @@ writeFunction() 1413 of 1413 bytes
 writeFunction() 1418 of 1418 bytes
 writeFunction() 1063 of 1063 bytes
 c.easyPerform() rc = 0
-[object Curl@0x9ada3f0] = {
+[object Curl@0x8b763f0] = {
   "opt": {
     "url": "http://code.google.com/p/v8-juice/wiki/HomePage",
     "userAgent": "Google Chrome, kind of.",
     "writeData": {
-      "count": 0
+      "count": 13
     },
     "headerData": {
-      "count": 0
+      "count": 12
     }
   }
 }
 [object Curl@0x9af51b0] = {"opt":{"url":"http://yahoo.com"}}
-
 }}}
 
 = TODOs =
 
   * The API currently doesn't support writing over curl.
   * Certain curl properties (e.g.. `CURL_HTTPAUTH` and those of type `curl_slist`) require extra infrastructure before they can be implemented.
+  * Add support for `curl_slist`-style options.
