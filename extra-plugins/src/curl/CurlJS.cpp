@@ -94,6 +94,7 @@ namespace v8 { namespace juice { namespace curl {
     char const * Strings::optWriteData = "writeData";
     char const * Strings::optWriteFunc = "writeFunction";
 
+    /** Convenience base for CurlOpt specializations. */
     template <int _CurlOptID,char const * &PropKey>
     struct CurlOpt_Base
     {
@@ -103,10 +104,36 @@ namespace v8 { namespace juice { namespace curl {
             return PropKey;
         }
     };
-    template <int CurlOptID>
+    /**
+       Interface for setting Curl options from JS. MUST
+       be specialized on CurlOptID and the specializations
+       must behave as demonstrated in CurlOptString,
+       CurlOptLong, and friends.
+    */
+    template <int CurlOptID_>
     struct CurlOpt
     {
+#if defined(DOXYGEN)
+        /**
+           Must be-a CURLOPT_xxx value.
+        */
+        static const int CurlOptID = CurlOptID_;
+        /**
+           Must return the JS property name.
+         */
+        static char const * Key();
+        /**
+           Sets jso[key] and calls curl_easy_setopt(cu,...).
+           Implementations must convert val to the proper
+           type for the CURLOPT_xxx value defined by CurlOptID.
+        */
+        static int Set( v8::Handle<v8::Object> jso, CURL * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv);
+#endif
     };
+
+    /**
+       Stores an arbitrary JS object as a curl option.
+    */
     template <int _CurlOptID, char const * &PropKey>
     struct CurlOptJSVal : CurlOpt_Base<_CurlOptID,PropKey>
     {
@@ -217,14 +244,34 @@ namespace v8 { namespace juice { namespace curl {
 #undef COPT_STR
 #undef COPT_JVAL
 
-    typedef int (*CurlOptSetter)( v8::Handle<v8::Object> jso, CURL * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv);
+    /**
+       Interface for setting a Curl option.
 
+       jso = the JS object in which to set the property.
+       cu = the CURL handle to set the property on.
+       key = the property name.
+       val = the new value.
+
+       Implementations must respect the type required for the
+       underlying curl_easy_setopt() call.
+    */
+    typedef int (*CurlOptSetter)( v8::Handle<v8::Object> jso, CURL * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & val);
+
+    /**
+       Stores info for mapping between CURLOPT_xxx and JS-friendly names for
+       various Curl options.
+    */
     struct OptInfo
     {
         int ID;
         std::string PropName;
         CurlOptSetter Setter;
     };
+    /**
+       Each entry must have a unique ID and corresponding CurlOpt<> specialization.
+       Order is irrelevant, but the list must end with an entry which looks like
+       {0,"",0}.
+    */
     static const OptInfo OptInfoList[] =
         {
 #define O(I,S) { CURLOPT_##I, Strings::S, CurlOpt<CURLOPT_##I>::Set }
@@ -518,47 +565,37 @@ namespace v8 { namespace juice { namespace curl {
     int CurlJS::setOption( int curlID, v8::Handle<v8::Value> const & val )
     {
         //CERR << "setOption("<<curlID<<","<<cv::JSToStdString(val)<<")\n";
-        const int cid = curlID;
-        switch( cid )
+        OptInfo const * oi = optInfo(curlID);
+        if( ! oi )
         {
-#define CASE(O) case CURLOPT_##O: return CurlOpt<CURLOPT_##O>::Set( this->impl->opt(), this->impl->ch, JSTR(CurlOpt<CURLOPT_##O>::Key()), val )
-            CASE(FAILONERROR);
-            CASE(FOLLOWLOCATION);
-            CASE(HEADER);
-            CASE(NOBODY);
-            CASE(VERBOSE);
-
-            CASE(BUFFERSIZE);
-            CASE(CONNECTTIMEOUT);
-            CASE(CRLF);
-            CASE(MAXREDIRS);
-            CASE(PORT);
-            CASE(PROXYPORT);
-            CASE(TIMEOUT);
-            CASE(TIMEOUT_MS);
-
-            CASE(INTERFACE);
-            CASE(NOPROXY);
-            CASE(PROXY);
-            CASE(RANGE);
-            CASE(URL);
-            CASE(USERAGENT);
-            CASE(USERNAME);
-            CASE(USERPWD);
-
-            CASE(HEADERFUNCTION);
-            CASE(HEADERDATA);
-            CASE(WRITEFUNCTION);
-            CASE(WRITEDATA);
-#undef CASE
-           default: {
-               cv::StringBuffer msg;
-               msg << "Unknown Curl option #"<<cid<<'.';
-               TOSSV(msg);
-               return -1;
-           }
-        };
-        return -1;
+            cv::StringBuffer msg;
+            msg << "Unknown Curl option ID: "<<curlID;
+            TOSSV(msg);
+            return -1;
+        }
+        return oi->Setter( this->impl->opt(), this->impl->ch, cv::CastToJS(oi->PropName), val );
+    }
+    int CurlJS::setOption( v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & val )
+    {
+        //CERR << "setOption("<<cv::JSToStdString(val)<<","<<cv::JSToStdString(val)<<")\n";
+        const int curlID = cv::CastFromJS<int>(key);
+        OptInfo const * oi = optInfo(curlID);
+        if( oi )
+        {
+            return this->setOption( curlID, val );
+        }
+        else
+        {
+            oi = optInfo( cv::JSToStdString(key) );
+        }
+        if( ! oi )
+        {
+            cv::StringBuffer msg;
+            msg << "Unknown Curl option: "<<cv::JSToStdString(key);
+            TOSSV(msg);
+            return -1;
+        }
+        return oi->Setter( this->impl->opt(), this->impl->ch, cv::CastToJS(oi->PropName), val );
     }
 
     /**
@@ -740,7 +777,7 @@ namespace v8 { namespace juice { namespace curl {
         */
         typedef tmp::TypeList<
             convert::InvocableMemFunc1<N,uint32_t,ValHnd const &,&N::setOptions>,
-            convert::InvocableMemFunc2<N,int,int,ValHnd const &,&N::setOption>
+            convert::InvocableMemFunc2<N,int,ValHnd const &,ValHnd const &,&N::setOption>
             > SetOptList;
         cw
             .Set( Strings::easyPerform, ICM::M0::Invocable<int,&N::EasyPerform> )

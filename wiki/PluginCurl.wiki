@@ -96,13 +96,17 @@ The various option properties can be set like:
 // Using libcurl notation:
 mycurl.setOpt( Curl.OPT_VERBOSE, true );
 
+// Using JS-style option names:
+mycurl.setOpt( 'userName', 'stephan' );
+
 // As an object containing key/value pairs:
 mycurl.setOpt( { verbose:true, url:'http://code.google.com' } );
 }}}
 
 In the first form, the first argument must be `Curl.OPT_XXX`,
 which corresponds to one of the `CURLOPT_XXX` constants listed above.
-(FIXME: it _should_ also accept the string form of the option.)
+In the second form, it uses the "JS-like" propert name as the first
+argument.
 
 The changes are applied immediately, but not all have any effect if
 changed after a connection is established (by calling `easyPerform()`).
