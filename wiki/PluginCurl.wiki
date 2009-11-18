@@ -49,10 +49,13 @@ into your app and calling `v8::juice::expat::CurlJS::SetupBindings()`.
 || `Curl` || `new Curl([string url | object options])` || Creates a new parser object. ||
 || `int` || `easyPerform()` || Analog to `curl_easy_perform()`. ||
 || `void` || `destroy()` || Destroys the object, freeing all of its resources. Calling this is optional, but has the benefit of freeing up resources immediately, rather than waiting on the garbage collector. ||
+|| `int` || `setOpt(int CurlOptionID,mixed value)` || See below. Returns 0 on success (meaning libcurl accepted the value). ||
+|| `int` || `setOpt(Object options)` || See below. Returns number of properties set. ||
 
-Each `Curl` object has a member called `opt` which holds the curl-related options. The following
-table list the `opt` options (in alphabetical order) and their libcurl counterparts (which are documented
-[http://curl.haxx.se/libcurl/c/curl_easy_setopt.html at the libcurl site]):
+Each `Curl` object has a number of options which control how libcurl handles
+data. The following table list the options (in alphabetical order) and
+their libcurl counterparts (which are documented
+[http://curl.haxx.se/libcurl/c/curl_easy_setopt.html at the libcurl site]).
 
 || *Property* || *Curl Counterpart* || *Notes* ||
 || `bool crlf` || `CURLOPT_CRLF` || ||
@@ -81,30 +84,45 @@ table list the `opt` options (in alphabetical order) and their libcurl counterpa
 || `any writeData` || `CURL_WRITEDATA` || Passed as last argument to `writeFunction()` ||
 || `function writeFunction(data,readLength,userData)` || `CURL_WRITEFUNCTION` || See below. ||
 
-The various properties can either be set like:
+All of the supported `CURLOPT_xxx` constants are available in JS space via `Curl.OPT_xxx`.
+
+== Setting Curl Options ==
+
+The various option properties can be set like:
 
 {{{
-mycurl.opt.verbose = true;
-}}}
-
-or:
-
-{{{
+// As a property:
 mycurl.verbose = true;
+
+// Using libcurl notation:
+mycurl.setOpt( Curl.OPT_VERBOSE, true );
+
+// As an object containing key/value pairs:
+mycurl.setOpt( { verbose:true, url:'http://code.google.com' } );
 }}}
 
-but there is a subtle difference. When using the first approach, the
-settings are only passed on to libcurl when `easyPerform()` is
-called. Options set directly on the `Curl` object will be passed on to
-libcurl immediately (but not all have any effect if changed after a
-connection is established!). The reason for this difference is our
-inability to hook in to the accessors of the `opt` object (it can be
-done, but would require a significant amount of effort, requiring a custom
-bound native class for the opt object). My initial efforts at solving this with an internal proxy class for the `opt` property crash in v8's internals when constructing the proxy object.
+In the second form, the first argument must be `Curl.OPT_XXX`,
+which corresponds to one of the `CURLOPT_XXX` constants listed above.
+(FIXME: it _should_ also accept the string form of the option.)
+
+The changes are applied immediately, but not all have any effect if
+changed after a connection is established (by calling `easyPerform()`).
 
 Curl options properties set directly on a `Curl` object are
 non-enumerable.  That means they will not show up when doing,
-e.g. (`for(var k in myCurlObj)`). This is by design.
+e.g. (`for(var k in myCurlObj)`). This is by design.  To get the
+options values, use `myCurlObj.opt.optionName`. *However*, if you
+_assign_ to that variable directly then the settings will not be
+applied to the underlying curl routines. (This is a bug, but v8's
+get/set interceptor interface won't let me do this they way i would
+like to.)
+
+Also beware that passing an object to `setOpt()` will replace the
+internal list of options but will not "undo" any options previously set
+on the object. e.g. if you call `myCurl.url=...` and then call
+`myCurl.setOpt({})`, the url property will be erased from the `myCurl`
+object but the underlying libcurl connection will still use it until
+another value is set.
 
 == Callback routines ==
 
@@ -128,7 +146,7 @@ When the `headerFunction()` is called, it is passed a single header line (a comp
 
 {{{
     var c = new Curl();
-    c.opt = {
+    c.setOpt({
         url:'http://code.google.com/p/v8-juice/wiki/PluginCurl',
         userAgent:"Google Chrome, kind of.",
         //verbose:true,
@@ -150,17 +168,10 @@ When the `headerFunction()` is called, it is passed a single header line (a comp
         },
         headerData:{count:0},
         placeholder:undefined
-    };
+    });
     var rc = c.easyPerform();
     print( "c.easyPerform() rc =",rc);
     print(c,'=',JSON.stringify(c,undefined,2));
-    var c2 =
-        //new Curl();
-        //new Curl({ url:"http://yahoo.com" })
-        new Curl("http://yahoo.com")
-        ;
-    print( c2,'=', JSON.stringify(c2) );
-    c2.destroy();
     c.destroy();
 }}}
 
@@ -205,7 +216,6 @@ c.easyPerform() rc = 0
     }
   }
 }
-[object Curl@0x9af51b0] = {"opt":{"url":"http://yahoo.com"}}
 }}}
 
 = TODOs =
