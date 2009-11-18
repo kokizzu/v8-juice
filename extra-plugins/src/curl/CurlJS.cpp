@@ -251,16 +251,6 @@ namespace v8 { namespace juice { namespace curl {
             }
         }
         /**
-            Returns opt(Strings::optWriteData), or v8::Undefined()
-            if it is not set.
-        */
-        v8::Handle<v8::Value> writeData()
-        {
-            const v8::Handle<v8::Value> rc = this->opt( Strings::optWriteData );
-            if( rc.IsEmpty() ) return v8::Undefined();
-            else return rc;
-        }
-        /**
            Gets the handler callback function associated with n, or an
            empty handle if n is not set or is not-a Function.
         */
