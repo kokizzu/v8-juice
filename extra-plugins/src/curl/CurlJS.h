@@ -31,83 +31,7 @@ namespace v8 { namespace juice { namespace curl {
 
        JS API:
 
-       Class name = Curl
-
-       Ctors:
-
-       - Curl()
-       - Curl(string url)
-       - Curl(Object options)
-       
-       Functions:
-
-       - int easyPerform() = a wrapper around curl_easy_perform(). Processes
-       the current request options. It requires that opt.url and the appropriate
-       other options properties be set.
-
-       Curl Options Properties, all of which can be set as members
-       of the 'opt' property, e.g. mycurl.opt.url = "...", or can be
-       set directly in the Curl object (but they will not show up in
-       enumerations!).
-
-       - string url = the URL to read from
-
-       - int port = default port number to use
-       
-       - function writeFunction(data,readLength,userData) = callback
-       called when data arrives.  Analogous to curl's
-       CURLOPT_WRITEFUNCTION except that the signature is different
-       due to differences in JS/C++ argument passing conventions. If
-       data.length is not the same as readLength then there was an
-       unwanted conversion in converting the data to JS space (e.g. it
-       may contain non-ASCII data), and it should be treated as suspect.
-
-       - any writeData = passed as second arg to
-       writeFunction(). Analogous to curl's CURLOPT_WRITEDATA.
-
-       - function headerFunction(data,readLength,userData) = callback
-       called when a header line arrives. Analogous to
-       CURLOPT_HEADERFUNCTION. headerFunction() is passed the header
-       lines with the trailing \\r\\n from the server, to avoid
-       confusion regarding the read size.
-       
-       - bool verbose = analogous to curl's CURLOPT_VERBOSE.
-
-       - bool failOnError = CURLOPT_FAILONERROR
-
-       - bool header = CURLOPT_HEADER
-
-       - string userAgent = CURLOPT_USERAGENT
-
-       - string proxy = CURLOPT_PROXY
-
-       - int proxyPort = CURLOPT_PROXYPORT
-
-       - string noProxy = CURLOPT_NOPROXY
-
-       - string interface = CURLOPT_INTERFACE
-
-       - bool noBody = CURLOPT_NOBODY
-
-       - bool crlf = CURLOPT_CRLF
-
-       - string range = CURLOPT_RANGE
-
-       - int maxRedirs = CURLOPT_MAXREDIRS
-
-       - bool followLocation = CURLOPT_FOLLOWLOCATION
-
-       - int connectionTimeout = CURLOPT_CONNECTIONTIMEOUT
-
-       - int timeout = CURLOPT_TIMEOUT
-
-       - int timeoutMS = CURLOPT_TIMEOUT_MS
-
-       - int bufferSize = CURLOPT_BUFFERSIZE
-
-       - string userName = CURLOPT_USERNAME
-
-       - string userPwd = CURLOPT_USERPWD
+       See: http://code.google.com/p/v8-juice/wiki/PluginCurl
        
        TODOs:
 
@@ -118,10 +42,17 @@ namespace v8 { namespace juice { namespace curl {
     public:
         /** Internal implementation detail. */
         struct Impl;
+        /**
+           Initializes a new curl handle using curl_easy_init().
+        */
         CurlJS();
+        /**
+           Frees up internal resources.
+        */
         ~CurlJS();
 
         /**
+           See curl_easy_perform().
         */
         int EasyPerform();
         
@@ -130,15 +61,19 @@ namespace v8 { namespace juice { namespace curl {
            Returns target, for reasons lost unto history.
         */
         static v8::Handle<v8::Value> SetupBindings( v8::Handle<v8::Object> target );
+
+        /**
+           Returns this type's JS-side class name.
+        */
+        static const char * ClassName()
+        {
+            return "Curl";
+        }
         /**
            Internal details. In the public API so some internal
            binding routines can get at it.
         */
         Impl * impl;
-        static const char * ClassName()
-        {
-            return "Curl";
-        }
 
         v8::Handle<v8::Value> toString() const;
     private:
@@ -159,7 +94,10 @@ namespace v8 { namespace juice {  namespace cw {
     struct ClassName<CurlJS>
     {
         /** Returns the JS-side class name of the CurlJS native class. */
-        static char const * Value();
+        static char const * Value()
+        {
+            return CurlJS::ClassName();
+        }
     };
 
     /**
@@ -167,13 +105,7 @@ namespace v8 { namespace juice {  namespace cw {
        v8::juice::curl::CurlJS.
     */
     template <>
-    struct Factory<CurlJS>// :
-//         Factory_CtorForwarder<CurlJS,
-//             v8::juice::tmp::TypeList<
-//                Factory_CtorForwarder0<CurlJS>,
-//                Factory_CtorForwarder1<CurlJS,v8::Handle<v8::Value> >
-//         > >
-                  //Factory_NewDelete<CurlJS>
+    struct Factory<CurlJS>
     {
         typedef convert::TypeInfo<CurlJS>::Type Type;
         typedef convert::TypeInfo<CurlJS>::NativeHandle NativeHandle;

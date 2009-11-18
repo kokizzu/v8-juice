@@ -18,14 +18,7 @@ typedef v8::Handle<v8::Value> ValHnd;
 #define TOSS(X) v8::ThrowException(JSTR(X))
 #define TOSSV(X) v8::ThrowException(X)
 
-namespace v8 { namespace juice {
-namespace cw {
-    char const * ClassName<v8::juice::curl::CurlJS>::Value()
-    {
-        return v8::juice::curl::CurlJS::ClassName();
-    }
-}
-namespace curl {
+namespace v8 { namespace juice { namespace curl {
     namespace cv = v8::juice::convert;
     // For use with CURLOPT_WRITEFUNCTION
     static size_t WriteCallback(void *ptr, size_t size, size_t nmemb, void *data);
@@ -286,10 +279,16 @@ namespace curl {
        OptKey == callback function name.
        DataKey == "data argument" property name.
 
-       StripCRNL is highly arguable: if it's true it expects that ptr
-       contains a \\r\\n combination and adjusts it's size by -2.
+       BUGS:
+
+       - Our callback mechanism does not 100% match what libcurl specifies
+       for CURLOPT_HEADERFUNCTION when HEADERFUNCTION is null but HEADERDATA
+       is not. See:
+
+       http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTHEADERFUNCTION
+       
     */
-    template <char const * &OptKey,char const * &DataKey,bool StripCRNL>
+    template <char const * &OptKey,char const * &DataKey>
     static size_t WriterCallback( void *ptr, size_t size, size_t nmemb, void *data)
     {
         //CERR << "WriterCallback<"<<OptKey<<", "<<DataKey<<">() "<<(size*nmemb)<<" bytes.\n";
@@ -299,13 +298,6 @@ namespace curl {
         if( fh.IsEmpty() ) return (size*nmemb);
         enum { argc = 3 };
         size_t len = size * nmemb;
-        size_t adjust = 0;
-        if( StripCRNL )
-        {
-            adjust = 2;
-            if( len < adjust ) len = 0;
-            else len-=adjust; // assume we're stripping a cr/nl
-        }
         char const * cp = (len) ? reinterpret_cast<char const *>( ptr ) : 0;
         ValHnd argv[argc] = {
             v8::String::New( cp ? cp : "", cp ? static_cast<int>( len ) : 0 ),
@@ -313,16 +305,16 @@ namespace curl {
             im->opt( DataKey )
         };
         v8::Local<v8::Value> rv = fh->Call( im->jself, argc, argv );
-        return rv.IsEmpty() ? 0 : (adjust + cv::CastFromJS<size_t>( rv ));
+        return rv.IsEmpty() ? 0 : cv::CastFromJS<size_t>( rv );
     }
     
     static size_t WriteCallback(void *ptr, size_t size, size_t nmemb, void *data)
     {
-        return WriterCallback<Strings::optWriteFunc,Strings::optWriteData,false>( ptr, size, nmemb, data );
+        return WriterCallback<Strings::optWriteFunc,Strings::optWriteData>( ptr, size, nmemb, data );
     }
     static size_t HeaderCallback(void *ptr, size_t size, size_t nmemb, void *data)
     {
-        return WriterCallback<Strings::optHeaderFunc,Strings::optHeaderData,false>( ptr, size, nmemb, data );
+        return WriterCallback<Strings::optHeaderFunc,Strings::optHeaderData>( ptr, size, nmemb, data );
     }
     
 }}} // v8::juice::curl
@@ -435,6 +427,7 @@ namespace v8 { namespace juice { namespace curl {
     {
         return this->impl->EasyPerform();
     }
+
     v8::Handle<v8::Value> CurlJS::toString() const
     {
         cv::StringBuffer s;
@@ -596,6 +589,7 @@ namespace v8 { namespace juice { namespace curl {
 #define ACC(I,KEY) GF = OptGet<Strings::KEY>; \
             SF = OptSet<I,Strings::KEY>; \
             proto->SetAccessor( JSTR(Strings::KEY), GF, SF, ValHnd(), v8::DEFAULT, v8::DontEnum )
+
             ACC(CURLOPT_URL,optURL);
             ACC(CURLOPT_USERAGENT,optUserAgent);
             ACC(CURLOPT_USERPWD,optUserPwd );
@@ -618,24 +612,20 @@ namespace v8 { namespace juice { namespace curl {
             ACC(CURLOPT_PORT,optPort);
             //proto->SetAccessor( JSTR(Strings::optObj), OptGetObj );//, OptSetObj );
             //proto->SetAccessor( JSTR(Strings::optObj), 0, OptSetObj );
+#undef FN
 #undef ACC
         }
 
 
-#define JF v8::FunctionTemplate::New(cb)->GetFunction()
-#define F(X) cw.Set( X, JF )
-        v8::InvocationCallback cb;
-
-        cb = CW::DestroyObject;
-        F("destroy");
-
-//         cb = ICM::M2::Invocable<bool,std::string const &,bool,&N::Parse>;
-//         F("parse");
+// #define JF v8::FunctionTemplate::New(cb)->GetFunction()
+// #define F(X) cw.Set( X, JF )
+//         v8::InvocationCallback cb;
+// #undef JF
+// #undef F
+        cw.Set( "destroy", CW::DestroyObject );
 
 //         cb = ICM::M0::Invocable<void,&N::Reset>;
 //         F("reset");
-#undef JF
-#undef F
         v8::Handle<v8::Function> ctor = cw.Seal();
         cw.AddClassTo(target);
 
