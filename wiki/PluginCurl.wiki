@@ -9,7 +9,7 @@
 
 *Achtung: this is new code (added 20091118) and the interface may still change significantly.*
 
-This plugin provides a JS class called !Curl which allows the client to
+This plugin provides a JS class called `Curl` which allows the client to
 perform certain operations on URLs using the
 [http://curl.haxx.se/libcurl/ libcurl API].
 
@@ -100,7 +100,7 @@ libcurl immediately (but not all have any effect if changed after a
 connection is established!). The reason for this difference is our
 inability to hook in to the accessors of the `opt` object (it can be
 done, but would require a significant amount of effort, requiring a custom
-bound native class for the opt object).
+bound native class for the opt object). My initial efforts at solving this with an internal proxy class for the `opt` property crash in v8's internals when constructing the proxy object.
 
 Curl options properties set directly on a `Curl` object are
 non-enumerable.  That means they will not show up when doing,
