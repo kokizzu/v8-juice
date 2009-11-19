@@ -1100,7 +1100,13 @@ namespace convert {
            Appends to the message using CastFromJS<std::string>(t) 
         */
         template <typename T>
-        inline StringBuffer & operator<<( v8::Handle<T> const t )
+        inline StringBuffer & operator<<( v8::Handle<T> const & t )
+        {
+            this->os << CastFromJS<std::string>( t );
+            return *this;
+        }
+        template <typename T>
+        inline StringBuffer & operator<<( v8::Local<T> const & t )
         {
             this->os << CastFromJS<std::string>( t );
             return *this;
@@ -1126,7 +1132,8 @@ namespace convert {
     /** Outputs sb.Content() to os and returns os. */
     inline std::ostream & operator<<( std::ostream & os, v8::juice::convert::StringBuffer const & sb )
     {
-        return os << sb.Content();
+        os << sb.Content();
+        return os;
     }
 
 }}} /* namespaces */
