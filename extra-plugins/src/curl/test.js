@@ -136,15 +136,15 @@ function testCrash()
     var c = new Curl();
     var o = {
         port:80,
-        //httpHeader:["Host: s11n","Accept-Encoding: gzip","Accept: text/html"],
-        httpHeader:3, // v8 crash or "secondary" throw, depending on the workarounds in the native code
+        httpHeader:["Host: s11n","Accept-Encoding: gzip","Accept: text/html"],
+        //httpHeader:3, // v8 crash or "secondary" throw, depending on the workarounds in the native code
         url:'http://localhost'
     };
     rc = c.addOpt(o);
     print( "setOpt RC =",rc);
     rc = c.setOpt( Curl.OPT_HTTPHEADER,
-                   //"" // causes error code or throws
-                   ["Host: wh","Accept-Encoding: gzip","Accept: text/html"]
+                   "" // causes error code or throws
+                   //["Host: wh","Accept-Encoding: gzip","Accept: text/html"]
                    );
     print( "setOpt RC =",rc);
     print( "c =",JSON.stringify(c,undefined,2));
@@ -156,15 +156,21 @@ function testCurlInfo()
 {
     print(banner.start);
     print( arguments.callee.name+"()" );
-    for( var i = Curl.INFO_NONE; i < Curl.INFO_LASTONE; ++i )
-    {
-        print( i );
-    }
+//     for( var i = Curl.INFO_NONE; i < Curl.INFO_LASTONE; ++i )
+//     {
+//         print( i );
+//     }
+    var c = new Curl();
+    var irc = c.getInfo( Curl.INFO_OS_ERRNO );
+    print( 'irc =',irc);
+    irc = c.getInfo( Curl.INFO_PRIMARY_IP );
+    print( 'irc =',typeof irc,irc);
+    c.destroy();
     print(banner.end);
 }
 
 //testOne();
 //testTwo();
-testThree();
-testCurlInfo();
-//testCrash();
+// testThree();
+ testCurlInfo();
+// testCrash();

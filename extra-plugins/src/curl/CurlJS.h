@@ -106,6 +106,12 @@ namespace v8 { namespace juice { namespace curl {
            list before applying the new options.
         */
         v8::Handle<v8::Value> AddOpts( v8::Handle<v8::Value> const & obj );
+
+	/**
+	   Analog to curl_easy_getinfo(), but throws on error.
+	*/
+	v8::Handle<v8::Value> GetInfo( int flag );
+
     };
 
     

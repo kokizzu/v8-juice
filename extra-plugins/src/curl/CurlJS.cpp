@@ -97,6 +97,9 @@ namespace v8 { namespace juice { namespace curl {
         ~Impl()
         {
 #if 0
+	    // curl_easy_setopt() pages say that i have to
+	    // delete the slist's, but when i do i get
+	    // double-free() errors!
             // It seems that curl takes over ownership
             SListMap::iterator it = this->slist.begin();
             for( ; this->slist.end() != it; ++it )
@@ -341,7 +344,7 @@ namespace v8 { namespace juice { namespace curl {
 #elif 1
                 // second-choice behaviour, which we accommodate in CurlJS::setOptions()
                 // and friends:
-                CERR << msg.Content() << '\n';
+                //CERR << msg.Content() << '\n';
                 return v8::Integer::New(-1);
 #endif
             }
@@ -520,7 +523,7 @@ namespace v8 { namespace juice { namespace curl {
     template <int InfoID>
     struct CInfoGet
     {
-        static v8::Handle<v8::Value> Getter( CURL * c )
+        static v8::Handle<v8::Value> Get( CURL * c )
         {
             return TOSS("Unspecialized CURLINFO value!");
         }
@@ -532,73 +535,105 @@ namespace v8 { namespace juice { namespace curl {
     struct CInfoGet_Base
     {
         static const int ID = InfoID;
-        //static v8::Handle<v8::Value> Getter( CURL * c );
+        //static v8::Handle<v8::Value> Get( CURL * c );
     };
     template <int InfoID>
     struct CInfoGet_String : CInfoGet_Base<InfoID>
     {
-        static v8::Handle<v8::Value> Getter( CURL * c )
+        static v8::Handle<v8::Value> Get( CURL * c )
         {
-            return TOSS("Not yet implemented!");
+	    char const * nv = 0;
+	    CURLcode rc = curl_easy_getinfo( c, CURLINFO(InfoID), &nv );
+	    if( CURLE_OK != rc )
+	    {
+		cv::StringBuffer msg;
+		msg << "curl_easy_getinfo(Curl@"<<c<<", "<<InfoID<<", STRING) failed with RC "<<int(rc)<<'!';
+		return TOSSV(msg);
+	    }
+	    else
+	    {
+		if( nv ) return cv::CastToJS( nv );
+		else return v8::Null();
+	    }
         }        
     };
     template <int InfoID>
     struct CInfoGet_Long : CInfoGet_Base<InfoID>
     {
-        static v8::Handle<v8::Value> Getter( CURL * c )
+        static v8::Handle<v8::Value> Get( CURL * c )
         {
-            return TOSS("Not yet implemented!");
+	    long nv = 0;
+	    CURLcode rc = curl_easy_getinfo( c, CURLINFO(InfoID), &nv );
+	    if( CURLE_OK != rc )
+	    {
+		cv::StringBuffer msg;
+		msg << "curl_easy_getinfo(Curl@"<<c<<", "<<InfoID<<", LONG) failed with RC "<<int(rc)<<'!';
+		return TOSSV(msg);
+	    }
+	    else
+	    {
+		return cv::CastToJS( nv );
+	    }
         }        
     };
     template <int InfoID>
     struct CInfoGet_Double : CInfoGet_Base<InfoID>
     {
-        static v8::Handle<v8::Value> Getter( CURL * c )
+        static v8::Handle<v8::Value> Get( CURL * c )
         {
-            return TOSS("Not yet implemented!");
+	    double nv = 0;
+	    CURLcode rc = curl_easy_getinfo( c, CURLINFO(InfoID), &nv );
+	    if( CURLE_OK != rc )
+	    {
+		cv::StringBuffer msg;
+		msg << "curl_easy_getinfo(Curl@"<<c<<", "<<InfoID<<",DOUBLE) failed with RC "<<int(rc)<<'!';
+		return TOSSV(msg);
+	    }
+	    else
+	    {
+		return cv::CastToJS( nv );
+	    }
         }        
     };
     template <int InfoID>
     struct CInfoGet_SList : CInfoGet_Base<InfoID>
     {
-        static v8::Handle<v8::Value> Getter( CURL * c )
+        static v8::Handle<v8::Value> Get( CURL * c )
         {
             return TOSS("Not yet implemented!");
         }        
     };
-    enum {
-    };
         
-    template <int V>
+    template <int Mask,int V>
     struct CInfoChoose
     {
         typedef CInfoGet<V> Type;
     };
-    template <>
-    struct CInfoChoose<CURLINFO_STRING>
+    template <int V>
+    struct CInfoChoose<CURLINFO_STRING,V>
     {
-        typedef CInfoGet_String<CURLINFO_STRING> Type;
+        typedef CInfoGet_String<V> Type;
     };
-    template <>
-    struct CInfoChoose<CURLINFO_LONG>
+    template <int V>
+    struct CInfoChoose<CURLINFO_LONG,V>
     {
-        typedef CInfoGet_Long<CURLINFO_LONG> Type;
+        typedef CInfoGet_Long<V> Type;
     };
-    template <>
-    struct CInfoChoose<CURLINFO_DOUBLE>
+    template <int V>
+    struct CInfoChoose<CURLINFO_DOUBLE,V>
     {
-        typedef CInfoGet_Double<CURLINFO_DOUBLE> Type;
+        typedef CInfoGet_Double<V> Type;
     };
-    template <>
-    struct CInfoChoose<CURLINFO_SLIST>
+    template <int V>
+    struct CInfoChoose<CURLINFO_SLIST,V>
     {
-        typedef CInfoGet_SList<CURLINFO_SLIST> Type;
+        typedef CInfoGet_SList<V> Type;
     };
 
     template <int I>
     struct CInfoHandler
     {
-        typedef typename CInfoChoose<I & CURLINFO_TYPEMASK>::Type Type;
+        typedef typename CInfoChoose<I & CURLINFO_TYPEMASK,I>::Type Type;
     };
     
     /**
@@ -613,7 +648,7 @@ namespace v8 { namespace juice { namespace curl {
     static const CInfoMeta CInfoList[] =
         {
 #define INFO(K) { CURLINFO_ ## K, "INFO_" # K, \
-                  CInfoHandler<CURLINFO_ ## K>::Type::Getter }
+                  CInfoHandler<CURLINFO_ ## K>::Type::Get }
         INFO(NONE),
 
         INFO(APPCONNECT_TIME),
@@ -644,7 +679,6 @@ namespace v8 { namespace juice { namespace curl {
         INFO(OS_ERRNO),
         INFO(PRETRANSFER_TIME),
         INFO(PRIMARY_IP),
-        INFO(PRIVATE),
         INFO(PROXYAUTH_AVAIL),
         INFO(REDIRECT_COUNT),
         INFO(REDIRECT_TIME),
@@ -668,7 +702,7 @@ namespace v8 { namespace juice { namespace curl {
 
         INFO(LASTONE),
 #undef INFO
-        {0,0}
+        {0,0,0}
         };
     
     /**
@@ -786,6 +820,21 @@ namespace v8 { namespace juice { namespace curl {
         return s;
     }
     
+
+    v8::Handle<v8::Value> CurlJS::GetInfo( int flag )
+    {
+	// TODO: need ID/String-to-CURLINFO_xxx routines.
+	CInfoMeta const * ci = CInfoList;
+	//int rc = -1;
+	//ValHnd jrc;
+	for( ; ci && ci->PropName; ++ci )
+	{
+	    if( ci->ID != flag ) continue;
+	    return ci->Getter( this->impl->ch );
+	}
+	return TOSS("Unknown CURLINFO_xxx ID!");
+    }
+
     v8::Handle<v8::Value> CurlJS::SetOpt( int curlID, v8::Handle<v8::Value> const & val )
     {
         //CERR << "setOption("<<curlID<<","<<cv::JSToStdString(val)<<")\n";
@@ -1073,7 +1122,8 @@ namespace v8 { namespace juice { namespace curl {
         cw
             .Set( Strings::easyPerform, ICM::M0::Invocable<int,&N::EasyPerform> )
             .Set( "toString", ICM::M0::Invocable<ValHnd,&N::toString> )
-            .Set( Strings::fnAddOption, convert::InvocableMemFunc1<N,ValHnd,ValHnd const &,&N::AddOpts>::Invocable )
+            .Set( Strings::fnAddOption, ICM::M1::Invocable<ValHnd,ValHnd const &,&N::AddOpts> )
+            .Set( "getInfo", ICM::M1::Invocable<ValHnd,int,&N::GetInfo> )
             .Set( "destroy", CW::DestroyObject )
             //.Set( Strings::optObj, OptGetter ) // if i do this the opts are not enumerable!
             ;
@@ -1131,61 +1181,11 @@ namespace v8 { namespace juice { namespace curl {
         /**
            Add Curl.INFO_XXX mappings to CURLINFO_XXX.
         */
-#define INFOKEY(O) ctor->Set( JSTR("INFO_"#O), v8::Integer::New( CURLINFO_ ## O ) )
-        INFOKEY(NONE);
-
-        INFOKEY(APPCONNECT_TIME);
-        INFOKEY(CERTINFO);
-        INFOKEY(CONDITION_UNMET);
-        INFOKEY(CONNECT_TIME);
-        INFOKEY(CONTENT_LENGTH_DOWNLOAD);
-        INFOKEY(CONTENT_LENGTH_UPLOAD);
-        INFOKEY(CONTENT_TYPE);
-        INFOKEY(COOKIELIST);
-        INFOKEY(DATA_IN);
-        INFOKEY(DATA_OUT);
-        INFOKEY(DOUBLE);
-        INFOKEY(EFFECTIVE_URL);
-        INFOKEY(END);
-        INFOKEY(FILETIME);
-        INFOKEY(FTP_ENTRY_PATH);
-        INFOKEY(HEADER_IN);
-        INFOKEY(HEADER_OUT);
-        INFOKEY(HEADER_SIZE);
-        INFOKEY(HTTPAUTH_AVAIL);
-        INFOKEY(HTTP_CONNECTCODE);
-        INFOKEY(LASTSOCKET);
-        INFOKEY(LONG);
-        INFOKEY(MASK);
-        INFOKEY(NAMELOOKUP_TIME);
-        INFOKEY(NUM_CONNECTS);
-        INFOKEY(OS_ERRNO);
-        INFOKEY(PRETRANSFER_TIME);
-        INFOKEY(PRIMARY_IP);
-        INFOKEY(PRIVATE);
-        INFOKEY(PROXYAUTH_AVAIL);
-        INFOKEY(REDIRECT_COUNT);
-        INFOKEY(REDIRECT_TIME);
-        INFOKEY(REDIRECT_URL);
-        INFOKEY(REQUEST_SIZE);
-        INFOKEY(RESPONSE_CODE);
-        INFOKEY(SIZE_DOWNLOAD);
-        INFOKEY(SIZE_UPLOAD);
-        INFOKEY(SLIST);
-        INFOKEY(SPEED_DOWNLOAD);
-        INFOKEY(SPEED_UPLOAD);
-        INFOKEY(SSL_DATA_IN);
-        INFOKEY(SSL_DATA_OUT);
-        INFOKEY(SSL_ENGINES);
-        INFOKEY(SSL_VERIFYRESULT);
-        INFOKEY(STARTTRANSFER_TIME);
-        INFOKEY(STRING);
-        INFOKEY(TEXT);
-        INFOKEY(TOTAL_TIME);
-        INFOKEY(TYPEMASK);
-
-        INFOKEY(LASTONE);
-#undef INFOKEY
+	CInfoMeta const * cinfo = CInfoList;
+	for( ; cinfo && cinfo->PropName; ++cinfo )
+	{
+	    ctor->Set( JSTR( cinfo->PropName ), v8::Integer::New(cinfo->ID) );
+	}
         return target;
     }
 
