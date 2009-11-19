@@ -220,7 +220,7 @@ namespace convert {
     {
 	v8::Handle<v8::Value> operator()( IntegerT v ) const
 	{
-	    return Integer::New( static_cast<uint32_t>(v) );
+	    return Integer::NewFromUnsigned( static_cast<uint32_t>(v) );
 	}
     };
 #endif // if !defined(DOXYGEN)
