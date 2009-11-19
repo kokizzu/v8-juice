@@ -83,6 +83,7 @@ counterparts (which are documented
 || `string range` || `CURLOPT_RANGE` || ||
 || `int resumeFrom` || `CURLOPT_RESUME_FROM` || ||
 || `int maxRedirs` || `CURLOPT_MAXREDIRS` || ||
+|| `bool post` || `CURLOPT_POST` || ||
 || `StringArray quote` || `CURLOPT_QUOTE` || ||
 || `int timeout` || `CURLOPT_TIMEOUT` || ||
 || `int timeoutMS` || `CURLOPT_TIMEOUT_MS` || ||

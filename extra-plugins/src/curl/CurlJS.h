@@ -84,9 +84,9 @@ namespace v8 { namespace juice { namespace curl {
            internally-supported options so we know which type
            conversion to use on val.
         */
-        int setOption( int curlID, v8::Handle<v8::Value> const & val );
+        v8::Handle<v8::Value> setOption( int curlID, v8::Handle<v8::Value> const & val );
 
-        int setOption( v8::Handle<v8::Value> const & k, v8::Handle<v8::Value> const & val );
+        v8::Handle<v8::Value> setOption( v8::Handle<v8::Value> const & k, v8::Handle<v8::Value> const & val );
         /**
            JS usage:
 
@@ -100,12 +100,12 @@ namespace v8 { namespace juice { namespace curl {
            
            Returns the number of properties set.
         */
-        uint32_t setOptions( v8::Handle<v8::Value> const & obj );
+        v8::Handle<v8::Value> setOptions( v8::Handle<v8::Value> const & obj );
         /**
            Like setOption(), but does not clear the list of options
            list before applying the new options.
         */
-        uint32_t addOptions( v8::Handle<v8::Value> const & obj );
+        v8::Handle<v8::Value> addOptions( v8::Handle<v8::Value> const & obj );
     };
 
     
