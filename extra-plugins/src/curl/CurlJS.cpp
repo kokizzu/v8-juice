@@ -25,6 +25,20 @@ namespace v8 { namespace juice { namespace curl {
     // For use with CURLOPT_HEADERFUNCTION
     static size_t HeaderCallback(void *ptr, size_t size, size_t nmemb, void *data);
 
+    typedef std::map<int,curl_slist *> SListMap;
+    static curl_slist * ArrayToSList( v8::Handle<v8::Array> ar )
+    {
+        curl_slist * li = 0;
+        int const len = cv::CastFromJS<int>( ar->Get(JSTR("length")) );
+        for( int i = 0; i < len; ++i )
+        {
+            v8::Local<v8::Value> v = ar->Get( v8::Integer::New(i) );
+            std::string const sv( cv::JSToStdString(v) );
+            if( sv.empty() ) continue;
+            li = curl_slist_append( li, sv.c_str() );
+        }
+        return li;
+    }
 
     /**
        Holds names of JS properties.
@@ -51,273 +65,18 @@ namespace v8 { namespace juice { namespace curl {
     char const * Strings::optWriteData = "writeData";
     char const * Strings::optWriteFunc = "writeFunction";
 
-    /**
-       Interface for setting a Curl option.
 
-       - jso = the JS object in which to set the property.
-       - cu = the CURL handle to set the property on.
-       - key = the property name.
-       - val = the new value.
-
-       Implementations must respect the type required for the
-       underlying curl_easy_setopt() call.
-    */
-    typedef int (*CurlOptSetter)( v8::Handle<v8::Object> jso, CURL * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & val);
-
-
-    /** Convenience base for CurlOpt specializations. */
-    template <int _CurlOptID>
-    struct CurlOpt_Base
-    {
-        static const int CurlOptID = _CurlOptID;
-    };
-    /**
-       Interface for setting Curl options from JS. MUST
-       be specialized on CurlOptID and the specializations
-       must behave as demonstrated in CurlOptString,
-       CurlOptLong, and friends.
-    */
-    template <int CurlOptID_>
-    struct CurlOpt
-    {
-#if defined(DOXYGEN)
-        /**
-           Must be-a CURLOPT_xxx value.
-        */
-        static const int CurlOptID = CurlOptID_;
-        /**
-           Must return the JS property name.
-         */
-        static char const * Key();
-        /**
-           Must implement the CurlOptSetter interface.
-        */
-        static int Set( v8::Handle<v8::Object> jso, CURL * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv);
-#endif
-    };
-
-    /**
-       Stores an arbitrary JS object as a curl option.
-    */
-    template <int CurlOptID>
-    struct CurlOptJSVal : CurlOpt_Base<CurlOptID>
-    {
-        static int Set( v8::Handle<v8::Object> jso, CURL * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
-        {
-            jso->Set( key, jv );
-            return 0;
-        }
-    };
-    /**
-       Sets a curl string option.
-    */
-    template <int CurlOptID>
-    struct CurlOptString : CurlOpt_Base<CurlOptID>
-    {
-        static int Set( v8::Handle<v8::Object> jso, CURL * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
-        {
-            std::string val;
-            if( jv.IsEmpty() )
-            {
-                return -1;
-            }
-            else if( jv->IsUndefined()
-                     || jv->IsNull() )
-            {
-                val = "";
-            }
-            else val = cv::JSToStdString( jv );
-            jso->Set( key, cv::CastToJS(val) );
-            //CERR << "Setting "<<PropKey<<" STRING: "<<val<<'\n';
-            return curl_easy_setopt( cu, CURLoption(CurlOptID), val.empty() ? 0 : val.c_str() );
-        }
-    };
-
-    /**
-       Sets a curl 'long' option.
-    */
-    template <int CurlOptID>
-    struct CurlOptLong : CurlOpt_Base<CurlOptID>
-    {
-        static int Set( v8::Handle<v8::Object> jso, CURL * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
-        {
-            long nv = 0;
-            if( jv.IsEmpty() || jv->IsUndefined() )
-            {
-                return -1;
-            }
-            else
-            {
-                nv = cv::CastFromJS<long>( jv );
-            }
-            //CERR << "Setting "<<PropKey<<" LONG: "<<nv<<'\n';
-            jso->Set( key, cv::CastToJS(nv) );
-            return curl_easy_setopt( cu,
-                                     CURLoption(CurlOptID),
-                                     nv );
-        }
-    };
-    /**
-       Sets a curl boolean option (actually a long for libcurl).
-    */
-    template <int CurlOptID>
-    struct CurlOptBool : CurlOpt_Base<CurlOptID>
-    {
-        static int Set( v8::Handle<v8::Object> jso, CURL * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
-        {
-            bool nv = cv::CastFromJS<bool>( jv );
-            jso->Set( key, jv );
-            //CERR << "Setting "<<PropKey<<" BOOL: "<<nv<<'\n';
-            return curl_easy_setopt( cu,
-                                     CURLoption(CurlOptID),
-                                     nv ? 1 : 0 );
-        }
-    };
-
-#define OPTKEY(KEY) static char const * Key() { return KEY; }
-#define COPT_LONG(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptLong<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
-#define COPT_BOOL(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptBool<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
-#define COPT_STR(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptString<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
-#define COPT_JVAL(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptJSVal<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
-    COPT_BOOL(FAILONERROR, "failOnErr");
-    COPT_BOOL(FOLLOWLOCATION, "followLocation");
-    COPT_BOOL(HEADER, "header");
-    COPT_BOOL(NOBODY, "noBody");
-    COPT_BOOL(VERBOSE,"verbose");
-    COPT_JVAL(HEADERDATA, Strings::optHeaderData);
-    COPT_JVAL(HEADERFUNCTION, Strings::optHeaderFunc);
-    COPT_JVAL(WRITEDATA, Strings::optWriteData);
-    COPT_JVAL(WRITEFUNCTION, Strings::optWriteFunc);
-    COPT_LONG(BUFFERSIZE, "bufferSize");
-    COPT_LONG(CONNECTTIMEOUT, "connectionTimeout");
-    COPT_LONG(CRLF, "crlf");
-    COPT_LONG(LOW_SPEED_LIMIT,"lowSpeedLimit");
-    COPT_LONG(LOW_SPEED_TIME,"lowSpeedTime");
-    COPT_LONG(MAXREDIRS, "maxRedirs");
-    COPT_LONG(PORT, "port");
-    COPT_LONG(PROXYPORT, "proxyPort");
-    COPT_LONG(RESUME_FROM,"resumeFrom");
-    COPT_LONG(TIMEOUT, "timeout");
-    COPT_LONG(TIMEOUT_MS, "timeoutMS");
-    COPT_STR(INTERFACE, "interface");
-    COPT_STR(NOPROXY, "noProxy");
-    COPT_STR(PROXY, "proxy");
-    COPT_STR(RANGE, "range");
-    COPT_STR(URL, "url");
-    COPT_STR(USERAGENT, "userAgent");
-    COPT_STR(USERNAME, "userName");
-    COPT_STR(USERPWD, "userPwd");
-
-#undef OPTKEY
-#undef COPT_LONG
-#undef COPT_BOOL
-#undef COPT_STR
-#undef COPT_JVAL
-
-    /**
-       Stores info for mapping between CURLOPT_xxx and JS-friendly names for
-       various Curl options.
-    */
-    struct OptInfo
-    {
-        int ID;
-        char const * PropName;
-        CurlOptSetter Setter;
-    };
-    /**
-       Each entry must have a unique ID and corresponding CurlOpt<> specialization.
-       Order is irrelevant, but the list must end with an entry which has all fields
-       set to 0.
-    */
-    static const OptInfo OptInfoList[] =
-        {
-#define O1(I) { CURLOPT_##I, CurlOpt<CURLOPT_##I>::Key(), CurlOpt<CURLOPT_##I>::Set }
-#define O2(I,S) { CURLOPT_##I, Strings::S, CurlOpt<CURLOPT_##I>::Set }
-        O1(BUFFERSIZE),
-        O1(CONNECTTIMEOUT),
-        O1(CRLF),
-        O1(FAILONERROR),
-        O1(FOLLOWLOCATION),
-        O1(HEADER),
-        O2(HEADERDATA, optHeaderData),
-        O2(HEADERFUNCTION, optHeaderFunc),
-        O1(INTERFACE),
-        O1(MAXREDIRS),
-        O1(NOBODY),
-        O1(NOPROXY),
-        O1(PORT),
-        O1(PROXY),
-        O1(PROXYPORT),
-        O1(RANGE),
-        O1(TIMEOUT),
-        O1(TIMEOUT_MS),
-        O1(URL),
-        O1(USERAGENT),
-        O1(USERNAME),
-        O1(USERPWD),
-        O1(VERBOSE),
-        O2(WRITEDATA, optWriteData),
-        O2(WRITEFUNCTION, optWriteFunc),
-#undef O1
-#undef O2
-        {0,0,0}
-        };
-    typedef std::map<std::string,OptInfo const *> KeyToOptMap;
-    typedef std::map<int,OptInfo const *> IntToOptMap;
-    static KeyToOptMap const & keyToOpt()
-    {
-        static KeyToOptMap m;
-        if( m.empty() )
-        {
-            OptInfo const * o = OptInfoList;
-            for( ; o->ID; ++o )
-            {
-                m[o->PropName] = o;
-            }
-        }
-        return m;
-    }
-
-    OptInfo const * optInfo( std::string const & prop )
-    {
-        KeyToOptMap const & m( keyToOpt() );
-        KeyToOptMap::const_iterator it = m.find(prop);
-        return (m.end() == it)
-            ? 0
-            : (*it).second;
-    }
-    
-    static IntToOptMap const & optToProp()
-    {
-        static IntToOptMap m;
-        if( m.empty() )
-        {
-            OptInfo const * o = OptInfoList;
-            for( ; o->ID; ++o )
-            {
-                m[o->ID] = o;
-            }
-        }
-        return m;
-    }
-
-    OptInfo const * optInfo( int id )
-    {
-        IntToOptMap const & m( optToProp() );
-        IntToOptMap::const_iterator it = m.find(id);
-        return (m.end() == it)
-            ? 0
-            : (*it).second;
-    }
-    
+    static std::string optToName( int id );    
     struct CurlJS::Impl
     {
         CURL * ch;
         /** The JS-side 'this' object for the CurlJS object holding this object. */
         v8::Handle<v8::Object> jself; // we assume this is Persistent elsewhere
+        SListMap slist;
         Impl()
             : ch(curl_easy_init()),
-              jself()
+              jself(),
+              slist()
         {
             if( ! this->ch )
             {
@@ -335,7 +94,28 @@ namespace v8 { namespace juice { namespace curl {
         */
         ~Impl()
         {
+            SListMap::iterator it = this->slist.begin();
+            for( ; this->slist.end() != it; ++it )
+            {
+                curl_slist * s = (*it).second;
+                if( s ) curl_slist_free_all(s);
+            }
             curl_easy_cleanup( this->ch );
+        }
+        void addList( int id, curl_slist * s )
+        {
+            SListMap::iterator it = this->slist.find(id);
+            if( this->slist.end() != it )
+            {
+                curl_slist * old = (*it).second;
+                if( old && (s == old) ) return;
+                else if( old ) curl_slist_free_all(s);
+                this->slist.erase(it);
+            }
+            if( s )
+            {
+                this->slist[id] = s;
+            }
         }
         /** Returns curl_easy_perform(this->ch). */
         int EasyPerform()
@@ -401,6 +181,313 @@ namespace v8 { namespace juice { namespace curl {
                 : FuncHnd();
         }
     };
+    
+    /**
+       Interface for setting a Curl option.
+
+       - jso = the JS object in which to set the property.
+       - cu = the CurlJS object to act upon.
+       - key = the property name.
+       - val = the new value.
+
+       Implementations must respect the type required for the
+       underlying curl_easy_setopt() call.
+    */
+    typedef int (*CurlOptSetter)( v8::Handle<v8::Object> jso, CurlJS * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & val);
+
+
+    /** Convenience base for CurlOpt specializations. */
+    template <int _CurlOptID>
+    struct CurlOpt_Base
+    {
+        static const int CurlOptID = _CurlOptID;
+    };
+    /**
+       Interface for setting Curl options from JS. MUST
+       be specialized on CurlOptID and the specializations
+       must behave as demonstrated in CurlOptString,
+       CurlOptLong, and friends.
+    */
+    template <int CurlOptID_>
+    struct CurlOpt
+    {
+#if defined(DOXYGEN)
+        /**
+           Must be-a CURLOPT_xxx value.
+        */
+        static const int CurlOptID = CurlOptID_;
+        /**
+           Must return the JS property name.
+         */
+        static char const * Key();
+        /**
+           Must implement the CurlOptSetter interface.
+        */
+        static int Set( v8::Handle<v8::Object> jso, CurlJS * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv);
+#endif
+    };
+
+    /**
+       Stores an arbitrary JS object as a curl option.
+    */
+    template <int CurlOptID>
+    struct CurlOptJSVal : CurlOpt_Base<CurlOptID>
+    {
+        static int Set( v8::Handle<v8::Object> jso, CurlJS * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
+        {
+            jso->Set( key, jv );
+            return 0;
+        }
+    };
+    /**
+       Sets a curl string option.
+    */
+    template <int CurlOptID>
+    struct CurlOptString : CurlOpt_Base<CurlOptID>
+    {
+        static int Set( v8::Handle<v8::Object> jso, CurlJS * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
+        {
+            std::string val;
+            if( jv.IsEmpty() )
+            {
+                return -1;
+            }
+            else if( jv->IsUndefined()
+                     || jv->IsNull() )
+            {
+                val = "";
+            }
+            else val = cv::JSToStdString( jv );
+            jso->Set( key, cv::CastToJS(val) );
+            //CERR << "Setting "<<PropKey<<" STRING: "<<val<<'\n';
+            return curl_easy_setopt( cu->Curl(), CURLoption(CurlOptID), val.empty() ? 0 : val.c_str() );
+        }
+    };
+
+    /**
+       Sets a curl 'long' option.
+    */
+    template <int CurlOptID>
+    struct CurlOptLong : CurlOpt_Base<CurlOptID>
+    {
+        static int Set( v8::Handle<v8::Object> jso, CurlJS * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
+        {
+            long nv = 0;
+            if( jv.IsEmpty() || jv->IsUndefined() )
+            {
+                return -1;
+            }
+            else
+            {
+                nv = cv::CastFromJS<long>( jv );
+            }
+            //CERR << "Setting "<<PropKey<<" LONG: "<<nv<<'\n';
+            jso->Set( key, cv::CastToJS(nv) );
+            return curl_easy_setopt( cu->Curl(),
+                                     CURLoption(CurlOptID),
+                                     nv );
+        }
+    };
+    /**
+       Sets a curl boolean option (actually a long for libcurl).
+    */
+    template <int CurlOptID>
+    struct CurlOptBool : CurlOpt_Base<CurlOptID>
+    {
+        static int Set( v8::Handle<v8::Object> jso, CurlJS * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
+        {
+            bool nv = cv::CastFromJS<bool>( jv );
+            jso->Set( key, jv );
+            //CERR << "Setting "<<PropKey<<" BOOL: "<<nv<<'\n';
+            return curl_easy_setopt( cu->Curl(),
+                                     CURLoption(CurlOptID),
+                                     nv ? 1 : 0 );
+        }
+    };
+
+    template <int CurlOptID>
+    struct CurlOptSList : CurlOpt_Base<CurlOptID>
+    {
+        static int Set( v8::Handle<v8::Object> jso, CurlJS * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
+        {
+            if( jv.IsEmpty() || ! jv->IsArray() )
+            {
+                cv::StringBuffer msg;
+                msg << "Curl option #"<<CurlOptID
+                    <<" ("<<optToName(CurlOptID)<<") "
+                    <<"requires a Array of Strings as arguments!";
+                CERR << msg.Content() << '\n';
+#if 0
+                // This is causing my script to silently fail with error code 0!
+                // But throwing works from other handlers!
+                TOSSV(msg);
+#endif
+                return -1;
+            }
+            v8::Local<v8::Array> ar( v8::Array::Cast(*jv) );
+            curl_slist * sl = ArrayToSList( ar );
+            cu->impl->addList( CurlOptID, sl );
+            jso->Set( key, cv::CastToJS(jv) );
+            //CERR << "Setting slist property "<<cv::JSToStdString(key)<<" @"<<sl<<'\n';
+            return curl_easy_setopt( cu->Curl(), CURLoption(CurlOptID), sl );
+        }
+    };
+
+    
+#define OPTKEY(KEY) static char const * Key() { return KEY; }
+#define COPT_LONG(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptLong<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
+#define COPT_BOOL(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptBool<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
+#define COPT_STR(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptString<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
+#define COPT_JVAL(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptJSVal<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
+#define COPT_SLIST(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptSList<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
+    COPT_BOOL(FAILONERROR, "failOnErr");
+    COPT_BOOL(FOLLOWLOCATION, "followLocation");
+    COPT_BOOL(HEADER, "header");
+    COPT_BOOL(NOBODY, "noBody");
+    COPT_BOOL(VERBOSE,"verbose");
+    COPT_JVAL(HEADERDATA, Strings::optHeaderData);
+    COPT_JVAL(HEADERFUNCTION, Strings::optHeaderFunc);
+    COPT_JVAL(WRITEDATA, Strings::optWriteData);
+    COPT_JVAL(WRITEFUNCTION, Strings::optWriteFunc);
+    COPT_LONG(BUFFERSIZE, "bufferSize");
+    COPT_LONG(CONNECTTIMEOUT, "connectionTimeout");
+    COPT_LONG(CRLF, "crlf");
+    COPT_LONG(LOW_SPEED_LIMIT,"lowSpeedLimit");
+    COPT_LONG(LOW_SPEED_TIME,"lowSpeedTime");
+    COPT_LONG(MAXREDIRS, "maxRedirs");
+    COPT_LONG(PORT, "port");
+    COPT_LONG(PROXYPORT, "proxyPort");
+    COPT_LONG(RESUME_FROM,"resumeFrom");
+    COPT_LONG(TIMEOUT, "timeout");
+    COPT_LONG(TIMEOUT_MS, "timeoutMS");
+    COPT_STR(INTERFACE, "interface");
+    COPT_STR(NOPROXY, "noProxy");
+    COPT_STR(PROXY, "proxy");
+    COPT_STR(RANGE, "range");
+    COPT_STR(URL, "url");
+    COPT_STR(USERAGENT, "userAgent");
+    COPT_STR(USERNAME, "userName");
+    COPT_STR(USERPWD, "userPwd");
+    COPT_SLIST(HTTPHEADER, "httpHeader");
+    COPT_SLIST(HTTP200ALIASES,"http200Aliases");
+    COPT_SLIST(PREQUOTE,"preQuote");
+    COPT_SLIST(POSTQUOTE,"postQuote");
+    COPT_SLIST(QUOTE,"quote");
+    //COPT_SLIST(TELNETOPTIONS,"telnetOptions"); // my curl doesn't have CURLOPT_TELNETOPTIONS
+#undef OPTKEY
+#undef COPT_LONG
+#undef COPT_BOOL
+#undef COPT_STR
+#undef COPT_JVAL
+#undef COPY_SLIST
+    /**
+       Stores info for mapping between CURLOPT_xxx and JS-friendly names for
+       various Curl options.
+    */
+    struct OptInfo
+    {
+        int ID;
+        char const * PropName;
+        CurlOptSetter Setter;
+    };
+    /**
+       Each entry must have a unique ID and corresponding CurlOpt<> specialization.
+       Order is irrelevant, but the list must end with an entry which has all fields
+       set to 0.
+    */
+    static const OptInfo OptInfoList[] =
+        {
+#define O1(I) { CURLOPT_##I, CurlOpt<CURLOPT_##I>::Key(), CurlOpt<CURLOPT_##I>::Set }
+#define O2(I,S) { CURLOPT_##I, Strings::S, CurlOpt<CURLOPT_##I>::Set }
+        O1(BUFFERSIZE),
+        O1(CONNECTTIMEOUT),
+        O1(CRLF),
+        O1(FAILONERROR),
+        O1(FOLLOWLOCATION),
+        O1(HEADER),
+        O2(HEADERDATA, optHeaderData),
+        O2(HEADERFUNCTION, optHeaderFunc),
+        O1(HTTP200ALIASES),
+        O1(HTTPHEADER),
+        O1(INTERFACE),
+        O1(MAXREDIRS),
+        O1(NOBODY),
+        O1(NOPROXY),
+        O1(PORT),
+        O1(POSTQUOTE),
+        O1(PREQUOTE),
+        O1(PROXY),
+        O1(PROXYPORT),
+        O1(QUOTE),
+        O1(RANGE),
+        O1(TIMEOUT),
+        O1(TIMEOUT_MS),
+        //01(TELNETOPTIONS),
+        O1(URL),
+        O1(USERAGENT),
+        O1(USERNAME),
+        O1(USERPWD),
+        O1(VERBOSE),
+        O2(WRITEDATA, optWriteData),
+        O2(WRITEFUNCTION, optWriteFunc),
+#undef O1
+#undef O2
+        {0,0,0}
+        };
+    typedef std::map<std::string,OptInfo const *> KeyToOptMap;
+    static KeyToOptMap const & keyToOpt()
+    {
+        static KeyToOptMap m;
+        if( m.empty() )
+        {
+            OptInfo const * o = OptInfoList;
+            for( ; o->ID; ++o )
+            {
+                m[o->PropName] = o;
+            }
+        }
+        return m;
+    }
+
+    OptInfo const * optInfo( std::string const & prop )
+    {
+        KeyToOptMap const & m( keyToOpt() );
+        KeyToOptMap::const_iterator it = m.find(prop);
+        return (m.end() == it)
+            ? 0
+            : (*it).second;
+    }
+
+    typedef std::map<int,OptInfo const *> IntToOptMap;
+    static IntToOptMap const & optToProp()
+    {
+        static IntToOptMap m;
+        if( m.empty() )
+        {
+            OptInfo const * o = OptInfoList;
+            for( ; o->ID; ++o )
+            {
+                m[o->ID] = o;
+            }
+        }
+        return m;
+    }
+
+    static OptInfo const * optInfo( int id )
+    {
+        IntToOptMap const & m( optToProp() );
+        IntToOptMap::const_iterator it = m.find(id);
+        return (m.end() == it)
+            ? 0
+            : (*it).second;
+    }
+    static std::string optToName( int id )
+    {
+        IntToOptMap const & m( optToProp() );
+        IntToOptMap::const_iterator it = m.find(id);
+        OptInfo const * i = (m.end() == it) ? 0 : (*it).second;
+        return (i && i->PropName) ? i->PropName : "";
+    }
 
     /**
        CURLOPT_xxxFUNCTION callback for WRITEFUNCTION and HEADERFUNCTION.
@@ -500,7 +587,10 @@ namespace v8 { namespace juice { namespace curl {
     {
         delete this->impl;
     }
-    
+    CURL * CurlJS::Curl()
+    {
+        return this->impl->ch;
+    }
     int CurlJS::EasyPerform()
     {
         return this->impl->EasyPerform();
@@ -525,7 +615,7 @@ namespace v8 { namespace juice { namespace curl {
             TOSSV(msg);
             return -1;
         }
-        return oi->Setter( this->impl->opt(), this->impl->ch, cv::CastToJS(oi->PropName), val );
+        return oi->Setter( this->impl->opt(), this, cv::CastToJS(oi->PropName), val );
     }
 
     int CurlJS::setOption( v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & val )
@@ -548,7 +638,7 @@ namespace v8 { namespace juice { namespace curl {
             TOSSV(msg);
             return -1;
         }
-        return oi->Setter( this->impl->opt(), this->impl->ch, cv::CastToJS(oi->PropName), val );
+        return oi->Setter( this->impl->opt(), this, cv::CastToJS(oi->PropName), val );
     }
 
     /**
@@ -567,7 +657,7 @@ namespace v8 { namespace juice { namespace curl {
             CERR << "Warning: skipping non-Curl option '"<<cv::JSToStdString(key)<<"'.\n";
             return false;
         }
-        return 0 == oi->Setter( c->impl->opt(), c->impl->ch, key, val );
+        return 0 == oi->Setter( c->impl->opt(), c, key, val );
     }
 
     uint32_t CurlJS::setOptions( v8::Handle<v8::Value> const & value )
@@ -679,7 +769,7 @@ namespace v8 { namespace juice { namespace curl {
             TOSSV(msg);
             return;
         }
-        int check = CurlOpt<CurlOptID>::Set( c->impl->opt(), c->impl->ch, jkey, value );
+        int check = CurlOpt<CurlOptID>::Set( c->impl->opt(), c, jkey, value );
         if( 0 != check )
         {
             cv::StringBuffer msg;
@@ -764,6 +854,8 @@ namespace v8 { namespace juice { namespace curl {
             ACC(HEADER);
             ACC(HEADERDATA);
             ACC(HEADERFUNCTION);
+            ACC(HTTP200ALIASES);
+            ACC(HTTPHEADER);
             ACC(INTERFACE);
             ACC(LOW_SPEED_LIMIT);
             ACC(LOW_SPEED_TIME);
@@ -771,9 +863,13 @@ namespace v8 { namespace juice { namespace curl {
             ACC(NOBODY);
             ACC(NOPROXY);
             ACC(PORT);
+            ACC(POSTQUOTE);
+            ACC(PREQUOTE);
             ACC(PROXY);
+            ACC(QUOTE);
             ACC(RANGE);
             ACC(RESUME_FROM);
+            //ACC(TELNETOPTIONS);
             ACC(TIMEOUT);
             ACC(TIMEOUT_MS);
             ACC(URL);
@@ -808,6 +904,8 @@ namespace v8 { namespace juice { namespace curl {
         OPTKEY(HEADER);
         OPTKEY(HEADERDATA);
         OPTKEY(HEADERFUNCTION);
+        OPTKEY(HTTP200ALIASES);
+        OPTKEY(HTTPHEADER);
         OPTKEY(INTERFACE);
         OPTKEY(LOW_SPEED_LIMIT);
         OPTKEY(LOW_SPEED_TIME);
@@ -815,9 +913,13 @@ namespace v8 { namespace juice { namespace curl {
         OPTKEY(NOBODY);
         OPTKEY(NOPROXY);
         OPTKEY(PORT);
+        OPTKEY(POSTQUOTE);
+        OPTKEY(PREQUOTE);
         OPTKEY(PROXY);
+        OPTKEY(QUOTE);
         OPTKEY(RANGE);
         OPTKEY(RESUME_FROM);
+        //OPTKEY(TELNETOPTIONS);
         OPTKEY(TIMEOUT);
         OPTKEY(TIMEOUT_MS);
         OPTKEY(URL);

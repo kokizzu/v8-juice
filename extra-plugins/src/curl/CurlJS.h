@@ -55,6 +55,8 @@ namespace v8 { namespace juice { namespace curl {
         */
         ~CurlJS();
 
+        CURL * Curl();
+        
         /**
            See curl_easy_perform().
         */

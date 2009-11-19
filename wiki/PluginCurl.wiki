@@ -66,28 +66,33 @@ counterparts (which are documented
 || `bool failOnError` || `CURLOPT_FAILONERROR` || ||
 || `bool followLocation` || `CURLOPT_FOLLOWLOCATION` || ||
 || `bool header` || `CURLOPT_HEADER` || ||
-|| `any headerData` || `CURL_HEADERDATA` || Passed as last argument to `headerFunction()` ||
-|| `function headerFunction(data,readLength,userData)` || `CURL_HEADERFUNCTION` || See below. ||
+|| `any headerData` || `CURLOPT_HEADERDATA` || Passed as last argument to `headerFunction()` ||
+|| `function headerFunction(data,readLength,userData)` || `CURLOPT_HEADERFUNCTION` || See below. ||
+|| `StringArray httpHeader` || `CURLOPT_HTTPHEADER` || ||
+|| `StringArray http200Aliases` || `CURLOPT_HTTP200ALIASES` || ||
 || `string interface` || `CURLOPT_INTERFACE` || ||
-|| `int lowSpeedLimit` || `CURL_LOW_SPEED_LIMIT` || ||
-|| `int lowSpeedTime` || `CURL_LOW_SPEED_TIME` || ||
+|| `int lowSpeedLimit` || `CURLOPT_LOW_SPEED_LIMIT` || ||
+|| `int lowSpeedTime` || `CURLOPT_LOW_SPEED_TIME` || ||
 || `bool noBody` || `CURLOPT_NOBODY` || ||
 || `string noProxy` || `CURLOPT_NOPROXY` || ||
-|| `int port` || `CURL_PORT` || default port number to use. ||
+|| `int port` || `CURLOPT_PORT` || default port number to use. ||
+|| `StringArray postQuote` || `CURLOPT_POSTQUOTE` || ||
+|| `StringArray preQuote` || `CURLOPT_PREQUOTE` || ||
 || `string proxy` || `CURLOPT_PROXY` || ||
 || `int proxyPort` || `CURLOPT_PROXYPORT` || ||
 || `string range` || `CURLOPT_RANGE` || ||
-|| `int resumeFrom` || `CURL_RESUME_FROM` || ||
+|| `int resumeFrom` || `CURLOPT_RESUME_FROM` || ||
 || `int maxRedirs` || `CURLOPT_MAXREDIRS` || ||
+|| `StringArray quote` || `CURLOPT_QUOTE` || ||
 || `int timeout` || `CURLOPT_TIMEOUT` || ||
 || `int timeoutMS` || `CURLOPT_TIMEOUT_MS` || ||
-|| `string url` || `CURL_URL` || The URL to read from/write to. ||
+|| `string url` || `CURLOPT_URL` || The URL to read from/write to. ||
 || `string userAgent` || `CURLOPT_USERAGENT` || ||
 || `string userName` || `CURLOPT_USERNAME` || ||
 || `string userPwd` || `CURLOPT_USERPWD` || ||
 || `bool verbose` || `CURLOPT_VERBOSE` || If true, libcurl sends debugging info to stderr.  ||
-|| `any writeData` || `CURL_WRITEDATA` || Passed as last argument to `writeFunction()` ||
-|| `function writeFunction(data,readLength,userData)` || `CURL_WRITEFUNCTION` || See below. ||
+|| `any writeData` || `CURLOPT_WRITEDATA` || Passed as last argument to `writeFunction()` ||
+|| `function writeFunction(data,readLength,userData)` || `CURLOPT_WRITEFUNCTION` || See below. ||
 
 All of the supported `CURLOPT_xxx` constants are available in JS space via `Curl.OPT_xxx`.
 
@@ -227,5 +232,5 @@ c.easyPerform() rc = 0
 = TODOs =
 
   * The API currently doesn't support writing over curl.
-  * Certain curl properties (e.g.. `CURL_HTTPAUTH` and those of type `curl_slist`) require extra infrastructure before they can be implemented.
+  * Certain curl properties (e.g.. `CURLOPT_HTTPAUTH` and those of type `curl_slist`) require extra infrastructure before they can be implemented.
   * Add support for `curl_slist`-style options.
