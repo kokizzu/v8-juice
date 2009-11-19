@@ -42,6 +42,18 @@ namespace v8 { namespace juice { namespace curl {
         return li;
     }
 
+    static v8::Handle<v8::Value> SListToArray( curl_slist * li )
+    {
+        if( ! li ) return v8::Null();
+        v8::Handle<v8::Array> ar = v8::Array::New();
+        int i = 0;
+        for( ; li ; li = li->next )
+        {
+            ar->Set( v8::Integer::New(i), cv::CastToJS( li->data ? li->data : "" ) );
+        }
+        return ar;
+    }
+
     /**
        Holds names of JS properties.
     */
@@ -97,10 +109,12 @@ namespace v8 { namespace juice { namespace curl {
         ~Impl()
         {
 #if 0
-	    // curl_easy_setopt() pages say that i have to
-	    // delete the slist's, but when i do i get
-	    // double-free() errors!
-            // It seems that curl takes over ownership
+	    /**
+               curl_easy_setopt() docs say that i have to delete the
+               slist's, but when i do i get double-free() errors!  It
+               seems that curl takes over ownership and cleans them up
+               in curl_easy_cleanup(). See AddList() for more info.
+            */
             SListMap::iterator it = this->slist.begin();
             for( ; this->slist.end() != it; ++it )
             {
@@ -111,10 +125,18 @@ namespace v8 { namespace juice { namespace curl {
 #endif
             curl_easy_cleanup( this->ch );
         }
-        void addList( int id, curl_slist * s )
+        /**
+           Adds an slist property to our internal cleanup
+           list. id is the CURLOPT_xxx ID. Any previous mapping
+           will be destroyed.
+        */
+        void AddList( int id, curl_slist * s )
         {
 #if 0
-            // It seems that curl takes over ownership
+            /**
+                It seems that curl takes over ownership of slist
+                properties.
+            */
             SListMap::iterator it = this->slist.find(id);
             if( this->slist.end() != it )
             {
@@ -342,16 +364,16 @@ namespace v8 { namespace juice { namespace curl {
                 return TOSSV(msg);
                 //return hsc.Close(TOSSV(msg));
 #elif 1
-                // second-choice behaviour, which we accommodate in CurlJS::setOptions()
+                // second-choice behaviour, which we accommodate in CurlJS::SetOpt()
                 // and friends:
-                //CERR << msg.Content() << '\n';
+                // CERR << msg.Content() << '\n';
                 return v8::Integer::New(-1);
 #endif
             }
             typedef v8::Handle<v8::Array> ARH;
             ARH ar( jv->IsArray() ? ARH( v8::Array::Cast(*jv) ) : ARH() );
             curl_slist * sl = ArrayToSList( ar );
-            cu->impl->addList( CurlOptID, sl );
+            cu->impl->AddList( CurlOptID, sl );
             jso->Set( key, cv::CastToJS(jv) );
             //CERR << "Setting slist property "<<cv::JSToStdString(key)<<" @"<<sl<<'\n';
             int rc = curl_easy_setopt( cu->Curl(), CURLoption(CurlOptID), sl );
@@ -517,26 +539,47 @@ namespace v8 { namespace juice { namespace curl {
     }
 
 
-    /** Interface for fetching CURLINFO_xxx into JS space. */
+    /**
+        Interface for fetching CURLINFO_xxx into JS space. Each
+        handler is responsible for one CURLINFO_xxx value.
+    */
     typedef v8::Handle<v8::Value> (*CurlInfoGetter)( CURL * c );
 
+    /**
+       Interface for fetching CURLINFO_xxx data. InfoID must be a
+       supported CURLINFO_xxx value.
+    */
     template <int InfoID>
     struct CInfoGet
     {
+#if defined(DOXYGEN)
         static v8::Handle<v8::Value> Get( CURL * c )
         {
             return TOSS("Unspecialized CURLINFO value!");
         }
         // ^^^^ remove this (to force a compile error on non-specialization
         // once all handlers are in place
+#endif
     };
-
+    /**
+       Base class for CInfoGet implementations. The Get()
+       member throws a JS exception.
+    */
     template <int InfoID>
     struct CInfoGet_Base
     {
         static const int ID = InfoID;
-        //static v8::Handle<v8::Value> Get( CURL * c );
+        static v8::Handle<v8::Value> Get( CURL * c )
+        {
+            cv::StringBuffer msg;
+            msg << "CURLINFO ID #"<<InfoID<<" is not handled.";
+            return TOSSV(msg);
+        }
     };
+#define CINFO(X) template <> struct CInfoGet<X> : CInfoGet_Base<X> {}
+    CINFO(CURLINFO_NONE);
+    CINFO(CURLINFO_LASTONE);
+#undef CINFO
     template <int InfoID>
     struct CInfoGet_String : CInfoGet_Base<InfoID>
     {
@@ -600,7 +643,21 @@ namespace v8 { namespace juice { namespace curl {
     {
         static v8::Handle<v8::Value> Get( CURL * c )
         {
-            return TOSS("Not yet implemented!");
+            curl_slist * li = 0;
+            int rc = curl_easy_getinfo( c, CURLINFO(InfoID), &li );
+	    if( CURLE_OK != rc )
+	    {
+		cv::StringBuffer msg;
+		msg << "curl_easy_getinfo(Curl@"<<c<<", "<<InfoID<<",SLIST) failed with RC "<<int(rc)<<'!';
+                if(li) curl_slist_free_all(li);
+		return TOSSV(msg);
+	    }
+	    else
+	    {
+		v8::Handle<v8::Value> rc = SListToArray( li );
+                if(li) curl_slist_free_all(li);
+                return rc;
+	    }
         }        
     };
         
@@ -649,7 +706,8 @@ namespace v8 { namespace juice { namespace curl {
         {
 #define INFO(K) { CURLINFO_ ## K, "INFO_" # K, \
                   CInfoHandler<CURLINFO_ ## K>::Type::Get }
-        INFO(NONE),
+#define INFO_NOOP(K) { CURLINFO_ ## K, "INFO_" # K, 0 }
+        INFO_NOOP(NONE),
 
         INFO(APPCONNECT_TIME),
         INFO(CERTINFO),
@@ -659,21 +717,15 @@ namespace v8 { namespace juice { namespace curl {
         INFO(CONTENT_LENGTH_UPLOAD),
         INFO(CONTENT_TYPE),
         INFO(COOKIELIST),
-        INFO(DATA_IN),
-        INFO(DATA_OUT),
         INFO(DOUBLE),
         INFO(EFFECTIVE_URL),
-        INFO(END),
         INFO(FILETIME),
         INFO(FTP_ENTRY_PATH),
-        INFO(HEADER_IN),
-        INFO(HEADER_OUT),
         INFO(HEADER_SIZE),
         INFO(HTTPAUTH_AVAIL),
         INFO(HTTP_CONNECTCODE),
         INFO(LASTSOCKET),
         INFO(LONG),
-        INFO(MASK),
         INFO(NAMELOOKUP_TIME),
         INFO(NUM_CONNECTS),
         INFO(OS_ERRNO),
@@ -690,18 +742,24 @@ namespace v8 { namespace juice { namespace curl {
         INFO(SLIST),
         INFO(SPEED_DOWNLOAD),
         INFO(SPEED_UPLOAD),
-        INFO(SSL_DATA_IN),
-        INFO(SSL_DATA_OUT),
         INFO(SSL_ENGINES),
         INFO(SSL_VERIFYRESULT),
         INFO(STARTTRANSFER_TIME),
         INFO(STRING),
         INFO(TEXT),
         INFO(TOTAL_TIME),
-        INFO(TYPEMASK),
-
-        INFO(LASTONE),
+        INFO_NOOP(DATA_IN),
+        INFO_NOOP(DATA_OUT),
+        INFO_NOOP(END),
+        INFO_NOOP(HEADER_IN),
+        INFO_NOOP(HEADER_OUT),
+        INFO_NOOP(MASK),
+        INFO_NOOP(SSL_DATA_IN),
+        INFO_NOOP(SSL_DATA_OUT),
+        INFO_NOOP(TYPEMASK),
+        INFO_NOOP(LASTONE),
 #undef INFO
+#undef INFO_NOOP
         {0,0,0}
         };
     
@@ -823,16 +881,26 @@ namespace v8 { namespace juice { namespace curl {
 
     v8::Handle<v8::Value> CurlJS::GetInfo( int flag )
     {
-	// TODO: need ID/String-to-CURLINFO_xxx routines.
-	CInfoMeta const * ci = CInfoList;
-	//int rc = -1;
-	//ValHnd jrc;
-	for( ; ci && ci->PropName; ++ci )
-	{
-	    if( ci->ID != flag ) continue;
-	    return ci->Getter( this->impl->ch );
-	}
-	return TOSS("Unknown CURLINFO_xxx ID!");
+        typedef std::map<int,CInfoMeta const *> InfoMetaMap;
+        static InfoMetaMap map;
+        if( map.empty() )
+        {
+            CInfoMeta const * ci = CInfoList;
+            //int rc = -1;
+            //ValHnd jrc;
+            for( ; ci && ci->PropName; ++ci )
+            {
+                map[ci->ID] = ci;
+            }
+        }
+        InfoMetaMap::const_iterator it = map.find(flag);
+        if( map.end() == it )
+        {
+            cv::StringBuffer msg;
+            msg << "Unknown CURLINFO_xxx ID "<<flag<<"!";
+            return TOSSV(msg);
+        }
+        return it->second->Getter( this->impl->ch );
     }
 
     v8::Handle<v8::Value> CurlJS::SetOpt( int curlID, v8::Handle<v8::Value> const & val )
@@ -1188,8 +1256,6 @@ namespace v8 { namespace juice { namespace curl {
 	}
         return target;
     }
-
-
 
 } } } // v8::juice::curl
 

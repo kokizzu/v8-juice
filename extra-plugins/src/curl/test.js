@@ -80,7 +80,7 @@ function testThree()
     print( arguments.callee.name+"()" );
     var c = new Curl();
     var o = {
-        url:'http://wh',
+        url:'http://localhost',
         //verbose:true,
         port:80,
         timeout:11,
@@ -104,7 +104,7 @@ function testThree()
     print( "setOpt RC =",rc);
     rc = c.setOpt( 'userAgent', "v8-juice" );
     print( "setOpt RC =",rc);
-    var rc = c.setOpt( Curl.OPT_URL, 'http://localhost' )
+    var rc = c.setOpt( Curl.OPT_URL, 'http://wh' )
     print( "setOpt RC =",rc);
     print('c.opt.url ==',c.opt.url);
     c.setOpt( Curl.OPT_WRITEFUNCTION, function writeFunction(data,len,ud)
@@ -117,11 +117,18 @@ function testThree()
 
     print( "c =",JSON.stringify(c,undefined,2));
     c.easyPerform();
+    if(1)
+    {
+        var ar = c.getInfo( Curl.INFO_HTTPAUTH_AVAIL );
+        print('CURLINFO_HTTPAUTH_AVAIL =\n\t',(ar ? ar.join('\n\t') : null));
+        ar = c.getInfo( Curl.INFO_SSL_ENGINES );
+        print('CURLINFO_SSL_ENGINES =\n\t',(ar ? ar.join('\n\t') : null));
+    }
     c.destroy();
     print(banner.end);
 }
 
-function testCrash()
+function testFour()
 {
     /**
        v8 weirdness/bug:
@@ -143,8 +150,8 @@ function testCrash()
     rc = c.addOpt(o);
     print( "setOpt RC =",rc);
     rc = c.setOpt( Curl.OPT_HTTPHEADER,
-                   "" // causes error code or throws
-                   //["Host: wh","Accept-Encoding: gzip","Accept: text/html"]
+                   //"" // causes error code or throws
+                   ["Host: wh","Accept-Encoding: gzip","Accept: text/html"]
                    );
     print( "setOpt RC =",rc);
     print( "c =",JSON.stringify(c,undefined,2));
@@ -171,6 +178,7 @@ function testCurlInfo()
 
 //testOne();
 //testTwo();
-// testThree();
- testCurlInfo();
-// testCrash();
+testThree();
+//testFour();
+//  testCurlInfo();
+

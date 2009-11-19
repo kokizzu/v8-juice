@@ -47,11 +47,12 @@ into your app and calling `v8::juice::expat::CurlJS::SetupBindings()`.
 
 || *Return type* || *Name/Signature* || *Notes* ||
 || `Curl` || `new Curl([string url | object options])` || Creates a new parser object. ||
-|| `int` || `easyPerform()` || Analog to `curl_easy_perform()`. ||
+|| `int` || `addOpt(Object options)` || Like `setOpt(object)`, but does not clear the options list. ||
 || `void` || `destroy()` || Destroys the object, freeing all of its resources. Calling this is optional, but has the benefit of freeing up resources immediately, rather than waiting on the garbage collector. ||
+|| `mixed` || `getInfo(int)` || ||
+|| `int` || `easyPerform()` || Analog to `curl_easy_perform()`. ||
 || `int` || `setOpt(int CurlOptionID,mixed value)` || See below. Throws on error. ||
 || `int` || `setOpt(Object options)` || See below. Returns number of properties set or throws on error. ||
-|| `int` || `addOpt(Object options)` || Like `setOpt(object)`, but does not clear the options list. ||
 
 Each `Curl` object has a number of options which control how libcurl
 handles data. These options are set using `setOpt()`. The following
@@ -154,11 +155,22 @@ corrupted via v8's string conversion routines.
 
 When the `headerFunction()` is called, it is passed a single header line (a complete header entry), but that line has a trailing `\r\n` on it, which should be stripped by the caller. It is not stripped by the wrapper because doing so would cause confusion with the `length` parameter (and we do not adjust to account for the two extra stripped characters that because it would falsify any byte count calculations done by the client).
 
-== `CURLINFO_xxx` mappings. ==
+== `getInfo()` and `CURLINFO_xxx` mappings. ==
 
-The following `CURLINFO_xxx` constants are available via `Curl.INFO_xxx`:
+`getInfo()` works similarly to [http://curl.haxx.se/libcurl/c/curl_easy_getinfo.html curl_easy_getinfo()].
+It accepts a single integer parameter corresponding to one of the
+`CURLINFO_xxx` arguments listed below. If `getInfo()` fails then it
+throws an exception, otherwise it returns an different type depending
+on the `CURLINFO` argument (string, int, double, or array-of-strings).
+Unlike `setOpt()` and friends, the first argument must be an integer -
+there are no "JS-friendly" names for these properties.
 
-  * `CURLINFO_NONE`
+The following list shows which `CURLINFO_xxx` constants are available
+via `Curl.INFO_xxx`. Most, but not all, of these can be fetched using
+`getInfo()`. Those which cannot be fetched via `getInfo()` are marked
+with an asterisk.
+
+
   * `CURLINFO_APPCONNECT_TIME`
   * `CURLINFO_CERTINFO`
   * `CURLINFO_CONDITION_UNMET`
@@ -167,22 +179,24 @@ The following `CURLINFO_xxx` constants are available via `Curl.INFO_xxx`:
   * `CURLINFO_CONTENT_LENGTH_UPLOAD`
   * `CURLINFO_CONTENT_TYPE`
   * `CURLINFO_COOKIELIST`
-  * `CURLINFO_DATA_IN`
-  * `CURLINFO_DATA_OUT`
+  * `CURLINFO_DATA_IN` `*`
+  * `CURLINFO_DATA_OUT` `*`
   * `CURLINFO_DOUBLE`
   * `CURLINFO_EFFECTIVE_URL`
-  * `CURLINFO_END`
+  * `CURLINFO_END` `*`
   * `CURLINFO_FILETIME`
   * `CURLINFO_FTP_ENTRY_PATH`
-  * `CURLINFO_HEADER_IN`
-  * `CURLINFO_HEADER_OUT`
+  * `CURLINFO_HEADER_IN` `*`
+  * `CURLINFO_HEADER_OUT` `*`
   * `CURLINFO_HEADER_SIZE`
   * `CURLINFO_HTTPAUTH_AVAIL`
   * `CURLINFO_HTTP_CONNECTCODE`
+  * `CURLINFO_LASTONE` `*`
   * `CURLINFO_LASTSOCKET`
   * `CURLINFO_LONG`
-  * `CURLINFO_MASK`
+  * `CURLINFO_MASK` `*`
   * `CURLINFO_NAMELOOKUP_TIME`
+  * `CURLINFO_NONE`
   * `CURLINFO_NUM_CONNECTS`
   * `CURLINFO_OS_ERRNO`
   * `CURLINFO_PRETRANSFER_TIME`
@@ -195,21 +209,18 @@ The following `CURLINFO_xxx` constants are available via `Curl.INFO_xxx`:
   * `CURLINFO_REQUEST_SIZE`
   * `CURLINFO_RESPONSE_CODE`
   * `CURLINFO_SIZE_DOWNLOAD`
-  * `CURLINFO_SIZE_UPLOAD`
   * `CURLINFO_SLIST`
   * `CURLINFO_SPEED_DOWNLOAD`
   * `CURLINFO_SPEED_UPLOAD`
-  * `CURLINFO_SSL_DATA_IN`
-  * `CURLINFO_SSL_DATA_OUT`
+  * `CURLINFO_SSL_DATA_IN` `*`
+  * `CURLINFO_SSL_DATA_OUT` `*`
   * `CURLINFO_SSL_ENGINES`
   * `CURLINFO_SSL_VERIFYRESULT`
   * `CURLINFO_STARTTRANSFER_TIME`
   * `CURLINFO_STRING`
   * `CURLINFO_TEXT`
   * `CURLINFO_TOTAL_TIME`
-  * `CURLINFO_TYPEMASK`
-  * `CURLINFO_LASTONE`
-
+  * `CURLINFO_TYPEMASK` `*`
 
 = Example =
 
@@ -290,5 +301,4 @@ c.easyPerform() rc = 0
 = TODOs =
 
   * The API currently doesn't support writing over curl.
-  * Certain curl properties (e.g.. `CURLOPT_HTTPAUTH` and those of type `curl_slist`) require extra infrastructure before they can be implemented.
-  * Add support for `curl_slist`-style options.
+  * Add `CURLOPT_READFUNCTION` and friends.
