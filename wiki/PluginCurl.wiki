@@ -154,6 +154,63 @@ corrupted via v8's string conversion routines.
 
 When the `headerFunction()` is called, it is passed a single header line (a complete header entry), but that line has a trailing `\r\n` on it, which should be stripped by the caller. It is not stripped by the wrapper because doing so would cause confusion with the `length` parameter (and we do not adjust to account for the two extra stripped characters that because it would falsify any byte count calculations done by the client).
 
+== `CURLINFO_xxx` mappings. ==
+
+The following `CURLINFO_xxx` constants are available via `Curl.INFO_xxx`:
+
+  * `CURLINFO_NONE`
+  * `CURLINFO_APPCONNECT_TIME`
+  * `CURLINFO_CERTINFO`
+  * `CURLINFO_CONDITION_UNMET`
+  * `CURLINFO_CONNECT_TIME`
+  * `CURLINFO_CONTENT_LENGTH_DOWNLOAD`
+  * `CURLINFO_CONTENT_LENGTH_UPLOAD`
+  * `CURLINFO_CONTENT_TYPE`
+  * `CURLINFO_COOKIELIST`
+  * `CURLINFO_DATA_IN`
+  * `CURLINFO_DATA_OUT`
+  * `CURLINFO_DOUBLE`
+  * `CURLINFO_EFFECTIVE_URL`
+  * `CURLINFO_END`
+  * `CURLINFO_FILETIME`
+  * `CURLINFO_FTP_ENTRY_PATH`
+  * `CURLINFO_HEADER_IN`
+  * `CURLINFO_HEADER_OUT`
+  * `CURLINFO_HEADER_SIZE`
+  * `CURLINFO_HTTPAUTH_AVAIL`
+  * `CURLINFO_HTTP_CONNECTCODE`
+  * `CURLINFO_LASTSOCKET`
+  * `CURLINFO_LONG`
+  * `CURLINFO_MASK`
+  * `CURLINFO_NAMELOOKUP_TIME`
+  * `CURLINFO_NUM_CONNECTS`
+  * `CURLINFO_OS_ERRNO`
+  * `CURLINFO_PRETRANSFER_TIME`
+  * `CURLINFO_PRIMARY_IP`
+  * `CURLINFO_PRIVATE`
+  * `CURLINFO_PROXYAUTH_AVAIL`
+  * `CURLINFO_REDIRECT_COUNT`
+  * `CURLINFO_REDIRECT_TIME`
+  * `CURLINFO_REDIRECT_URL`
+  * `CURLINFO_REQUEST_SIZE`
+  * `CURLINFO_RESPONSE_CODE`
+  * `CURLINFO_SIZE_DOWNLOAD`
+  * `CURLINFO_SIZE_UPLOAD`
+  * `CURLINFO_SLIST`
+  * `CURLINFO_SPEED_DOWNLOAD`
+  * `CURLINFO_SPEED_UPLOAD`
+  * `CURLINFO_SSL_DATA_IN`
+  * `CURLINFO_SSL_DATA_OUT`
+  * `CURLINFO_SSL_ENGINES`
+  * `CURLINFO_SSL_VERIFYRESULT`
+  * `CURLINFO_STARTTRANSFER_TIME`
+  * `CURLINFO_STRING`
+  * `CURLINFO_TEXT`
+  * `CURLINFO_TOTAL_TIME`
+  * `CURLINFO_TYPEMASK`
+  * `CURLINFO_LASTONE`
+
+
 = Example =
 
 {{{

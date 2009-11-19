@@ -152,7 +152,19 @@ function testCrash()
     print(banner.end);
 }
 
+function testCurlInfo()
+{
+    print(banner.start);
+    print( arguments.callee.name+"()" );
+    for( var i = Curl.INFO_NONE; i < Curl.INFO_LASTONE; ++i )
+    {
+        print( i );
+    }
+    print(banner.end);
+}
+
 //testOne();
 //testTwo();
 testThree();
+testCurlInfo();
 //testCrash();

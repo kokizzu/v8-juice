@@ -408,7 +408,7 @@ namespace v8 { namespace juice { namespace curl {
        Stores info for mapping between CURLOPT_xxx and JS-friendly names for
        various Curl options.
     */
-    struct OptInfo
+    struct COptMeta
     {
         int ID;
         char const * PropName;
@@ -419,7 +419,7 @@ namespace v8 { namespace juice { namespace curl {
        Order is irrelevant, but the list must end with an entry which has all fields
        set to 0.
     */
-    static const OptInfo OptInfoList[] =
+    static const COptMeta OptInfoList[] =
         {
 #define O1(I) { CURLOPT_##I, CurlOpt<CURLOPT_##I>::Key(), CurlOpt<CURLOPT_##I>::Set }
 #define O2(I,S) { CURLOPT_##I, Strings::S, CurlOpt<CURLOPT_##I>::Set }
@@ -458,13 +458,13 @@ namespace v8 { namespace juice { namespace curl {
 #undef O2
         {0,0,0}
         };
-    typedef std::map<std::string,OptInfo const *> KeyToOptMap;
+    typedef std::map<std::string,COptMeta const *> KeyToOptMap;
     static KeyToOptMap const & keyToOpt()
     {
         static KeyToOptMap m;
         if( m.empty() )
         {
-            OptInfo const * o = OptInfoList;
+            COptMeta const * o = OptInfoList;
             for( ; o->ID; ++o )
             {
                 m[o->PropName] = o;
@@ -473,7 +473,7 @@ namespace v8 { namespace juice { namespace curl {
         return m;
     }
 
-    OptInfo const * optInfo( std::string const & prop )
+    COptMeta const * optInfo( std::string const & prop )
     {
         KeyToOptMap const & m( keyToOpt() );
         KeyToOptMap::const_iterator it = m.find(prop);
@@ -482,13 +482,13 @@ namespace v8 { namespace juice { namespace curl {
             : (*it).second;
     }
 
-    typedef std::map<int,OptInfo const *> IntToOptMap;
+    typedef std::map<int,COptMeta const *> IntToOptMap;
     static IntToOptMap const & optToProp()
     {
         static IntToOptMap m;
         if( m.empty() )
         {
-            OptInfo const * o = OptInfoList;
+            COptMeta const * o = OptInfoList;
             for( ; o->ID; ++o )
             {
                 m[o->ID] = o;
@@ -497,7 +497,7 @@ namespace v8 { namespace juice { namespace curl {
         return m;
     }
 
-    static OptInfo const * optInfo( int id )
+    static COptMeta const * optInfo( int id )
     {
         IntToOptMap const & m( optToProp() );
         IntToOptMap::const_iterator it = m.find(id);
@@ -509,10 +509,168 @@ namespace v8 { namespace juice { namespace curl {
     {
         IntToOptMap const & m( optToProp() );
         IntToOptMap::const_iterator it = m.find(id);
-        OptInfo const * i = (m.end() == it) ? 0 : (*it).second;
+        COptMeta const * i = (m.end() == it) ? 0 : (*it).second;
         return (i && i->PropName) ? i->PropName : "";
     }
 
+
+    /** Interface for fetching CURLINFO_xxx into JS space. */
+    typedef v8::Handle<v8::Value> (*CurlInfoGetter)( CURL * c );
+
+    template <int InfoID>
+    struct CInfoGet
+    {
+        static v8::Handle<v8::Value> Getter( CURL * c )
+        {
+            return TOSS("Unspecialized CURLINFO value!");
+        }
+        // ^^^^ remove this (to force a compile error on non-specialization
+        // once all handlers are in place
+    };
+
+    template <int InfoID>
+    struct CInfoGet_Base
+    {
+        static const int ID = InfoID;
+        //static v8::Handle<v8::Value> Getter( CURL * c );
+    };
+    template <int InfoID>
+    struct CInfoGet_String : CInfoGet_Base<InfoID>
+    {
+        static v8::Handle<v8::Value> Getter( CURL * c )
+        {
+            return TOSS("Not yet implemented!");
+        }        
+    };
+    template <int InfoID>
+    struct CInfoGet_Long : CInfoGet_Base<InfoID>
+    {
+        static v8::Handle<v8::Value> Getter( CURL * c )
+        {
+            return TOSS("Not yet implemented!");
+        }        
+    };
+    template <int InfoID>
+    struct CInfoGet_Double : CInfoGet_Base<InfoID>
+    {
+        static v8::Handle<v8::Value> Getter( CURL * c )
+        {
+            return TOSS("Not yet implemented!");
+        }        
+    };
+    template <int InfoID>
+    struct CInfoGet_SList : CInfoGet_Base<InfoID>
+    {
+        static v8::Handle<v8::Value> Getter( CURL * c )
+        {
+            return TOSS("Not yet implemented!");
+        }        
+    };
+    enum {
+    };
+        
+    template <int V>
+    struct CInfoChoose
+    {
+        typedef CInfoGet<V> Type;
+    };
+    template <>
+    struct CInfoChoose<CURLINFO_STRING>
+    {
+        typedef CInfoGet_String<CURLINFO_STRING> Type;
+    };
+    template <>
+    struct CInfoChoose<CURLINFO_LONG>
+    {
+        typedef CInfoGet_Long<CURLINFO_LONG> Type;
+    };
+    template <>
+    struct CInfoChoose<CURLINFO_DOUBLE>
+    {
+        typedef CInfoGet_Double<CURLINFO_DOUBLE> Type;
+    };
+    template <>
+    struct CInfoChoose<CURLINFO_SLIST>
+    {
+        typedef CInfoGet_SList<CURLINFO_SLIST> Type;
+    };
+
+    template <int I>
+    struct CInfoHandler
+    {
+        typedef typename CInfoChoose<I & CURLINFO_TYPEMASK>::Type Type;
+    };
+    
+    /**
+       Holder for CURLINFO_xxx binding info.
+    */
+    struct CInfoMeta
+    {
+        int ID;
+        char const * PropName;
+        CurlInfoGetter Getter;
+    };
+    static const CInfoMeta CInfoList[] =
+        {
+#define INFO(K) { CURLINFO_ ## K, "INFO_" # K, \
+                  CInfoHandler<CURLINFO_ ## K>::Type::Getter }
+        INFO(NONE),
+
+        INFO(APPCONNECT_TIME),
+        INFO(CERTINFO),
+        INFO(CONDITION_UNMET),
+        INFO(CONNECT_TIME),
+        INFO(CONTENT_LENGTH_DOWNLOAD),
+        INFO(CONTENT_LENGTH_UPLOAD),
+        INFO(CONTENT_TYPE),
+        INFO(COOKIELIST),
+        INFO(DATA_IN),
+        INFO(DATA_OUT),
+        INFO(DOUBLE),
+        INFO(EFFECTIVE_URL),
+        INFO(END),
+        INFO(FILETIME),
+        INFO(FTP_ENTRY_PATH),
+        INFO(HEADER_IN),
+        INFO(HEADER_OUT),
+        INFO(HEADER_SIZE),
+        INFO(HTTPAUTH_AVAIL),
+        INFO(HTTP_CONNECTCODE),
+        INFO(LASTSOCKET),
+        INFO(LONG),
+        INFO(MASK),
+        INFO(NAMELOOKUP_TIME),
+        INFO(NUM_CONNECTS),
+        INFO(OS_ERRNO),
+        INFO(PRETRANSFER_TIME),
+        INFO(PRIMARY_IP),
+        INFO(PRIVATE),
+        INFO(PROXYAUTH_AVAIL),
+        INFO(REDIRECT_COUNT),
+        INFO(REDIRECT_TIME),
+        INFO(REDIRECT_URL),
+        INFO(REQUEST_SIZE),
+        INFO(RESPONSE_CODE),
+        INFO(SIZE_DOWNLOAD),
+        INFO(SIZE_UPLOAD),
+        INFO(SLIST),
+        INFO(SPEED_DOWNLOAD),
+        INFO(SPEED_UPLOAD),
+        INFO(SSL_DATA_IN),
+        INFO(SSL_DATA_OUT),
+        INFO(SSL_ENGINES),
+        INFO(SSL_VERIFYRESULT),
+        INFO(STARTTRANSFER_TIME),
+        INFO(STRING),
+        INFO(TEXT),
+        INFO(TOTAL_TIME),
+        INFO(TYPEMASK),
+
+        INFO(LASTONE),
+#undef INFO
+        {0,0}
+        };
+    
     /**
        CURLOPT_xxxFUNCTION callback for WRITEFUNCTION and HEADERFUNCTION.
 
@@ -628,10 +786,10 @@ namespace v8 { namespace juice { namespace curl {
         return s;
     }
     
-    v8::Handle<v8::Value> CurlJS::setOption( int curlID, v8::Handle<v8::Value> const & val )
+    v8::Handle<v8::Value> CurlJS::SetOpt( int curlID, v8::Handle<v8::Value> const & val )
     {
         //CERR << "setOption("<<curlID<<","<<cv::JSToStdString(val)<<")\n";
-        OptInfo const * oi = optInfo(curlID);
+        COptMeta const * oi = optInfo(curlID);
         if( ! oi )
         {
             cv::StringBuffer msg;
@@ -641,15 +799,15 @@ namespace v8 { namespace juice { namespace curl {
         return oi->Setter( this->impl->opt(), this, cv::CastToJS(oi->PropName), val );
     }
 
-    v8::Handle<v8::Value> CurlJS::setOption( v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & val )
+    v8::Handle<v8::Value> CurlJS::SetOpt( v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & val )
     {
         //CERR << "setOption("<<cv::JSToStdString(val)<<","<<cv::JSToStdString(val)<<")\n";
         const int curlID = key->IsNumber() ? cv::CastFromJS<int>(key) : 0;
-        OptInfo const * oi = curlID ? optInfo(curlID) : 0;
+        COptMeta const * oi = curlID ? optInfo(curlID) : 0;
         ValHnd setrc;
         if( oi )
         {
-            setrc = this->setOption( curlID, val );
+            setrc = this->SetOpt( curlID, val );
         }
         else
         {
@@ -690,16 +848,16 @@ namespace v8 { namespace juice { namespace curl {
     }
 
     /**
-       If key is a known curl property then the registered OptInfo object
+       If key is a known curl property then the registered COptMeta object
        will be used to set the option. True is returned if key is a known
-       option, else true is returned if OptInfo::Setter returns 0.
+       option, else true is returned if COptMeta::Setter returns 0.
      */
     static v8::Handle<v8::Value> SetNamedCurlOption( CurlJS * c,
                                                      v8::Handle<v8::Value> const & key,
                                                      v8::Handle<v8::Value> const & val )
     {
         std::string const pname = cv::JSToStdString(key);
-        OptInfo const * oi = optInfo( pname );
+        COptMeta const * oi = optInfo( pname );
         if( ! oi )
         {
             //CERR << "Warning: skipping non-Curl option '"<<cv::JSToStdString(key)<<"'.\n";
@@ -708,7 +866,7 @@ namespace v8 { namespace juice { namespace curl {
         return oi->Setter( c->impl->opt(), c, key, val );
     }
 
-    v8::Handle<v8::Value> CurlJS::setOptions( v8::Handle<v8::Value> const & value )
+    v8::Handle<v8::Value> CurlJS::SetOpts( v8::Handle<v8::Value> const & value )
     {
         if( value.IsEmpty() || !value->IsObject() )
         {
@@ -759,7 +917,7 @@ namespace v8 { namespace juice { namespace curl {
         return cv::CastToJS(rc);//hsc.Close(cv::CastToJS(rc));
     }
 
-    v8::Handle<v8::Value> CurlJS::addOptions( v8::Handle<v8::Value> const & value )
+    v8::Handle<v8::Value> CurlJS::AddOpts( v8::Handle<v8::Value> const & value )
     {
         if( value.IsEmpty() || !value->IsObject() )
         {
@@ -909,13 +1067,13 @@ namespace v8 { namespace juice { namespace curl {
             clean up!
         */
         typedef tmp::TypeList<
-            convert::InvocableMemFunc1<N,ValHnd,ValHnd const &,&N::setOptions>,
-            convert::InvocableMemFunc2<N,ValHnd,ValHnd const &,ValHnd const &,&N::setOption>
+            convert::InvocableMemFunc1<N,ValHnd,ValHnd const &,&N::SetOpts>,
+            convert::InvocableMemFunc2<N,ValHnd,ValHnd const &,ValHnd const &,&N::SetOpt>
             > SetOptList;
         cw
             .Set( Strings::easyPerform, ICM::M0::Invocable<int,&N::EasyPerform> )
             .Set( "toString", ICM::M0::Invocable<ValHnd,&N::toString> )
-            .Set( Strings::fnAddOption, convert::InvocableMemFunc1<N,ValHnd,ValHnd const &,&N::addOptions>::Invocable )
+            .Set( Strings::fnAddOption, convert::InvocableMemFunc1<N,ValHnd,ValHnd const &,&N::AddOpts>::Invocable )
             .Set( "destroy", CW::DestroyObject )
             //.Set( Strings::optObj, OptGetter ) // if i do this the opts are not enumerable!
             ;
@@ -969,6 +1127,65 @@ namespace v8 { namespace juice { namespace curl {
         OPTKEY(WRITEDATA);
         OPTKEY(WRITEFUNCTION);
 #undef OPTKEY
+
+        /**
+           Add Curl.INFO_XXX mappings to CURLINFO_XXX.
+        */
+#define INFOKEY(O) ctor->Set( JSTR("INFO_"#O), v8::Integer::New( CURLINFO_ ## O ) )
+        INFOKEY(NONE);
+
+        INFOKEY(APPCONNECT_TIME);
+        INFOKEY(CERTINFO);
+        INFOKEY(CONDITION_UNMET);
+        INFOKEY(CONNECT_TIME);
+        INFOKEY(CONTENT_LENGTH_DOWNLOAD);
+        INFOKEY(CONTENT_LENGTH_UPLOAD);
+        INFOKEY(CONTENT_TYPE);
+        INFOKEY(COOKIELIST);
+        INFOKEY(DATA_IN);
+        INFOKEY(DATA_OUT);
+        INFOKEY(DOUBLE);
+        INFOKEY(EFFECTIVE_URL);
+        INFOKEY(END);
+        INFOKEY(FILETIME);
+        INFOKEY(FTP_ENTRY_PATH);
+        INFOKEY(HEADER_IN);
+        INFOKEY(HEADER_OUT);
+        INFOKEY(HEADER_SIZE);
+        INFOKEY(HTTPAUTH_AVAIL);
+        INFOKEY(HTTP_CONNECTCODE);
+        INFOKEY(LASTSOCKET);
+        INFOKEY(LONG);
+        INFOKEY(MASK);
+        INFOKEY(NAMELOOKUP_TIME);
+        INFOKEY(NUM_CONNECTS);
+        INFOKEY(OS_ERRNO);
+        INFOKEY(PRETRANSFER_TIME);
+        INFOKEY(PRIMARY_IP);
+        INFOKEY(PRIVATE);
+        INFOKEY(PROXYAUTH_AVAIL);
+        INFOKEY(REDIRECT_COUNT);
+        INFOKEY(REDIRECT_TIME);
+        INFOKEY(REDIRECT_URL);
+        INFOKEY(REQUEST_SIZE);
+        INFOKEY(RESPONSE_CODE);
+        INFOKEY(SIZE_DOWNLOAD);
+        INFOKEY(SIZE_UPLOAD);
+        INFOKEY(SLIST);
+        INFOKEY(SPEED_DOWNLOAD);
+        INFOKEY(SPEED_UPLOAD);
+        INFOKEY(SSL_DATA_IN);
+        INFOKEY(SSL_DATA_OUT);
+        INFOKEY(SSL_ENGINES);
+        INFOKEY(SSL_VERIFYRESULT);
+        INFOKEY(STARTTRANSFER_TIME);
+        INFOKEY(STRING);
+        INFOKEY(TEXT);
+        INFOKEY(TOTAL_TIME);
+        INFOKEY(TYPEMASK);
+
+        INFOKEY(LASTONE);
+#undef INFOKEY
         return target;
     }
 
