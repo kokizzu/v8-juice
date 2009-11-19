@@ -10,20 +10,25 @@
 *Achtung: this is new code (added 20091118) and the interface may still change significantly.*
 
 This plugin provides a JS class called `Curl` which allows the client to
-perform certain operations on URLs using the
+perform certain operations on URLs using the amazing
 [http://curl.haxx.se/libcurl/ libcurl API].
 
-Currently only reading of URLs is supported.
+Only the features of the so-called "easy" API (`curl_easy_xxx()`) are
+available. The main limitation of this is that the plugin works only
+synchronously.
 
 == WARNINGS ==
 
-*Do not try to use this API to load binary data.* It is not possible to pass
-binary data to JS without the overhead of transporting the data from C++ to
-JS as an Array of integers, which would have a _huge_ memory cost.
+*Do not try to use this API to load binary data.* It is not possible
+to pass binary data to JS without the overhead of transporting the
+data from C++ to JS as an Array of integers, which would have a _huge_
+memory cost (somewhere around 100 times the size of the input data).
 
-When a v8 string is created and it contains any "high bits" (anything non-ASCII),
-v8 assumes (IIRC) UTF16 and acts accordingly, and this will fail miserably if the data
-is not exactly the assumed format.
+When a v8 string is created and it contains any "high bits" (anything
+non-ASCII), v8 assumes UC16 format and will try to convert it
+accordingly, and this will fail miserably if the data is not exactly
+the assumed format. This is unfortunately a limitation of v8. Thus this
+plugin cannot be used to fetch images, zip files, PDFs, and the like.
 
 == Loading from JS ==
 
@@ -43,14 +48,19 @@ The class can be added to a JS engine by linking in
 [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/curl the relevant code]
 into your app and calling `v8::juice::expat::CurlJS::SetupBindings()`.
 
+Alternately, you can use `v8::juice::plugin::LoadPlugin()` to load the plugin from
+native code.
+
 = JS API =
 
 || *Return type* || *Name/Signature* || *Notes* ||
-|| `Curl` || `new Curl([string url | object options])` || Creates a new parser object. ||
+|| `Curl` || `new Curl()` || Creates a new parser object. ||
 || `int` || `addOpt(Object options)` || Like `setOpt(object)`, but does not clear the options list. ||
 || `void` || `destroy()` || Destroys the object, freeing all of its resources. Calling this is optional, but has the benefit of freeing up resources immediately, rather than waiting on the garbage collector. ||
-|| `mixed` || `getInfo(int)` || ||
-|| `int` || `easyPerform()` || Analog to `curl_easy_perform()`. ||
+|| `mixed` || `getInfo(int)` || Fetches various information about a request or response. See below. ||
+|| `int` || `easyPerform()` || Processes the current request parameters. Analog to `curl_easy_perform()`. ||
+|| `int` || `pause([int = Curl.PAUSE_ALL])` || Pauses a connection, optionally pausing either reading or writing. ||
+|| `int` || `resume()` || Resumes a paused connection. Equivalent to `pause(Curl.PAUSE_CONT)`. ||
 || `int` || `setOpt(int CurlOptionID,mixed value)` || See below. Throws on error. ||
 || `int` || `setOpt(Object options)` || See below. Returns number of properties set or throws on error. ||
 
@@ -98,6 +108,32 @@ counterparts (which are documented
 
 All of the supported `CURLOPT_xxx` constants are available in JS space via `Curl.OPT_xxx`.
 
+
+== Callback routines ==
+
+The `headerFunction()` and `writeFunction()` properties are functions
+which are called when a response header or body chunk have been
+read. They take three arguments:
+
+  * The data read in, as a string object.
+  * The real length of the read-in data.
+  * The `Curl` object's `opt.writeData` value (because this is how the native API does it).
+
+They must return the number of bytes they consume, meaning they must
+return the value of the second parameter on success. Any other value
+will cause the process (initialized by `easyPerform()`) to stop and
+will cause `easyPerform()` to return an error code.
+
+*Note that it is not safe to pass binary data into v8*. If the
+function is passed binary data then the `.length` property of the
+read-in data (the first argument to the callback) will _probably_
+differ from the second paremeter's value. In such a case, there are no
+guarantees that the data is valid - it might have been corrupted via
+v8's string conversion routines (or it _might_ actually be a legal v8
+string).
+
+When the `headerFunction()` is called, it is passed a single header line (a complete header entry), but that line has a trailing `\r\n` on it, which should be stripped by the caller. It is not stripped by the wrapper because doing so would cause confusion with the `length` parameter (and we do not adjust to account for the two extra stripped characters that because it would falsify any byte count calculations done by the client).
+
 == Setting Curl Options ==
 
 The various option properties can be set like:
@@ -116,18 +152,21 @@ mycurl.setOpt( { verbose:true, url:'http://code.google.com' } );
 In the first form, the first argument must be `Curl.OPT_XXX`,
 which corresponds to one of the `CURLOPT_XXX` constants listed above.
 In the second form, it uses the "JS-like" propert name as the first
-argument.
+argument. All such properties use the "camelCase" spelling of the
+equivalent `CURLOPT_xxx` property. e.g. the "friendly" form of
+`CURLOPT_TIMEOUT_MS` is `timeoutMs`.
 
-The changes are applied immediately, but not all have any effect if
-changed after a connection is established (by calling `easyPerform()`).
+Changes made with `setOpt()` and friends are applied immediately, but
+not all have any effect if changed after a connection is established
+(by calling `easyPerform()`).
 
-To fetch the options values, use
-`myCurlObj.opt.optionName`. *However*, if you _assign_ to that
-variable directly then the settings will not be applied to the
-underlying curl routines. _Never_ re-assign the `opt` property itself
-- that will cause the internals to use a different options object! 
-(Those last two behaviours are bugs, but v8's get/set interceptor
-interface won't let me do this they way i would like to.)
+To fetch the options values use `myCurlObj.opt.optionName`. *However*,
+if you _assign_ to that variable directly then the settings will not
+be applied to the underlying curl routines. _Never_ re-assign the
+`opt` property itself - that will cause the internals to use a
+different options object! (Those last two behaviours are bugs, but
+v8's get/set interceptor interface won't let me do this they way i
+would like to.)
 
 Also beware that passing an object to `setOpt()` will replace the
 internal list of options but will not "undo" any options previously
@@ -137,39 +176,25 @@ from the `myCurl` object (because it is not in the new options) but
 the underlying libcurl connection will still use it until another
 value is set.
 
-== Callback routines ==
-
-The `headerFunction()` and `writeFunction()` properties are functions
-which are called when a response header or body chunk have been
-read. They take three arguments:
-
-  * The data read in, as a string object.
-  * The real length of the read-in data.
-  * The `Curl` object's `opt.writeData` value (because this is how the native API does it).
-
-Note that it is not safe to pass binary data into v8, so if you
-fetched binary data then the `.length` property of the read-in data
-will differ from the second paremeter's value. In such a case, there
-are no guarantees that the data is valid - it might have been
-corrupted via v8's string conversion routines.
-
-When the `headerFunction()` is called, it is passed a single header line (a complete header entry), but that line has a trailing `\r\n` on it, which should be stripped by the caller. It is not stripped by the wrapper because doing so would cause confusion with the `length` parameter (and we do not adjust to account for the two extra stripped characters that because it would falsify any byte count calculations done by the client).
-
 == `getInfo()` and `CURLINFO_xxx` mappings. ==
 
-`getInfo()` works similarly to [http://curl.haxx.se/libcurl/c/curl_easy_getinfo.html curl_easy_getinfo()].
+`getInfo()` is equivalent to [http://curl.haxx.se/libcurl/c/curl_easy_getinfo.html curl_easy_getinfo()],
+and allows one to fetch various connection-related information.
+
 It accepts a single integer parameter corresponding to one of the
-`CURLINFO_xxx` arguments listed below. If `getInfo()` fails then it
-throws an exception, otherwise it returns an different type depending
-on the `CURLINFO` argument (string, int, double, or array-of-strings).
-Unlike `setOpt()` and friends, the first argument must be an integer -
-there are no "JS-friendly" names for these properties.
+`CURLINFO_xxx` arguments listed below (but names `Curl.INFO_xxx` in
+this API). If `getInfo()` fails (passed an unknown value, or because
+the underlying call to `curl_easy_getinfo()` fails) then it throws an
+exception, otherwise it returns an different type depending on the
+`CURLINFO` argument (string, int, double, or array-of-strings, as
+documented in the libcurl API).  Unlike `setOpt()` and friends, the
+first argument must be an integer - there are no "JS-friendly" names
+for these properties.
 
 The following list shows which `CURLINFO_xxx` constants are available
 via `Curl.INFO_xxx`. Most, but not all, of these can be fetched using
 `getInfo()`. Those which cannot be fetched via `getInfo()` are marked
 with an asterisk.
-
 
   * `CURLINFO_APPCONNECT_TIME`
   * `CURLINFO_CERTINFO`
@@ -218,9 +243,37 @@ with an asterisk.
   * `CURLINFO_SSL_VERIFYRESULT`
   * `CURLINFO_STARTTRANSFER_TIME`
   * `CURLINFO_STRING`
-  * `CURLINFO_TEXT`
+  * `CURLINFO_TEXT` `*`
   * `CURLINFO_TOTAL_TIME`
   * `CURLINFO_TYPEMASK` `*`
+
+Some of these cannot be fetched because they are markers
+(e.g. `CURLINFO_LASTONE`), masks/flags (e.g. `CURLINFO_TYPEMASK` and
+`CURLINFO_LONG`), or are otherwise not documented in the
+`curl_easy_getinfo()` documentation (e.g. `CURLINFO_HEADER_IN`).
+
+== `pause()` and `resume()` ==
+
+The `pause()` function works like
+[http://curl.haxx.se/libcurl/c/curl_easy_pause.html curl_easy_pause()].
+Its only argument is an integer, which corresponse to a bitmask of
+the `CURLPAUSE_XXX` constants. The following values are supported,
+but are called `Curl.PAUSE_XXX` in this API:
+
+  * `CURLPAUSE_RECV`
+  * `CURLPAUSE_SEND`
+  * `CURLPAUSE_ALL`
+  * `CURLPAUSE_CONT`
+
+If called without arguments, `pause()` behaves as if `Curl.PAUSE_ALL`
+had been passed in.
+
+To resume a paused connection call `pause(Curl.PAUSE_CONT)` or
+`resume()` (which is equivalent).
+
+These functions return an integer value, with 0 being success. They
+do not throw JS exceptions like some of the other functions.
+
 
 = Example =
 

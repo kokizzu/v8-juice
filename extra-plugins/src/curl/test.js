@@ -30,8 +30,7 @@ function testOne()
             ++ud.count;
             return data.length;
         },
-        headerData:{count:0},
-        placeholder:undefined
+        headerData:{count:0}
     });
     var rc = c.easyPerform();
     print( "c.easyPerform() rc =",rc);
@@ -62,8 +61,7 @@ function testTwo()
             return data.length;
         },
         headerData:{count:0},
-        userAgent:"v8-juice-curl",
-        placeholder:null
+        userAgent:"v8-juice-curl"
     });
     print( "port =",c.opt.port);
     print( "timeout =",c.opt.timeout);
@@ -178,7 +176,7 @@ function testCurlInfo()
 
 //testOne();
 //testTwo();
-testThree();
-//testFour();
+//testThree();
+testFour();
 //  testCurlInfo();
 

@@ -61,6 +61,19 @@ namespace v8 { namespace juice { namespace curl {
            See curl_easy_perform().
         */
         int EasyPerform();
+
+        /**
+           Equivalent to Pause( CURLPAUSE_ALL ).
+        */
+        int Pause();
+        /**
+           Equivalent to curl_easy_pause( this->Curl(), mask ).
+        */
+        int Pause( int mask );
+        /**
+           Equivalent to Pause( CURLPAUSE_CONT ).
+        */
+        int Resume();
         
         /**
            Adds the JS/C++ bindings for this class to the given target.

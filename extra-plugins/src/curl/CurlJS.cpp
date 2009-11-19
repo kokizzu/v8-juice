@@ -61,6 +61,10 @@ namespace v8 { namespace juice { namespace curl {
     {
         static char const * easyPerform;
         static char const * fnAddOption;
+        static char const * fnDestroy;
+        static char const * fnGetInfo;
+        static char const * fnPause;
+        static char const * fnResume;
         static char const * fnSetOption;
         static char const * optHeaderData;
         static char const * optHeaderFunc;
@@ -70,8 +74,12 @@ namespace v8 { namespace juice { namespace curl {
         static char const * optWriteFunc;
     };
     char const * Strings::easyPerform = "easyPerform";
-    char const * Strings::fnSetOption = "setOpt";
     char const * Strings::fnAddOption = "addOpt";
+    char const * Strings::fnDestroy = "destroy";
+    char const * Strings::fnGetInfo = "getInfo";
+    char const * Strings::fnPause = "pause";
+    char const * Strings::fnResume = "resume";
+    char const * Strings::fnSetOption = "setOpt";
     char const * Strings::optHeaderData = "headerData";
     char const * Strings::optHeaderFunc = "headerFunction";
     char const * Strings::optObj = "opt";
@@ -381,7 +389,9 @@ namespace v8 { namespace juice { namespace curl {
         }
     };
 
-    
+/**
+   Set up CurlOpt<> specializations for all CURLOPT_XXX options we support...
+*/
 #define OPTKEY(KEY) static char const * Key() { return KEY; }
 #define COPT_LONG(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptLong<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
 #define COPT_BOOL(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptBool<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
@@ -408,7 +418,7 @@ namespace v8 { namespace juice { namespace curl {
     COPT_LONG(PROXYPORT, "proxyPort");
     COPT_LONG(RESUME_FROM,"resumeFrom");
     COPT_LONG(TIMEOUT, "timeout");
-    COPT_LONG(TIMEOUT_MS, "timeoutMS");
+    COPT_LONG(TIMEOUT_MS, "timeoutMs");
     COPT_STR(INTERFACE, "interface");
     COPT_STR(NOPROXY, "noProxy");
     COPT_STR(PROXY, "proxy");
@@ -576,10 +586,11 @@ namespace v8 { namespace juice { namespace curl {
             return TOSSV(msg);
         }
     };
-#define CINFO(X) template <> struct CInfoGet<X> : CInfoGet_Base<X> {}
-    CINFO(CURLINFO_NONE);
-    CINFO(CURLINFO_LASTONE);
-#undef CINFO
+/* A error implementations for certain CURLINFO values... */
+// #define CINFO(X) template <> struct CInfoGet<X> : CInfoGet_Base<X> {}
+//     CINFO(CURLINFO_NONE);
+//     CINFO(CURLINFO_LASTONE);
+// #undef CINFO
     template <int InfoID>
     struct CInfoGet_String : CInfoGet_Base<InfoID>
     {
@@ -707,8 +718,6 @@ namespace v8 { namespace juice { namespace curl {
 #define INFO(K) { CURLINFO_ ## K, "INFO_" # K, \
                   CInfoHandler<CURLINFO_ ## K>::Type::Get }
 #define INFO_NOOP(K) { CURLINFO_ ## K, "INFO_" # K, 0 }
-        INFO_NOOP(NONE),
-
         INFO(APPCONNECT_TIME),
         INFO(CERTINFO),
         INFO(CONDITION_UNMET),
@@ -746,8 +755,8 @@ namespace v8 { namespace juice { namespace curl {
         INFO(SSL_VERIFYRESULT),
         INFO(STARTTRANSFER_TIME),
         INFO(STRING),
-        INFO(TEXT),
         INFO(TOTAL_TIME),
+        INFO_NOOP(NONE),
         INFO_NOOP(DATA_IN),
         INFO_NOOP(DATA_OUT),
         INFO_NOOP(END),
@@ -756,6 +765,7 @@ namespace v8 { namespace juice { namespace curl {
         INFO_NOOP(MASK),
         INFO_NOOP(SSL_DATA_IN),
         INFO_NOOP(SSL_DATA_OUT),
+        INFO_NOOP(TEXT),
         INFO_NOOP(TYPEMASK),
         INFO_NOOP(LASTONE),
 #undef INFO
@@ -877,6 +887,20 @@ namespace v8 { namespace juice { namespace curl {
           <<'@'<<(void const *)this<<']';
         return s;
     }
+
+    int CurlJS::Pause()
+    {
+        return this->Pause( CURLPAUSE_ALL );
+    }
+    int CurlJS::Resume()
+    {
+        return this->Pause( CURLPAUSE_CONT );
+    }
+    int CurlJS::Pause( int mask )
+    {
+        return curl_easy_pause( this->Curl(), mask );
+    }
+
     
 
     v8::Handle<v8::Value> CurlJS::GetInfo( int flag )
@@ -886,8 +910,6 @@ namespace v8 { namespace juice { namespace curl {
         if( map.empty() )
         {
             CInfoMeta const * ci = CInfoList;
-            //int rc = -1;
-            //ValHnd jrc;
             for( ; ci && ci->PropName; ++ci )
             {
                 map[ci->ID] = ci;
@@ -897,7 +919,8 @@ namespace v8 { namespace juice { namespace curl {
         if( map.end() == it )
         {
             cv::StringBuffer msg;
-            msg << "Unknown CURLINFO_xxx ID "<<flag<<"!";
+            msg << "The value "<<flag<<" does not correspond to "
+                << "a supported CURLINFO_XXX constant.";
             return TOSSV(msg);
         }
         return it->second->Getter( this->impl->ch );
@@ -1187,15 +1210,20 @@ namespace v8 { namespace juice { namespace curl {
             convert::InvocableMemFunc1<N,ValHnd,ValHnd const &,&N::SetOpts>,
             convert::InvocableMemFunc2<N,ValHnd,ValHnd const &,ValHnd const &,&N::SetOpt>
             > SetOptList;
+        typedef tmp::TypeList<
+            convert::InvocableMemFunc0<N,int,&N::Pause>,
+            convert::InvocableMemFunc1<N,int,int,&N::Pause>
+            > PauseList;
         cw
             .Set( Strings::easyPerform, ICM::M0::Invocable<int,&N::EasyPerform> )
             .Set( "toString", ICM::M0::Invocable<ValHnd,&N::toString> )
             .Set( Strings::fnAddOption, ICM::M1::Invocable<ValHnd,ValHnd const &,&N::AddOpts> )
-            .Set( "getInfo", ICM::M1::Invocable<ValHnd,int,&N::GetInfo> )
-            .Set( "destroy", CW::DestroyObject )
-            //.Set( Strings::optObj, OptGetter ) // if i do this the opts are not enumerable!
+            .Set( Strings::fnGetInfo, ICM::M1::Invocable<ValHnd,int,&N::GetInfo> )
+            .Set( Strings::fnDestroy, CW::DestroyObject )
+            .Set( Strings::fnResume, ICM::M0::Invocable<int,&N::Resume> )
+            .Set( Strings::fnSetOption, convert::OverloadInvocables<SetOptList>::Invocable )
+            .Set( Strings::fnPause, convert::OverloadInvocables<PauseList>::Invocable )
             ;
-         cw.Set( Strings::fnSetOption, convert::OverloadInvocables<SetOptList>::Invocable );
          v8::Handle<v8::Function> ctor = cw.Seal();
          cw.AddClassTo(target);
 
@@ -1246,6 +1274,13 @@ namespace v8 { namespace juice { namespace curl {
         OPTKEY(WRITEFUNCTION);
 #undef OPTKEY
 
+#define PAUSE(O) ctor->Set( JSTR("PAUSE_"#O), v8::Integer::New( CURLPAUSE_ ## O ) )
+        PAUSE(RECV);
+        PAUSE(SEND);
+        PAUSE(ALL);
+        PAUSE(CONT);
+#undef PAUSE
+        
         /**
            Add Curl.INFO_XXX mappings to CURLINFO_XXX.
         */
