@@ -137,14 +137,14 @@ function testCrash()
     var o = {
         port:80,
         //httpHeader:["Host: s11n","Accept-Encoding: gzip","Accept: text/html"],
-        httpHeader:"", // v8 crash or "secondary" throw, depending on the workarounds in the native code
+        httpHeader:3, // v8 crash or "secondary" throw, depending on the workarounds in the native code
         url:'http://localhost'
     };
-    rc = c.setOpt(o);
+    rc = c.addOpt(o);
     print( "setOpt RC =",rc);
     rc = c.setOpt( Curl.OPT_HTTPHEADER,
-                   "" // causes error code to be returned. should throw, though.
-                   //["Host: wh","Accept-Encoding: gzip","Accept: text/html"]
+                   //"" // causes error code or throws
+                   ["Host: wh","Accept-Encoding: gzip","Accept: text/html"]
                    );
     print( "setOpt RC =",rc);
     print( "c =",JSON.stringify(c,undefined,2));
@@ -154,5 +154,5 @@ function testCrash()
 
 //testOne();
 //testTwo();
-//testThree();
-testCrash();
+testThree();
+//testCrash();

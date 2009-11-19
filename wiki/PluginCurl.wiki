@@ -49,8 +49,8 @@ into your app and calling `v8::juice::expat::CurlJS::SetupBindings()`.
 || `Curl` || `new Curl([string url | object options])` || Creates a new parser object. ||
 || `int` || `easyPerform()` || Analog to `curl_easy_perform()`. ||
 || `void` || `destroy()` || Destroys the object, freeing all of its resources. Calling this is optional, but has the benefit of freeing up resources immediately, rather than waiting on the garbage collector. ||
-|| `int` || `setOpt(int CurlOptionID,mixed value)` || See below. Returns 0 on success (meaning libcurl accepted the value). ||
-|| `int` || `setOpt(Object options)` || See below. Returns number of properties set. ||
+|| `int` || `setOpt(int CurlOptionID,mixed value)` || See below. Throws on error. ||
+|| `int` || `setOpt(Object options)` || See below. Returns number of properties set or throws on error. ||
 || `int` || `addOpt(Object options)` || Like `setOpt(object)`, but does not clear the options list. ||
 
 Each `Curl` object has a number of options which control how libcurl

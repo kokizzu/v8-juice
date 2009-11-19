@@ -330,18 +330,22 @@ namespace v8 { namespace juice { namespace curl {
                    TOSS'ing from here causes v8 to crash at some point
                    when we call this from CurlJS::setOption(Object).
                    But throwing works from other handlers!
+
+                   In some cases it crashes silently - ending my app
+                   immediately with RC=0!
                 */
                 //ValHnd ex = TOSSV(msg);
                 //return hsc.Close( ex );
                 return TOSSV(msg);
                 //return hsc.Close(TOSSV(msg));
 #elif 1
-                // second-choice behaviour, which we accommodate in CurlJS::setOptions():
+                // second-choice behaviour, which we accommodate in CurlJS::setOptions()
+                // and friends:
                 CERR << msg.Content() << '\n';
                 return v8::Integer::New(-1);
 #endif
             }
-            typedef v8::Local<v8::Array> ARH;
+            typedef v8::Handle<v8::Array> ARH;
             ARH ar( jv->IsArray() ? ARH( v8::Array::Cast(*jv) ) : ARH() );
             curl_slist * sl = ArrayToSList( ar );
             cu->impl->addList( CurlOptID, sl );
@@ -642,24 +646,47 @@ namespace v8 { namespace juice { namespace curl {
         //CERR << "setOption("<<cv::JSToStdString(val)<<","<<cv::JSToStdString(val)<<")\n";
         const int curlID = key->IsNumber() ? cv::CastFromJS<int>(key) : 0;
         OptInfo const * oi = curlID ? optInfo(curlID) : 0;
+        ValHnd setrc;
         if( oi )
         {
-            return this->setOption( curlID, val );
+            setrc = this->setOption( curlID, val );
         }
         else
         {
             oi = optInfo( cv::JSToStdString(key) );
+            if( ! oi )
+            {
+                cv::StringBuffer msg;
+                msg << "Unknown Curl option: "<<cv::JSToStdString(key)
+                    << " = "<<cv::JSToStdString(val);
+                return TOSSV(msg);
+                //CERR << msg.Content() << '\n';
+                //return v8::Integer::New(-1);
+            }
         }
-        if( ! oi )
+        setrc = oi->Setter( this->impl->opt(), this, cv::CastToJS(oi->PropName), val );
+#if 0
+        return setrc;
+#else
+        // This can, in some combinations of code, cause v8 to crash silently if Setter tosses!
+        if( setrc.IsEmpty() )
         {
-            cv::StringBuffer msg;
-            msg << "Unknown Curl option: "<<cv::JSToStdString(key)
-                << " = "<<cv::JSToStdString(val);
-            return TOSSV(msg);
-            //CERR << msg.Content() << '\n';
-            //return v8::Integer::New(-1);
+            return setrc; // pass on exception
         }
-        return oi->Setter( this->impl->opt(), this, cv::CastToJS(oi->PropName), val );
+        else if( 0 == setrc->Int32Value() )
+        {
+            return setrc;
+        }
+        else
+        {
+            // This is a workaround. Grep this code for "crash" for the reason
+            cv::StringBuffer msg;
+            msg << "Setting of curl property";
+            msg <<" '"<<oi->PropName<<"' failed with rc ";
+            msg <<setrc<<"!";
+            return TOSSV(msg);
+        }
+#endif
     }
 
     /**
@@ -697,8 +724,6 @@ namespace v8 { namespace juice { namespace curl {
         const int arlen = cv::CastFromJS<int>( ar->Get(JSTR("length")) );
         uint32_t rc = 0;
         v8::Handle<v8::Value> setrc;
-        //v8::TryCatch tryer;
-        //tryer.SetVerbose(true);
         for( int i = 0; (i < arlen); ++i )
         {
             // FUCK: if a Setter throws propogates a JS exception, v8 crashes!
@@ -710,9 +735,9 @@ namespace v8 { namespace juice { namespace curl {
             //if( tryer.HasCaught() ) return ValHnd();
 #else
             setrc = this->setOption( pkey, src->Get( pkey ) );
-            // ^^^ causes a segfault somewhere!
+            // ^^^ can cause a crash somewhere!
 #endif
-            CERR << "setrc = "<<cv::JSToStdString(setrc) << '\n';
+            //CERR << "setrc = "<<cv::JSToStdString(setrc) << '\n';
             if( setrc.IsEmpty() )
             {
                 return setrc; // pass on exception
@@ -723,7 +748,7 @@ namespace v8 { namespace juice { namespace curl {
             }
             else
             {
-                // This is a workaround
+                // This is a workaround. Grep this code for "crash" for the reason
                 cv::StringBuffer msg;
                 msg << "Setting of curl property";
                 msg <<" '"<<pkey<<"' failed with rc ";
@@ -739,29 +764,37 @@ namespace v8 { namespace juice { namespace curl {
         if( value.IsEmpty() || !value->IsObject() )
         {
             cv::StringBuffer msg;
-            msg << CurlJS::ClassName() << "."<<Strings::fnAddOption << "(1 argument): Argument must be-a Object.";
+            msg << CurlJS::ClassName() << "."<<Strings::fnSetOption << "(1 argument): Argument must be-a Object.";
             return TOSSV(msg);
         }
-        v8::HandleScope hsc;
         v8::Local<v8::Object> src( v8::Object::Cast(*value) );
         v8::Local<v8::Array> ar = src->GetPropertyNames();
         const int arlen = cv::CastFromJS<int>( ar->Get(JSTR("length")) );
         uint32_t rc = 0;
         v8::Handle<v8::Value> setrc;
-        for( int i = 0; (i < arlen); ++i, ++rc )
+        for( int i = 0; (i < arlen); ++i )
         {
             v8::Local<v8::Value> pkey = ar->Get( v8::Integer::New(i) );
             setrc = SetNamedCurlOption( this, pkey, src->Get( pkey ) );
             if( setrc.IsEmpty() )
             {
-                return hsc.Close(setrc); // pass on exception
+                return setrc; // pass on exception
             }
             else if( 0 == setrc->Int32Value() )
             {
                 ++rc;
             }
+            else
+            {
+                // This is a workaround. Grep this code for "crash" for the reason
+                cv::StringBuffer msg;
+                msg << "Setting of curl property";
+                msg <<" '"<<pkey<<"' failed with rc ";
+                msg <<setrc<<"!";
+                return TOSSV(msg);
+            }
         }
-        return hsc.Close(cv::CastToJS(rc));
+        return cv::CastToJS(rc);
     }
 
     /**
@@ -887,56 +920,8 @@ namespace v8 { namespace juice { namespace curl {
             //.Set( Strings::optObj, OptGetter ) // if i do this the opts are not enumerable!
             ;
          cw.Set( Strings::fnSetOption, convert::OverloadInvocables<SetOptList>::Invocable );
-
-#if 0        
-         if(0) // we currently need these so that setOptions can dispatch to the proper handler...
-         {
-            v8::Handle<v8::ObjectTemplate> proto = cw.Prototype();
-            // Add curlObj.XXX interceptors for the supported CURLOPT_xxx options:
-#define ACC(I) \
-            proto->SetAccessor( JSTR(CurlOpt<CURLOPT_ ## I>::Key()), \
-                                OptGet, OptSet<CURLOPT_ ## I>, \
-                                ValHnd(), v8::DEFAULT, v8::DontEnum )
-            ACC(BUFFERSIZE);
-            ACC(CONNECTTIMEOUT);
-            ACC(CRLF);
-            ACC(FAILONERROR);
-            ACC(FOLLOWLOCATION);
-            ACC(HEADER);
-            ACC(HEADERDATA);
-            ACC(HEADERFUNCTION);
-            ACC(HTTP200ALIASES);
-            ACC(HTTPHEADER);
-            ACC(INTERFACE);
-            ACC(LOW_SPEED_LIMIT);
-            ACC(LOW_SPEED_TIME);
-            ACC(MAXREDIRS);
-            ACC(NOBODY);
-            ACC(NOPROXY);
-            ACC(PORT);
-            ACC(POST);
-            ACC(POSTQUOTE);
-            ACC(PREQUOTE);
-            ACC(PROXY);
-            ACC(QUOTE);
-            ACC(RANGE);
-            ACC(RESUME_FROM);
-            //ACC(TELNETOPTIONS);
-            ACC(TIMEOUT);
-            ACC(TIMEOUT_MS);
-            ACC(URL);
-            ACC(USERAGENT);
-            ACC(USERNAME);
-            ACC(USERPWD);
-            ACC(VERBOSE);
-            ACC(WRITEDATA);
-            ACC(WRITEFUNCTION);
-#undef ACC
-        }
-#endif
-
          v8::Handle<v8::Function> ctor = cw.Seal();
-        cw.AddClassTo(target);
+         cw.AddClassTo(target);
 
         /**
            Add Curl.OPT_XXX mappings to CURLOPT_XXX.
