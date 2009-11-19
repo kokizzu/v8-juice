@@ -91,7 +91,7 @@ function testThree()
     print( "setOpt RC =",rc);
     var rc = c.setOpt( Curl.OPT_CRLF, 0 )
     print( "setOpt RC =",rc);
-    rc = c.setOpt( Curl.OPT_USERAGENT, "v8-juice" );
+    rc = c.setOpt( 'userAgent', "v8-juice" );
     print( "setOpt RC =",rc);
     var rc = c.setOpt( Curl.OPT_URL, 'http://localhost' )
     print( "setOpt RC =",rc);
@@ -109,7 +109,5 @@ function testThree()
     c.destroy();
 }
 //testOne();
-testTwo();
-//testThree();
-
-
+//testTwo();
+testThree();

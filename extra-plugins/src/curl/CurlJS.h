@@ -76,12 +76,15 @@ namespace v8 { namespace juice { namespace curl {
 
         v8::Handle<v8::Value> toString() const;
 
+        
         /**
            Analog to curl_easy_setopt(), but curlID must be one of our
            internally-supported options so we know which type
            conversion to use on val.
         */
         int setOption( int curlID, v8::Handle<v8::Value> const & val );
+
+        int setOption( v8::Handle<v8::Value> const & k, v8::Handle<v8::Value> const & val );
         /**
            JS usage:
 

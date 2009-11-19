@@ -69,12 +69,15 @@ counterparts (which are documented
 || `any headerData` || `CURL_HEADERDATA` || Passed as last argument to `headerFunction()` ||
 || `function headerFunction(data,readLength,userData)` || `CURL_HEADERFUNCTION` || See below. ||
 || `string interface` || `CURLOPT_INTERFACE` || ||
+|| `int lowSpeedLimit` || `CURL_LOW_SPEED_LIMIT` || ||
+|| `int lowSpeedTime` || `CURL_LOW_SPEED_TIME` || ||
 || `bool noBody` || `CURLOPT_NOBODY` || ||
 || `string noProxy` || `CURLOPT_NOPROXY` || ||
 || `int port` || `CURL_PORT` || default port number to use. ||
 || `string proxy` || `CURLOPT_PROXY` || ||
 || `int proxyPort` || `CURLOPT_PROXYPORT` || ||
 || `string range` || `CURLOPT_RANGE` || ||
+|| `int resumeFrom` || `CURL_RESUME_FROM` || ||
 || `int maxRedirs` || `CURLOPT_MAXREDIRS` || ||
 || `int timeout` || `CURLOPT_TIMEOUT` || ||
 || `int timeoutMS` || `CURLOPT_TIMEOUT_MS` || ||
