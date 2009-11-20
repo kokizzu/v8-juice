@@ -414,7 +414,9 @@ namespace v8 { namespace juice { namespace curl {
     COPT_BOOL(FOLLOWLOCATION, "followLocation");
     COPT_BOOL(HEADER, "header");
     COPT_BOOL(NOBODY, "noBody");
+    COPT_BOOL(NOSIGNAL, "noSignal");
     COPT_BOOL(POST,"post");
+    COPT_BOOL(TCP_NODELAY,"tcpNoDelay");
     COPT_BOOL(VERBOSE,"verbose");
     COPT_JVAL(HEADERDATA, Strings::optHeaderData);
     COPT_JVAL(HEADERFUNCTION, Strings::optHeaderFunc);
@@ -425,6 +427,7 @@ namespace v8 { namespace juice { namespace curl {
     COPT_LONG(BUFFERSIZE, "bufferSize");
     COPT_LONG(CONNECTTIMEOUT, "connectionTimeout");
     COPT_LONG(CRLF, "crlf");
+    COPT_LONG(DNS_CACHE_TIMEOUT, "dnsCacheTimeout");
     COPT_LONG(LOW_SPEED_LIMIT,"lowSpeedLimit");
     COPT_LONG(LOW_SPEED_TIME,"lowSpeedTime");
     COPT_LONG(MAXREDIRS, "maxRedirs");
@@ -475,6 +478,7 @@ namespace v8 { namespace juice { namespace curl {
         O1(BUFFERSIZE),
         O1(CONNECTTIMEOUT),
         O1(CRLF),
+        O1(DNS_CACHE_TIMEOUT),
         O1(FAILONERROR),
         O1(FOLLOWLOCATION),
         O1(HEADER),
@@ -1296,6 +1300,7 @@ namespace v8 { namespace juice { namespace curl {
 #define OPTKEY(O) ctor->Set( JSTR("OPT_"#O), v8::Integer::New( CURLOPT_ ## O ) )
         OPTKEY(BUFFERSIZE);
         OPTKEY(CONNECTTIMEOUT);
+        OPTKEY(DNS_CACHE_TIMEOUT);
         OPTKEY(CRLF);
         OPTKEY(FAILONERROR);
         OPTKEY(FOLLOWLOCATION);
@@ -1309,6 +1314,7 @@ namespace v8 { namespace juice { namespace curl {
         OPTKEY(LOW_SPEED_TIME);
         OPTKEY(MAXREDIRS);
         OPTKEY(NOBODY);
+        OPTKEY(NOSIGNAL);
         OPTKEY(NOPROXY);
         OPTKEY(PORT);
         OPTKEY(POST);
@@ -1321,6 +1327,7 @@ namespace v8 { namespace juice { namespace curl {
         OPTKEY(READFUNCTION);
         OPTKEY(RESUME_FROM);
         //OPTKEY(TELNETOPTIONS);
+        OPTKEY(TCP_NODELAY);
         OPTKEY(TIMEOUT);
         OPTKEY(TIMEOUT_MS);
         OPTKEY(URL);
@@ -1357,7 +1364,7 @@ namespace v8 { namespace juice { namespace curl {
 	SETE(COULDNT_RESOLVE_PROXY);
 	SETE(COULDNT_RESOLVE_HOST);
 	SETE(COULDNT_CONNECT);
-	SETE(FTP_WEIRD_SERVER_REPLY);
+        SETE(FTP_WEIRD_SERVER_REPLY);
 	SETE(REMOTE_ACCESS_DENIED);
 	SETE(OBSOLETE10);
 	SETE(FTP_WEIRD_PASS_REPLY);

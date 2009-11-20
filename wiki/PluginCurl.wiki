@@ -75,6 +75,7 @@ counterparts (which are documented
 || `bool crlf` || `CURLOPT_CRLF` || ||
 || `int bufferSize` || `CURLOPT_BUFFERSIZE` || ||
 || `int connectionTimeout` || `CURLOPT_CONNECTIONTIMEOUT` || ||
+|| `int dnsCacheTimeout` || `CURLOPT_DNS_CACHE_TIMEOUT` || ||
 || `bool failOnError` || `CURLOPT_FAILONERROR` || ||
 || `bool followLocation` || `CURLOPT_FOLLOWLOCATION` || ||
 || `bool header` || `CURLOPT_HEADER` || ||
@@ -86,6 +87,7 @@ counterparts (which are documented
 || `int lowSpeedLimit` || `CURLOPT_LOW_SPEED_LIMIT` || ||
 || `int lowSpeedTime` || `CURLOPT_LOW_SPEED_TIME` || ||
 || `bool noBody` || `CURLOPT_NOBODY` || ||
+|| `bool noSignal` || `CURLOPT_NOSIGNAL` || ||
 || `string noProxy` || `CURLOPT_NOPROXY` || ||
 || `int port` || `CURLOPT_PORT` || default port number to use. ||
 || `StringArray postQuote` || `CURLOPT_POSTQUOTE` || ||
@@ -99,6 +101,7 @@ counterparts (which are documented
 || `int maxRedirs` || `CURLOPT_MAXREDIRS` || ||
 || `bool post` || `CURLOPT_POST` || ||
 || `StringArray quote` || `CURLOPT_QUOTE` || ||
+|| `bool tcpNoDelay` || `CURLOPT_TCP_NODELAY` || ||
 || `int timeout` || `CURLOPT_TIMEOUT` || ||
 || `int timeoutMS` || `CURLOPT_TIMEOUT_MS` || ||
 || `string url` || `CURLOPT_URL` || The URL to read from/write to. ||
