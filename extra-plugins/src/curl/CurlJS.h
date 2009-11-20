@@ -1,5 +1,14 @@
 #if !defined(CODE_GOOGLE_COM_V8_JUICE_CURL_H_INCLUDED)
 #define CODE_GOOGLE_COM_V8_JUICE_CURL_H_INCLUDED 1
+/************************************************************************
+libcurl bindings for the v8 JavaScript engine, based on the v8-juice
+library.
+
+Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
+
+License: Public Domain
+
+************************************************************************/
 
 #include <v8.h>
 #include <v8/juice/ClassWrap.h>
@@ -31,10 +40,6 @@ namespace v8 { namespace juice { namespace curl {
        JS API:
 
        See: http://code.google.com/p/v8-juice/wiki/PluginCurl
-       
-       TODOs:
-
-       - Lots.
     */
     class CurlJS
     {
@@ -89,6 +94,7 @@ namespace v8 { namespace juice { namespace curl {
             return "Curl";
         }
 
+	/** JS-convnetional toString(). */
         v8::Handle<v8::Value> toString() const;
 
         
@@ -99,6 +105,14 @@ namespace v8 { namespace juice { namespace curl {
         */
         v8::Handle<v8::Value> SetOpt( int curlID, v8::Handle<v8::Value> const & val );
 
+	/**
+	   Requires k to be either a CURLOPT_xxx value or one of the
+	   mapped "friendly" property names for the corresponding
+	   CURLOPT_xxx option. The exact type of 'val' must match the
+	   exepectations for the given option key.
+
+	   Returns 0 on success, throws JS exception on error.
+	*/
         v8::Handle<v8::Value> SetOpt( v8::Handle<v8::Value> const & k, v8::Handle<v8::Value> const & val );
         /**
            JS usage:
