@@ -266,7 +266,7 @@ Some of these cannot be fetched because they are markers
 
 The `pause()` function works like
 [http://curl.haxx.se/libcurl/c/curl_easy_pause.html curl_easy_pause()].
-Its only argument is an integer, which corresponse to a bitmask of
+Its only argument is an integer, which corresponds to a bitmask of
 the `CURLPAUSE_XXX` constants. The following values are supported,
 but are called `Curl.PAUSE_XXX` in this API:
 
@@ -363,5 +363,5 @@ c.easyPerform() rc = 0
 
 = TODOs =
 
-  * The API currently doesn't support writing over curl.
   * Add `CURLOPT_READFUNCTION` and friends.
+  * Give some thought to how we might bind the "curl multi" interface, which apparently allows asynchronous communication.
