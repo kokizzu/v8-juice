@@ -108,6 +108,16 @@ counterparts (which are documented
 
 All of the supported `CURLOPT_xxx` constants are available in JS space via `Curl.OPT_xxx`.
 
+== libcurl constants ==
+
+The curl API contains many constant values which used as:
+
+  * Error codes (named `CURLE_xxx`)
+  * Option codes (`CURLOPT_xxx`)
+  * Connection information codes (`CURLINFO_xxx`)
+  * A few other miscellaneous things (e.g. the special-purpose return value `CURL_READFUNC_PAUSE`).
+
+All such constants are available in the JS API by replacing the `CURL` prefix with `Curl.`. e.g. `CURLE_OK` becomes `Curl.E_OK` and `CURLOPT_VERBOSE` becomes `Curl.OPT_VERBOSE`. The majority of the `CURLOPT_xxx`, `CURLINFO_xxx` and `CURLE_xxx` constants are available in JS.
 
 == Callback routines ==
 
