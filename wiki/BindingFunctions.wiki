@@ -243,7 +243,7 @@ static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv );
 
 Not coincidentally, that is the interface used by much of the function binding code, so this allows us to pass the various function binder helpers.
 
-In the case of `InvocationCallbackInvocable<>` the `Arity` value may be less than 0, which tells the overload resolver to use that overload regardless of the number of arguments. Thus this can be used to catch any unresolved calls.
+In the case of `InvocableCallback<>` (a proxy class for a `v8::InvocationCallback`) the `Arity` value may be less than 0, which tells the overload resolver to use that overload regardless of the number of arguments. Thus this can be used to catch any unresolved calls.
 
 Now in JS code:
 
