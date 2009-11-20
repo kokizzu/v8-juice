@@ -13,6 +13,11 @@ describes how to use them.
 
 This API is likely to be continually tweaked, so if you use this API be prepared for changes down the road.
 
+== See also... ==
+
+  * ClassBinder was the first class-binding framework built on this API. Most of the v8-juice plugins use this system.
+  * ClassWrap is the second generation of class-binding systems built upon this API, and is more flexible than ClassBinder. Newer plugins use this system.
+
 ==Getting the source code==
 
 While this code is part of v8-juice, much of it is independent of any
