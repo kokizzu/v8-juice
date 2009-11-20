@@ -21,9 +21,11 @@ typedef struct curl_slist curl_slist;
 namespace v8 { namespace juice { namespace curl {
     namespace cv = v8::juice::convert;
     // For use with CURLOPT_WRITEFUNCTION
-    static size_t WriteCallback(void *ptr, size_t size, size_t nmemb, void *data);
+    static size_t WriteCallback(char *ptr, size_t size, size_t nmemb, void *data);
+    // For use with CURLOPT_READFUNCTION
+    static size_t ReadCallback(char *ptr, size_t size, size_t nmemb, void *data);
     // For use with CURLOPT_HEADERFUNCTION
-    static size_t HeaderCallback(void *ptr, size_t size, size_t nmemb, void *data);
+    static size_t HeaderCallback(char *ptr, size_t size, size_t nmemb, void *data);
 
     typedef std::map<int,curl_slist *> SListMap;
     static curl_slist * ArrayToSList( v8::Handle<v8::Array> ar )
@@ -70,6 +72,8 @@ namespace v8 { namespace juice { namespace curl {
         static char const * optHeaderFunc;
         static char const * optObj;
         static char const * optObjHidden;
+        static char const * optReadData;
+        static char const * optReadFunc;
         static char const * optWriteData;
         static char const * optWriteFunc;
     };
@@ -84,6 +88,8 @@ namespace v8 { namespace juice { namespace curl {
     char const * Strings::optHeaderFunc = "headerFunction";
     char const * Strings::optObj = "opt";
     char const * Strings::optObjHidden = "$opt";
+    char const * Strings::optReadData = "readData";
+    char const * Strings::optReadFunc = "readFunction";
     char const * Strings::optWriteData = "writeData";
     char const * Strings::optWriteFunc = "writeFunction";
 
@@ -105,8 +111,10 @@ namespace v8 { namespace juice { namespace curl {
                 throw std::runtime_error("curl_easy_init() returned NULL!");
             }
             curl_easy_setopt( this->ch, CURLOPT_WRITEFUNCTION, WriteCallback );
-            curl_easy_setopt( this->ch, CURLOPT_HEADERFUNCTION, HeaderCallback );
             curl_easy_setopt( this->ch, CURLOPT_WRITEDATA, this );
+            curl_easy_setopt( this->ch, CURLOPT_READFUNCTION, ReadCallback );
+            curl_easy_setopt( this->ch, CURLOPT_READDATA, this );
+            curl_easy_setopt( this->ch, CURLOPT_HEADERFUNCTION, HeaderCallback );
             curl_easy_setopt( this->ch, CURLOPT_HEADERDATA, this );
             curl_easy_setopt( this->ch, CURLOPT_ENCODING, "" );
             //CERR << "Impl() @"<<(void const *)this<<'\n';
@@ -272,8 +280,12 @@ namespace v8 { namespace juice { namespace curl {
     template <int CurlOptID>
     struct CurlOptJSVal : CurlOpt_Base<CurlOptID>
     {
-        static v8::Handle<v8::Value> Set( v8::Handle<v8::Object> jso, CurlJS * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & jv)
+        static v8::Handle<v8::Value> Set( v8::Handle<v8::Object> jso,
+                                          CurlJS *,
+                                          v8::Handle<v8::Value> const & key,
+                                          v8::Handle<v8::Value> const & jv)
         {
+            //CERR << "Setting "<<cv::JSToStdString(key)<<" JSVAL: "<<cv::JSToStdString(jv)<<'\n';
             jso->Set( key, jv );
             return v8::Integer::New(0);
         }
@@ -408,6 +420,8 @@ namespace v8 { namespace juice { namespace curl {
     COPT_JVAL(HEADERFUNCTION, Strings::optHeaderFunc);
     COPT_JVAL(WRITEDATA, Strings::optWriteData);
     COPT_JVAL(WRITEFUNCTION, Strings::optWriteFunc);
+    COPT_JVAL(READDATA, Strings::optReadData);
+    COPT_JVAL(READFUNCTION, Strings::optReadFunc);
     COPT_LONG(BUFFERSIZE, "bufferSize");
     COPT_LONG(CONNECTTIMEOUT, "connectionTimeout");
     COPT_LONG(CRLF, "crlf");
@@ -487,6 +501,8 @@ namespace v8 { namespace juice { namespace curl {
         O1(USERNAME),
         O1(USERPWD),
         O1(VERBOSE),
+        O2(READDATA, optReadData),
+        O2(READFUNCTION, optReadFunc),
         O2(WRITEDATA, optWriteData),
         O2(WRITEFUNCTION, optWriteFunc),
 #undef O1
@@ -671,11 +687,15 @@ namespace v8 { namespace juice { namespace curl {
 	    }
         }        
     };
-        
+
+    /** Metatemplate for choosing a conversion handler for a CURLINFO_xxx value. */
     template <int Mask,int V>
     struct CInfoChoose
     {
+#if defined(DOXYGEN)
+        /** Specializations must define this to a CInfoGet-compliant type. */
         typedef CInfoGet<V> Type;
+#endif
     };
     template <int V>
     struct CInfoChoose<CURLINFO_STRING,V>
@@ -698,6 +718,10 @@ namespace v8 { namespace juice { namespace curl {
         typedef CInfoGet_SList<V> Type;
     };
 
+    /**
+       Metatemplate to pick a CInfoGet specialization for the
+       CURLOPT_xxx value I.
+    */
     template <int I>
     struct CInfoHandler
     {
@@ -808,16 +832,41 @@ namespace v8 { namespace juice { namespace curl {
         return rv.IsEmpty() ? 0 : cv::CastFromJS<size_t>( rv );
     }
     
-    static size_t WriteCallback(void *ptr, size_t size, size_t nmemb, void *data)
+    static size_t WriteCallback(char *ptr, size_t size, size_t nmemb, void *data)
     {
         return WriterCallback<Strings::optWriteFunc,Strings::optWriteData>( ptr, size, nmemb, data );
     }
-    static size_t HeaderCallback(void *ptr, size_t size, size_t nmemb, void *data)
+    static size_t HeaderCallback(char *ptr, size_t size, size_t nmemb, void *data)
     {
         return WriterCallback<Strings::optHeaderFunc,Strings::optHeaderData>( ptr, size, nmemb, data );
     }
 
-
+    static size_t ReadCallback( char *ptr, size_t size, size_t nmemb, void *data)
+    {
+        //CERR << "WriterCallback<"<<OptKey<<", "<<DataKey<<">() "<<(size*nmemb)<<" bytes.\n";
+        CurlJS::Impl * im;
+        im = reinterpret_cast<CurlJS::Impl *>( data );
+        FuncHnd fh = im->getOptFunc( Strings::optReadFunc );
+        if( fh.IsEmpty() ) return CURL_READFUNC_ABORT; // (size*nmemb);
+        enum { argc = 2 };
+        size_t len = size * nmemb;
+        //char const * cp = (len) ? reinterpret_cast<char const *>( ptr ) : 0;
+        ValHnd argv[argc] = {
+            v8::Integer::NewFromUnsigned( len ),
+            im->opt( Strings::optReadData )
+        };
+        v8::Local<v8::Value> rv = fh->Call( im->jself, argc, argv );
+        if( rv.IsEmpty() )
+        {
+            return CURL_READFUNC_ABORT;
+        }
+        v8::Local<v8::String> sv( rv->ToString() );
+        v8::String::AsciiValue const asc( sv );
+        size_t rc = static_cast<size_t>( asc.length() );
+        if( rc < len ) len = rc;
+        memcpy( ptr, *asc, len );
+        return len;
+    }
 
     
 }}} // v8::juice::curl
@@ -921,6 +970,13 @@ namespace v8 { namespace juice { namespace curl {
             cv::StringBuffer msg;
             msg << "The value "<<flag<<" does not correspond to "
                 << "a supported CURLINFO_XXX constant.";
+            return TOSSV(msg);
+        }
+        if( ! it->second->Getter )
+        {
+            cv::StringBuffer msg;
+            msg << "The value "<<flag<<" does not correspond to "
+                << "a "<<Strings::fnGetInfo<<"()'able CURLINFO_XXX constant.";
             return TOSSV(msg);
         }
         return it->second->Getter( this->impl->ch );
@@ -1261,6 +1317,8 @@ namespace v8 { namespace juice { namespace curl {
         OPTKEY(PROXY);
         OPTKEY(QUOTE);
         OPTKEY(RANGE);
+        OPTKEY(READDATA);
+        OPTKEY(READFUNCTION);
         OPTKEY(RESUME_FROM);
         //OPTKEY(TELNETOPTIONS);
         OPTKEY(TIMEOUT);

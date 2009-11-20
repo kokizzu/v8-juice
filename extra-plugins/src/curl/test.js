@@ -173,10 +173,57 @@ function testCurlInfo()
     c.destroy();
     print(banner.end);
 }
+function listProperties()
+{
+    print(banner.start);
+    print( arguments.callee.name+"()" );
+    for( var k in Curl )
+    {
+        print("Curl."+k,"= ["+Curl[k]+"]");
+    }
+    print(banner.end);
+}
 
+function testReader()
+{
+    print(banner.start);
+    print( arguments.callee.name+"()" );
+    var c = new Curl();
+    var content = "";
+    for( var i = 0; i < 20000; ++i )
+    {
+        content += '*';
+    }
+    c.setOpt({
+            url:'http://wh',
+            verbose:true,
+            post:true,
+            httpHeader:['Content-Length: '+content.length],
+            readFunction:function(len,ud)
+            {
+                if( ud.pos >= ud.max ) return "";
+                var clen = ud.length - ud.pos;
+                var xlen = (len > clen) ? clen : len;
+                var s = ud.content.substr( ud.pos, xlen );
+                print("readFunction(",len,") sending",s.length,'bytes.');
+                ud.pos += xlen;
+                return s;
+            },
+            readData:{
+                pos:0,
+                content:content
+            }
+        });
+    var rc = c.easyPerform();
+    c.destroy();
+    print(banner.end);
+
+}
+
+//listProperties();
 //testOne();
 //testTwo();
 //testThree();
-testFour();
+//testFour();
 //  testCurlInfo();
-
+testReader();
