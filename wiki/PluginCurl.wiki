@@ -125,128 +125,6 @@ The curl API contains many constant values which used as:
 
 All such constants which are supported by the JS API are available by replacing the `CURL` prefix with `Curl.`. e.g. `CURLE_OK` becomes `Curl.E_OK` and `CURLOPT_VERBOSE` becomes `Curl.OPT_VERBOSE`. The majority (about 200!) of the `CURLOPT_xxx`, `CURLINFO_xxx` and `CURLE_xxx` constants are available in JS.
 
-== Callback routines ==
-
-=== Reading `GET` Data from Curl ===
-
-The `headerFunction()` and `writeFunction()` properties are functions
-which are called when a response header or body chunk have been
-read. They take three arguments:
-
-  * The data read in, as a string object.
-  * The real length of the read-in data.
-  * The `Curl` object's `opt.writeData` value (because this is how the native API does it).
-
-They must return the number of bytes they consume, meaning they must
-return the value of the second parameter on success. Any other value
-will cause the process (initialized by `easyPerform()`) to stop and
-will cause `easyPerform()` to return an error code.
-
-*Note that it is not safe to pass binary data into v8*. If the
-function is passed binary data then the `.length` property of the
-read-in data (the first argument to the callback) will _probably_
-differ from the second paremeter's value. In such a case, there are no
-guarantees that the data is valid - it might have been corrupted via
-v8's string conversion routines (or it _might_ actually be a legal v8
-string).
-
-When the `headerFunction()` is called, it is passed a single header line (a complete header entry), but that line has a trailing `\r\n` on it, which should be stripped by the caller. It is not stripped by the wrapper because doing so would cause confusion with the `length` parameter (and we do not adjust to account for the two extra stripped characters that because it would falsify any byte count calculations done by the client).
-
-=== Writing `POST` Data via Curl ===
-
-When curl is told to send data to a server, e.g. by using `setOpt(Curl.OPT_POST,true)`, curl uses a callback
-function to fetch the data from the user. The JS callback has, due to differences in C++ and JS calling conventions,
-a different signature than the native callback function:
-
-{{{
-function readerCallback( int bytes, any userData );
-}}}
-
-The first argument is the number of bytes which curl would like to have. The second is the value of
-the `Curl.OPT_READDATA` option (e.g. set via `setOpt(Curl.OPT_READDATA,...)`). The function must
-return one of:
-
-  * An empty string to signal the end of the input.
-  * Throw an exception to abort the sending process prematurely.
-  * On success, a string value with the same length as the first argument passed to the callback (count in _bytes_, not _characters_).
-
-It is important to stop producing data once curl has requested
-`Content-Length` (e.g., set via `setOpt(Curl.OPT_HTTPHEADER,...)`)
-bytes.  This is because curl will read until the callback either
-throws or returns a value smaller than the first parameter passed to
-the callback.
-
-_Encoding of the data is left to the user._ i have absolutely no experience with posting data this way, and
-can say nothing more on the topic!
-
-Here's a trivial, largely nonsensical example:
-
-{{{
-var c = new Curl();
-var content = "";
-for( var i = 0; i < 20000; ++i )
-{
-    content += '*';
-}
-c.setOpt({
-        url:'http://wh',
-        verbose:true,
-        post:true,
-        httpHeader:['Content-Length: '+content.length],
-        readFunction:function(len,ud)
-        {
-            if( ud.pos >= ud.max ) return "";
-            var clen = ud.length - ud.pos;
-            var xlen = (len > clen) ? clen : len;
-            var s = ud.content.substr( ud.pos, xlen );
-            print("readFunction(",len,") sending",s.length,'bytes.');
-            ud.pos += xlen;
-            return s;
-        },
-        readData:{
-            pos:0,
-            content:content
-        }
-    });
-var rc = c.easyPerform();
-c.destroy();
-}}}
-
-That produces output similar to:
-
-{{{
-* About to connect() to localhost port 80 (#0)
-*   Trying 127.0.0.1... * connected
-* Connected to localhost (127.0.0.1) port 80 (#0)
-> POST / HTTP/1.1
-Host: localhost
-Accept: */*
-Accept-Encoding: deflate, gzip
-Content-Length: 20000
-Content-Type: application/x-www-form-urlencoded
-
-readFunction( 16384 ) sending 16384 bytes.
-readFunction( 16384 ) sending 3616 bytes.
-readFunction( 16384 ) sending 0 bytes.
-< HTTP/1.1 200 OK
-< Date: Fri, 20 Nov 2009 20:15:07 GMT
-< Server: Apache/2.2.12 (Ubuntu)
-< X-Powered-By: PHP/5.2.10-2ubuntu6.1
-< Set-Cookie: PHPSESSID=1ce8cb3dacb9d6619991832e9f3c2179; path=/
-< Expires: Thu, 19 Nov 1981 08:52:00 GMT
-< Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
-< Pragma: no-cache
-< Vary: Accept-Encoding
-< Content-Encoding: gzip
-< Content-Length: 1912
-< Content-Type: text/html
-< 
-* Connection #0 to host localhost left intact
-* Closing connection #0
-}}}
-
-(The lines starting with `*` or `<` appear because the `verbose` option is set to true.)
-
 == Setting Curl Options ==
 
 The various option properties can be set like:
@@ -388,6 +266,128 @@ These functions return an integer value, with 0 being success. They
 do not throw JS exceptions like some of the other functions.
 
 
+== Callback routines ==
+
+=== Reading `GET` Data from Curl ===
+
+The `headerFunction()` and `writeFunction()` properties are functions
+which are called when a response header or body chunk have been
+read. They take three arguments:
+
+  * The data read in, as a string object.
+  * The real length of the read-in data.
+  * The `Curl` object's `opt.writeData` value (because this is how the native API does it).
+
+They must return the number of bytes they consume, meaning they must
+return the value of the second parameter on success. Any other value
+will cause the process (initialized by `easyPerform()`) to stop and
+will cause `easyPerform()` to return an error code.
+
+*Note that it is not safe to pass binary data into v8*. If the
+function is passed binary data then the `.length` property of the
+read-in data (the first argument to the callback) will _probably_
+differ from the second paremeter's value. In such a case, there are no
+guarantees that the data is valid - it might have been corrupted via
+v8's string conversion routines (or it _might_ actually be a legal v8
+string).
+
+When the `headerFunction()` is called, it is passed a single header line (a complete header entry), but that line has a trailing `\r\n` on it, which should be stripped by the caller. It is not stripped by the wrapper because doing so would cause confusion with the `length` parameter (and we do not adjust to account for the two extra stripped characters that because it would falsify any byte count calculations done by the client).
+
+=== Writing `POST` Data via Curl ===
+
+When curl is told to send data to a server, e.g. by using `setOpt(Curl.OPT_POST,true)`, curl uses a callback
+function to fetch the data from the user. The JS callback has, due to differences in C++ and JS calling conventions,
+a different signature than the native callback function:
+
+{{{
+function readerCallback( int bytes, any userData );
+}}}
+
+The first argument is the number of bytes which curl would like to have. The second is the value of
+the `Curl.OPT_READDATA` option (e.g. set via `setOpt(Curl.OPT_READDATA,...)`). The function must
+return one of:
+
+  * An empty string to signal the end of the input.
+  * Throw an exception to abort the sending process prematurely.
+  * On success, a string value with the same length as the first argument passed to the callback (count in _bytes_, not _characters_).
+
+It is important to stop producing data once curl has requested
+`Content-Length` (e.g., set via `setOpt(Curl.OPT_HTTPHEADER,...)`)
+bytes.  This is because curl will read until the callback either
+throws or returns a value smaller than the first parameter passed to
+the callback.
+
+_Encoding of the data is left to the user._ i have absolutely no experience with posting data this way, and
+can say nothing more on the topic!
+
+Here's a trivial, largely nonsensical example:
+
+{{{
+var c = new Curl();
+var content = "";
+for( var i = 0; i < 20000; ++i )
+{
+    content += '*';
+}
+c.setOpt({
+        url:'http://wh',
+        verbose:true,
+        post:true,
+        httpHeader:['Content-Length: '+content.length],
+        readFunction:function(len,ud)
+        {
+            if( ud.pos >= ud.max ) return "";
+            var clen = ud.length - ud.pos;
+            var xlen = (len > clen) ? clen : len;
+            var s = ud.content.substr( ud.pos, xlen );
+            print("readFunction(",len,") sending",s.length,'bytes.');
+            ud.pos += xlen;
+            return s;
+        },
+        readData:{
+            pos:0,
+            content:content
+        }
+    });
+var rc = c.easyPerform();
+c.destroy();
+}}}
+
+That produces output similar to:
+
+{{{
+* About to connect() to localhost port 80 (#0)
+*   Trying 127.0.0.1... * connected
+* Connected to localhost (127.0.0.1) port 80 (#0)
+> POST / HTTP/1.1
+Host: localhost
+Accept: */*
+Accept-Encoding: deflate, gzip
+Content-Length: 20000
+Content-Type: application/x-www-form-urlencoded
+
+readFunction( 16384 ) sending 16384 bytes.
+readFunction( 16384 ) sending 3616 bytes.
+readFunction( 16384 ) sending 0 bytes.
+< HTTP/1.1 200 OK
+< Date: Fri, 20 Nov 2009 20:15:07 GMT
+< Server: Apache/2.2.12 (Ubuntu)
+< X-Powered-By: PHP/5.2.10-2ubuntu6.1
+< Set-Cookie: PHPSESSID=1ce8cb3dacb9d6619991832e9f3c2179; path=/
+< Expires: Thu, 19 Nov 1981 08:52:00 GMT
+< Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+< Pragma: no-cache
+< Vary: Accept-Encoding
+< Content-Encoding: gzip
+< Content-Length: 1912
+< Content-Type: text/html
+< 
+* Connection #0 to host localhost left intact
+* Closing connection #0
+}}}
+
+(The lines starting with `*` or `<` appear because the `verbose` option is set to true.)
+
 = Example =
 
 {{{
@@ -466,5 +466,4 @@ c.easyPerform() rc = 0
 
 = TODOs =
 
-  * Add `CURLOPT_READFUNCTION` and friends.
   * Give some thought to how we might bind the curl "multi" interface, which apparently allows asynchronous communication.
