@@ -106,63 +106,6 @@ void setNative(T *); // IFF CastFromJS<T>() works!
 
 (As you may have guessed, the numeric template argument is the number of arguments in the bound function's signature.)
 
-== The (`char const *`) Problem ==
-
-The `JSToNative` API cannot convert JS handles to (`char const *`) because the lifetime of the converted value
-expires when the `JSToNative` conversion returns, meaning the caller gets a pointer which refers to undefined
-memory.
-
-However, as of 20091121 (commit r1092) the function binding framework
-supports C-style string arguments with the following limitations:
-
-  * The C-strings must be `NULL` or null-terminated. It cannot be used with binary data.
-  * The bound function *_must not_* hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself.
-  * The internal conversion process uses `v8::String::Utf8Value`, and "should" be safe for use with functions accepting ASCII or UTF8 input. Behaviour with any other encodings is undefined.
-  * If passed a JS `null` or `undefined`, it converts to a literal `NULL`, otherwise it _will_ convert to a string (though possibly empty). This is significant for functions which treat `NULL` different than an empty string (like `strlen()`, which does _not_ like `NULL`).
-
-This support allows us to convert functions to `v8::InvocableCallback` functions like:
-
-{{{
-
-char const * cstring_test( char const * c )
-{
-    std::cerr << "cstring_test( @"<<(void const *)c<<") ["<<(c ? c : "<NULL>")<<"]\n";
-    return c;
-}
-
-v8::InvocableCallback cb =
-   convert::FunctionForwarder<1>::Invocable<char const *,char const *,cstring_test>;
-}}}
-
-If we bind that to JS with the name `cstr`:
-
-{{{
-var jstr = "Hi, world!";
-jstr = cstr(jstr); print(jstr);
-jstr = cstr(undefined); print(jstr);
-jstr = cstr(null); print(jstr);
-jstr = cstr("Bye, world!"); print(jstr);
-}}}
-
-The output looks something like:
-
-{{{
-cstring_test( @0x984acbc) [Hi, world!]
-Hi, world!
-cstring_test( @0) [<NULL>]
-null
-cstring_test( @0) [<NULL>]
-null
-cstring_test( @0x984acbc) [Bye, world!]
-Bye, world!
-}}}
-
-
-When implementing custom function forwarders and you need to pass a C-style string, you have at least these options:
-
-  * Use a proxy class for the conversion. Conventionally we use `std::string` for this, and use `str.c_str()` to fetch the C-style string.
-  * Use `convert::ArgCaster`, _paying very careful attention_ to the `ArgCaster` API documentation, to do the conversion.
-  * "Manually" do the conversion with a `v8::String::AsciiValue` or `v8::String::Utf8Value`.
 
 = Member Functions =
 
@@ -225,6 +168,65 @@ TODO: Some points to discuss:
   * How virtual method lookup across JS/Native inheritance does not come for free, and requires fairly detailed support from a higher-level framework. This is implemented in [ClassBinder], for example.
   * How JS-triggered destruction of bound objects needs to be sure and pick up the proper native destructor function in the face of inheritance.
   * How to bind to _inherited_ native functions. e.g. Class B inherits from native A, and we want to bind an inherited `A::*func` to a `B` object. (How DO we do this? i think adding `using func` to the inherited interface might be enough, but that needs to be tested.)
+
+= The (`char const *`) Problem =
+
+The `JSToNative` API cannot convert JS handles to (`char const *`) because the lifetime of the converted value
+expires when the `JSToNative` conversion returns, meaning the caller gets a pointer which refers to undefined
+memory.
+
+However, as of 20091121 (commit r1092) the function binding framework
+supports C-style string arguments with the following limitations:
+
+  * The C-strings must be `NULL` or null-terminated. It cannot be used with binary data.
+  * The bound function *_must not_* hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself.
+  * The internal conversion process uses `v8::String::Utf8Value`, and "should" be safe for use with functions accepting ASCII or UTF8 input. Behaviour with any other encodings is undefined.
+  * If passed a JS `null` or `undefined`, it converts to a literal `NULL`, otherwise it _will_ convert to a string (though possibly empty). This is significant for functions which treat `NULL` different than an empty string (like `strlen()`, which does _not_ like `NULL`).
+
+This support allows us to convert functions to `v8::InvocableCallback` functions like:
+
+{{{
+
+char const * cstring_test( char const * c )
+{
+    std::cerr << "cstring_test( @"<<(void const *)c<<") ["<<(c ? c : "<NULL>")<<"]\n";
+    return c;
+}
+
+v8::InvocableCallback cb =
+   convert::FunctionForwarder<1>::Invocable<char const *,char const *,cstring_test>;
+}}}
+
+If we bind that to JS with the name `cstr`:
+
+{{{
+var jstr = "Hi, world!";
+jstr = cstr(jstr); print(jstr);
+jstr = cstr(undefined); print(jstr);
+jstr = cstr(null); print(jstr);
+jstr = cstr("Bye, world!"); print(jstr);
+}}}
+
+The output looks something like:
+
+{{{
+cstring_test( @0x984acbc) [Hi, world!]
+Hi, world!
+cstring_test( @0) [<NULL>]
+null
+cstring_test( @0) [<NULL>]
+null
+cstring_test( @0x984acbc) [Bye, world!]
+Bye, world!
+}}}
+
+
+When implementing custom function forwarders and you need to pass a C-style string, you have at least these options:
+
+  * Use a proxy class for the conversion. Conventionally we use `std::string` for this, and use `str.c_str()` to fetch the C-style string.
+  * Use `convert::ArgCaster`, _paying very careful attention_ to the `ArgCaster` API documentation, to do the conversion.
+  * "Manually" do the conversion with a `v8::String::AsciiValue` or `v8::String::Utf8Value`.
+
 
 = Binding to Static or Member Variables =
 
