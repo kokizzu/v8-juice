@@ -19,6 +19,8 @@ tmplsigV="typename WrappedType, void, "
 aTDecl="" # typename A0, typename A1,...
 aTParam="" # A0, A1 ...
 castCalls="" # CastFromJS<A0>(argv[0), ...
+castTypedefs="" # typedef ArgCaster<A#> AC#, ...
+castInits="" # AC# ac#; ...
 at=0
 
 ########################################################
@@ -33,7 +35,10 @@ function makeLists()
 	tmplsigV="${tmplsigV} ${AT},"
 	aTDecl="${aTDecl} typename ${AT}"
 	aTParam="${aTParam} ${AT}"
-	castCalls="${castCalls} CastFromJS< ${AT} >(argv[${at}])"
+	#castCalls="${castCalls} CastFromJS< ${AT} >(argv[${at}])"
+        castTypedefs="${castTypedefs} typedef ArgCaster<${AT}> AC${at};"
+        castInits="${castInits} AC${at} ac${at};"
+        castCalls="${castCalls} ac${at}.ToNative(argv[${at}])"
 	test $at -ne $((count-1)) && {
 	    aTDecl="${aTDecl}, "
 	    aTParam="${aTParam},"
@@ -45,9 +50,8 @@ function makeLists()
     tmplsig="typename WrappedType, typename RV, ${aTDecl}, RV ${funcSig}";
     tmplsigV="typename WrappedType, ${aTDecl}, void ${funcSig}";
     tmplspecV="WrappedType, void, ${aTParam}, void ${funcSig}"
+    castOps="${castTypedefs} ${castInits}"
 }
-
-
 #######################################################
 # Creates MemFuncForwarder implementations.
 function makeMemFuncForwarder()
@@ -59,15 +63,17 @@ cat <<EOF
 /**
 A helper class for forwarding JS arguments to member functions
 taking ${count} arguments.
+
+@implements InvocableInterface
 */
 template <>
 struct MemFuncForwarder<${count}>
 {
-    enum { Arity = ${count} };
-
+    static const int Arity = ${count};
     template <typename T, typename RV, ${aTDecl}>
     static Handle<Value> Call( T * obj, RV (T::*MemFunc)(${aTParam}), Arguments const & argv )
     {
+        ${castOps}
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
         try
@@ -96,6 +102,7 @@ struct MemFuncForwarder<${count}>
     template <typename T, typename RV, ${aTDecl}>
     static Handle<Value> Call( T const * obj, RV (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
     {
+        ${castOps}
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
         try
@@ -124,6 +131,7 @@ struct MemFuncForwarder<${count}>
     template <typename T, typename VoidType, ${aTDecl}>
     static Handle<Value> CallVoid( T * obj, VoidType (T::*MemFunc)(${aTParam}), Arguments const & argv )
     {
+        ${castOps}
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
         try
@@ -165,6 +173,7 @@ struct MemFuncForwarder<${count}>
     template <typename T, typename VoidType, ${aTDecl} >
     static Handle<Value> CallVoid( T const * obj, VoidType (T::*MemFunc)(${aTParam}) const, Arguments const & argv )
     {
+        ${castOps}
 	if( ! obj ) return v8::ThrowException(v8::String::New("${err_native_is_null}"));
 	else if( argv.Length() < Arity ) return v8::ThrowException(v8::String::New("${err_too_few_args}"));
         try
@@ -260,6 +269,8 @@ cat <<EOF
 /**
 A helper class for forwarding JS arguments to member functions
 taking ${count} arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,${count}>
@@ -267,7 +278,7 @@ struct TMemFuncForwarder<T,${count}>
 private:
     typedef MemFuncForwarder<${count}> Proxy;
 public:
-    enum { Arity = ${count} };
+    static const int Arity = ${count};
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV, ${aTDecl}>
@@ -376,14 +387,18 @@ EOF
 function makeFunctorForwarder()
 {
     cat <<EOF
-/** Specialization for functor taking ${count} arguments. */
+/** Specialization for functor taking ${count} arguments.
+
+@implements InvocableInterface
+*/
 template <typename RV>
 struct FunctorForwarder<${count},RV>
 {
-    enum { Arity = ${count} };
+    static const int Arity = ${count};
     template < ${aTDecl}, typename Func >
     static Handle<Value> Call( Func f, ::v8::Arguments const & argv )
     {
+        ${castOps}
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<${count},RV>::Call() expects at least ${count} JS arguments!"));
         try
         {
@@ -404,10 +419,11 @@ struct FunctorForwarder<${count},RV>
 template <>
 struct FunctorForwarder<${count},void>
 {
-    enum { Arity = ${count} };
+    static const int Arity = ${count};
     template < ${aTDecl}, typename Func >
     static Handle<Value> Call( Func f, ::v8::Arguments const & argv )
     {
+        ${castOps}
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("FunctorForwarder<${count},void>::Call() expects at least ${count} JS arguments!"));
         try
         {
@@ -454,14 +470,19 @@ function makeFunctionForwarder()
     local err_exception="FunctionForwarder<${count}>::Call() Native function threw an unknown native exception type!"
 
     cat <<EOF
-/** Specialization for functor taking ${count} arguments. */
+/**
+Specialization for functor taking ${count} arguments.
+
+@implements InvocableInterface
+*/
 template <>
 struct FunctionForwarder<${count}>
 {
-    enum { Arity = ${count} };
+    static const int Arity = ${count};
     template < typename RV, ${aTDecl} >
     static v8::Handle<v8::Value> Call( RV (*Func)(${aTParam}), ::v8::Arguments const & argv )
     {
+        ${castOps}
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("${err_too_few_args}"));
         try
         {
@@ -480,6 +501,7 @@ struct FunctionForwarder<${count}>
     template < typename VoidType, ${aTDecl} >
     static v8::Handle<v8::Value> CallVoid( VoidType (*Func)(${aTParam}), ::v8::Arguments const & argv )
     {
+        ${castOps}
 	if( argv.Length() < Arity ) return ::v8::ThrowException(::v8::String::New("${err_too_few_args}"));
         try
         {
@@ -515,10 +537,16 @@ struct FunctionForwarder<${count}>
 
 };
 
+/**
+Specialization for function taking ${count} arguments.
+
+@implements InvocableInterface
+*/
 template <typename RV, ${aTDecl}, RV (*Func)(${aTParam})>
 struct InvocableFunction${count}
 {
     static const int Arity = ${count};
+
     static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
     {
         return FunctionForwarder<Arity>::Call<RV>( Func, argv );
@@ -553,6 +581,7 @@ struct CtorForwarder<T,${count}>
     template < ${aTDecl} >
     static NativeHandle Ctor( ::v8::Arguments const & argv )
     {
+        ${castOps}
 	if( argv.Length() < Arity )
         {
             throw std::range_error("${err_too_few_args}");
@@ -569,7 +598,7 @@ templatized on the ctor paramter types. */
 template <typename T, ${aTDecl} >
 struct CtorForwarder${count}
 {
-    enum { Arity = ${count} };
+    static const int Arity = ${count};
     typedef typename TypeInfo<T>::Type Type;
     typedef typename TypeInfo<T>::NativeHandle NativeHandle;
     static NativeHandle Ctor( ::v8::Arguments const & argv )

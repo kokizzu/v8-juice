@@ -646,7 +646,9 @@ void PosixFILE::SetupBindings( v8::Handle<v8::Object> dest )
     cb = ICC::F2::Invocable<int,v8::Handle<v8::Value> const &,int64_t,::PosixFILE_ftruncate>;
     F("ftruncate");
 
-    cb = ICC::F1::Invocable<int,std::string const &,::PosixFILE_unlink>;
+    cb =
+        //ICC::F1::Invocable<int,std::string const &,::PosixFILE_unlink>;
+        ICC::F1::Invocable<int,char const *,::unlink>;
     F("unlink");
 
     
