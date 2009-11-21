@@ -242,13 +242,6 @@ namespace v8 { namespace juice { namespace curl {
     */
     typedef v8::Handle<v8::Value> (*CurlOptSetter)( v8::Handle<v8::Object> jso, CurlJS * cu, v8::Handle<v8::Value> const & key, v8::Handle<v8::Value> const & val);
 
-
-    /** Convenience base for CurlOpt specializations. */
-    template <int _CurlOptID>
-    struct CurlOpt_Base
-    {
-        static const int CurlOptID = _CurlOptID;
-    };
     /**
        Interface for setting Curl options from JS. MUST
        be specialized on CurlOptID and the specializations
@@ -262,7 +255,7 @@ namespace v8 { namespace juice { namespace curl {
         /**
            Must be-a CURLOPT_xxx value.
         */
-        static const int CurlOptID = CurlOptID_;
+        static const int ID = CurlOptID_;
         /**
            Must return the JS property name.
          */
@@ -274,8 +267,16 @@ namespace v8 { namespace juice { namespace curl {
 #endif
     };
 
+
+    /** Convenience base for CurlOpt specializations. */
+    template <int _CurlOptID>
+    struct CurlOpt_Base
+    {
+        static const int ID = _CurlOptID;
+    };
     /**
-       Stores an arbitrary JS object as a curl option.
+       Stores an arbitrary JS object as a curl option. libcurl never
+       actually gets the option.
     */
     template <int CurlOptID>
     struct CurlOptJSVal : CurlOpt_Base<CurlOptID>
@@ -359,6 +360,9 @@ namespace v8 { namespace juice { namespace curl {
         }
     };
 
+    /**
+       Sets a curl_slist option.
+    */
     template <int CurlOptID>
     struct CurlOptSList : CurlOpt_Base<CurlOptID>
     {
@@ -369,11 +373,11 @@ namespace v8 { namespace juice { namespace curl {
                 cv::StringBuffer msg;
                 msg << "Curl option #"<<CurlOptID
                     <<" ("<<optToName(CurlOptID)<<") "
-                    <<"requires a Array of Strings as arguments!";
+                    <<"requires a Array of Strings as its argument!";
 #if 0
                 /**
                    TOSS'ing from here causes v8 to crash at some point
-                   when we call this from CurlJS::setOption(Object).
+                   when we call this from CurlJS::SetOpt(Object).
                    But throwing works from other handlers!
 
                    In some cases it crashes silently - ending my app
@@ -1026,10 +1030,9 @@ namespace v8 { namespace juice { namespace curl {
 #if 0
         return setrc;
 #else
-        // This can, in some combinations of code, cause v8 to crash silently if Setter tosses!
         if( setrc.IsEmpty() )
         {
-            return setrc; // pass on exception
+            return setrc;
         }
         else if( 0 == setrc->Int32Value() )
         {
@@ -1084,8 +1087,8 @@ namespace v8 { namespace juice { namespace curl {
         v8::Handle<v8::Value> setrc;
         for( int i = 0; (i < arlen); ++i )
         {
-            // FUCK: if a Setter throws propogates a JS exception, v8 crashes!
-            // But when it throws via setOption() it works fine!!!
+            // FUCK: if a Setter throws or propogates a JS exception, v8 crashes!
+            // But when it throws from SetOpt() it works fine!!!
             v8::Local<v8::Value> pkey = ar->Get( v8::Integer::New(i) );
 #if 1
             //this->impl->jself->Set( pkey, src->Get( pkey ) );
@@ -1156,39 +1159,6 @@ namespace v8 { namespace juice { namespace curl {
     }
 
     /**
-       v8::AccessorGetter impl.
-       
-       OptKey must be one of the Strings strings and must refer to one
-       of the CURLOPT_xxx options.
-    */
-//     static v8::Handle<v8::Value> OptGet( Local< String > jkey, const AccessorInfo & info )
-//     {
-//         CurlJS * c = cv::CastFromJS<CurlJS>( info.This() );
-//         //CERR << "OptGet("<<cv::JSToStdString(jkey)<<")@"<<(void const *)c<<"\n";
-//         if( ! c )
-//         {
-//             cv::StringBuffer msg;
-//             msg << CurlJS::ClassName() << '.'<<cv::JSToStdString(jkey)
-//                 << " getter could not find native 'this' object!";
-//             return TOSSV(msg);
-//         }
-//         return c->impl->opt()->Get( jkey );
-//     }
-
-//     static v8::Handle<v8::Value> OptGetter( Local< String > jkey, const AccessorInfo & info )
-//     {
-//         CurlJS * c = cv::CastFromJS<CurlJS>( info.This() );
-//         CERR << "OptGetter("<<cv::JSToStdString(jkey)<<")@"<<(void const *)c<<"\n";
-//         if( ! c )
-//         {
-//             cv::StringBuffer msg;
-//             msg << CurlJS::ClassName() << '.'<<cv::JSToStdString(jkey)
-//                 << " getter could not find native 'this' object!";
-//             return TOSSV(msg);
-//         }
-//         return c->impl->opt();
-//     }
-    /**
        v8::AccessorSetter impl.
        
        CurlOptID must be one of the supported CURLOPT_xxx values and
@@ -1240,16 +1210,6 @@ namespace v8 { namespace juice { namespace curl {
     
     v8::Handle<v8::Value> CurlJS::SetupBindings( v8::Handle<v8::Object> target )
     {
-        {
-            /**
-               Initialize these now, when we are almost certain to be running
-               under a mutex (via v8::juice::plugin::LoadPlugin()) or otherwise
-               not in multiple threads.
-            */
-            keyToOpt();
-            optToProp();
-        }
-
         typedef CurlJS N;
         typedef cw::ClassWrap<N> CW;
         CW & cw( CW::Instance() );
@@ -1258,13 +1218,24 @@ namespace v8 { namespace juice { namespace curl {
             cw.AddClassTo(target);
             return target;
         }
+        {
+            /**
+               Initialize these maps now, when we are almost certain
+               to be running under a mutex (via
+               v8::juice::plugin::LoadPlugin()) or otherwise not in
+               multiple threads.
+            */
+            keyToOpt();
+            optToProp();
+        }
+
         typedef convert::InvocationCallbackCreator ICC;
         typedef convert::MemFuncInvocationCallbackCreator<N> ICM;
 
-
         static const CurlGlobalInitializer curlResources;
         /** ^^^ We have no real way of knowing if this was already done, or if we should
-            clean up!
+            clean up! We WILL cause grief here if the main application is also using
+            the curl API.
         */
         typedef tmp::TypeList<
             convert::InvocableMemFunc1<N,ValHnd,ValHnd const &,&N::SetOpts>,
