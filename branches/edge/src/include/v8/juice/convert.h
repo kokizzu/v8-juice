@@ -1136,5 +1136,71 @@ namespace convert {
         return os;
     }
 
+    /**
+       EXPERIMENTAL!
+
+       ArgCaster is a thin wrapper around CastFromJS(), and primarily
+       exists to give us a way to convert JS values to (char const *)
+       for purposes of passing them to native functions. The main
+       difference between this type and JSToNative<T> is that this
+       interface explicitly allows for the conversion to be stored by
+       an instance of this type. That allows us to get more lifetime
+       out of converted values in certain cases (namely (char const*)).
+
+       Added 20091121.
+    */
+    template <typename T>
+    struct ArgCaster
+    {
+        typedef typename TypeInfo<T>::Type Type;
+        typedef typename TypeInfo<T>::NativeHandle NativeHandle;
+        typedef typename JSToNative<T>::ResultType ResultType;
+        /**
+           Default impl simply returns CastFromJS<T>(v).
+           Specializations are allowed to store the result of the
+           conversion, as long as they release it when the destruct.
+           See ArgCaster<char const *> for an example of that.
+        */
+        ResultType ToNative( v8::Handle<v8::Value> const & v )
+        {
+            return CastFromJS<T>( v );
+        }
+    };
+    /**
+       Specialization for (char const *). The value returned from
+       ToNative() is guaranteed to be valid as long as the ArgCaster
+       object is alive. Holding a pointer to the ToNative() return
+       value after the ArgCaster is destroyed will lead to undefined
+       behaviour.
+
+       BEWARE OF THESE LIMITATIONS:
+
+       1) This will only work properly for null-terminated strings, and
+       not binary data!
+
+       2) Do not use this to pass (char const *) as a function
+       parameter if that function will hold a copy of the pointer
+       after it returns (as opposed to copying/consuming the
+       pointed-to-data before it returns).
+
+       Violating either of those leads to undefined behaviour, and
+       very possibly memory corruption for case 2.
+    */
+    template <>
+    struct ArgCaster<char const *>
+    {
+    private:
+        std::string val;
+    public:
+        typedef char Type;
+        typedef Type const * ResultType;
+        ResultType ToNative( v8::Handle<v8::Value> const & v )
+        {
+            typedef JSToNative<std::string> C;
+            this->val = C()( v );
+            return this->val.c_str();
+        }
+    };
+    
 }}} /* namespaces */
 #endif /* CODE_GOOGLE_COM_P_V8_V8_CONVERT_H_INCLUDED */

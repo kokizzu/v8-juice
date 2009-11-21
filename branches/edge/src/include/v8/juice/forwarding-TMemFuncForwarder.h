@@ -3,6 +3,8 @@
 /**
 A helper class for forwarding JS arguments to member functions
 taking 1 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,1>
@@ -10,7 +12,7 @@ struct TMemFuncForwarder<T,1>
 private:
     typedef MemFuncForwarder<1> Proxy;
 public:
-    enum { Arity = 1 };
+    static const int Arity = 1;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0>
@@ -112,6 +114,8 @@ public:
 /**
 A helper class for forwarding JS arguments to member functions
 taking 2 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,2>
@@ -119,7 +123,7 @@ struct TMemFuncForwarder<T,2>
 private:
     typedef MemFuncForwarder<2> Proxy;
 public:
-    enum { Arity = 2 };
+    static const int Arity = 2;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0,  typename A1>
@@ -221,6 +225,8 @@ public:
 /**
 A helper class for forwarding JS arguments to member functions
 taking 3 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,3>
@@ -228,7 +234,7 @@ struct TMemFuncForwarder<T,3>
 private:
     typedef MemFuncForwarder<3> Proxy;
 public:
-    enum { Arity = 3 };
+    static const int Arity = 3;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0,  typename A1,  typename A2>
@@ -330,6 +336,8 @@ public:
 /**
 A helper class for forwarding JS arguments to member functions
 taking 4 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,4>
@@ -337,7 +345,7 @@ struct TMemFuncForwarder<T,4>
 private:
     typedef MemFuncForwarder<4> Proxy;
 public:
-    enum { Arity = 4 };
+    static const int Arity = 4;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3>
@@ -439,6 +447,8 @@ public:
 /**
 A helper class for forwarding JS arguments to member functions
 taking 5 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,5>
@@ -446,7 +456,7 @@ struct TMemFuncForwarder<T,5>
 private:
     typedef MemFuncForwarder<5> Proxy;
 public:
-    enum { Arity = 5 };
+    static const int Arity = 5;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4>
@@ -548,6 +558,8 @@ public:
 /**
 A helper class for forwarding JS arguments to member functions
 taking 6 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,6>
@@ -555,7 +567,7 @@ struct TMemFuncForwarder<T,6>
 private:
     typedef MemFuncForwarder<6> Proxy;
 public:
-    enum { Arity = 6 };
+    static const int Arity = 6;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5>
@@ -657,6 +669,8 @@ public:
 /**
 A helper class for forwarding JS arguments to member functions
 taking 7 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,7>
@@ -664,7 +678,7 @@ struct TMemFuncForwarder<T,7>
 private:
     typedef MemFuncForwarder<7> Proxy;
 public:
-    enum { Arity = 7 };
+    static const int Arity = 7;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6>
@@ -766,6 +780,8 @@ public:
 /**
 A helper class for forwarding JS arguments to member functions
 taking 8 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,8>
@@ -773,7 +789,7 @@ struct TMemFuncForwarder<T,8>
 private:
     typedef MemFuncForwarder<8> Proxy;
 public:
-    enum { Arity = 8 };
+    static const int Arity = 8;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7>
@@ -875,6 +891,8 @@ public:
 /**
 A helper class for forwarding JS arguments to member functions
 taking 9 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,9>
@@ -882,7 +900,7 @@ struct TMemFuncForwarder<T,9>
 private:
     typedef MemFuncForwarder<9> Proxy;
 public:
-    enum { Arity = 9 };
+    static const int Arity = 9;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8>
@@ -984,6 +1002,8 @@ public:
 /**
 A helper class for forwarding JS arguments to member functions
 taking 10 arguments.
+
+@implements InvocableInterface
 */
 template <typename T>
 struct TMemFuncForwarder<T,10>
@@ -991,7 +1011,7 @@ struct TMemFuncForwarder<T,10>
 private:
     typedef MemFuncForwarder<10> Proxy;
 public:
-    enum { Arity = 10 };
+    static const int Arity = 10;
     typedef typename TypeInfo<T>::Type Type;
 
     template <typename RV,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9>
