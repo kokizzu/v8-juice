@@ -362,8 +362,8 @@ namespace convert {
     {
 	v8::Handle<v8::Value> operator()( char const * v ) const
 	{
-	    return String::New( v ? v : "", v ? std::strlen(v) : 0 );
-	    /** String::New() internally calls strlen(), which hates it when string==0. */
+            if( ! v ) return v8::Null();
+            else return v8::String::New( v );
 	}
     };
 
@@ -682,15 +682,9 @@ namespace convert {
     template <>
     struct JSToNative<char const *>
     {
-    private:
-	std::string kludge;
     public:
 	typedef char const * ResultType;
-	ResultType operator()( v8::Handle<v8::Value> const & h )
-	{
-	    this->kludge = JSToNative<std::string>()( h );
-	    return this->kludge.c_str();
-	}
+	ResultType operator()( v8::Handle<v8::Value> const & h );
     };
 #else
     /** Not great, but a happy medium. */
@@ -1147,6 +1141,10 @@ namespace convert {
        an instance of this type. That allows us to get more lifetime
        out of converted values in certain cases (namely (char const*)).
 
+       The default implementation is suitable for all cases which
+       JSToNative<T> supports, but specializations can handle some of
+       the corner cases which JSToNative cannot (e.g. (char const *)).
+       
        Added 20091121.
     */
     template <typename T>
@@ -1169,22 +1167,32 @@ namespace convert {
     /**
        Specialization for (char const *). The value returned from
        ToNative() is guaranteed to be valid as long as the ArgCaster
-       object is alive. Holding a pointer to the ToNative() return
-       value after the ArgCaster is destroyed will lead to undefined
-       behaviour.
+       object is alive or until ToNative() is called again (which will
+       almost certainly change the pointer). Holding a pointer to the
+       ToNative() return value after the ArgCaster is destroyed will
+       lead to undefined behaviour. Likewise, fetching a pointer, then
+       calling ToNative() a second time, will invalidate the first
+       pointer.
 
        BEWARE OF THESE LIMITATIONS:
 
-       1) This will only work properly for null-terminated strings, and
-       not binary data!
+       1) This will only work properly for null-terminated strings,
+       and not binary data!
 
        2) Do not use this to pass (char const *) as a function
        parameter if that function will hold a copy of the pointer
        after it returns (as opposed to copying/consuming the
        pointed-to-data before it returns).
 
-       Violating either of those leads to undefined behaviour, and
-       very possibly memory corruption for case 2.
+       3) Do not use the same ArgCaster object to convert multiple
+       arguments, as each call to ToNative() will invalidate the
+       pointer returned by previous calls.
+
+       4) The conversion assumes the data is ASCII, though UTF8
+       "should" also work.
+
+       Violating any of those leads to undefined behaviour, and
+       very possibly memory corruption for cases 2 or 3.
     */
     template <>
     struct ArgCaster<char const *>
@@ -1194,9 +1202,27 @@ namespace convert {
     public:
         typedef char Type;
         typedef Type const * ResultType;
+        /**
+           Returns the toString() value of v unless:
+
+           - v.IsEmpty()
+           - v->IsNull()
+           - v->IsUndefined()
+
+           In which cases it returns 0.
+
+           The returned value is valid until:
+
+           - ToNative() is called again.
+           - This object is destructed.
+        */
         ResultType ToNative( v8::Handle<v8::Value> const & v )
         {
             typedef JSToNative<std::string> C;
+            if( v.IsEmpty() || v->IsNull() || v->IsUndefined() )
+            {
+                return 0;
+            }
             this->val = C()( v );
             return this->val.c_str();
         }
