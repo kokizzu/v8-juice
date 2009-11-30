@@ -251,7 +251,7 @@ fz.close();
 
 fz = fs.openPseudofile("/etc/hosts.gz",false);
 istr = new whio.InStream(fz);
-ostr = new whio.OutStream('/dev/stdout',false);
+ostr = new whio.OutStream('/dev/stdout',true);
 istr.gunzipTo(ostr);
 istr.close();
 ostr.close();
