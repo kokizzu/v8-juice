@@ -1,7 +1,9 @@
 #summary Creating new JS classes from C++ and binding C++ classes to JS
 #labels Phase-UserDocs,Featured,Topic-CPlusPlus
 
-*Achtung:* this page documents the _current_ state of the library, which might be five minutes or a thousand years newer than any given version found on the downloads page.
+*Achtung:* the WeakJSClassCreator and ClassBinder APIs described below are considered obsolete, and have been superseded in functionality and flexibility by the ClassWrap API. Several of the v8-juice plugins still use the older APIs (and porting them would require a significant effort), so the older APIs will be supported for the foreseeable future. More specifically: there are no plans to remove them, but new C++/JS bindings should use the ClassWrap API instead of the APIs described below.
+
+*Achtung #2:* this page documents the _current_ state of the library, which might be five minutes or a thousand years newer than any given version found on the downloads page.
 
 <wiki:toc max_depth="3" />
 
