@@ -169,7 +169,7 @@ typedef convert::MemFuncInvocationCallbackCreator<BoundNative>
 b.Set( "toString",
         ICM::M0::Invocable<std::string,&BoundNative::toString> );
 b.Set( "setInt",
-        ICM::M1::Invocable<void,int,&BoundNative::setInt );
+        ICM::M1::Invocable<void,int,&BoundNative::setInt> );
 b.Set( "getInt",
         ICM::M0::Invocable<int,&BoundNative::getInt> );
 
@@ -266,7 +266,7 @@ the value to an Array of Strings. That's all fine and good, but
 be very aware that that particular conversion _requires copying list_.
 The two main implications are that (1) such access may not be cheap,
 depending on the conversion necessary for the getter/setter,
-and (2) the following _will not work in an intuive manner_:
+and (2) the following _will not work in an intuitive manner_:
 
 {{{
 var ar = ["hi", "world" ];
