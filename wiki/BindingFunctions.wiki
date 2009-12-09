@@ -142,7 +142,7 @@ void T::setBuddy(Foo *); // IFF CastFromJS<Foo>() works
 // ^^^ MemFuncForwarder<1>::Invocable<T,void,Foo*,&T::bar>
 }}}
 
-The notes about `CastToJS<T>` and `CastFromJS<T>()` will be qualified/explained later on, once some planned changes to the API are in place. In short, `CastFromJS()` can be done fairly generically, but `CastToJS()` requires some sort of underlying binding mechanism from which we can map a native pointer to its JS object representation. Those bits come in the form of a higher-level class binding mechanism (like [ClassBinder], though a new one is being developed based on these new binding capabilities).
+Regarding `CastToJS<T>` and `CastFromJS<T>()`: in short, `CastFromJS()` can be done fairly generically, but `CastToJS()` requires some sort of underlying binding mechanism from which we can map a native pointer to its JS object representation. Those bits come in the form of a higher-level class binding mechanism (like the [ClassWrap] API).
 
 The `MemFuncForwarder` class has a counterpart, `TMemFuncForwarder`, which is identical in every way except that it is templatized at the class level instead of the function level. For example:
 
@@ -161,11 +161,11 @@ IC = TMF::Invocable<int,&T::Func>
 
 == Limitations vis-a-vis inheritance ==
 
-TODO: explain this in gross detail. There are workarounds for some aspects, but they require support from a more specific class-binding mechanism (which is being developed on top of this API as we speak).
+TODO: explain this in gross detail. There are workarounds for some aspects, but they require support from a more specific class-binding mechanism (e.g. ClassWrap).
 
 TODO: Some points to discuss:
 
-  * How virtual method lookup across JS/Native inheritance does not come for free, and requires fairly detailed support from a higher-level framework. This is implemented in [ClassBinder], for example.
+  * How virtual method lookup across JS/Native inheritance does not come for free, and requires fairly detailed support from a higher-level framework. This is implemented in [ClassWrap], for example.
   * How JS-triggered destruction of bound objects needs to be sure and pick up the proper native destructor function in the face of inheritance.
   * How to bind to _inherited_ native functions. e.g. Class B inherits from native A, and we want to bind an inherited `A::*func` to a `B` object. (How DO we do this? i think adding `using func` to the inherited interface might be enough, but that needs to be tested.)
 
