@@ -254,6 +254,10 @@ function XMLToObject(xml)
     {
         p.parse( xml, true );
     }
+    catch(e)
+    {
+        throw e;
+    }
     finally
     {
         p.destroy();
