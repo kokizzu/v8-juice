@@ -337,4 +337,3 @@ Search those files for "Instance()" to find the relevant parts.
 Here's some JS code related to the above C++ code:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/BoundNative/BoundNative.js BoundNative.js]
-  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/PosixFILE/PosixFILE.js PosixFILE.js]
