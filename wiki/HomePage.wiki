@@ -10,6 +10,8 @@ To any members of the Campbell Soup Company: i would really appreciate it if you
 
 v8-juice is, at this point, primarily an experimentation ground, and not a product which aims to have a "1.0" release (it uses the release date as its version number). As the library is still very new (it was born in late February, 2009), it is still in a high state of flux and may contain any number of (possibly incompatible) changes between versions. That said, i like to keep my own client code working, and will try not to make any major changes which break things unless there is a good reason to do so. Also, the core library parts (primarily the [ConvertingTypes type conversions], which are the most-central component) are based off of [http://SpiderApe.sourceforge.net much older implementations i wrote for SpiderMonkey], and they've had a stable interface for some years now.
 
+v8-juice is believed to work well, without any undocumented crash conditions and whatnot. It is used in at least one high-profile commercial product (which i unfortunately am not at liberty to name) to simplify the C++/JS binding process.
+
 ==Related work==
 
   * [http://code.google.com/p/cproxyv8/ cproxyv8] is very similar in purpose to v8-juice, and appears to provide largely the same feature set for binding C++ types to v8.
