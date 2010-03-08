@@ -19,8 +19,8 @@ License: Public Domain
     Native-to-JS). This is only needed if native CurlJS objects will
     be passed back to JS via, e.g., function return values.
 
-    Using the TwoWay wrapper increases the memory cost of each parser
-    and is a tad bit slower than not using it.
+    Using the TwoWay wrapper increases the memory cost of each Curl
+    object and is a tad bit slower than not using it.
 */
 #define V8_JUICE_CURL_USE_TWOWAY_WRAP 0
 #if V8_JUICE_CURL_USE_TWOWAY_WRAP
@@ -28,8 +28,7 @@ License: Public Domain
 #endif
 #include <curl/curl.h>
 /**
-   The curl namespace houses a libcurl-based XML parser class for
-   binding to JS.
+   The curl namespace houses a JS binding for the libcurl "easy" API.
 */
 namespace v8 { namespace juice { namespace curl {
 
