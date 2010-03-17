@@ -273,7 +273,7 @@ var ar = ["hi", "world" ];
 myobj.list = ar; // COPIES ar!
 ar.push("!"); // does NOT modify myobj.list
 // myobj.list.length == 2
-// ar.length == 2
+// ar.length == 3
 }}}
 
 Thus it is not generically possible to update JS references
