@@ -241,7 +241,7 @@ As an example, policies which implement more intricate JS/Native
 conversions may need to map the object as being of a certain native
 type (or types, when inheritance is used).
 
-The policy interface is:
+The policy looks like this:
 
 {{{
 template <typename T>
@@ -306,7 +306,7 @@ This policy looks like:
 
 {{{
 template <typename T>
-struct ToNative_WithNativeSubclassCheck
+struct ToNative
 {
     typedef typename convert::TypeInfo<T>::NativeHandle NativeHandle;
     static NativeHandle Value( v8::Handle<v8::Object> const jo );
@@ -327,7 +327,7 @@ needed if we bind to functions (or members) which return a native object, e.g.
 `Foo * somefunc()`. It is not needed if (`Foo*`) will be passed
 as function arguments (that is handled by the `ToNative` policy).
 
-The policy's interface is:
+This policy looks like:
 
 {{{
 template <typename T>
@@ -374,8 +374,8 @@ errors at compile time.
 
 Some (currently only one) policy sets _might_ implement `NativeToJS<>'
 as well, but the `ToJS` policy (the basis of the above specialization)
-necessarily requires policy-specific infrastructure, and there is no
-way to create a default implementation.
+necessarily requires policy-specific infrastructure, and there appears to be no
+way(?) to create a generic default implementation.
 
 It is simple to create a `JSToNative` specialization for a given type. Simply
 call the following from global-scope code:
@@ -394,7 +394,7 @@ JUICE_CLASSWRAP_JSTONATIVE(MyBoundType)
 = Concrete Policy Implementations =
 
 The library comes with enough parts to easily build your own policy
-sets.  For our purposes, a "policy set" is a are collection of
+sets.  For our purposes, a "policy set" is a collection of
 policies which work together to provide certain features above and
 beyond the basics necessary for binding.
 
@@ -415,13 +415,13 @@ Not all policies have default implementations. Notably:
 
   * `ClassName` must be implemented. (See the `JUICE_CLASSWRAP_CLASSNAME()` macro.)
   * `Factory` must be implemented, but there are several useful base classes which do all the work (specializations must simply subclass them).
-  * `ToJS` has no default but is never invoked unless some bound function/member/whatever must return (`T*`) to JS space.
+  * `ToJS` has no default but is never invoked unless some bound function/member/whatever must return (`T`) to JS space.
 
 When starting work on a binding, it is simplest to use the defaults (except
 for those listed above). One can switch policies later if it is determined
 that certain features are necessary. For example, two-way conversions from/to
 JS/Native are currently provided only by the !TwoWay policy set (described below).
-That said, JS-to-native conversions are only needed if we have to pass (`T*`) to JS
+That said, JS-to-native conversions are only needed if we have to pass (`T`) to JS
 space (e.g. a bound function returns (`T*`)).
 
 Some properties of the default policy implementations:
