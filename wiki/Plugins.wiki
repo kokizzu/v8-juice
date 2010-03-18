@@ -16,6 +16,7 @@ List of current plugins:
   * [PluginSQLite3 sqlite3 bindings]
   * [PluginStringFuncs supplemental string functions] (e.g. for escaping and quoting strings).
   * [PluginWhio i/o device and stream classes], with an optional [PluginWhefs embedded filesystem component].
+  * [PluginPosixFILE The PosixFILE plugin] provides an i/o API almost identical to the Posix `FILE` API for C.
 
 The plugins live in
 [http://code.google.com/p/v8-juice/source/browse/extra-plugins the extra-plugins source repository], and can be downloaded from there. See the
