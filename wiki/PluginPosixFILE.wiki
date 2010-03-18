@@ -11,7 +11,7 @@
 
 The `PosixFILE` plugin started out as a test/demonstration of the [ClassWrap] API, but it turns out it's useful in its own right. It provides an API nearly identical to the POSIX-standard `FILE` API, and it provides both C-like and OO-style interfaces (which can be used together). This plugin is different from [PluginWhio the whio plugin]: whio provides a more abstract i/o interface, but this one deals only with the POSIX-defined APIs for `FILE` handles.
 
-*ACHTUNG: DO NOT USE THIS API WITH BINARY DATA!* Binary data _cannot_ be safely passed between the v8 engine and JS code. The engine will, if it sees any non-ASCII characters, assume the data is UCS-16 and will convert it accordingly. This is not my bug, but a trait of the v8 engine.
+*ACHTUNG: DO NOT USE THIS API WITH BINARY DATA!* Binary data _cannot_ be safely passed between the v8 engine and JS code. The engine will, if it sees any non-ASCII characters, assume the data is UC16 and will convert it accordingly. This is not my bug, but a trait of the v8 engine.
 
 == Loading from JS ==
 
