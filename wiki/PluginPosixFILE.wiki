@@ -1,0 +1,61 @@
+#summary A plugin providing an API almost identical to the Posix FILE API.
+#labels Phase-UserDocs,Topic-Plugins,Topic-JS-API
+
+*See also:* [Plugins]
+
+<wiki:toc max_depth='3'/>
+
+= Introduction =
+
+The `PosixFILE` plugin started out as a test/demonstration of the [ClassWrap] API, but it turned out to be useful in its own right. It provides an API nearly identical to the POSIX-standard `FILE` API, and it provides both C-like and OO-style interfaces (which can be used together).
+
+
+== Loading from JS ==
+
+Install the plugin by following the instructions on the [Plugins] page.
+
+Then simply do:
+
+{{{
+loadPlugin('v8-juice-PosixFILE');
+}}}
+
+== Loading from C++ ==
+
+The class can be added to a JS engine by linking in
+[http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/PosixFILE the relevant code]
+into your app and calling `v8::juice::expat::ExpatJS::SetupBindings()`.
+
+= C-style API =
+
+The C-style API functions are as close to the real C API as JS calling conventions allow for. All of the following functions and properties are members of an object named `posix`.
+
+|| *Return Type* || *Signature* || *Notes* ||
+|| `PosixFILE` || `fopen(string filename, string mode)` || See `man fopen`. ||
+|| `bool` || `fclose(PosixFILE)` || Closes the file and destroys the handle object. ||
+|| `void` || `clearerr(PosixFILE)` || Clears EOF and error state flags. ||
+|| `int` || `fdatasync(int)` || See `man fdatasync`. ||
+|| `int` || `feof(PosixFILE)` || Returns 0 if _not_ at EOF, else non-0 (a `true` value). ||
+|| `int` || `ferror(PosixFILE)` || Returns 0 if the file is in an OK state, else non-0. ||
+|| `int` || `fileno(PosixFILE)` || Returns the file descriptor number for the file. ||
+|| `int` || `flush(PosixFILE)` || Flushes the file handle. ||
+|| `int` || `ftell(PosixFILE)` || Returns the current position of the file cursor. ||
+|| `string` || `fread( int sizeEach, int count, PosixFILE )` || Reads up to `count` blocks, each of `sizeEach` bytes, and returns the number of blocks it read. ||
+|| `string` || `fread( int n, PosixFILE )` || Reads up to `n` bytes from the file and returns it as a string. ||
+|| `int` || `fseek(PosixFILE,int offset,int whence)` || See `man fseek`. ||
+|| `int` || `fsync(PosixFILE | int)` || See `man fsync` ||
+|| `int` || `ftruncate(PosixFILE | int, int size)` || Truncates a file (or file descriptor ID) to the given size. ||
+|| `int` || `fwrite( string src, int sizeEach, int n, PosixFILE )` || Writes `n` objects, each of `sizeEach` bytes, from src. Returns the number of objects (not bytes) written. ||
+|| `int` || `fwrite( string src, int n, PosixFILE )` || Writes up to n bytes from src to the file. ||
+|| `int` || `fwrite( string src, PosixFILE )` || Writes src to the file. ||
+|| `void` || `rewind(PosixFILE)` || Resets the file's cursor to the beginning of the file. ||
+|| `int` || `unlink( string )` || Removes the given filename from the system. Returns 0 on success. ||
+|| *Properties (read-only!)* || *Type* || *Notes* ||
+|| `SEEK_SET` || `int` || Used with `fseek()`. ||
+|| `SEEK_CUR` || `int` || Used with `fseek()`. ||
+|| `SEEK_END` || `int` || Used with `fseek()`. ||
+
+
+= OO API =
+
+The OO API is very similar to, and can be used in conjunction with, the C-style API.
