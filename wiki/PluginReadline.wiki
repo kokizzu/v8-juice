@@ -20,7 +20,7 @@ See [Plugins the plugins page for build instructions].
 
 {{{
 var my = {fn:"my.history"};
-load_plugin('v8-juice-readline',my);
+loadPlugin('v8-juice-readline',my);
 if( my.readline.loadHistory(my.fn) ) {
     print("Loaded history file",my.fn);
 } else {
