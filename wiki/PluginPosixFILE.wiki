@@ -27,7 +27,7 @@ loadPlugin('v8-juice-PosixFILE');
 
 The class can be added to a JS engine by linking in
 [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/PosixFILE the relevant code]
-into your app and calling `v8::juice::expat::ExpatJS::SetupBindings()`.
+into your app and calling `PosixFILE::SetupBindings()`.
 
 = C-style API =
 
