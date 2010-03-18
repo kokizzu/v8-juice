@@ -74,24 +74,28 @@ The members are:
 || `FILE` || `new posix.FILE(string filename, string mode)` || Eqivalent to `fopen()`. ||
 || `bool` || `close()` || Equivalent to `fclose()` ||
 || `void` || `clearerr()` ||  ||
-|| `int` || `fdatasync(int)` || See `man fdatasync`. ||
-|| `int` || `feof()` ||  ||
-|| `int` || `ferror()` || Returns 0 if the file is in an OK state, else non-0. ||
+|| `int` || `datasync(int)` || See `man fdatasync`. ||
+|| `int` || `eof()` ||  ||
+|| `int` || `error()` || Returns 0 if the file is in an OK state, else non-0. ||
 || `int` || `fileno()` || Returns the file descriptor number for the file. ||
 || `int` || `flush()` || Flushes the file handle. ||
-|| `int` || `ftell()` || Returns the current position of the file cursor. ||
-|| `string` || `read( int sizeEach, int count )` ||  ||
-|| `string` || `read( int n )` ||  ||
-|| `int` || `seek(int offset,int whence)` ||  ||
-|| `int` || `sync()` ||  ||
-|| `int` || `truncate(int size)` || ||
-|| `int` || `write( string src, int sizeEach, int n )` || ||
-|| `int` || `write( string src, int n )` || ||
-|| `int` || `write( string src, PosixFILE )` || ||
-|| `void` || `rewind()` || ||
-|| `int` || `unlink()` || Removes the underlying file but does not close the object - it can still be used for i/o. ||
+|| `int` || `tell()` || Returns the current position of the file cursor. ||
+|| `string` || `read( int sizeEach, int count )` || Equivalent to `fread()` ||
+|| `string` || `read( int n )` ||  Equivalent to `fread(n,FILE)` ||
+|| `int` || `seek(int offset[,int whence=posix.SEEK_SET])` ||  Equivalent to `fseek()` ||
+|| `int` || `sync()` ||  Equivalent to `fsync()` ||
+|| `int` || `truncate(int size)` ||  Equivalent to `ftruncate()` ||
+|| `int` || `write( string src, int sizeEach, int n )` ||  Equivalent to `fwrite()` ||
+|| `int` || `write( string src, int n )` || Equivalent to `fwrite()` ||
+|| `int` || `write( string src, PosixFILE )` || Equivalent to `fwrite()` ||
+|| `void` || `rewind()` || Equivalent to `frewind()` ||
+|| `void` || `size()` || Returns the file's current size, in bytes. ||
+|| `int` || `unlink()` || Equivalent to `unlink(thisObject.name)` Removes the underlying file but does not close the object - it can still be used for i/o. ||
 || `string` || `toString()` || More of a debugging string than anything else. ||
-
+|| *Properties (read-only!)* || *Type* || *Notes* ||
+|| `string` || `name` || The name passed to the ctor or `fopen()` ||
+|| `string` || `mode` || The mode string passed to the ctor or `fopen()` ||
+|| `int` || `errno` || Corresponds to the C-global `errno`, which is set by many of the i/o routines on error. The values are system-specific. ||
 
 = Example =
 
