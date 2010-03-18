@@ -11,6 +11,7 @@
 
 The `PosixFILE` plugin started out as a test/demonstration of the [ClassWrap] API, but it turns out it's useful in its own right. It provides an API nearly identical to the POSIX-standard `FILE` API, and it provides both C-like and OO-style interfaces (which can be used together). This plugin is different from [PluginWhio the whio plugin]: whio provides a more abstract i/o interface, but this one deals only with the POSIX-defined APIs for `FILE` handles.
 
+*ACHTUNG: DO NOT USE THIS API WITH BINARY DATA!* Binary data _cannot_ be safely passed between the v8 engine and JS code. The engine will, if it sees any non-ASCII characters, assume the data is UCS-16 and will convert it accordingly. This is not my bug, but a trait of the v8 engine.
 
 == Loading from JS ==
 
@@ -42,7 +43,7 @@ The C-style API functions are as close to the real C API as JS calling conventio
 || `int` || `fileno(FILE)` || Returns the file descriptor number for the file. ||
 || `int` || `flush(FILE)` || Flushes the file handle. ||
 || `int` || `ftell(FILE)` || Returns the current position of the file cursor. ||
-|| `string` || `fread( int sizeEach, int count, FILE )` || Reads up to `count` blocks, each of `sizeEach` bytes, and returns the number of blocks it read. ||
+|| `string` || `fread( int sizeEach, int count, FILE )` || Reads up to `count` blocks, each of `sizeEach` bytes, and returns the result as a string. ||
 || `string` || `fread( int n, FILE )` || Reads up to `n` bytes from the file and returns it as a string. ||
 || `int` || `fseek(FILE,int offset,int whence)` || See `man fseek`. ||
 || `int` || `fsync(FILE | int)` || See `man fsync` ||
