@@ -145,7 +145,7 @@ public:
         int x = this->seek( 0L, SEEK_END );
         if( 0 != x ) return 0;
         int64_t npos = this->tell();
-        this->seek( pos, SEEK_END );
+        this->seek( pos, SEEK_SET );
         return npos;
     }
     
