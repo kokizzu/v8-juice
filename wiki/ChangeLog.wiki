@@ -10,6 +10,10 @@ are at the top. Dates written extra large are release dates. This contains only 
   * http://code.google.com/p/v8-juice/source/list
 
 ----
+
+*2010 March 18*
+  * Moved one of the class binding demos into its own plugin: [PluginPosixFILE]
+
 *2009 Nov 21*
   * Got function binding working for functions taking (`char const *`) arguments, with a few fairly minor limitations.
 
