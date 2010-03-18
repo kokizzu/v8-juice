@@ -215,6 +215,10 @@ There are some real-world examples of using these types in the v8-juice source t
 
 The `ClassBinder` class template, [ClassBinder described on its own page], extends `WeakJSClassCreator` type to add the ability to bind member functions and member variables to native types. See that page for more information.
 
+=!ClassWrap=
+
+The `ClassWrap` class template, [ClassWrap described on its own page], is the "next generation" of the ClassBinder API, and supersedes it in functionality and flexibility. ClassBinder will stay around because i have plugins which use it extensively, but will not be touched except to fix (fixable) bugs. Newer wrappers are encouraged to use the ClassWrap API instead of ClassBinder.
+
 =Real-world problems and caveats=
 
 For general problems and caveats, see the [CommentaryOnV8 v8 criticisms page].
