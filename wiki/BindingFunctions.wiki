@@ -139,7 +139,7 @@ Foo * T::getBuddy(); // IFF CastToJS<Foo>() works
 // ^^^ MemFuncForwarder<0>::Invocable<T,Foo*,&T::getBuddy>
 
 void T::setBuddy(Foo *); // IFF CastFromJS<Foo>() works
-// ^^^ MemFuncForwarder<1>::Invocable<T,void,Foo*,&T::bar>
+// ^^^ MemFuncForwarder<1>::Invocable<T,void,Foo*,&T::setBuddy>
 }}}
 
 Regarding `CastToJS<T>` and `CastFromJS<T>()`: in short, `CastFromJS()` can be done fairly generically, but `CastToJS()` requires some sort of underlying binding mechanism from which we can map a native pointer to its JS object representation. Those bits come in the form of a higher-level class binding mechanism (like the [ClassWrap] API).
