@@ -329,7 +329,7 @@ It is not necessary (though it is legal) to use `InvocableVoid` instead of `Invo
 Here are some a complete example of what the binding process itself looks like:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/BoundNative/BoundNative.cpp BoundNative.cpp]
-  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/PosixFILE/PosixFILE.cpp PosixFILEcpp] demonstrates using the native/JS conversions to convert C++-bound one JS object to/from multiple native types.
+  * [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/PosixFILE/PosixFILE.cpp PosixFILEcpp] demonstrates using the native/JS conversions to convert a JS-bound object to/from _multiple_ native types.
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-cw.cc PathFinder-cw.cc] and [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/PathFinder-cw.h PathFinder-cw.h] are the JS bindings for the [PathFinderClass PathFinder class]
 
 Search those files for "Instance()" to find the relevant parts.
