@@ -49,6 +49,22 @@ For those averse to template arguments, there are a number of convenience instan
 
 but then we're again stuck with the limitation of hard-coded conversion operator names, so these aren't very useful in generic algoriths.
 
+==Out-of-the-box Conversions==
+
+The following native types are supported out of the box by the conversion API:
+
+  * `int16_t`, `int32_t`, `int64_t`
+  * `uint16_t`, `uint32_t`, `uint64_t`
+  * `double`
+  * `bool`
+  * `long`, `unsigned long` (these require some special handling, as described in the API docs).
+  * `std::string`
+  * Conversion _from_ (`char const *`) to JS-string, but not the reverse (see below for why).
+  *  `std::list<T>`, `std::vector<T>`, provided `T` is convertible.
+  *  `std::map<K,T>`, provided `K` and `T` are convertible.
+
+(i don't recall why `int8_t`/`uint8_t` are missing, but it was possibly due to template type collisions with (`char const *`) on platforms where `int8_t` is `char`.)
+
 =Implementing custom conversions=
 
 ==Achtung: not for noobs==
