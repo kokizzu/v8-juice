@@ -157,19 +157,9 @@ char const * v = CastFromJS<char const *>(myJSVal);
 
 The problem here is ownership and lifetime of the string bytes. v8 does not document them (and also can't realistically provide any requirements which we would need for this conversion). We _can_ write a conversion routine for this, and it would probably work 99% of the time, but its results would technically be undefined. As a workaround, client code should use `std::string` instead (at least for `CastFromJS()`) or implement `JSToNative<>` and/or `NativeToJS<>` specializations for their string type of choice. The `CastToJS()` function is overloaded for (`char const *`) and "does the right thing", but `CastFromJS()` cannot handle such strings as transparently as it can most other types.
 
-=Forwarding to functions=
+=Forwarding to Free- or Member Functions=
 
-The `v8::juice::convert` namespace contains functions named `FwdToFuncN()`, where `N` is the number of arguments they expect, which use the casting framework to marshal calls between JS and native functions.
-
-The [ClassBinder ClassBinder class] can also bind member functions.
-
-TODOs:
-  * Refactor `FwdToFuncN()` to use a mechanism similar to what the !ClassBinder member bindings do, as this allows us to use `void` return types.
-  * Consolidate the `FwdToFuncN()` and !ClassBinder call forwarding API. Right now they are completely separate beasts and have some inconsistencies (e.g. !ClassBinder's code can handle void returns whereas `FwdToFuncN()` cannot).
-
-=Forwarding to member functions/variables=
-
-Native classes which are bound using the [CreatingJSClasses ClassBinder class] can bind member functions and member variables, as well as free functions. See that page for an example, or see [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassBinder.h ClassBinder.h] for the API docs.
+The `v8::juice::convert` namespace contains functions named `FwdToFuncN()`, where `N` is the number of arguments they expect, which use the casting framework to marshal calls between JS and native functions. Alternately, one can bind native functions to JS objects as described on the BindingFunctions page.
 
 =Silly Examples=
 
