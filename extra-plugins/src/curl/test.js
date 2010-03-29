@@ -141,6 +141,7 @@ function testFour()
     var c = new Curl();
     var o = {
         port:80,
+        verbose:true,
         httpHeader:["Host: s11n","Accept-Encoding: gzip","Accept: text/html"],
         //httpHeader:3, // v8 crash or "secondary" throw, depending on the workarounds in the native code
         url:'http://localhost'
@@ -153,6 +154,7 @@ function testFour()
                    );
     print( "setOpt RC =",rc);
     print( "c =",JSON.stringify(c,undefined,2));
+    c.easyPerform();
     c.destroy();
     print(banner.end);
 }
@@ -224,6 +226,6 @@ function testReader()
 //testOne();
 //testTwo();
 //testThree();
-//testFour();
+testFour();
 //  testCurlInfo();
-testReader();
+//testReader();

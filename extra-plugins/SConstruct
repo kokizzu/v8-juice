@@ -103,3 +103,12 @@ if( True ):
             ]]
     my_ld = ['expat']
     buildPlugin('ExpatParser',my_src,my_ld)
+
+########################################################################
+# readline plugin    
+if( True ):
+    my_src = [os.path.join('#/src/PosixFILE/', x) for x in [
+            'PosixFILE.cpp'
+            ]]
+    buildPlugin('PosixFILE',my_src,my_ld)
+
