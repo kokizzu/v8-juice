@@ -501,6 +501,12 @@ int PosixFILE_fsync( v8::Handle<v8::Value> const & h )
     else return ::fsync( v8::juice::convert::JSToInt32(h) );
 }
 
+char const * cstring_test( char const * c )
+{
+    CERR << "cstring_test( @"<<(void const *)c<<") ["<<(c ? c : "<NULL>")<<"]\n";
+    return c;
+}
+
 /**
    Sets up the Posix FILE-related bindings.
 
@@ -650,6 +656,9 @@ void PosixFILE::SetupBindings( v8::Handle<v8::Object> dest )
         //ICC::F1::Invocable<int,std::string const &,::PosixFILE_unlink>;
         ICC::F1::Invocable<int,char const *,::unlink>;
     F("unlink");
+
+    cb =ICC::F1::Invocable<char const *,char const *,cstring_test>;
+    F("cstr");
 
     
     typedef tmp::TypeList<
