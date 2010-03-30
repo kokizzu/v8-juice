@@ -407,6 +407,14 @@ namespace convert {
 	typedef NativeToJS<char const *> F;
 	return F()( v );
     }
+    /**
+       Overload to avoid ambiguity in certain calls.
+    */
+    static inline v8::Handle<v8::Value> CastToJS( char * v )
+    {
+	typedef NativeToJS<char const *> F;
+	return F()( v );
+    }
 
     /** Convenience instance of NativeToJS. */
     static const NativeToJS<int16_t> Int16ToJS = NativeToJS<int16_t>();
@@ -1133,8 +1141,6 @@ namespace convert {
     }
 
     /**
-       EXPERIMENTAL!
-
        ArgCaster is a thin wrapper around CastFromJS(), and primarily
        exists to give us a way to convert JS values to (char const *)
        for purposes of passing them to native functions. The main
