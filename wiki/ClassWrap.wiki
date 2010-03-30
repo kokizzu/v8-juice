@@ -32,7 +32,7 @@ Some related materials:
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/include/v8/juice/ClassWrap_TwoWay.h ClassWrap_TwoWay.h]
 
 
-=An example Class=
+=An Example Class=
 
 For the demonstrations below we will use the following class:
 
@@ -65,7 +65,7 @@ public:
 Now let's see how to "bind" various aspects of `BoundNative`
 into JS...
 
-=Setting up the basic policies=
+=Setting up the Basic Policies=
 
 Part of binding our class using this framework involves setting
 up various so-called "policy" classes. We won't go into detail
@@ -78,9 +78,9 @@ be left out of examples. The example code also assumes that
 `using namespace v8::juice` is in effect.
 
 For much more information about ClassWrap policies, see
-the ClassWrapPolicies page.
+the ClassWrapPolicies page and the API documentation.
 
-== Factory policy ==
+== Factory Policy ==
 
 The Factory policy's responsibilities are creating and destroying
 new instances of objects. It is one of the few policies for which
@@ -112,7 +112,7 @@ If we wanted to customize the construction process we would specialize
 `Factory<BoundNative>` and implement the `cw::Factory` policy's
 interface (two functions and one constant).
 
-== Class name ==
+== Class Name Policy ==
 
 The !ClassName policy defines a bound class's JS-side name. It looks like:
 
@@ -156,7 +156,7 @@ v8::Handle<v8::Object> SetupBoundNativeClass( v8::Handle<v8::Object> dest )
 }
 }}}
 
-=Binding functions=
+=Binding Functions=
 
 We can bind both `BoundNative` member functions and free functions
 to the JS class using the power of C++ templates.
@@ -194,7 +194,7 @@ interface. The generated functions use the [ConvertingTypes type conversion API]
 to convert their arguments from their native counterparts and convert
 the return value to a native value (or JS `undefined` for `void` return types).
 
-=Binding member variables=
+=Binding Member Variables=
 
 We can bind native member variables to JS space, such that all
 get/set access is directed through the native variables. Alternately,
