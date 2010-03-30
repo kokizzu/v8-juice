@@ -107,12 +107,10 @@ public:
         const std::string e = "BoundNative::toss(): " + msg;
         throw std::runtime_error(e.c_str());
     }
-    BoundNative * getPtr();
-#if 0
+    BoundNative * getPtr()
     {
         return this;
     }
-#endif
     BoundNative & getRef()
     {
         return *this;
@@ -161,7 +159,7 @@ property set macros.
 namespace v8 { namespace juice {
     namespace cw
     {
-        template <> struct DebugLevel<BoundNative> : Opt_Int<2> {};
+        template <> struct DebugLevel<BoundNative> : Opt_Int<3> {};
 
         template <>
         struct ToNative_SearchPrototypesForNative<BoundNative>
@@ -233,7 +231,7 @@ namespace v8 { namespace juice { namespace cw
     {
     };
 
-    template <> struct DebugLevel<BoundSub> : Opt_Int<2> {};
+    template <> struct DebugLevel<BoundSub> : Opt_Int<3> {};
 
     using namespace v8::juice;
     template <>
@@ -343,17 +341,6 @@ namespace v8 { namespace juice { namespace cw
    Down here is where the runtime setup parts of the bindings take place...
 ************************************************************************/
 
-BoundNative * BoundNative::getPtr()
-{
-#if 0
-        typedef v8::juice::cw::Extract<BoundNative> XT;
-        BoundNative const * x = XT::VoidToNative(this);
-        CERR << "BoundNative::getPtr() this@"<<(void const *)this
-             << ", x@"<<(void const *)x<<'\n';
-#endif
-        return this;
-}
-
 std::string BoundNative_version()
 {
     return "alphalpha 0.0.1";
@@ -407,16 +394,17 @@ v8::Handle<v8::Value> BoundNative_toss( v8::Arguments const & argv )
 void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
 {
 
-    //         typedef Inheritance<BoundNative> Inherit;
-    //         {
-    //             Inherit x;
-    //         }
     using namespace v8;
     using namespace v8::juice;
     HandleScope scope;
     typedef BoundNative N;
     typedef cw::ClassWrap<N> CW;
     CW & cw( CW::Instance() );
+    if( cw.IsSealed() )
+    {
+        cw.AddClassTo( dest );
+        return;
+    }
     DBGOUT <<"Binding class "<<CW::ClassName::Value()<<"...\n";
     cw.Set("foo",String::New("this is foo"));
     cw.Set("toString2", convert::InvocationCallbackMember<N,&N::toString2>::Invocable );
@@ -433,8 +421,8 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
     cw.Set( "aRef", ICM::M1::Invocable<std::string,N&,&N::aRef > );
 #endif
     cw.Set( "toss",
-            //ICM::M1::Invocable<void,std::string const &,&N::toss >
-            convert::InvocationCallbackCatcher< -1, BoundNative_toss >::Invocable
+            ICM::M1::Invocable<void,std::string const &,&N::toss >
+            //convert::InvocationCallbackCatcher< -1, BoundNative_toss >::Invocable
             );
 
     typedef tmp::TypeList<
@@ -456,13 +444,14 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
     //PB::BindMemVarRO<double,&N::publicProperty>( "publicPropertyRO", cwproto );
     cw.BindMemVarRO<double,&N::publicProperty>( "publicPropertyRO" );
 
-    PB::BindStaticVar<bool,&N::enableDebug>( "debug", cwproto );
-    PB::BindStaticVarRO<bool,&N::enableDebug>( "debugRO", cwproto );
+    //PB::BindStaticVar<bool,&N::enableDebug>( "debug", cwproto );
+    //PB::BindStaticVarRO<bool,&N::enableDebug>( "debugRO", cwproto );
+    cw.BindStaticVar<bool,&N::enableDebug>( "debug" );
+    cw.BindStaticVarRO<bool,&N::enableDebug>( "debugRO" );
         
     v8::InvocationCallback FH;
     FH =
         ICC::F0::Invocable<std::string,BoundNative_version>
-        //ICC::Invocable<std::string,BoundNative_version>
         ;
 #define JFH v8::FunctionTemplate::New(FH)->GetFunction()
     cw.Set( "version", JFH );
@@ -556,13 +545,6 @@ void BoundNative::SetupClass( v8::Handle<v8::Object> dest )
         DBGOUT << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
         CW::DestroyObject(jobj);
         DBGOUT << "BoundNative::InstanceCount() == "<<BoundNative::InstanceCount()<<'\n';
-#if 0
-        if(0 && bound)
-        {
-            Handle<Object> j2 = CW::CastToJS::Value( bound );
-            DBGOUT << "JW::CastToJS::Value(jobj) == "<<convert::CastFromJS<std::string>(j2)<<'\n';
-        }
-#endif
     }
 
 #define ENABLE_MY_TESTS 0
