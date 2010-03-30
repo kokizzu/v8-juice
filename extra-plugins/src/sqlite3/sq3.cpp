@@ -15,11 +15,12 @@
 #include <cstring>
 
 /**
-   If DO_CURSOR_LIFETIME_HACK is true then the statement/cursor classes
-   get an extra relationship to try to avoid a cursor stepping on
-   a dead statement. In pure C++ this is not a problem because scoping
-   is our friend, but this hack was added when this code was used as the
-   basis for a JavaScript/sqlite3 binding.
+   If DO_CURSOR_LIFETIME_HACK is true then the statement/cursor
+   classes get an extra relationship to try to avoid a cursor stepping
+   on a dead statement. In pure C++ this is not a problem because
+   scoping is our friend, but this hack was added when this code was
+   used as the basis for a JavaScript/sqlite3 binding, where objects
+   can be destroyed in arbitrary order by the garbage collector.
 */
 #define DO_CURSOR_LIFETIME_HACK 1
 
@@ -673,9 +674,9 @@ namespace sq3 {
         { int bogus; bogus = flags; } // avoid "unused variable: flags" warning from gcc
         rc = sqlite3_open(dbn, &sq);
 #endif // sqlite3 >= 3.5.1
+        this->m_dbh.take( sq );
         if( SQLITE_OK == rc )
         {
-            this->m_dbh.take( sq );
             rc = this->on_open();
         }
         if( SQLITE_OK != rc )
