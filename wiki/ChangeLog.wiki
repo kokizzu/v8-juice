@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2010 March 30*
+  * A templates-related compilation fix for an error which should have been triggered long ago but never was for some reason.
+
 *2010 March 18*
   * Moved one of the class binding demos into its own plugin: [PluginPosixFILE]
 
