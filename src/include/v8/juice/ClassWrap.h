@@ -1365,6 +1365,13 @@ namespace cw {
             PB::template BindGetter<RV,Getter>( propName, this->Prototype() );
         }
 
+        /** Overload to support a free-function Getter. */
+        template <typename RV, RV (*Getter)()>
+        void BindGetter( char const * propName )
+	{
+            PB::template BindGetter<RV,Getter>( propName, this->Prototype() );
+        }
+
         /** Overload to support a const Getter. */
         template <typename RV, RV (Type::*Getter)() const>
         void BindGetter( char const * propName )
