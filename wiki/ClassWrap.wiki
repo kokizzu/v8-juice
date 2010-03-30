@@ -234,7 +234,7 @@ b.BindStaticVar<bool,&BoundNative::enableDebug>("enableDebug");
 b.BindStaticVarRO<bool,&BoundNative::enableDebug>("enableDebug");
 }}}
 
-Caveat: on the JS side such statics are only available via the prototype object. e.g.:
+Caveat: on the JS side such statics are only available via objects, and not the constructor. e.g.:
 
 {{{
 BoundNative.prototype.enableDebug; // === a boolean value
