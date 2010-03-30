@@ -95,7 +95,7 @@ namespace convert {
        binding cases.
     */
     template <typename T>
-    struct TypeInfo : TypeInfoBase<T>
+    struct TypeInfo : TypeInfoBase<T,T *>
     {
     };
 
@@ -108,6 +108,8 @@ namespace convert {
     template <typename T>
     struct TypeInfo<T const &> : TypeInfo<T> {};
 
+    template <typename T>
+    struct TypeInfo<T &> : TypeInfo<T> {};
 
     using namespace v8;
 
