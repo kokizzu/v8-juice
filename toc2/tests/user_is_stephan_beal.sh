@@ -6,7 +6,7 @@ test xstephan = "x${USER}" || return 1
 
 got=0
 
-for h in cheyenne ludo jareth hoggle owl; do
+for h in ludo jareth hoggle tiny; do
     test x$h = "x${HOSTNAME}" && { got=1; break; }
 done
 
