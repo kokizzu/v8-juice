@@ -614,7 +614,7 @@ Handle<Value> execute_impl( DBWrapper * db,
     } pos = { 0, 1, 2 };
 
     std::string sql( JSToStdString(argv[pos.sql]) );
-    CERR << "argc="<<argc<<", pos.func="<<pos.func<<", sql=["<<sql<<"]\n";
+    //CERR << "argc="<<argc<<", pos.func="<<pos.func<<", sql=["<<sql<<"]\n";
     if( argc < 2 )
     {
         return CastToJS( db->proxy.execute(sql) );
@@ -622,7 +622,7 @@ Handle<Value> execute_impl( DBWrapper * db,
     Handle<Value> fv = argv[pos.func];
     if( ! fv->IsFunction() )
     {
-        CERR << "fv="<<JSToStdString(fv)<<'\n';
+        //CERR << "fv="<<JSToStdString(fv)<<'\n';
         TOSS("sqlite3_exec() 3rd argument is not a Function!");
     }
     Handle<Object> cbjo = CallbackWrapper::js_ctor->NewInstance( 0, 0 );
@@ -786,7 +786,7 @@ Handle<Value> StmtWrapper::prepare( Arguments const & argv )
     ARGC; ASSERTARGS(1==argc);
     std::string sql( JSToStdString(argv[0]) );
     if( sql.empty() ) TOSS("SQL string is empty!");
-    return CastToJS( (SQLITE_OK == proxy.prepare( sql )) ? true : false );
+    return CastToJS( proxy.prepare( sql ) );
 }
 
 
@@ -971,6 +971,9 @@ JS_WRAPPER(sq3_XXX)
 #undef STMT_ARG_THROW
 #undef JS_WRAPPER
 
+/** Adds sqlite3 bindings to gl. Returns the outer-most containing
+    object, which is the same object as gl.sqlite3.
+*/
 static Handle<Value> SetupSQ3( Handle<Object> gl )
 {
     CERR << "Initializing sqlite3 wrapper plugin...\n";
@@ -1148,7 +1151,7 @@ static Handle<Value> SetupSQ3( Handle<Object> gl )
 
 #undef SET_MAC
 
-    return gl->Get(String::New("sqlite3_open"));
+    return sqobj;
     //return Boolean::New(true);
 }
 
