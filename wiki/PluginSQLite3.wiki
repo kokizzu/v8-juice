@@ -310,7 +310,7 @@ db.execute("create table if not exists t(a,b,c)");
 db.close();
 }}}
 
-Note that sqlite3 reserved the special filename `":memory:"` to create an in-memory database. The v8 engine is not aware of such memory, and thus in-memory databases are not counted for purposes any VM-imposed memory limit.
+Note that sqlite3 reserves the special filename `":memory:"` to create an in-memory database. The v8 engine is not aware of such memory, and thus in-memory databases are not counted for purposes any VM-imposed memory limit.
 
 ===Function list===
 
