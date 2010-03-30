@@ -292,9 +292,9 @@ completely unrelated) point in your application.
 
 *To summarize:*
 
-  * Always call `DB.close()` to close a `DB` object.
-  * Always call `Statement.finalize()` to destroy a `Statement` object.
-  * Always call `Cursor.finalize()` to destroy a `Cursor` object.
+  * Always call `Cursor.finalize()` to destroy a `Cursor` object _before_ the corresponding statement is finalized.
+  * Always call `Statement.finalize()` to destroy a `Statement` object _before_ the corresponding database is closed.
+  * Always call `DB.close()` to close a `DB` object _after_ all associated statements and cursors have been destroyed.
 
 
 ==sqlite3.DB class==
@@ -310,6 +310,7 @@ db.execute("create table if not exists t(a,b,c)");
 db.close();
 }}}
 
+Note that sqlite3 reserved the special filename `":memory:"` to create an in-memory database. The v8 engine is not aware of such memory, and thus in-memory databases are not counted for purposes any VM-imposed memory limit.
 
 ===Function list===
 
