@@ -3,6 +3,8 @@
 
 This is an extension of the [CreatingJSClasses page about creating JS classes]. Please read that page before reading this one. The page for the [ConvertingTypes v8::juice type conversions API] might also be helpful.
 
+The ClassBinder API is now (as of late 2009) considered obsolete, and newer code should prefer the ClassWrap API. This API will stay around because i have a significant amount of plugins code which uses it, but no further features or significant changes are planned for this API.
+
 <wiki:toc max_depth='3'/>
 
 =!ClassBinder=
@@ -476,4 +478,3 @@ proxiedProp = 42
 = Advanced Topics =
 
 The discussion continues in [ClassBinderPartTwo]...
-
