@@ -1298,6 +1298,27 @@ namespace v8 { namespace juice { namespace convert {
                 return ::v8::ThrowException( ::v8::String::New("Native property getter function threw an unknown native exception type!"));
             }
         }
+
+        /** Overload which takes a free function as the getter. */
+	template <typename RV, RV (*Func)()>
+        static v8::Handle<v8::Value> PropGetterFunc( Local< String > /*ignored*/, const AccessorInfo & info )
+        {
+            NativeHandle self = CastFromJS<NativeHandle>( info.This() );
+            if( ! self ) return v8::ThrowException( v8::String::New( "Native member property getter could not access native This object!" ) );
+            try
+            {
+                return convert::CastToJS( Func() );
+            }
+            catch( std::exception const & ex )
+            {
+                return ::v8::ThrowException( ::v8::String::New(ex.what()) );
+            }
+            catch( ... )
+            {
+                return ::v8::ThrowException( ::v8::String::New("Native property getter function threw an unknown native exception type!"));
+            }
+        }
+
         /**
             Implements v8::AccessorSetter interface to proxy a JS
             member property through a native member setter function.
@@ -1406,6 +1427,15 @@ namespace v8 { namespace juice { namespace convert {
                                    PropGetterFunc<RV,Getter> );
 	}
 
+        /**
+           Overload too support free-function getters.
+        */
+        template <typename RV, RV (*Getter)()>
+        static void BindGetter( char const * propName, v8::Handle<v8::ObjectTemplate> const & prototype )
+	{
+	    prototype->SetAccessor( v8::String::New( propName ),
+                                    PropGetterFunc<RV,Getter> );
+	}
     };
 
     /**
