@@ -403,6 +403,7 @@ namespace v8 { namespace juice {
             int rc = sqlite3_open( name.c_str(), &dbh );
             if( SQLITE_OK != rc )
             {
+                if( dbh ) sqlite3_close( dbh );
                 std::ostringstream os;
                 os << "sqlite3_open(\""<<name<<"\") failed with error code "<<rc<<'!';
                 exceptionText = os.str();
