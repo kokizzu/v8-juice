@@ -1525,8 +1525,6 @@ namespace cw {
             }
         };
 
-        template <typename T,typename List>
-        struct CtorFwdDispatchList;
         /**
            Internal dispatch routine. CTOR _must_ be a convert::CtorForwardN implementation,
            where N is 0..N.
