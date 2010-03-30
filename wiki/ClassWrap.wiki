@@ -201,36 +201,59 @@ get/set access is directed through the native variables. Alternately,
 we can bind JS properties to native getter/setter functions, such that
 all JS access to the property goes through those native accessors.
 
-This requires a slightly different approach than binding
-functions:
+The binding process looks like:
 
 {{{
-typedef convert::PropertyBinder<BoundNative> PB;
-v8::Handle<v8::ObjectTemplate> cwproto = b.Prototype();
-
 // Bind BoundNative.myInt to BoundNative::getInt() and BoundNative::setInt():
-PB::BindGetterSetter<int,
-                     &BoundNative::getInt,
-                     void,int,&BoundNative::setInt>
-                     ( "myInt", cwproto );
+b.BindGetterSetter<int,
+                   &BoundNative::getInt,
+                   void,int,&BoundNative::setInt>
+                   ( "myInt");
 
 // Bind BoundNative.intGetter read-only to BoundNative::getInt()
-PB::BindGetter<int,&BoundNative::getInt>( "intGetter", cwproto );
+b.BindGetter<int,&BoundNative::getInt>( "intGetter" );
 
 // Bind BoundNative.publicProperty to BoundNative::publicProperty:
-PB::BindMemVar<double,
-              &BoundNative::publicProperty>
-              ( "publicProperty", cwproto );
+b.BindMemVar<double,
+             &BoundNative::publicProperty>
+             ( "publicProperty" );
 
 // Bind BoundNative.publicPropertyRO read-only to BoundNative::publicProperty:
-PB::BindMemVarRO<double,
-                 &BoundNative::publicProperty>
-                 ( "publicPropertyRO", cwproto );
+b.BindMemVarRO<double,
+               &BoundNative::publicProperty>
+               ( "publicPropertyRO" );
 }}}
 
-(TODO: adjust the above demonstration to user the newer !ClassWrap member API for such bindings.)
 
-We can also bind JS properties to static variables, using `PB::BindStaticVar()`.
+We can also bind JS properties to static variables, using `b.BindStaticVar()`:
+
+{{{
+// Read-write access:
+b.BindStaticVar<bool,&BoundNative::enableDebug>("enableDebug");
+// Read-only access:
+b.BindStaticVarRO<bool,&BoundNative::enableDebug>("enableDebug");
+}}}
+
+Caveat: on the JS side such statics are only available via the prototype object. e.g.:
+
+{{{
+BoundNative.prototype.enableDebug; // === a boolean value
+BoundNative.enableDebug; // === undefined
+}}}
+
+As far as i can determine, the v8 API doesn't allow us to bind these at the class level, only the object level.
+
+= Binding a Destruction Function =
+
+It is often useful to provide a mechanism which allows a JS-side client to destroy (or close) an object. For example, when binding i/o streams or database-related objects, we often need to explicitly close/destroy (sometimes in the proper order) them to ensure proper cleanup. Remember that v8 does not guaranty that destructors will _ever_ be called. Binding our own destruction/cleanup functions gives us the level of control we need for many bound native types.
+
+For any class wrapped by the ClassWrap API, we can simply do the following:
+
+{{{
+b.Set( "destroy", CW::DestroyObject );
+}}}
+
+That will trigger the destruction of the _native_ object using the bound destruction function. After the destruction/close function is called, subsequent JS-side use of the object's members will cause an exception to be thrown with a message similar to, "could not find native 'this' object." Thus, after the destruction routine is called, the object should be used any more. Though the native object is destroyed immediately, the now-empty JS object must be cleaned up by v8, and is left to the whims of the garbage collector. (v8 provides us with no API to force the immediate destruction of the JS object, as far as i'm aware.)
 
 = Caveats and Gotchas =
 
@@ -241,7 +264,7 @@ Crossing the JS/C++ lines poses several problems for bound classes.
 
 The more glaring ones are:
 
-  * JS-side subclass complicate the lookup of the native `this` pointer which is stored internally in the JS object.
+  * JS-side subclasses complicate the lookup of the native `this` pointer which is stored internally in the JS object.
   * When one bound type inherits another, inherited bound native functions called from the subclass may not be able to find their own `this` pointer because the subtype is not exactly the same type as the parent.
 
 
@@ -289,10 +312,9 @@ provides this.)
 MyClass * MyClass::getBuddy();
 void MyClass::setBuddy( MyClass * );
 ...
-PB::BindGetterSetter<MyClass *,
-                     &MyClass::getBuddy,
-                     void,MyClass *,&MyClass::setBuddy>
-                     ( "buddy", b.Prototype() );
+b.BindGetterSetter<MyClass *, &MyClass::getBuddy, // <-getter
+                   void, MyClass *,&MyClass::setBuddy // <-setter
+                   >( "buddy" );
 
 // JS:
 var o1 = new MyClass();
