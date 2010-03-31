@@ -20,7 +20,8 @@ function test1()
         print('s =',s,'c =',c);
         print('s.hostname =',s.hostname);
         var host =
-            'localhost'
+            //'localhost'
+            'wh'
             //'127.0.0.1'
             //'www.google.de'
             ;
@@ -70,6 +71,7 @@ function test1()
         function nukeRC(BA)
         {
             if( BA instanceof ns.ByteArray ) BA.destroy();
+            else BA.length = 0;
         }
         function rcVal(BA)
         {
@@ -79,11 +81,12 @@ function test1()
         {
             n = 64;
             print("Reading...");
-            while( undefined !== (rc = c.read(n)) )
+            while( undefined !== (rc = c.read(n,false)) )
             {
                 if( null === rc )
                 {
                     print("Apparently interrupted by timeout before data arrived.");
+                    nukeRC(rc);
                     continue;
                 }
                 print("read("+n+") ==",(rc.length),"["+rcVal(rc)+"]");
@@ -140,7 +143,7 @@ function testBA()
 try
 {
     test1();
-    //testBA();
+    testBA();
     print("Done!");
 }
 catch(e)

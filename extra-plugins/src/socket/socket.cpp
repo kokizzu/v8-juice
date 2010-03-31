@@ -94,7 +94,7 @@ static int create_addr(char const * address, int port, int family, sock_addr_t *
     unsigned int length = strlen(address);
     switch (family) {
 #ifndef windows
-      case PF_UNIX: {
+      case AF_UNIX: {
           struct sockaddr_un *addr = (struct sockaddr_un*) result;
           memset(addr, 0, sizeof(sockaddr_un));
           
@@ -108,7 +108,7 @@ static int create_addr(char const * address, int port, int family, sock_addr_t *
           *len = length + (sizeof(*addr) - sizeof(addr->sun_path));
       } break;
 #endif
-      case PF_INET: {
+      case AF_INET: {
           struct sockaddr_in *addr = (struct sockaddr_in*) result;
           memset(result, 0, sizeof(*addr)); 
           addr->sin_family = AF_INET;
@@ -125,7 +125,7 @@ static int create_addr(char const * address, int port, int family, sock_addr_t *
           addr->sin_port = htons((short)port);
           *len = sizeof(*addr);
       } break;
-      case PF_INET6: {
+      case AF_INET6: {
           struct sockaddr_in6 *addr = (struct sockaddr_in6*) result;
           memset(addr, 0, sizeof(*addr));
           addr->sin6_family = AF_INET6;
@@ -219,7 +219,7 @@ public:
     JSByteArray( v8::Handle<v8::Value> const & val, unsigned int len = 0 );
     ~JSByteArray()
     {
-        CERR "~JSByteArray@"<<this<<'\n';
+        //CERR "~JSByteArray@"<<this<<'\n';
     }
     /** Returns the current length of the byte array. */
     uint32_t length() const
@@ -280,7 +280,7 @@ private:
         this->family = family;
         this->proto = proto;
         this->type = type;
-        if( ! socketFD )
+        if( socketFD < 0 )
         {
             this->fd = socket( family, type, proto );
         }
@@ -288,7 +288,7 @@ private:
         {
             this->fd = socketFD;
         }
-        if( this->fd <= 0 )
+        if( this->fd < 0 )
         {
             cv::StringBuffer msg;
             msg << "socket("<<family<<", "<<type<<", "<<proto<<") failed. errno="<<errno<<'.';
@@ -298,7 +298,18 @@ private:
 public:
 #define DBGOUT if(JSSocket::enableDebug) CERR
 
-    JSSocket(int family = AF_INET, int type = SOCK_DGRAM, int proto = 0, int socketFD = 0 )
+    /**
+       Like socket(family,type,proto). If socketFD is >=0 then it is
+       assumed to be an opened socket with the same family, type, and
+       protocol. If socketFD is (>=0) and the constructor succeeds,
+       this object takes ownership of the socket and will close it
+       when it destructs. If socketFD is (>=0) and the ctor fails
+       (throws), the caller owns the socket.
+    */
+    JSSocket(int family = AF_INET,
+             int type = SOCK_DGRAM,
+             int proto = 0,
+             int socketFD = -1 )
         : fd(-1), family(0), proto(0),type(0),
           hitTimeout(false),
           jsSelf()
@@ -334,15 +345,19 @@ public:
     static void SetupBindings( v8::Handle<v8::Object> dest );
 
     /**
-       where == host address
+       JS Usage:
 
-       FIXME: support where==hostname
+       int bind( string hostNameOrAddress, int port )
+    
+       Throws a JS exception on error, so the return value
+       is largely irrelevant. But 0==success, if you must
+       know.       
     */
     int bind( char const * where, int port )
     {
         if( ! where || !*where )
         {
-            v8::ThrowException(JSTR("Address may not be empty!"));
+            v8::ThrowException(JSTR("Address argument may not be empty!"));
             return -1;
         }
         sock_addr_t addr;
@@ -368,7 +383,7 @@ public:
                 msg << "Malformed address: ["<<where<<"]";
             }
         }
-        else
+        if( 0 != rc )
         {
             {
                 v8::Unlocker unl;
@@ -376,7 +391,7 @@ public:
             }
             if( 0 != rc )
             {
-                msg << "Bind failed with rc "<<rc<<" ("<<strerror(errno)<<")!";
+                msg << "Bind failed! errno="<<errno<<" ("<<strerror(errno)<<")!";
             }
         }
         if( 0 != rc )
@@ -387,9 +402,16 @@ public:
     }
 
 
+    /**
+       JS usage:
+
+       int listen( [int backlog] )
+
+       Throws a JS exception on error. Returns 0 on success.
+    */
     int listen( int backlog )
     {
-        CERR << "WARNING: UNTESTED CODE!\n";
+        CERR << "WARNING: listen() IS UNTESTED!\n";
         int rc = ::listen( this->fd, backlog );
         // ^^^^ does socket timeout value apply here???
         if( 0 != rc )
@@ -403,6 +425,7 @@ public:
         return rc;
     }
 
+    /** this->listen( someUnspecifiedValue ). */
     int listen()
     {
         return this->listen( 5 );
@@ -411,6 +434,16 @@ public:
     /**
        accept(2)'s a connection and creates a new socket
        for it. The returned object is owned by v8.
+
+       Returns NULL if:
+
+       - accept()ing would block a non-blocking socket.
+
+       - Possibly if a timeout occurs.
+
+       On error: in addition to returning NULL, a JS-side exception is
+       thrown if accept(2) returns an error or if construction of the
+       new socket object fails for some reason.
     */
     JSSocket * accept();
 
@@ -465,14 +498,14 @@ public:
     }
 
     /** Converts canonical address addy to hostname. if family==0 then
-        PF_INET is assumed. */
+        AF_INET is assumed. */
     static v8::Handle<v8::Value> addressToName( char const * addy, int family )
     {
         if( ! addy || !*addy )
         {
             return v8::ThrowException(JSTR("'address' parameter may not be empty!"));
         }
-        if( ! family ) family = PF_INET;
+        if( ! family ) family = AF_INET;
         char hn[NI_MAXHOST+1];
         memset( hn, 0, sizeof(hn) );
         sock_addr_t addr;
@@ -661,6 +694,14 @@ public:
     */
     static v8::Handle<v8::Value> writeN( v8::Arguments const & argv );
 
+    /**
+       JS Usage:
+
+       int sendTo( string hostNameOrAddress, ByteArray|string src [, int len=src.length] );
+    */
+    static v8::Handle<v8::Value> sendTo( v8::Arguments const & argv );
+
+    
     /**
        JS Usage:
 
@@ -976,6 +1017,95 @@ std::string JSSocket::toString() const
     return os.str();
 }
 
+v8::Handle<v8::Value> JSSocket::sendTo( v8::Arguments const & argv )
+{
+    if( (argv.Length()<3) || (argv.Length()>4) )
+    {
+        return v8::ThrowException(JSTR("write() requires 3-4 arguments!"));
+    }
+    JSSocket * so = cv::CastFromJS<JSSocket>( argv.This() );
+    if( ! so )
+    {
+        cv::StringBuffer msg;
+        msg << "Could not find native 'this' argument for "
+            << v8::juice::cw::ClassName<JSByteArray>::Value()
+            << " object!";
+        return v8::ThrowException(msg);
+    }
+    std::string where = cv::JSToStdString(argv[0]);
+    int port = cv::JSToInt32(argv[1]);
+    unsigned int len = 0;
+    sock_addr_t addr;
+    memset( &addr, 0, sizeof( sock_addr_t ) );
+    socklen_t alen = 0;
+    int rc = 0;
+    {
+        v8::Unlocker unl;
+        rc = create_addr(where.c_str(), port, so->family, &addr, &alen);
+    }
+    if( 0 != rc )
+    {
+        v8::Handle<v8::Value> ip = JSSocket::nameToAddress( where.c_str() );
+        if( ! ip.IsEmpty() )
+        {
+            where = cv::JSToStdString(ip);
+            v8::Unlocker unl;
+            rc = create_addr( where.c_str(), port, so->family, &addr, &alen );
+        }
+        if( 0 != rc )
+        {
+            cv::StringBuffer msg;
+            msg << "Malformed address: "<<where;
+            return v8::ThrowException(msg);
+        }
+    }
+
+    void const * buf = NULL;
+    std::string sval;
+    if( argv[2]->IsString() )
+    {
+        typedef cv::TMemFuncForwarder<JSSocket,1> FF;
+        sval = cv::JSToStdString(argv[2]);
+        if( argv.Length() > 3 )
+        {
+            len = cv::JSToUInt32(argv[3]);
+            if( len > sval.size() ) len = sval.size();
+        }
+        else len = sval.size();
+        buf = sval.c_str();
+    }
+    else
+    {
+        JSByteArray * ba = cv::CastFromJS<JSByteArray>( argv[2] );
+        if( ! ba )
+        {
+            cv::StringBuffer msg;
+            msg << "The second argument must be a String or "
+                << v8::juice::cw::ClassName<JSByteArray>::Value()
+                << '!';
+            return v8::ThrowException(msg);
+        }
+        if( argv.Length() > 3 )
+        {
+            len = cv::JSToUInt32(argv[3]);
+            if( len > ba->length() ) len = ba->length();
+        }
+        else len = ba->length();
+        buf = &ba->vec[0];
+    }
+    {
+        v8::Unlocker unl;
+        rc = ::sendto( so->fd, buf, len, 0, (sockaddr *)&addr, alen );
+    }
+    if( 0 != rc )
+    {
+        cv::StringBuffer msg;
+        msg << "::sendto("<<so->fd<<"["<<where<<":"<<port<<"], <buffer>, "<<len<<",...) failed: errno="<<errno
+            << " ("<<strerror(errno)<<")";
+        return v8::ThrowException( msg );
+    }
+    return cv::CastToJS( rc );
+}
 v8::Handle<v8::Value> JSSocket::writeN( v8::Arguments const & argv )
 {
     if( argv.Length() > 2 )
@@ -1121,7 +1251,7 @@ v8::Handle<v8::Value> JSSocket::read( unsigned int n, bool binary )
                     << " object failed!";
                 return v8::ThrowException( msg );
             }
-            ba->length( vec.size() );
+            //ba->length( vec.size() );
             //ba->vec.assign( vec.begin(), vec.end() );
             // ^^^ swap() won't work because of different signedness
             ba->vec.swap( vec );
@@ -1137,14 +1267,14 @@ v8::Handle<v8::Value> JSSocket::read( unsigned int n, bool binary )
     
 JSSocket * JSSocket::accept()
 {
-    CERR << "WARNING: UNTESTED CODE!\n";
+    CERR << "WARNING: accept() is UNTESTED CODE!\n";
     int rc = ::accept( this->fd, NULL, NULL );
     // ^^^^ does socket timeout value apply here???
     if( -1 == rc )
     {
         if( (errno == EAGAIN)
             || (errno == EWOULDBLOCK) )
-        {
+        { /** presumably(?) a timeout (or blocking on a non-blocking socket) */
             return NULL;
         }
         cv::StringBuffer msg;
@@ -1447,6 +1577,7 @@ void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
         .Set( "close", CW::DestroyObject )
         .Set( "toString", ICM::M0::Invocable<std::string,&N::toString> )
         .Set( "bind", ICM::M2::Invocable<int,char const *,int,&N::bind> )
+        .Set( "accept", ICM::M0::Invocable<JSSocket*,&N::accept> )
         .Set( "listen", cv::OverloadInvocables<OverloadsListen>::Invocable )
         .Set( "connect", ICM::M2::Invocable<int,char const *, int,&N::connect> )
         .Set( "nameToAddress", ICC::F1::Invocable< v8::Handle<v8::Value> , const char *,&N::nameToAddress> )
@@ -1456,6 +1587,7 @@ void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
               //cv::OverloadInvocables<OverloadsWrite>::Invocable
               cv::InvocableCallback< -1, &JSSocket::writeN >::Invocable
               )
+        .Set( "sendTo", cv::InvocableCallback< -1, &JSSocket::sendTo >::Invocable )
         .Set( "setTimeout", cv::OverloadInvocables<OverloadsSetTimeout>::Invocable )
         //.Set( "setOpt", ICM::M2::Invocable< int, int, int, &N::setOpt > )
         //.Set( "getOpt", convert::OverloadInvocables<OverloadsGetOpt>::Invocable )
