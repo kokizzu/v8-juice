@@ -269,12 +269,12 @@ v8::Handle<v8::Value> argv[] =
     cv::CastToJS( 42.24 )
     };
 
-typedef v8::juice::cw::ClassWrap<MyNative> CW;
+typedef v8::juice::cw::ClassWrap<BoundNative> CW;
 // Instantiate new instance via JS:
 v8::Handle<v8::Object> jobj =
   CW::Instance().NewInstance( sizeof(argv)/sizeof(argv[0]),argv);
 // Get a handle to the native, which is owned by v8:
-MyNative * my = cv::CastFromJS<MyNative>( jobj );
+BoundNative * my = cv::CastFromJS<BoundNative>( jobj );
 if( ! my ) {
     ... construction failed and possibly threw a JS-side exception ...
 }
