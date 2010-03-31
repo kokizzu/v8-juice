@@ -57,7 +57,7 @@ function test1()
         print("Connecting to",chost+":"+port,'...');
         rc = c.connect( chost, port );
         print("c.peerInfo =",c.peerInfo);
-        rc = c.setTimeout( 0, 1000 );
+        rc = c.setTimeout( 0, 10 );
         print("c.setTimeout() rc =",rc);
         var crnl = '\r\n';
         rc = c.write( "GET / HTTP/1.1"+crnl
@@ -70,6 +70,11 @@ function test1()
             print("Reading...");
             while( undefined !== (rc = c.read(n)) )
             {
+                if( null === rc )
+                {
+                    print("Apparently interrupted by timeout before data arrived.");
+                    continue;
+                }
                 print("read("+n+") ==",(rc.length),"["+rc+"]");
                 if( rc.length < n ) break; // there's a corner case here where we will block!
             }
@@ -84,9 +89,28 @@ function test1()
         
 }
 
+function testBA()
+{
+    var n = 10;
+    var ba = new ns.ByteArray(n);
+    var i;
+    print(ba,'length =',ba.length);
+    for( i = 0; i < n*1.5; ++i )
+    {
+        ba[i] = i * 17;
+        print( 'ba[',i,'] =',ba[i] );
+    }
+    print('length =',ba.length);
+    for( var k in ba )
+    {
+        print( '\t',k,'=',ba[k] );
+    }
+}
+
 try
 {
     test1();
+    //testBA();
     print("Done!");
 }
 catch(e)

@@ -733,7 +733,7 @@ public:
 class JSByteArray
 {
 public:
-    typedef std::vector<unsigned int> BufferType;
+    typedef std::vector<unsigned char> BufferType;
     BufferType vec;
     JSByteArray( unsigned int size = 0 )
         : vec( size, 0 )
@@ -744,15 +744,18 @@ public:
     }
     uint32_t length() const
     {
+        CERR << "length()\n";
         return this->vec.size();
     }
-#if 0
+    /** toString() for JS. */
+    std::string toString() const;
+
+    static v8::Handle<v8::Value> indexedPropertyGetter(uint32_t index, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Value> indexedPropertySetter(uint32_t index, v8::Local< v8::Value > value, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Boolean> indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info);
     static v8::Handle<v8::Boolean> indexedPropertyDeleter(uint32_t index, const v8::AccessorInfo &info);
     static v8::Handle<v8::Array> indexedPropertyEnumerator(const v8::AccessorInfo &info);
-    static v8::Handle<v8::Value> indexedPropertyGetter(uint32_t index, const v8::AccessorInfo &info);
-    static v8::Handle<v8::Boolean> indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info);
-    static v8::Handle<v8::Value> indexedPropertySetter(uint32_t index, v8::Local< v8::Value > value, const v8::AccessorInfo &info);
-#endif
+    static void SetupBindings( v8::Handle<v8::Object> dest );
 };
 
 #include <v8/juice/ClassWrap_TwoWay.h>
@@ -845,6 +848,43 @@ namespace v8 { namespace juice { namespace cw
             JSSocket::SetupBindings(target);
         }
     };
+
+    template <>
+    struct ToNative_SearchPrototypesForNative<JSByteArray>
+        : Opt_Bool<true>
+    {};
+
+    template <>
+    struct AllowCtorWithoutNew<JSByteArray>
+        : Opt_Bool<false>
+    {};
+
+    template <>
+    struct InternalFields<JSByteArray>
+        : InternalFields_Base<JSByteArray,1,0>
+    {};
+
+    template <>
+    struct Factory<JSByteArray>
+        : Factory_CtorForwarder<JSByteArray,
+                                v8::juice::tmp::TypeList<
+            cv::CtorForwarder0<JSByteArray>,
+            cv::CtorForwarder1<JSByteArray,unsigned int>
+            > >
+    {};
+
+    template <>
+    struct ToNative< JSByteArray > :
+        ToNative_Base< JSByteArray > {};
+    
+    template <>
+    struct ClassName< JSByteArray >
+    {
+        static char const * Value()
+        {
+            return "ByteArray";
+        }
+    };
     
 } } } // v8::juice::cw
 
@@ -859,6 +899,11 @@ namespace v8 { namespace juice { namespace convert
     struct NativeToJS< JSSocket > : v8::juice::cw::NativeToJSImpl< JSSocket >
     {};
 
+    template <>
+    struct JSToNative< JSByteArray > : v8::juice::cw::JSToNativeImpl< JSByteArray >
+    {};
+
+    
 } } } // v8::juice::convert
 
 bool JSSocket::enableDebug = v8::juice::cw::DebugLevel<JSSocket>::Value > 2;
@@ -900,6 +945,121 @@ JSSocket * JSSocket::accept()
     return cv::CastFromJS<JSSocket*>( jobj );
 }
 
+v8::Handle<v8::Value> JSByteArray::indexedPropertyGetter(uint32_t index, const v8::AccessorInfo &info)
+{
+    CERR << "index getter: "<<index<<'\n';
+    JSByteArray * ar = cv::CastFromJS<JSByteArray*>( info.This() );
+    if( ! ar ) return v8::ThrowException(JSTR("Native 'this' not found!"));
+    if( index >= ar->vec.size() ) return v8::Undefined();
+    else
+    {
+        return cv::CastToJS<int>( ar->vec[index] );
+    }
+}
+v8::Handle<v8::Value> JSByteArray::indexedPropertySetter(uint32_t index, v8::Local< v8::Value > value, const v8::AccessorInfo &info)
+{
+    CERR << "index setter: "<<index<<'\n';
+    v8::Handle<v8::Value> rv;
+    JSByteArray * ar = cv::CastFromJS<JSByteArray*>( info.This() );
+    if( ! ar ) return v8::ThrowException(JSTR("Native 'this' not found!"));
+    if( index >= ar->vec.size() )
+    {
+        ar->vec.reserve( index+1 );
+        CERR << "size = "<<ar->vec.size()<<'\n';
+    }
+    if( index >= ar->vec.size() )
+    {
+        return rv;
+    }
+    else
+    {
+        return cv::CastToJS<uint16_t>( ar->vec[index] = static_cast<unsigned char>( cv::CastFromJS<uint16_t>(value) ) );
+    }
+}
+
+v8::Handle<v8::Boolean> JSByteArray::indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info)
+{
+    JSByteArray * ar = cv::CastFromJS<JSByteArray*>( info.This() );
+    if( ! ar ) return v8::Handle<v8::Boolean>();
+    else
+    {
+        return (index < ar->vec.size())
+            ? v8::True()
+            : v8::False()
+            ;
+    }
+}
+v8::Handle<v8::Boolean> JSByteArray::indexedPropertyDeleter(uint32_t index, const v8::AccessorInfo &info)
+{
+    //CERR << "marker!\n";
+    return v8::False();
+}
+v8::Handle<v8::Array> JSByteArray::indexedPropertyEnumerator(const v8::AccessorInfo &info)
+{
+    CERR << "marker!\n";
+    v8::Handle<v8::Array> rv;
+    JSByteArray * ar = cv::CastFromJS<JSByteArray*>( info.This() );
+    if( ! ar )
+    {
+        v8::ThrowException(JSTR("Native 'this' not found!"));
+        return rv;
+    }
+    rv = v8::Handle<v8::Array>( v8::Array::New() );
+    for( uint32_t i = 0; i < ar->vec.size(); ++i )
+    {
+        rv->Set( i, cv::CastToJS(i) );
+    }
+    return rv;
+}
+std::string JSByteArray::toString() const
+{
+    std::ostringstream os;
+    os << "[object "
+       << v8::juice::cw::ClassName<JSByteArray>::Value()
+       << "@"<<(void const *)this
+       << ']';
+    return os.str();
+}
+
+void JSByteArray::SetupBindings( v8::Handle<v8::Object> dest )
+{
+    using namespace v8;
+    using namespace v8::juice;
+    //HandleScope scope;
+    typedef JSByteArray N;
+    typedef cw::ClassWrap<N> CW;
+    CW & cw( CW::Instance() );
+    DBGOUT <<"Binding class "<<CW::ClassName::Value()<<"...\n";
+    typedef convert::InvocationCallbackCreator ICC;
+    typedef convert::MemFuncInvocationCallbackCreator<N> ICM;
+
+    if( cw.IsSealed() )
+    {
+        cw.AddClassTo( dest );
+        return;
+    }
+
+
+    cw.BindGetter<uint32_t,&N::length>("length");
+    cw.Set( "toString", ICM::M0::Invocable<std::string,&N::toString> );
+
+    v8::Handle<v8::FunctionTemplate> ctorTmpl = cw.CtorTemplate();
+    ctorTmpl->InstanceTemplate()->SetIndexedPropertyHandler( JSByteArray::indexedPropertyGetter,
+                                                             JSByteArray::indexedPropertySetter,
+                                                             JSByteArray::indexedPropertyQuery,
+                                                             JSByteArray::indexedPropertyDeleter,
+                                                             JSByteArray::indexedPropertyEnumerator
+                                                             );
+    ctorTmpl->Set( JSTR("WTF"), cv::CastToJS("wtf is going on here?") );
+
+    v8::Handle<v8::Function> ctor = cw.Seal();
+    cw.AddClassTo( dest );
+
+
+
+    DBGOUT <<"Binding done.\n";
+    return;
+}
 
 /**
 
@@ -948,6 +1108,7 @@ JSSocket * JSSocket::accept()
 */
 void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
 {
+    JSByteArray::SetupBindings( dest );
     using namespace v8;
     using namespace v8::juice;
     HandleScope scope;
