@@ -214,13 +214,20 @@ public:
     /** JS-side 'this' object. Set by v8::juice::cw::WeakWrap<JSSocket>::Wrap(). */
     v8::Handle<v8::Object> jsSelf;
 private:
-    void init(int family, int type, int proto )
+    void init(int family, int type, int proto, int socketFD )
     {
         this->family = family;
         this->proto = proto;
         this->type = type;
-        this->fd = socket( family, type, proto );
-        if( this->fd < 0 )
+        if( ! socketFD )
+        {
+            this->fd = socket( family, type, proto );
+        }
+        else
+        {
+            this->fd = socketFD;
+        }
+        if( this->fd <= 0 )
         {
             cv::StringBuffer msg;
             msg << "socket("<<family<<", "<<type<<", "<<proto<<") failed. errno="<<errno<<'.';
@@ -230,11 +237,11 @@ private:
 public:
 #define DBGOUT if(JSSocket::enableDebug) CERR
 
-    JSSocket(int family = AF_INET, int type = SOCK_DGRAM, int proto = 0 )
+    JSSocket(int family = AF_INET, int type = SOCK_DGRAM, int proto = 0, int socketFD = 0 )
         : fd(-1), family(0), proto(0),type(0),
           jsSelf()
     {
-        this->init( family, type, proto );
+        this->init( family, type, proto, socketFD );
     }
 
     /** Closes the socket. */
@@ -318,9 +325,33 @@ public:
     }
 
 
+    int listen( int backlog )
+    {
+        CERR << "WARNING: UNTESTED CODE!\n";
+        int rc = ::listen( this->fd, backlog );
+        if( 0 != rc )
+        {
+            cv::StringBuffer msg;
+            msg << "connect() failed: errno="<<strerror(errno);
+            v8::ThrowException(msg);
+        }
+        return rc;
+    }
+
+    int listen()
+    {
+        return this->listen( 5 );
+    }
+
+    /**
+       accept(2)'s a connection and creates a new socket
+       for it. The returned object is owned by v8.
+    */
+    JSSocket * accept();
+
     static int getProtoByName( char const * name )
     {
-        struct protoent * r = ::getprotobyname(name);
+        struct protoent const * r = ::getprotobyname(name);
         return r ? r->p_proto : 0;
     }
 
@@ -432,10 +463,20 @@ public:
         }
         if( 0 != rc )
         {
-            cv::StringBuffer msg;
-            msg << "Malformed address: "<<where;
-            v8::ThrowException(msg);
-            return rc;
+            v8::Handle<v8::Value> ip = nameToAddress( where );
+            if( ! ip.IsEmpty() )
+            {
+                std::string const ips = cv::JSToStdString(ip);
+                v8::Unlocker unl;
+                rc = create_addr( ips.c_str(), port, this->family, &addr, &len );
+            }
+            if( 0 != rc )
+            {
+                cv::StringBuffer msg;
+                msg << "Malformed address: "<<where;
+                v8::ThrowException(msg);
+                return rc;
+            }
         }
         {
             v8::Unlocker unl;
@@ -744,7 +785,9 @@ namespace v8 { namespace juice { namespace cw
             cv::CtorForwarder0<JSSocket>,
             cv::CtorForwarder1<JSSocket,int>,
             cv::CtorForwarder2<JSSocket,int,int>,
-            cv::CtorForwarder3<JSSocket,int,int,int>
+            cv::CtorForwarder3<JSSocket,int,int,int>,
+            /* for internal use only! */
+            cv::CtorForwarder4<JSSocket,int,int,int,int>
         >
         >
     {};
@@ -834,6 +877,29 @@ std::string JSSocket::toString() const
     return os.str();
 }
 
+JSSocket * JSSocket::accept()
+{
+    CERR << "WARNING: UNTESTED CODE!\n";
+    int rc = ::accept( this->fd, NULL, NULL );
+    if( -1 == rc )
+    {
+        cv::StringBuffer msg;
+        msg << "connect() failed: errno="<<strerror(errno);
+        v8::ThrowException(msg);
+        return NULL;
+    }
+    typedef v8::juice::cw::ClassWrap<JSSocket> CW;
+    v8::Handle<v8::Value> argv[] =
+        {
+        cv::CastToJS( this->family ),
+        cv::CastToJS( this->type ),
+        cv::CastToJS( this->proto ),
+        cv::CastToJS( rc )        
+        };
+    v8::Handle<v8::Object> jobj = CW::Instance().NewInstance(4,argv);
+    return cv::CastFromJS<JSSocket*>( jobj );
+}
+
 
 /**
 
@@ -857,16 +923,20 @@ std::string JSSocket::toString() const
    - new Socket( [int family=AF_INET [, int type=SOCK_DGRAM [, int protocol=0]]] )
    - void close()
    - string toString()
-   - int bind( string address, int port )
-   - int connect( string address, int port )
+   - int bind( string hostNameOrAddress, int port )
+   - int connect( string hostNameOrAddress, int port )
    - string nameToAddress(string host)
    - string addressToName(string address)
    - string read(unsigned int length)
    - string write(string data [,int length=data.length])
-   - Array[address,port] peerInfo()
    - int setTimeout( unsigned int seconds, unsigned int microseconds )
 
    Most of the functions throw on error.
+
+   Socket instance properties:
+
+   - Array[address,port] peerInfo, only valid after a connection is
+   established.
    
    
    Socket constructor properties:
@@ -903,17 +973,22 @@ void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
     //cv::InvocableMemFunc2<N,v8::Handle<v8::Value>,int,unsigned int,&N::getOpt>
         cv::InvocableMemFunc1<N,v8::Handle<v8::Value>,int,&N::getOpt>
         > OverloadsGetOpt;
+    typedef tmp::TypeList<
+        cv::InvocableMemFunc0<N,int,&N::listen>,
+        cv::InvocableMemFunc1<N,int,int,&N::listen>
+        > OverloadsListen;
 
     cw
         .Set( "close", CW::DestroyObject )
         .Set( "toString", ICM::M0::Invocable<std::string,&N::toString> )
         .Set( "bind", ICM::M2::Invocable<int,char const *,int,&N::bind> )
+        .Set( "listen", cv::OverloadInvocables<OverloadsListen>::Invocable )
         .Set( "connect", ICM::M2::Invocable<int,char const *, int,&N::connect> )
         .Set( "nameToAddress", ICC::F1::Invocable< v8::Handle<v8::Value> , const char *,&N::nameToAddress> )
         .Set( "addressToName", ICC::F1::Invocable< v8::Handle<v8::Value> , const char *,&N::addressToName> )
         .Set( "read", ICM::M1::Invocable< v8::Handle<v8::Value>, unsigned int,&N::read> )
-        .Set( "write", convert::OverloadInvocables<OverloadsWrite>::Invocable )
-        .Set( "peerInfo", ICM::M0::Invocable< v8::Handle<v8::Value>, &N::peerInfo > )
+        .Set( "write", cv::OverloadInvocables<OverloadsWrite>::Invocable )
+        //.Set( "peerInfo", ICM::M0::Invocable< v8::Handle<v8::Value>, &N::peerInfo > )
         .Set( "setTimeout", ICM::M2::Invocable< int, unsigned int,unsigned int, &N::setTimeout> )
         //.Set( "setOpt", ICM::M2::Invocable< int, int, int, &N::setOpt > )
         //.Set( "getOpt", convert::OverloadInvocables<OverloadsGetOpt>::Invocable )
@@ -922,6 +997,7 @@ void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
     cw.BindMemVarRO<int,&N::family>( "family" );
     cw.BindMemVarRO<int,&N::proto>( "proto" );
     cw.BindMemVarRO<int,&N::type>( "type" );
+    cw.BindGetter< v8::Handle<v8::Value>, &N::peerInfo >( "peerInfo" );
     cw.BindGetter<std::string,&N::hostname>("hostname");
 
     v8::Handle<v8::Function> ctor = cw.Seal();

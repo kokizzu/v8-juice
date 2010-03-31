@@ -56,7 +56,7 @@ function test1()
         var chost = ns.Socket.nameToAddress( host );
         print("Connecting to",chost+":"+port,'...');
         rc = c.connect( chost, port );
-        print("c.peerInfo() =",c.peerInfo());
+        print("c.peerInfo =",c.peerInfo);
         rc = c.setTimeout( 0, 1000 );
         print("c.setTimeout() rc =",rc);
         var crnl = '\r\n';
@@ -74,7 +74,7 @@ function test1()
                 if( rc.length < n ) break; // there's a corner case here where we will block!
             }
         }
-        print("c.peerInfo() =",c.peerInfo());
+        print("c.peerInfo =",c.peerInfo);
     }
     finally
     {
