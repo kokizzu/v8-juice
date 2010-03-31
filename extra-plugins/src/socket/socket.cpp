@@ -58,14 +58,6 @@ namespace cv = v8::juice::convert;
 #  define MAXHOSTNAMELEN 64
 #endif
 
-#ifndef INVALID_SOCKET
-#  define INVALID_SOCKET -1
-#endif
-
-#ifndef SOCKET_ERROR
-#  define SOCKET_ERROR -1
-#endif
-
 
 namespace {
 
@@ -208,7 +200,8 @@ static v8::Handle<v8::Value> create_peer(sockaddr * addr)
 }
 
 /**
-   A thin wrapper around socket() and friends.
+   A thin wrapper around socket() and friends, providing
+   a C++/JS binding for the v8-juice framework.
 */
 class JSSocket
 {
@@ -271,6 +264,11 @@ public:
     */
     static void SetupBindings( v8::Handle<v8::Object> dest );
 
+    /**
+       where == host address
+
+       FIXME: support where==hostname
+    */
     int bind( char const * where, int port )
     {
         if( ! where || !*where )
@@ -281,15 +279,32 @@ public:
         sock_addr_t addr;
         memset( &addr, 0, sizeof( sock_addr_t ) );
         socklen_t len = 0;
-        int rc = create_addr( where, port, this->family, &addr, &len );
+        int rc = 0;
+        {
+            v8::Unlocker unl;
+            rc = create_addr( where, port, this->family, &addr, &len );
+        }
         cv::StringBuffer msg;
         if( 0 != rc )
         {
-            msg << "Malformed address: ["<<where<<"]";
+            v8::Handle<v8::Value> ip = nameToAddress( where );
+            if( ! ip.IsEmpty() )
+            {
+                std::string const ips = cv::JSToStdString(ip);
+                v8::Unlocker unl;
+                rc = create_addr( ips.c_str(), port, this->family, &addr, &len );
+            }
+            if( 0 != rc )
+            {
+                msg << "Malformed address: ["<<where<<"]";
+            }
         }
         else
         {
-            rc = ::bind( this->fd, (sockaddr *)&addr, len );
+            {
+                v8::Unlocker unl;
+                rc = ::bind( this->fd, (sockaddr *)&addr, len );
+            }
             if( 0 != rc )
             {
                 msg << "Bind failed with rc "<<rc<<" ("<<strerror(errno)<<")!";
@@ -319,7 +334,11 @@ public:
         struct addrinfo hints, * servinfo = NULL;
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = family;
-        int rc = getaddrinfo(name, NULL, &hints, &servinfo);
+        int rc = 0;
+        {
+            v8::Unlocker unl;
+            rc = getaddrinfo(name, NULL, &hints, &servinfo);
+        }
         if (rc != 0)
         {
             cv::StringBuffer msg;
@@ -349,7 +368,8 @@ public:
         return nameToAddress( name, 0 );
     }
 
-    /** Converts canonical address addy to hostname. */
+    /** Converts canonical address addy to hostname. if family==0 then
+        PF_INET is assumed. */
     static v8::Handle<v8::Value> addressToName( char const * addy, int family )
     {
         if( ! addy || !*addy )
@@ -364,7 +384,11 @@ public:
         memset( &addr, 0, sizeof(sock_addr_t) );
         struct addrinfo hints;
         memset(&hints, 0, sizeof(hints));
-        int rc = create_addr( addy, 0, family, &addr, &len );
+        int rc = 0;
+        {
+            v8::Unlocker unl;
+            rc = create_addr( addy, 0, family, &addr, &len );
+        }
         if( 0 != rc )
         {
             cv::StringBuffer msg;
@@ -401,7 +425,11 @@ public:
         sock_addr_t addr;
         memset( &addr, 0, sizeof(sock_addr_t) );
         socklen_t len = 0;
-        int rc = create_addr(where, port, this->family, &addr, &len);
+        int rc = 0;
+        {
+            v8::Unlocker unl;
+            rc = create_addr(where, port, this->family, &addr, &len);
+        }
         if( 0 != rc )
         {
             cv::StringBuffer msg;
@@ -409,7 +437,10 @@ public:
             v8::ThrowException(msg);
             return rc;
         }
-        rc = ::connect( this->fd, (sockaddr *)&addr, len );
+        {
+            v8::Unlocker unl;
+            rc = ::connect( this->fd, (sockaddr *)&addr, len );
+        }
         if( 0 != rc )
         {
             cv::StringBuffer msg;
@@ -439,28 +470,57 @@ public:
         return buf;
     }
 
+    /**
+       Reads n bytes from the socket and returns them
+       as a string (thus binary data will not work
+       properly!). Special return values:
+
+       - (val===null) means reading was interrupted
+       by a timeout and no bytes were read before the
+       timeout expired.
+
+       - (val===undefined) means that a read error
+       occured, but this function will throw
+       a v8 exception in that case.
+
+       When the length of the returned string is less than n, it
+       could mean any of:
+
+       - Timeout was reached after reading some bytes.
+
+       - EOF
+    */
     v8::Handle<v8::Value> read( unsigned int n )
     {
         typedef std::vector<char> VT;
         VT vec(n+1,'\0');
         //vec.reserve(n+1);
-        ssize_t rc;
-#if 1
+        ssize_t rc = 0;
         sock_addr_t addr;
         memset( &addr, 0, sizeof(sock_addr_t) );
         socklen_t len = 0;
-        rc = ::recvfrom(this->fd, &vec[0], n, 0, (sockaddr *) &addr, &len);
-#else
-
-        rc = ::read(this->fd, &vec[0], n);
-#endif
-        if( SOCKET_ERROR == rc )
         {
-            cv::StringBuffer msg;
-            msg << "socket read() failed! errno="<<errno
-                << " ("<<strerror(errno)<<")";
-            v8::ThrowException( msg );
-            return v8::Undefined();
+            v8::Unlocker unl;
+#if 1
+            rc = ::recvfrom(this->fd, &vec[0], n, 0, (sockaddr *) &addr, &len);
+#else
+            rc = ::read(this->fd, &vec[0], n);
+#endif
+        }
+        if( (ssize_t)-1 == rc )
+        {
+            if( (EAGAIN==errno) || (EWOULDBLOCK==errno) )
+            { /* Presumably interrupted by a timeout. */
+                return v8::Null();
+            }
+            else
+            {
+                cv::StringBuffer msg;
+                msg << "socket read() failed! errno="<<errno
+                    << " ("<<strerror(errno)<<")";
+                v8::ThrowException( msg );
+                return v8::Undefined();
+            }
         }
         else
         {
@@ -473,15 +533,30 @@ public:
             return cv::CastToJS( &vec[0] );
         }
     }
+
     unsigned int write( char const * src, unsigned int n )
     {
-        ssize_t rc = ::write(this->fd, src, n );
-        if( SOCKET_ERROR == rc )
+        ssize_t rc = 0;
         {
-            cv::StringBuffer msg;
-            msg << "socket write() failed! errno="<<errno
-                << " ("<<strerror(errno)<<")";
-            v8::ThrowException( msg );
+            v8::Unlocker unl;
+            // ^^^ this _might_ not be legal, since src is owned by v8
+            // (but it's ArgCaster container is valid until this func
+            // returns).
+            rc = ::write(this->fd, src, n );
+        }
+        if( (ssize_t)-1 == rc )
+        {
+            if( (EAGAIN==errno) || (EWOULDBLOCK==errno) )
+            { /* Presumably interrupted by a timeout. */
+                rc = 0;
+            }
+            else
+            {
+                cv::StringBuffer msg;
+                msg << "socket write() failed! errno="<<errno
+                    << " ("<<strerror(errno)<<")";
+                v8::ThrowException( msg );
+            }
         }
         return (unsigned int)rc;
     }
@@ -499,7 +574,11 @@ public:
             sock_addr_t addr;
             memset( &addr, 0, sizeof(sock_addr_t) );
             socklen_t len = sizeof(sock_addr_t);
-            int rc = getpeername(this->fd, (sockaddr *) &addr, &len);
+            int rc = 0;
+            {
+                v8::Unlocker unl;
+                rc = getpeername(this->fd, (sockaddr *) &addr, &len);
+            }
             if (0 == rc)
             {
                 this->jsSelf->Set(JSTR(socket_strings.fieldPeer), create_peer( (sockaddr*) &addr ) );
@@ -515,6 +594,9 @@ public:
         return this->jsSelf->Get(JSTR(socket_strings.fieldPeer));
     }
 
+    /**
+       Don't use. See getOpt() for why.
+    */
     int setOpt( int key, int val )
     {
         int rc = setsockopt( this->fd, SOL_SOCKET, key, (void const *)&val, sizeof(int) );
@@ -530,9 +612,13 @@ public:
         return rc;
     }
 
+    /**
+       Don't use this until we can confirm which options we can
+       support here.
+    */
     v8::Handle<v8::Value> getOpt( int key )
     {
-        unsigned int buf = 0;
+        int buf = 0;
         socklen_t len = sizeof(buf);
         int rc = getsockopt( this->fd, SOL_SOCKET, key, (void *)&buf, &len );
         if( 0 != rc )
@@ -574,8 +660,60 @@ public:
         }
     }
 
+    /**
+       Sets the send/receive timeouts to the given number of
+       seconds/microseconds. Returns 0 on success or an errno value on
+       error.
+    */
+    int setTimeout( unsigned int seconds, unsigned int usec )
+    {
+        struct timeval t;
+        t.tv_sec = seconds;
+        t.tv_usec = usec;
+        socklen_t len = sizeof(timeval);
+        int rc = setsockopt( this->fd, SOL_SOCKET, SO_SNDTIMEO, &t, len );
+        if( 0 == rc )
+        {
+            rc = setsockopt( this->fd, SOL_SOCKET, SO_RCVTIMEO, &t, len );
+        }
+        if( rc != 0 )
+        {
+            rc = errno;
+        }
+        return rc;
+    }
     
 }/*JSSocket*/;
+
+
+/**
+   Not yet complete.
+*/
+class JSByteArray
+{
+public:
+    typedef std::vector<unsigned int> BufferType;
+    BufferType vec;
+    JSByteArray( unsigned int size = 0 )
+        : vec( size, 0 )
+    {
+    }
+    ~JSByteArray()
+    {
+    }
+    uint32_t length() const
+    {
+        return this->vec.size();
+    }
+#if 0
+    static v8::Handle<v8::Boolean> indexedPropertyDeleter(uint32_t index, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Array> indexedPropertyEnumerator(const v8::AccessorInfo &info);
+    static v8::Handle<v8::Value> indexedPropertyGetter(uint32_t index, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Boolean> indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Value> indexedPropertySetter(uint32_t index, v8::Local< v8::Value > value, const v8::AccessorInfo &info);
+#endif
+};
+
 #include <v8/juice/ClassWrap_TwoWay.h>
 ////////////////////////////////////////////////////////////////////////
 // Set up our ClassWrap policies...
@@ -697,17 +835,46 @@ std::string JSSocket::toString() const
 }
 
 
-    
-
 /**
 
    Classes:
 
-   Functions:
+   - Socket
+
+   Socket ctor properties:
    
-   Properties (read-only):
+   - int AF_INET
+   - int AF_INET6
+   - int AF_UNIX
+   - int AF_UNSPEC
+   - int SOCK_DGRAM
+   - int SOCK_STREAM
+   - int SOCK_SEQPACKET
+   - int SOCK_RAW
+   
+   Socket class functions:
 
+   - new Socket( [int family=AF_INET [, int type=SOCK_DGRAM [, int protocol=0]]] )
+   - void close()
+   - string toString()
+   - int bind( string address, int port )
+   - int connect( string address, int port )
+   - string nameToAddress(string host)
+   - string addressToName(string address)
+   - string read(unsigned int length)
+   - string write(string data [,int length=data.length])
+   - Array[address,port] peerInfo()
+   - int setTimeout( unsigned int seconds, unsigned int microseconds )
 
+   Most of the functions throw on error.
+   
+   
+   Socket constructor properties:
+
+   - int getProtoByName( string protocolName )
+   - string nameToAddress( string hostname )
+   - string addressToName( string address )
+   
 */
 void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
 {
@@ -747,6 +914,7 @@ void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
         .Set( "read", ICM::M1::Invocable< v8::Handle<v8::Value>, unsigned int,&N::read> )
         .Set( "write", convert::OverloadInvocables<OverloadsWrite>::Invocable )
         .Set( "peerInfo", ICM::M0::Invocable< v8::Handle<v8::Value>, &N::peerInfo > )
+        .Set( "setTimeout", ICM::M2::Invocable< int, unsigned int,unsigned int, &N::setTimeout> )
         //.Set( "setOpt", ICM::M2::Invocable< int, int, int, &N::setOpt > )
         //.Set( "getOpt", convert::OverloadInvocables<OverloadsGetOpt>::Invocable )
         .Set( socket_strings.fieldPeer, cv::BoolToJS(false) )
@@ -792,131 +960,6 @@ void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
     F("addressToName");
 
     cw.AddClassTo( dest );
-#if 0
-#define F(X) posix->Set( JSTR(X), JF )
-    // write(...) overloads:
-    typedef tmp::TypeList<
-        convert::InvocableMemFunc1<N,size_t,std::string const &,&N::write>,
-        convert::InvocableMemFunc2<N,size_t,std::string const &,size_t,&N::write>
-        > WriteList;
-    // read(...) overloads:
-    typedef tmp::TypeList<
-        convert::InvocableMemFunc1<N,std::string,size_t,&N::read>,
-        convert::InvocableMemFunc2<N,std::string,size_t,size_t,&N::read>
-        > ReadList;
-    // seek(...) overloads:
-    typedef tmp::TypeList<
-        convert::InvocableMemFunc1<N,int64_t,int64_t,&N::seek>,
-        convert::InvocableMemFunc2<N,int64_t,int64_t,int,&N::seek>
-        > SeekList;
-    cw
-        .Set( "clearerr", ICM::M0::Invocable<void,&N::clearerr> )
-        .Set( "close", ICM::M0::Invocable<bool,&N::destroy> )
-        //.Set( "destroy", ICM::M0::Invocable<bool,&N::destroy> )
-        .Set( "datasync", ICM::M0::Invocable<int,&N::datasync> )
-        .Set( "eof", ICM::M0::Invocable<int,&N::eof> )
-        .Set( "error", ICM::M0::Invocable<int,&N::error> )
-        .Set( "fileno", ICM::M0::Invocable<int,&N::fileno> )
-        .Set( "flush", ICM::M0::Invocable<int,&N::flush> )
-        .Set( "read", convert::OverloadInvocables<ReadList>::Invocable )
-        .Set( "rewind", ICM::M0::Invocable<void,&N::rewind> )
-        .Set( "seek", convert::OverloadInvocables<SeekList>::Invocable )
-        .Set( "size", ICM::M0::Invocable<uint64_t,&N::size> )
-        .Set( "sync", ICM::M0::Invocable<int,&N::sync> )
-        .Set( "tell", ICM::M0::Invocable<int64_t,&N::tell> )
-        .Set( "truncate", ICM::M1::Invocable<int,int64_t,&N::truncate> )
-        .Set( "toString", ICM::M0::Invocable<std::string,&N::toString> )
-        .Set( "unlink", ICM::M0::Invocable<int,&N::unlink> )
-        .Set( "write", convert::OverloadInvocables<WriteList>::Invocable )
-        ;
-    cw.BindGetter<std::string,&N::name>("name");
-    cw.BindGetter<std::string,&N::mode>("mode");
-    cw.BindGetterSetter<int,&N::cerrno,int,int,&N::cerrno>("errno");
-    cw.BindStaticVar<bool,&N::enableDebug>( "debug" );
-    v8::Handle<v8::Function> ctor = cw.Seal();
-    v8::Handle<v8::Object> posix = v8::juice::GetNamespaceObject( dest, "posix" );
-    cw.AddClassTo( posix );
-    
-    v8::InvocationCallback cb;
-
-    cb = ICC::F1::Invocable<void,FILE*,::clearerr>;
-    F("clearerr");
-
-    cb =ICC::F1::Invocable<bool,v8::Handle<v8::Value> const &,CW::DestroyObject>;
-    F("fclose");
-
-    cb = ICC::F1::Invocable<int,int,::fdatasync>;
-    F("fdatasync");
-
-    cb = ICC::F1::Invocable<int,FILE*,::feof>;
-    F("feof");
-
-    cb = ICC::F1::Invocable<int,FILE*,::ferror>;
-    F("ferror");
-
-    cb = ICC::F1::Invocable<int,FILE*,::fileno>;
-    F("fileno");
-
-    cb = ICC::F1::Invocable<int,FILE*,::fflush>;
-    F("fflush");
-
-    cb = ICC::F1::Invocable<long,FILE*,::ftell>;
-    F("ftell");
-
-    cb = ICC::F2::Invocable< v8::Handle<v8::Value>,
-        v8::Handle<v8::Value> const &,
-        v8::Handle<v8::Value> const &,
-        JSSocket_fopen>;
-    F("fopen");
-
-    typedef tmp::TypeList<
-        convert::InvocableFunction2<std::string,size_t,FILE*,JSSocket_fread>,
-        convert::InvocableFunction3<std::string,size_t,size_t,FILE*,JSSocket_fread>
-        > FReadList;
-    cb = convert::OverloadInvocables<FReadList>::Invocable;
-    F("fread");
-
-    cb = ICC::F3::Invocable<int,FILE*,long,int,::fseek>;
-    F("fseek");
-
-    cb = ICC::F1::Invocable<int,v8::Handle<v8::Value> const &,JSSocket_fsync>;
-    F("fsync");
-
-    cb = ICC::F2::Invocable<int,v8::Handle<v8::Value> const &,int64_t,::JSSocket_ftruncate>;
-    F("ftruncate");
-
-    cb =
-        //ICC::F1::Invocable<int,std::string const &,::JSSocket_unlink>;
-        ICC::F1::Invocable<int,char const *,::unlink>;
-    F("unlink");
-
-    cb =ICC::F1::Invocable<char const *,char const *,cstring_test>;
-    F("cstr");
-
-    
-    typedef tmp::TypeList<
-        convert::InvocableFunction2<size_t,std::string const &,FILE*,JSSocket_fwrite>,
-        convert::InvocableFunction3<size_t,std::string const &,size_t,FILE*,JSSocket_fwrite>,
-        convert::InvocableFunction4<size_t,std::string const &,size_t,size_t,FILE*,JSSocket_fwrite>
-        > FWriteList;
-    cb = convert::OverloadInvocables<FWriteList>::Invocable;
-    F("fwrite");
-
-    cb = ICC::F1::Invocable<void,FILE*,::rewind>;
-    F("rewind");
-#undef JF
-#undef F
-    {
-        v8::juice::convert::ObjectPropSetter ops(posix);
-        ops( "SEEK_SET", SEEK_SET )
-            ( "SEEK_CUR", SEEK_CUR )
-            ( "SEEK_END", SEEK_END )
-            ;
-    }
-    static const bool doDebug = (v8::juice::cw::DebugLevel<JSSocket>::Value > 2);
-#undef JSTR
-
-#endif
     DBGOUT <<"Binding done.\n";
     return;
 }

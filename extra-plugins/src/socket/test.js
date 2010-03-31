@@ -19,7 +19,11 @@ function test1()
                            );
         print('s =',s,'c =',c);
         print('s.hostname =',s.hostname);
-        var host = '127.0.0.1';
+        var host =
+            'localhost'
+            //'127.0.0.1'
+            //'www.google.de'
+            ;
         var port = 80;
         var rc;
         if(false && (port > 1024))
@@ -35,21 +39,26 @@ function test1()
             print('getProtoByName('+v+') =',
                   ns.Socket.getProtoByName(v) );
         }
-        var hlist = ['localhost','www.google.com'];
-        for( k in hlist )
+        var hlist = ['localhost'];//,'www.google.com'];
+        rc = s.setTimeout( 0, 1000 );
+        print("s.setTimeout() rc =",rc);
+        if(1)
         {
-            var ao = ns.Socket.nameToAddress( hlist[k] );
-            print('nameToAddress(',hlist[k],') == ',ao);
-            print('addressToName(',ao,') == ',ns.Socket.addressToName(ao));
+            for( k in hlist )
+            {
+                var ao = ns.Socket.nameToAddress( hlist[k] );
+                print('nameToAddress(',hlist[k],') == ',ao);
+                print('addressToName(',ao,') == ',ns.Socket.addressToName(ao));
+            }
         }
 
         //host = 'nosuchfuckinghost'
         var chost = ns.Socket.nameToAddress( host );
+        print("Connecting to",chost+":"+port,'...');
         rc = c.connect( chost, port );
-        print("c.connect() rc =",rc);
-        if( 0 != rc ) throw new Error("Connect failed!");
         print("c.peerInfo() =",c.peerInfo());
-
+        rc = c.setTimeout( 0, 1000 );
+        print("c.setTimeout() rc =",rc);
         var crnl = '\r\n';
         rc = c.write( "GET / HTTP/1.1"+crnl
                       +"Host: "+host+crnl
@@ -59,9 +68,9 @@ function test1()
         {
             n = 64;
             print("Reading...");
-            while( (rc = c.read(n)) )
+            while( undefined !== (rc = c.read(n)) )
             {
-                print("read("+n+") == ["+rc+"]");
+                print("read("+n+") ==",(rc.length),"["+rc+"]");
                 if( rc.length < n ) break; // there's a corner case here where we will block!
             }
         }
