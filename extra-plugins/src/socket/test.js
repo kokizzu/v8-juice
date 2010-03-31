@@ -57,13 +57,24 @@ function test1()
         print("Connecting to",chost+":"+port,'...');
         rc = c.connect( chost, port );
         print("c.peerInfo =",c.peerInfo);
-        rc = c.setTimeout( 0, 10 );
+        rc = c.setTimeout( 3, 0 );
         print("c.setTimeout() rc =",rc);
         var crnl = '\r\n';
-        rc = c.write( "GET / HTTP/1.1"+crnl
-                      +"Host: "+host+crnl
-                      + crnl );
+        var header = ["GET / HTTP/1.1",
+                      "Host: "+host
+                      ].join(crnl)+crnl+crnl;
+        var ba = new ns.ByteArray( header );
+        rc = c.write( ba );
+        print('header =['+header+']');
         print("write() rc =",rc);
+        function nukeRC(BA)
+        {
+            if( BA instanceof ns.ByteArray ) BA.destroy();
+        }
+        function rcVal(BA)
+        {
+            return ( BA instanceof ns.ByteArray ) ? BA.stringValue : BA.toString();
+        }
         if( c.type === ns.Socket.SOCK_STREAM )
         {
             n = 64;
@@ -75,16 +86,33 @@ function test1()
                     print("Apparently interrupted by timeout before data arrived.");
                     continue;
                 }
-                print("read("+n+") ==",(rc.length),"["+rc+"]");
-                if( rc.length < n ) break; // there's a corner case here where we will block!
+                print("read("+n+") ==",(rc.length),"["+rcVal(rc)+"]");
+                if( rc.length < n )
+                {
+                    /* corner case: we might have been interrupted by
+                       a timeout here and got a short read. We need to
+                       add a flag value to Socket to be able to
+                       distinguish that here.
+
+                       ...
+
+                       it turns out we cannot recognize it in the native
+                       code, either!                      
+                    */
+                    nukeRC(rc);
+                    break;
+                }
+                nukeRC(rc);
             }
         }
         print("c.peerInfo =",c.peerInfo);
     }
     finally
     {
+        print("Closing sockets...");
         if( c ) c.close();
         if( s ) s.close();
+        print("Closed sockets.");
     }
         
 }
@@ -95,7 +123,9 @@ function testBA()
     var ba = new ns.ByteArray(n);
     var i;
     print(ba,'length =',ba.length);
-    for( i = 0; i < n*1.5; ++i )
+    ba.length = ba.length/2;
+    print(ba,'length =',ba.length);
+    for( i = 0; i < ba.length; ++i )
     {
         ba[i] = i * 17;
         print( 'ba[',i,'] =',ba[i] );

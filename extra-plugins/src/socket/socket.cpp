@@ -158,7 +158,7 @@ static v8::Handle<v8::Value> create_peer(sockaddr * addr)
       case AF_UNIX: {
           v8::Handle<v8::Array> result = v8::Array::New(1);
           sockaddr_un * addr_un = (sockaddr_un *) addr;
-          result->Set(cv::CastToJS<int>(0), cv::CastToJS<char const *>(addr_un->sun_path));
+          result->Set( 0U, cv::CastToJS<char const *>(addr_un->sun_path));
           return result;
       } break;
 #endif
@@ -175,8 +175,8 @@ static v8::Handle<v8::Value> create_peer(sockaddr * addr)
           inet_ntop(AF_INET6, addr_in6->sin6_addr.s6_addr, buf, INET6_ADDRSTRLEN);
 #endif
                         
-          result->Set(0U, cv::CastToJS(buf));
-          result->Set(1, cv::CastToJS( ntohs(addr_in6->sin6_port)));
+          result->Set( 0U, cv::CastToJS(buf));
+          result->Set( 1U, cv::CastToJS( ntohs(addr_in6->sin6_port)));
           return result;
       } break;
       case AF_INET: {
@@ -191,13 +191,73 @@ static v8::Handle<v8::Value> create_peer(sockaddr * addr)
 #else                   
           inet_ntop(AF_INET, & addr_in->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
 #endif
-          result->Set(0U, cv::CastToJS(buf));
-          result->Set(1, cv::CastToJS(ntohs(addr_in->sin_port)));
+          result->Set( 0U, cv::CastToJS(buf));
+          result->Set( 1U, cv::CastToJS(ntohs(addr_in->sin_port)));
           return result;
       } break;
     }
     return v8::Undefined();
 }
+
+/**
+   Not yet complete.
+*/
+class JSByteArray
+{
+public:
+    typedef std::vector<unsigned char> BufferType;
+    BufferType vec;
+    JSByteArray()
+        :vec()
+    {
+    }
+    /**
+       JS Usage:
+
+       new ByteArray( [string data = null [, int length=data.length]] )
+    */
+    JSByteArray( v8::Handle<v8::Value> const & val, unsigned int len = 0 );
+    ~JSByteArray()
+    {
+        CERR "~JSByteArray@"<<this<<'\n';
+    }
+    /** Returns the current length of the byte array. */
+    uint32_t length() const
+    {
+        //CERR << "length()\n";
+        return this->vec.size();
+    }
+    /** Sets the length of the byte array. Throws if sz is "too
+        long." Returns the new number of items. Any new entries (via
+        growing the array) are filled with zeroes.
+     */
+    uint32_t length( uint32_t sz );
+
+    /** toString() for JS. */
+    std::string toString() const;    
+
+    /**
+       Returns array contents as a std::string.
+    */
+    std::string stringValue() const
+    {
+        return this->vec.empty()
+            ? std::string()
+            : std::string( this->vec.begin(), this->vec.end() );
+    }
+    
+//     std::string asString() const;
+//     std::string asString( unsigned int fromOffset ) const;
+//     std::string asString( unsigned int fromOffset, unsigned int len ) const;
+    
+    static v8::Handle<v8::Value> indexedPropertyGetter(uint32_t index, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Value> indexedPropertySetter(uint32_t index, v8::Local< v8::Value > value, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Boolean> indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Boolean> indexedPropertyDeleter(uint32_t index, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Array> indexedPropertyEnumerator(const v8::AccessorInfo &info);
+    static void SetupBindings( v8::Handle<v8::Object> dest );
+};
+
 
 /**
    A thin wrapper around socket() and friends, providing
@@ -211,6 +271,7 @@ public:
     int family;
     int proto;
     int type;
+    bool hitTimeout;
     /** JS-side 'this' object. Set by v8::juice::cw::WeakWrap<JSSocket>::Wrap(). */
     v8::Handle<v8::Object> jsSelf;
 private:
@@ -239,6 +300,7 @@ public:
 
     JSSocket(int family = AF_INET, int type = SOCK_DGRAM, int proto = 0, int socketFD = 0 )
         : fd(-1), family(0), proto(0),type(0),
+          hitTimeout(false),
           jsSelf()
     {
         this->init( family, type, proto, socketFD );
@@ -329,10 +391,13 @@ public:
     {
         CERR << "WARNING: UNTESTED CODE!\n";
         int rc = ::listen( this->fd, backlog );
+        // ^^^^ does socket timeout value apply here???
         if( 0 != rc )
         {
             cv::StringBuffer msg;
-            msg << "connect() failed: errno="<<strerror(errno);
+            msg << "listen() failed: errno="<<errno
+                << " ("<<strerror(errno)<<')'
+                ;
             v8::ThrowException(msg);
         }
         return rc;
@@ -445,7 +510,14 @@ public:
         return addressToName( addy, 0 );
     }
 
-    
+
+    /**
+       JS usage:
+
+       int connect( string nameOrAddress, int port )
+
+       Throws a JS exception on error.
+    */
     int connect( char const * where, int port )
     {
         if( ! where || !*where )
@@ -485,7 +557,8 @@ public:
         if( 0 != rc )
         {
             cv::StringBuffer msg;
-            msg << "connect() failed: errno="<<strerror(errno);
+            msg << "connect() failed: errno="<<errno
+                << " ("<<strerror(errno)<<')';
             v8::ThrowException(msg);
             return rc;
         }
@@ -496,10 +569,10 @@ public:
         return 0;
     }
     
-    bool connect( char const * addr )
+    int connect( char const * addr )
     {
         // TODO: do not require port # for AF_UNIX?
-        return false;
+        return -1;
     }
 
     static std::string hostname()
@@ -513,8 +586,9 @@ public:
 
     /**
        Reads n bytes from the socket and returns them
-       as a string (thus binary data will not work
-       properly!). Special return values:
+       as described below.
+
+       Special return values:
 
        - (val===null) means reading was interrupted
        by a timeout and no bytes were read before the
@@ -524,90 +598,81 @@ public:
        occured, but this function will throw
        a v8 exception in that case.
 
-       When the length of the returned string is less than n, it
+       If binary is true then the returned value is a JSByteArray
+       object. If binary is false then the data is returned as a
+       string (which will fail with undefined behaviour if the string
+       is not encoded in a way which v8 requires).
+       
+       When the length of the returned data is less than n, it
        could mean any of:
 
        - Timeout was reached after reading some bytes.
 
        - EOF
+
+       There is unfortunately currently no way to distinguish.
+       We may need to add an error id property to the class so
+       that clients can tell the difference.
     */
+    v8::Handle<v8::Value> read( unsigned int n, bool binary );
+
+    /** this->read( n, false ). */
     v8::Handle<v8::Value> read( unsigned int n )
     {
-        typedef std::vector<char> VT;
-        VT vec(n+1,'\0');
-        //vec.reserve(n+1);
-        ssize_t rc = 0;
-        sock_addr_t addr;
-        memset( &addr, 0, sizeof(sock_addr_t) );
-        socklen_t len = 0;
-        {
-            v8::Unlocker unl;
-#if 1
-            rc = ::recvfrom(this->fd, &vec[0], n, 0, (sockaddr *) &addr, &len);
-#else
-            rc = ::read(this->fd, &vec[0], n);
-#endif
-        }
-        if( (ssize_t)-1 == rc )
-        {
-            if( (EAGAIN==errno) || (EWOULDBLOCK==errno) )
-            { /* Presumably interrupted by a timeout. */
-                return v8::Null();
-            }
-            else
-            {
-                cv::StringBuffer msg;
-                msg << "socket read() failed! errno="<<errno
-                    << " ("<<strerror(errno)<<")";
-                v8::ThrowException( msg );
-                return v8::Undefined();
-            }
-        }
-        else
-        {
-            // FIXME: provide a way to return binary data as an array of ints.
-            if(SOCK_DGRAM == this->type)
-            {
-                // i'm not quite sure what this is for. It's from the original implementation.
-                this->jsSelf->Set( JSTR(socket_strings.fieldPeer), create_peer( (sockaddr*)&addr) );
-            }
-            return cv::CastToJS( &vec[0] );
-        }
+        return this->read( n, false );
     }
 
-    unsigned int write( char const * src, unsigned int n )
+    /**
+       Writes n bytes from src to this socket. Returns the number
+       of bytes written or:
+
+       - 0 if a timeout was hit before sending any bytes.
+
+       - It return 0 and throws a JS exception on a write error other
+       than timeout-before-send.
+
+       Return of (<n) _may_ be due to a timeout during write.
+    */
+    unsigned int write2( char const * src, unsigned int n );
+
+    /** this->write2( src, strlen(src) ), or 0 if !src or !*src. */
+    unsigned int write1( char const * src )
     {
-        ssize_t rc = 0;
-        {
-            v8::Unlocker unl;
-            // ^^^ this _might_ not be legal, since src is owned by v8
-            // (but it's ArgCaster container is valid until this func
-            // returns).
-            rc = ::write(this->fd, src, n );
-        }
-        if( (ssize_t)-1 == rc )
-        {
-            if( (EAGAIN==errno) || (EWOULDBLOCK==errno) )
-            { /* Presumably interrupted by a timeout. */
-                rc = 0;
-            }
-            else
-            {
-                cv::StringBuffer msg;
-                msg << "socket write() failed! errno="<<errno
-                    << " ("<<strerror(errno)<<")";
-                v8::ThrowException( msg );
-            }
-        }
-        return (unsigned int)rc;
-    }
-    unsigned int write( char const * src )
-    {
-        return src
-            ? this->write( src, strlen(src) )
-            : 0;
+        return (src && *src)
+            ? this->write2( src, strlen(src) )
+            : 0
+            ;
     }
 
+    /**
+       JS usage:
+
+       int write( ByteArray|string src,  [, int len=src.length] )
+
+       Returns number of bytes written. Return of 0 "should" signify
+       that a timeout was encountered before any bytes were written. A
+       short write _might_ signify that a timeout was encountered
+       after some bytes had been written.
+
+       Throws a JS-side exception on write errors other than timeouts.
+
+       argv.This() must be-a JSSocket or it throws a JS-side
+       exception.
+    */
+    static v8::Handle<v8::Value> writeN( v8::Arguments const & argv );
+
+    /**
+       JS Usage:
+
+       Array peerInfo()
+
+       Returns [address,port] for AF_INET and AF_INET6 sockets.
+       For AF_UNIX sockets, [socketFilePath]. Returns undefined
+       for other types.
+
+       This value is only valid after a connection is established,
+       and it throws if getpeername(2) fails.
+    */    
     v8::Handle<v8::Value> peerInfo()
     {
         if( ! this->jsSelf->Get(JSTR(socket_strings.fieldPeer))->IsTrue() )
@@ -723,40 +788,14 @@ public:
         }
         return rc;
     }
+    int setTimeout( unsigned int seconds )
+    {
+        return this->setTimeout( seconds, 0 );
+    }
     
 }/*JSSocket*/;
 
 
-/**
-   Not yet complete.
-*/
-class JSByteArray
-{
-public:
-    typedef std::vector<unsigned char> BufferType;
-    BufferType vec;
-    JSByteArray( unsigned int size = 0 )
-        : vec( size, 0 )
-    {
-    }
-    ~JSByteArray()
-    {
-    }
-    uint32_t length() const
-    {
-        CERR << "length()\n";
-        return this->vec.size();
-    }
-    /** toString() for JS. */
-    std::string toString() const;
-
-    static v8::Handle<v8::Value> indexedPropertyGetter(uint32_t index, const v8::AccessorInfo &info);
-    static v8::Handle<v8::Value> indexedPropertySetter(uint32_t index, v8::Local< v8::Value > value, const v8::AccessorInfo &info);
-    static v8::Handle<v8::Boolean> indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info);
-    static v8::Handle<v8::Boolean> indexedPropertyDeleter(uint32_t index, const v8::AccessorInfo &info);
-    static v8::Handle<v8::Array> indexedPropertyEnumerator(const v8::AccessorInfo &info);
-    static void SetupBindings( v8::Handle<v8::Object> dest );
-};
 
 #include <v8/juice/ClassWrap_TwoWay.h>
 ////////////////////////////////////////////////////////////////////////
@@ -841,7 +880,7 @@ namespace v8 { namespace juice { namespace cw
     {
     public:
         /**
-           Installs the bindings for PathFinder into the given object.
+           Installs the bindings for JSSocket into the given object.
         */
         static void SetupBindings( ::v8::Handle< ::v8::Object> target )
         {
@@ -851,7 +890,7 @@ namespace v8 { namespace juice { namespace cw
 
     template <>
     struct ToNative_SearchPrototypesForNative<JSByteArray>
-        : Opt_Bool<true>
+        : Opt_Bool<false>
     {};
 
     template <>
@@ -869,7 +908,8 @@ namespace v8 { namespace juice { namespace cw
         : Factory_CtorForwarder<JSByteArray,
                                 v8::juice::tmp::TypeList<
             cv::CtorForwarder0<JSByteArray>,
-            cv::CtorForwarder1<JSByteArray,unsigned int>
+            cv::CtorForwarder1<JSByteArray, v8::Handle<v8::Value> const & >,
+            cv::CtorForwarder2<JSByteArray, v8::Handle<v8::Value> const &, unsigned int >
             > >
     {};
 
@@ -885,6 +925,20 @@ namespace v8 { namespace juice { namespace cw
             return "ByteArray";
         }
     };
+
+    template <>
+    struct Installer<JSByteArray>
+    {
+    public:
+        /**
+           Installs the bindings for JSByteArray into the given object.
+        */
+        static void SetupBindings( ::v8::Handle< ::v8::Object> target )
+        {
+            JSByteArray::SetupBindings(target);
+        }
+    };
+
     
 } } } // v8::juice::cw
 
@@ -922,14 +976,180 @@ std::string JSSocket::toString() const
     return os.str();
 }
 
+v8::Handle<v8::Value> JSSocket::writeN( v8::Arguments const & argv )
+{
+    if( argv.Length() > 2 )
+    {
+        return v8::ThrowException(JSTR("write() requires 1 or 2 arguments!"));
+    }
+    JSSocket * so = cv::CastFromJS<JSSocket>( argv.This() );
+    if( ! so )
+    {
+        cv::StringBuffer msg;
+        msg << "Could not find native 'this' argument for "
+            << v8::juice::cw::ClassName<JSByteArray>::Value()
+            << " object!";
+        return v8::ThrowException(msg);
+    }
+    unsigned int len = 0;
+    if( argv[0]->IsString() )
+    {
+        typedef cv::TMemFuncForwarder<JSSocket,1> FF;
+        std::string const val = cv::JSToStdString(argv[0]);
+        if( argv.Length() > 1 )
+        {
+            len = cv::JSToUInt32(argv[1]);
+            if( len > val.size() ) len = val.size();
+        }
+        else len = val.size();
+        return cv::CastToJS( so->write2( val.c_str(), len ) );
+    }
+    else
+    {
+        JSByteArray * ba = cv::CastFromJS<JSByteArray>( argv[0] );
+        if( ! ba )
+        {
+            cv::StringBuffer msg;
+            msg << "The first argument must be a String or "
+                << v8::juice::cw::ClassName<JSByteArray>::Value()
+                << '!';
+            return v8::ThrowException(msg);
+        }
+        if( argv.Length() > 1 )
+        {
+            len = cv::JSToUInt32(argv[1]);
+            if( len > ba->length() ) len = ba->length();
+        }
+        else len = ba->length();
+        return cv::CastToJS( so->write2( (char const *)&ba->vec[0], len ) );
+    }
+}
+unsigned int JSSocket::write2( char const * src, unsigned int n )
+{
+    this->hitTimeout = false;
+    ssize_t rc = 0;
+    {
+        v8::Unlocker unl;
+        rc = ::write(this->fd, src, n );
+        // reminder: ^^^^ affected by socket timeout
+        // reminder: through src technically came from v8,
+        // it actually lives in a std::string object and therefore
+        // is not subject to v8 lifetime issues during our unlocked
+        // time. i hope.
+    }
+    if( (ssize_t)-1 == rc )
+    {
+        if( (EAGAIN==errno) || (EWOULDBLOCK==errno) )
+        { /* Presumably interrupted by a timeout. */
+            this->hitTimeout = true;
+            rc = 0;
+        }
+        else
+        {
+            cv::StringBuffer msg;
+            msg << "socket write() failed! errno="<<errno
+                << " ("<<strerror(errno)<<")";
+            v8::ThrowException( msg );
+            rc = 0;
+        }
+    }
+    return (unsigned int)rc;
+}
+
+
+v8::Handle<v8::Value> JSSocket::read( unsigned int n, bool binary )
+{
+    this->hitTimeout = false;
+    typedef std::vector<unsigned char> VT;
+    VT vec(n,'\0');
+    ssize_t rc = 0;
+    sock_addr_t addr;
+    memset( &addr, 0, sizeof(sock_addr_t) );
+    socklen_t len = 0;
+    {
+        v8::Unlocker unl;
+        CERR << "read("<<n<<", "<<binary<<")...\n";
+#if 1
+        rc = ::recvfrom(this->fd, &vec[0], n, 0, (sockaddr *) &addr, &len);
+#else
+        rc = ::read(this->fd, &vec[0], n);
+#endif
+        CERR << "read("<<n<<", "<<binary<<") == "<<rc<<"\n";
+        if( 0 == rc ) /*EOF*/ return v8::Undefined();
+    }
+    if( (ssize_t)-1 == rc )
+    {
+#if 1
+        if( (EAGAIN==errno) || (EWOULDBLOCK==errno) )
+        { /* Presumably interrupted by a timeout. */
+            this->hitTimeout = true;
+            return v8::Null();
+        }
+#endif
+        cv::StringBuffer msg;
+        msg << "socket read() failed! errno="<<errno
+            << " ("<<strerror(errno)<<")";
+        v8::ThrowException( msg );
+        return v8::Undefined();
+    }
+    else
+    {
+        if( (unsigned int) rc < n )
+        {
+            // dammit... we cannot distinguish timeout from EOF here....
+            // this->hitTimeout = true;
+        }
+#if 1
+        if(SOCK_DGRAM == this->type)
+        {
+            // i'm not quite sure what this is for. It's from the original implementation.
+            this->jsSelf->Set( JSTR(socket_strings.fieldPeer),
+                               create_peer( (sockaddr*)&addr) );
+        }
+#endif
+        vec.resize( rc );
+        if( binary )
+        {
+            typedef v8::juice::cw::ClassWrap<JSByteArray> CW;
+            v8::Handle<v8::Object> jba =
+                CW::Instance().NewInstance( 0, NULL );
+            JSByteArray * ba = cv::CastFromJS<JSByteArray>( jba );
+            if( ! ba )
+            {
+                cv::StringBuffer msg;
+                msg << "Creation of "<<v8::juice::cw::ClassName<JSByteArray>::Value()
+                    << " object failed!";
+                return v8::ThrowException( msg );
+            }
+            ba->length( vec.size() );
+            //ba->vec.assign( vec.begin(), vec.end() );
+            // ^^^ swap() won't work because of different signedness
+            ba->vec.swap( vec );
+            return jba;
+        }
+        else
+        {
+            return v8::String::New( (char const *)&vec[0], static_cast<int>( vec.size() ) );
+        }
+    }
+}
+
+    
 JSSocket * JSSocket::accept()
 {
     CERR << "WARNING: UNTESTED CODE!\n";
     int rc = ::accept( this->fd, NULL, NULL );
+    // ^^^^ does socket timeout value apply here???
     if( -1 == rc )
     {
+        if( (errno == EAGAIN)
+            || (errno == EWOULDBLOCK) )
+        {
+            return NULL;
+        }
         cv::StringBuffer msg;
-        msg << "connect() failed: errno="<<strerror(errno);
+        msg << "accept() failed: errno="<<errno
+            << " ("<<strerror(errno)<<')';
         v8::ThrowException(msg);
         return NULL;
     }
@@ -941,35 +1161,82 @@ JSSocket * JSSocket::accept()
         cv::CastToJS( this->proto ),
         cv::CastToJS( rc )        
         };
-    v8::Handle<v8::Object> jobj = CW::Instance().NewInstance(4,argv);
+    v8::Handle<v8::Object> jobj =
+        CW::Instance().NewInstance( sizeof(argv)/sizeof(argv[0]), argv );
     return cv::CastFromJS<JSSocket*>( jobj );
+}
+
+JSByteArray::JSByteArray( v8::Handle<v8::Value> const & val, unsigned int len )
+    : vec()
+{
+    if( !val.IsEmpty()
+        && !val->IsNull()
+        && !val->IsUndefined()
+        )
+    {
+        if( val->IsNumber() )
+        {
+            const int32_t x = cv::JSToInt32( val );
+            if( x < 0 )
+            {
+                std::ostringstream msg;
+                msg << v8::juice::cw::ClassName<JSByteArray>::Value()
+                    << " ctor argument may not be a negative number.";
+                throw std::runtime_error( msg.str().c_str() );
+            }
+            this->length( (unsigned int)x );
+        }
+        else
+        {
+            std::string const x = cv::JSToStdString( val );
+            if( ! len ) len = x.size();
+            if( len > x.size() ) len = x.size();
+            if( len )
+            {
+                this->length( len );
+                this->vec.assign( x.begin(), x.end() );
+            }
+        }
+    }
 }
 
 v8::Handle<v8::Value> JSByteArray::indexedPropertyGetter(uint32_t index, const v8::AccessorInfo &info)
 {
-    CERR << "index getter: "<<index<<'\n';
+    //CERR << "indexed getter: "<<index<<'\n';
     JSByteArray * ar = cv::CastFromJS<JSByteArray*>( info.This() );
     if( ! ar ) return v8::ThrowException(JSTR("Native 'this' not found!"));
-    if( index >= ar->vec.size() ) return v8::Undefined();
+    if( index >= ar->length() ) return v8::Undefined();
     else
     {
         return cv::CastToJS<int>( ar->vec[index] );
     }
 }
+
 v8::Handle<v8::Value> JSByteArray::indexedPropertySetter(uint32_t index, v8::Local< v8::Value > value, const v8::AccessorInfo &info)
 {
-    CERR << "index setter: "<<index<<'\n';
+    //CERR << "indexed setter: "<<index<<'\n';
     v8::Handle<v8::Value> rv;
     JSByteArray * ar = cv::CastFromJS<JSByteArray*>( info.This() );
     if( ! ar ) return v8::ThrowException(JSTR("Native 'this' not found!"));
-    if( index >= ar->vec.size() )
+#if 0
+    if( index >= ar->length() )
     {
-        ar->vec.reserve( index+1 );
-        CERR << "size = "<<ar->vec.size()<<'\n';
+        ar->length( index+1 );
+        //CERR << "capacity = "<<ar->vec.capacity()<<'\n';
+        //CERR << "size = "<<ar->vec.size()<<'\n';
     }
-    if( index >= ar->vec.size() )
+#endif
+    if( index >= ar->length() )
     {
+#if 1
+        cv::StringBuffer msg;
+        msg << "Index "<<index<<" is out of bounds for "
+            <<v8::juice::cw::ClassName<JSByteArray>::Value()
+            << " of length "<<ar->length()<<'!';
+        return v8::ThrowException(msg);
+#else
         return rv;
+#endif
     }
     else
     {
@@ -979,24 +1246,30 @@ v8::Handle<v8::Value> JSByteArray::indexedPropertySetter(uint32_t index, v8::Loc
 
 v8::Handle<v8::Boolean> JSByteArray::indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info)
 {
+    CERR << "indexed query "<<index<<'\n';
     JSByteArray * ar = cv::CastFromJS<JSByteArray*>( info.This() );
     if( ! ar ) return v8::Handle<v8::Boolean>();
     else
     {
-        return (index < ar->vec.size())
+#if 0
+        return (index < ar->length())
             ? v8::True()
             : v8::False()
             ;
+#else
+        return v8::True();
+#endif
     }
 }
 v8::Handle<v8::Boolean> JSByteArray::indexedPropertyDeleter(uint32_t index, const v8::AccessorInfo &info)
 {
+    //CERR << "indexed deleter "<<index<<'\n';
     //CERR << "marker!\n";
     return v8::False();
 }
 v8::Handle<v8::Array> JSByteArray::indexedPropertyEnumerator(const v8::AccessorInfo &info)
 {
-    CERR << "marker!\n";
+    //CERR << "indexed enumerator\n";
     v8::Handle<v8::Array> rv;
     JSByteArray * ar = cv::CastFromJS<JSByteArray*>( info.This() );
     if( ! ar )
@@ -1005,7 +1278,7 @@ v8::Handle<v8::Array> JSByteArray::indexedPropertyEnumerator(const v8::AccessorI
         return rv;
     }
     rv = v8::Handle<v8::Array>( v8::Array::New() );
-    for( uint32_t i = 0; i < ar->vec.size(); ++i )
+    for( uint32_t i = 0; i < ar->length(); ++i )
     {
         rv->Set( i, cv::CastToJS(i) );
     }
@@ -1017,10 +1290,30 @@ std::string JSByteArray::toString() const
     os << "[object "
        << v8::juice::cw::ClassName<JSByteArray>::Value()
        << "@"<<(void const *)this
+       << ", length="<<this->length()
        << ']';
     return os.str();
 }
 
+uint32_t JSByteArray::length( uint32_t sz )
+{
+    //CERR << "length("<<sz<<")!\n";
+    if( sz > this->vec.max_size() )
+    {
+        cv::StringBuffer msg;
+        msg << v8::juice::cw::ClassName<JSByteArray>::Value()
+            << " length "<<sz << " is too large to store "
+            << "in std::vector! Max size is "<< this->vec.max_size()<<".";
+        throw std::runtime_error( msg.Content().c_str() );
+    }
+    if( sz != this->vec.size() )
+    {
+        this->vec.resize(sz,'\0');
+    }
+    return this->vec.size();
+}
+
+    
 void JSByteArray::SetupBindings( v8::Handle<v8::Object> dest )
 {
     using namespace v8;
@@ -1039,23 +1332,24 @@ void JSByteArray::SetupBindings( v8::Handle<v8::Object> dest )
         return;
     }
 
-
-    cw.BindGetter<uint32_t,&N::length>("length");
-    cw.Set( "toString", ICM::M0::Invocable<std::string,&N::toString> );
+    cw.BindGetterSetter<uint32_t,&N::length,uint32_t,uint32_t,&N::length>("length");
+    cw.BindGetter<std::string,&N::stringValue>("stringValue");
+    cw
+        .Set( "toString", ICM::M0::Invocable<std::string,&N::toString> )
+        .Set( "destroy", CW::DestroyObject )
+        ;
 
     v8::Handle<v8::FunctionTemplate> ctorTmpl = cw.CtorTemplate();
     ctorTmpl->InstanceTemplate()->SetIndexedPropertyHandler( JSByteArray::indexedPropertyGetter,
                                                              JSByteArray::indexedPropertySetter,
                                                              JSByteArray::indexedPropertyQuery,
-                                                             JSByteArray::indexedPropertyDeleter,
-                                                             JSByteArray::indexedPropertyEnumerator
+                                                             NULL/*JSByteArray::indexedPropertyDeleter*/,
+                                                             NULL/*JSByteArray::indexedPropertyEnumerator*/
                                                              );
     ctorTmpl->Set( JSTR("WTF"), cv::CastToJS("wtf is going on here?") );
 
     v8::Handle<v8::Function> ctor = cw.Seal();
     cw.AddClassTo( dest );
-
-
 
     DBGOUT <<"Binding done.\n";
     return;
@@ -1089,7 +1383,7 @@ void JSByteArray::SetupBindings( v8::Handle<v8::Object> dest )
    - string addressToName(string address)
    - string read(unsigned int length)
    - string write(string data [,int length=data.length])
-   - int setTimeout( unsigned int seconds, unsigned int microseconds )
+   - int setTimeout( unsigned int seconds[, unsigned int microseconds=0] )
 
    Most of the functions throw on error.
 
@@ -1108,9 +1402,9 @@ void JSByteArray::SetupBindings( v8::Handle<v8::Object> dest )
 */
 void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
 {
-    JSByteArray::SetupBindings( dest );
     using namespace v8;
     using namespace v8::juice;
+    cw::Installer<JSByteArray>::SetupBindings( dest );
     HandleScope scope;
     typedef JSSocket N;
     typedef cw::ClassWrap<N> CW;
@@ -1127,18 +1421,28 @@ void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
 
 
     typedef tmp::TypeList<
-            cv::InvocableMemFunc1<N,unsigned int,char const *,&N::write>,
-            cv::InvocableMemFunc2<N,unsigned int,char const *,unsigned int,&N::write>
+    cv::InvocableMemFunc1<N,v8::Handle<v8::Value>,unsigned int,&N::read>,
+        cv::InvocableMemFunc2<N,v8::Handle<v8::Value>,unsigned int,bool,&N::read>
+        > OverloadsRead;
+    typedef tmp::TypeList<
+        cv::InvocableMemFunc0<N,int,&N::listen>,
+        cv::InvocableMemFunc1<N,int,int,&N::listen>
+        > OverloadsListen;
+    typedef tmp::TypeList<
+        cv::InvocableMemFunc2<N,int,unsigned int,unsigned int,&N::setTimeout>,
+        cv::InvocableMemFunc1<N,int,unsigned int,&N::setTimeout>
+        > OverloadsSetTimeout;
+#if 0
+    typedef tmp::TypeList<
+    //cv::InvocableMemFunc1<N,unsigned int,char const *,&N::write1>,
+    //cv::InvocableMemFunc2<N,unsigned int,char const *,unsigned int,&N::write2>
+    cv::InvocableCallback< -1, &JSSocket::writeN >
         > OverloadsWrite;
     typedef tmp::TypeList<
     //cv::InvocableMemFunc2<N,v8::Handle<v8::Value>,int,unsigned int,&N::getOpt>
         cv::InvocableMemFunc1<N,v8::Handle<v8::Value>,int,&N::getOpt>
         > OverloadsGetOpt;
-    typedef tmp::TypeList<
-        cv::InvocableMemFunc0<N,int,&N::listen>,
-        cv::InvocableMemFunc1<N,int,int,&N::listen>
-        > OverloadsListen;
-
+#endif
     cw
         .Set( "close", CW::DestroyObject )
         .Set( "toString", ICM::M0::Invocable<std::string,&N::toString> )
@@ -1147,19 +1451,22 @@ void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
         .Set( "connect", ICM::M2::Invocable<int,char const *, int,&N::connect> )
         .Set( "nameToAddress", ICC::F1::Invocable< v8::Handle<v8::Value> , const char *,&N::nameToAddress> )
         .Set( "addressToName", ICC::F1::Invocable< v8::Handle<v8::Value> , const char *,&N::addressToName> )
-        .Set( "read", ICM::M1::Invocable< v8::Handle<v8::Value>, unsigned int,&N::read> )
-        .Set( "write", cv::OverloadInvocables<OverloadsWrite>::Invocable )
-        //.Set( "peerInfo", ICM::M0::Invocable< v8::Handle<v8::Value>, &N::peerInfo > )
-        .Set( "setTimeout", ICM::M2::Invocable< int, unsigned int,unsigned int, &N::setTimeout> )
+        .Set( "read", cv::OverloadInvocables<OverloadsRead>::Invocable )
+        .Set( "write",
+              //cv::OverloadInvocables<OverloadsWrite>::Invocable
+              cv::InvocableCallback< -1, &JSSocket::writeN >::Invocable
+              )
+        .Set( "setTimeout", cv::OverloadInvocables<OverloadsSetTimeout>::Invocable )
         //.Set( "setOpt", ICM::M2::Invocable< int, int, int, &N::setOpt > )
         //.Set( "getOpt", convert::OverloadInvocables<OverloadsGetOpt>::Invocable )
-        .Set( socket_strings.fieldPeer, cv::BoolToJS(false) )
+        .Set( socket_strings.fieldPeer, v8::False() )
         ;
     cw.BindMemVarRO<int,&N::family>( "family" );
     cw.BindMemVarRO<int,&N::proto>( "proto" );
     cw.BindMemVarRO<int,&N::type>( "type" );
+    cw.BindMemVarRO<bool,&N::hitTimeout>( "timeoutBeforeIO" );
     cw.BindGetter< v8::Handle<v8::Value>, &N::peerInfo >( "peerInfo" );
-    cw.BindGetter<std::string,&N::hostname>("hostname");
+    cw.BindGetter< std::string, &N::hostname >("hostname");
 
     v8::Handle<v8::Function> ctor = cw.Seal();
 #define SETInt(K) ctor->Set( JSTR(#K), v8::Integer::New(K) )
@@ -1176,6 +1483,10 @@ void JSSocket::SetupBindings( v8::Handle<v8::Object> dest )
     v8::InvocationCallback cb; cb = NULL;
 #define JF v8::FunctionTemplate::New(cb)->GetFunction()
 #define F(X) ctor->Set( JSTR(X), JF )
+
+    //cb = ICC::F0::Invocable<std::string,&N::hostname>;
+    ctor->Set( JSTR("hostname"), cv::CastToJS( N::hostname()), v8::ReadOnly );
+
     cb = ICC::F1::Invocable<int,char const *,&N::getProtoByName>;
     F("getProtoByName");
 
