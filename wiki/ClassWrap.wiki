@@ -402,11 +402,11 @@ assignment, and _not_ the return value of `MyClass::setProp()`. This
 is a property (feature or limitation?) of the v8 property accessor
 binding API.
 
-=Example of using !ClassWrap=
+=Examples of using !ClassWrap=
 
 Here are links to several class bindings which use !ClassWrap:
 
   * [http://code.google.com/p/v8-juice/source/browse/trunk/src/client/sample/BoundNative/BoundNative.cpp BoundNative.cpp] contains the generic test/demo code for ClassWrap.
   * [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/PosixFILE/PosixFILE.cpp PosixFILE.cpp] binds the C-standard `FILE` API.
-  * [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/expat ExpatParser]
-  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-cw.cc PathFinder-cw.cc]
+  * [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/expat ExpatParser]: the sources for the [PluginExpatParser ExpatParser plugin].
+  * [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/PathFinder-cw.cc PathFinder-cw.cc] implements the [PathFinderClass] bindings.
