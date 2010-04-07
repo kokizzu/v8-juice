@@ -123,11 +123,22 @@ namespace juice {
         BIND("sleep", v8::juice::sleep);
         BIND("mssleep", v8::juice::mssleep);
         BIND("usleep", v8::juice::usleep);
+        BIND("wait", v8::juice::wait);
+        BIND("mswait", v8::juice::mswait);
+        BIND("uwait", v8::juice::uwait);
         BIND("setTimeout", v8::juice::setTimeout);
         BIND("setInterval", v8::juice::setInterval);
         BIND("clearTimeout", v8::juice::clearTimeout);
         BIND("clearInterval", v8::juice::clearInterval);
+        BIND("spawnTimeoutThread", v8::juice::spawnTimeoutThread );
+        BIND("spawnIntervalThread", v8::juice::spawnIntervalThread );
+        BIND("clearTimeoutThread", v8::juice::clearTimeoutThread );
+        BIND("clearIntervalThread", v8::juice::clearIntervalThread );
         BIND("print", PrintToCout);
+
+        this->impl->global->Set( v8::String::New("v8JuiceVersion"),
+                                 v8::Integer::New(v8_juice_LIBRARY_VERSION),
+                                 v8::ReadOnly );
 #undef BIND
         //v8::juice::SetupPathFinderClass( this->impl->global );
         v8::juice::cw::Installer<PathFinder>::SetupBindings( this->impl->global );
