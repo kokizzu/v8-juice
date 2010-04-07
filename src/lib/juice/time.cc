@@ -355,14 +355,29 @@ namespace v8 { namespace juice {
         return clearTimeout(argv);
     }
 
+    v8::Handle<v8::Value> clearIntervalThread(const v8::Arguments& argv )
+    {
+        return clearTimeout(argv);
+    }
+    v8::Handle<v8::Value> clearTimeoutThread(const v8::Arguments& argv )
+    {
+        return clearTimeout(argv);
+    }
+
+
     /**
        If isInterval, this behaves like setInterval(), otherwise as
        setTimeout().
+
+       minArgC is the minimum number of arguments (should be 1 or 2, but
+       is int b/c that's the type of argv.Length()).
+
+       defaultDelay is only used if (minArgC<2) and (argv.Length()<2).
     */
-    template <bool isInterval>
+    template <bool isInterval,int minArgC,uint32_t defaultDelay>
     static v8::Handle<v8::Value> setTimeoutImpl(const v8::Arguments& argv )
     {
-        if( argv.Length() < 2 )
+        if( argv.Length() < minArgC )
         {
             return v8::ThrowException( v8::String::New("setTimeout() requires two arguments!") );
         }
@@ -374,8 +389,10 @@ namespace v8 { namespace juice {
         v8::Locker locker;
         v8::HandleScope hsc; // this must exist to avoid a weird error
         Detail::js_thread_info * ji = new Detail::js_thread_info;
-        ji->delay = static_cast<uint32_t>( argv[1]->ToNumber()->Value() );
-        if( fh->IsString() )
+        ji->delay = (argv.Length()>1)
+            ? static_cast<uint32_t>( argv[1]->ToNumber()->Value() )
+            : defaultDelay;
+       if( fh->IsString() )
         {
             Local<Object> evalObj = v8::Context::GetCurrent()->Global();
             Local<Function> eval = v8::Function::Cast( *(evalObj->Get(v8::String::New("eval"))) );
@@ -399,14 +416,24 @@ namespace v8 { namespace juice {
 
     v8::Handle<v8::Value> setTimeout(const v8::Arguments& argv )
     {
-        return setTimeoutImpl<false>( argv );
+        return setTimeoutImpl<false,2,0>( argv );
     }
     
     v8::Handle<v8::Value> setInterval(const v8::Arguments& argv )
     {
-        return setTimeoutImpl<true>( argv );
+        return setTimeoutImpl<true,2,0>( argv );
     }
 
+
+    v8::Handle<v8::Value> spawnTimeout(const v8::Arguments& argv )
+    {
+        return setTimeoutImpl<false,1,1>( argv );
+    }
+    
+    v8::Handle<v8::Value> spawnInterval(const v8::Arguments& argv )
+    {
+        return setTimeoutImpl<true,1,1>( argv );
+    }
 
     namespace Detail
     {

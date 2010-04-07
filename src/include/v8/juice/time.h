@@ -7,25 +7,11 @@ namespace v8 { namespace juice {
 
     /**
        A setTimeout() implementation which can be bound to v8.
+
+       This implementation is currently identical to that
+       of spawnTimeoutThread() except that this function requires
+       2 arguments.
     
-       JS usage: setTimeout( Function|string, when ), where 'when' is
-       a number of milliseconds, after which the given function will
-       be called or the given string will be eval()'d. Returns a
-       unique timer ID which can be passed to clearTimeout() before
-       the interval expires in order to cancel the queued function.
-
-       This starts up a separate thread (using an unspecified
-       threading technique). That thread will briefly lock v8, then
-       will unlock it to sleep for argv[1] milliseconds.  When it
-       wakes up, it waits for the v8 lock and then runs the function
-       defined by argv[0]. If clearTimeout() has been called while the
-       timer was sleeping, the function will not be executed.
-       
-       During the countdown this routine uses v8::Unlocker to unlock
-       the v8 engine for other threads.
-
-       ACHTUNG:
-
        This implementation works differently than browser-side
        implementations, because a timeout thread can interrupt (and,
        under the right circumstances, be interrupted by) the main
@@ -41,9 +27,16 @@ namespace v8 { namespace juice {
        which have specific threading semantics, and those semantics
        might be violated (or cause a deadlock) by a timeout handler).
 
-       See also:
+       The plan is to evenqtually replace this implementation with
+       the one from:
 
        http://github.com/visionmedia/js-mock-timers/
+
+       Which is more browser-compliant than the current
+       implementation. On top of that implementation we can use a
+       single (additional) thread to control the virtual flow of time
+       which that implementation abstracts away (which is the feature
+       which makes that impl portable to arbitrary JS engines).
     */
     v8::Handle<v8::Value> setTimeout(const v8::Arguments& argv );
     /**
@@ -70,6 +63,53 @@ namespace v8 { namespace juice {
     */
     v8::Handle<v8::Value> clearInterval(const v8::Arguments& argv );
 
+    /**
+       JS usage: spawnTimeoutThread( Function|string, [int when=1] ),
+       where 'when' is a number of milliseconds, after which the given
+       function will be called or the given string will be
+       eval()'d. Returns a unique timer ID (of an unspecified basic
+       data type) which can be passed to clearTimeoutThread() before
+       the interval expires in order to cancel the queued function.
+
+       This routine is deceptively similar to the browser-standard
+       setTimeout(). However...
+       
+       This starts up a separate thread (using an unspecified
+       threading technique). That thread will briefly lock v8, then
+       will unlock it to sleep for argv[1] milliseconds (or some very
+       small amount of time if no time is specified). When it wakes
+       up, it waits for the v8 lock and then runs the function defined
+       by argv[0]. If clearTimeoutThread() has been called while the
+       timer was sleeping, the function will not be executed.
+       
+       During the countdown this routine uses v8::Unlocker to unlock
+       the v8 engine for other threads.
+
+    */
+    v8::Handle<v8::Value> spawnTimeoutThread(const v8::Arguments& argv );
+    /**
+       Identical to spawnTimeoutThread() except that the
+       client-supplied callback is executed in a loop, ending only
+       when the client passes the return value from this function to
+       clearIntervalThread() (or clearTimeoutThread(), which is
+       actually the same function).
+    */
+    v8::Handle<v8::Value> spawnIntervalThread(const v8::Arguments& argv );
+    /**
+       Unbinds (stops future execution of) a timer thread.
+
+       Requires argv[0] to be a timer ID returned from
+       spawnTimeoutThread() or spawnTimeoutInterval(). If such a timer
+       is found and can be cancelled (has not yet been fired) then
+       true is returned, else false.
+    */
+    v8::Handle<v8::Value> clearTimeoutThread(const v8::Arguments& argv );
+    /**
+       Identical to clearTimeoutThread().
+    */
+    v8::Handle<v8::Value> clearIntervalThread(const v8::Arguments& argv );
+
+    
     /**
        A sleep() implementation which can be bound to v8.
     
