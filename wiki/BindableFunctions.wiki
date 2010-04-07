@@ -1,5 +1,8 @@
 #summary Optional JS-bindable functions
 #labels Topic-CPlusPlus,Topic-JS-API,Phase-UserDocs
+
+See also: [BindingFunctions]
+
 <wiki:toc max_depth=4/>
 
 = Optional JS Functions =
