@@ -23,8 +23,27 @@ namespace v8 { namespace juice {
        
        During the countdown this routine uses v8::Unlocker to unlock
        the v8 engine for other threads.
-       
-       FIXME: add clearTimeout().
+
+       ACHTUNG:
+
+       This implementation works differently than browser-side
+       implementations, because a timeout thread can interrupt (and,
+       under the right circumstances, be interrupted by) the main
+       thread (or any other thread, for that matter). A browser's
+       implementation interrupts the main thread, runs the timeout
+       handler to completion, and then continues the main thread
+       (or another timeout thread).
+
+       Since only one timeout handler can actually use v8 at a time
+       (and locks the VM for that duration), in practice this
+       difference shouldn't make _much_ of a difference, but there are
+       cases which will behave desastrously (e.g. accessing native objects
+       which have specific threading semantics, and those semantics
+       might be violated (or cause a deadlock) by a timeout handler).
+
+       See also:
+
+       http://github.com/visionmedia/js-mock-timers/
     */
     v8::Handle<v8::Value> setTimeout(const v8::Arguments& argv );
     /**
@@ -82,6 +101,23 @@ namespace v8 { namespace juice {
     */
     v8::Handle<v8::Value> usleep(const v8::Arguments & argv);
 
+    /**
+       Identical to sleep(), but it does NOT unlock v8 while it's
+       sleeping. Thus other threads cannot run while it is running.
+    */
+    v8::Handle<v8::Value> wait(const v8::Arguments & argv);
+    /**
+       Identical to mssleep(), but it does NOT unlock v8 while it's
+       sleeping. Thus other threads cannot run while it is running.
+    */
+    v8::Handle<v8::Value> mswait(const v8::Arguments & argv);
+    /**
+       Identical to usleep(), but it does NOT unlock v8 while it's
+       sleeping. Thus other threads cannot run while it is running.
+    */
+    v8::Handle<v8::Value> uwait(const v8::Arguments & argv);
+
+    
 }} // namespace
 
 #endif // CODE_GOOGLE_COM_V8_JUICE_TIME_H_INCLUDED
