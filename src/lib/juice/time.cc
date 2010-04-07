@@ -355,16 +355,6 @@ namespace v8 { namespace juice {
         return clearTimeout(argv);
     }
 
-    v8::Handle<v8::Value> clearIntervalThread(const v8::Arguments& argv )
-    {
-        return clearTimeout(argv);
-    }
-    v8::Handle<v8::Value> clearTimeoutThread(const v8::Arguments& argv )
-    {
-        return clearTimeout(argv);
-    }
-
-
     /**
        If isInterval, this behaves like setInterval(), otherwise as
        setTimeout().
@@ -425,14 +415,23 @@ namespace v8 { namespace juice {
     }
 
 
-    v8::Handle<v8::Value> spawnTimeout(const v8::Arguments& argv )
+    v8::Handle<v8::Value> spawnTimeoutThread(const v8::Arguments& argv )
     {
         return setTimeoutImpl<false,1,1>( argv );
     }
     
-    v8::Handle<v8::Value> spawnInterval(const v8::Arguments& argv )
+    v8::Handle<v8::Value> spawnIntervalThread(const v8::Arguments& argv )
     {
         return setTimeoutImpl<true,1,1>( argv );
+    }
+
+    v8::Handle<v8::Value> clearIntervalThread(const v8::Arguments& argv )
+    {
+        return clearTimeout(argv);
+    }
+    v8::Handle<v8::Value> clearTimeoutThread(const v8::Arguments& argv )
+    {
+        return clearTimeout(argv);
     }
 
     namespace Detail
