@@ -38,8 +38,12 @@
 #  include "mutex.hpp"
 #endif
 
-// #include <iostream> // only for debuggering
-// #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+#include <sstream> /* only for formatting one exception message */
+#include <stdexcept> /* only for throwing that formatted exception message. */
+
+
+//#include <iostream> // only for debuggering
+//#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 
 namespace v8 { namespace juice {
 
@@ -228,6 +232,15 @@ namespace v8 { namespace juice {
                   evalfunc()
             {
             }
+            js_thread_info( js_thread_info const & rhs )
+                : delay(rhs.delay),
+                  isInterval(rhs.isInterval),
+                  id(rhs.id),
+                  jv(rhs.jv),
+                  jself(rhs.jself),
+                  evalfunc(rhs.evalfunc)
+            {
+            }
         };        
     } // namespace Detail
 
@@ -243,45 +256,69 @@ namespace v8 { namespace juice {
     static void * thread_setTimeout( void * arg )
     {
 #define THREAD_RETURN return NULL; //::pthread_exit( (void *)0 )
-        if( ! v8::V8::IsDead() )
+        if( v8::V8::IsDead() ) return NULL;
+        Detail::js_thread_info * jio = arg ? reinterpret_cast<Detail::js_thread_info*>( arg ) : 0;
+        if( ! jio )
         {
-            v8::Locker locker;
-            v8::HandleScope hsc;
-            Detail::js_thread_info * jio = reinterpret_cast<Detail::js_thread_info*>( arg );
-            /** reminder: copy jio to the stack so we can free it up immediately
-                and not worry about a leak via an exception propagating below... */
-            const Detail::js_thread_info ji(*jio);
-            const uint32_t udelay = ji.delay * 1000;
-            delete jio;
-            bool isFunc = ji.jv->IsFunction();
-            typedef v8::Local<v8::Function> LoF;
-            LoF fh( ( isFunc ) ? LoF( v8::Function::Cast( *(ji.jv) ) ) : LoF() );
-            typedef v8::Local<v8::Value> LoS;
-            LoS jscode( (isFunc) ? LoS() : *(ji.jv) );
-            do
+            std::ostringstream os;
+            os << __FILE__<<':'<<__LINE__<<": INTERNAL USAGE ERROR: jio MUST be-a (Detail::js_thread_info*)!\n";
+            throw std::runtime_error( os.str().c_str() );
+        }
+        /** reminder: copy jio to the stack so we can free it up immediately
+            and not worry about a leak via an exception propagating below... */
+        Detail::js_thread_info ji(*jio);
+        delete jio;
+        jio = NULL;
+        v8::Locker locker;
+        v8::HandleScope hsc;
+        const uint32_t udelay = ji.delay * 1000;
+        bool isFunc = ji.jv->IsFunction();
+        typedef v8::Local<v8::Function> LoF;
+        LoF fh( ( isFunc ) ? LoF( v8::Function::Cast( *(ji.jv) ) ) : LoF() );
+        typedef v8::Local<v8::Value> LoS;
+        LoS jscode( (isFunc) ? LoS() : *(ji.jv) );
+        do
+        {
+            if( v8::V8::IsDead() ) break;
+            int src = 0;
+            if(udelay
+               || ji.isInterval/*always Unlock for an intervals, to avoid choking other threads if (0==udelay)*/
+               )
             {
-                int src = 0;
-                {
-                    v8::Unlocker ul;
-                    /**
+                v8::Unlocker ul;
+                /**
                    FIXME: for long waits, wake up periodically and see if
                    we should still be waiting, otherwise this might keep
                    the app from exiting from an arbitrarily long time
                    after the main thread has gone. But how to know that?
-                    */
-                    /**
-                       FIXME: posix has obsoleted usleep() and recommends
-                       nanonosleep(), with it's much more complicated
-                       interface. OTOH, according to APUE, nanosleep() is only
-                       required to be defined on platforms which implement "the
-                       real-time extensions". What to do?
-                    */
+                */
+                /**
+                   FIXME: posix has obsoleted usleep() and recommends
+                   nanonosleep(), with its much more complicated
+                   interface. OTOH, according to APUE, nanosleep() is only
+                   required to be defined on platforms which implement "the
+                   real-time extensions". What to do?
+                */
+                if(udelay)
+                {
                     src = ::usleep( udelay );
-                    // Check for cancellation resp. unregister the timer ID:
-                    Detail::TimerLock lock;
-                    if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) break;
                 }
-                if( v8::V8::IsDead() ) break;
+                // Check for cancellation resp. unregister the timer ID:
+                Detail::TimerLock lock;
+                if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) break;
+            }
+            if( v8::V8::IsDead() ) break;
+            //v8::Locker locker3;
+            try
+            {
+                // 2nd Locker: see http://groups.google.com/group/v8-users/browse_thread/thread/117ba3596c3ac9c1
+                // OTOH, though this _theoretically_ makes setTimeout() behave more like browser-side impls,
+                // it explicitly disables high concurrency for non-browser applications. Since v8-juice
+                // is not intended to run in a browser.... hmmm.... i hate this type of decision.
+                //v8::Locker locker2;
+                // In my simple tests i haven't been able to see a difference between using a second locker or not.
+                
+                // ARGUABLE: v8::TryCatch ignoreErrors;
                 if( isFunc )
                 {
                     fh->Call( ji.jself, 0, 0 );
@@ -290,9 +327,14 @@ namespace v8 { namespace juice {
                 {
                     ji.evalfunc->Call( ji.jself, 1, &jscode );
                 }
-            } while( ji.isInterval );
-        }
-        THREAD_RETURN;
+            }
+            catch(...)
+            { // ARGUABLE!
+                break;
+            }
+        } while( (!v8::V8::IsDead()) && ji.isInterval && Detail::TimerLock().has(ji.id) );
+        Detail::TimerLock().take(ji.id); // make sure it's gone.
+    THREAD_RETURN;
 #undef THREAD_RETURN
     }
 
@@ -316,11 +358,16 @@ namespace v8 { namespace juice {
     /**
        If isInterval, this behaves like setInterval(), otherwise as
        setTimeout().
+
+       minArgC is the minimum number of arguments (should be 1 or 2, but
+       is int b/c that's the type of argv.Length()).
+
+       defaultDelay is only used if (minArgC<2) and (argv.Length()<2).
     */
-    template <bool isInterval>
+    template <bool isInterval,int minArgC,uint32_t defaultDelay>
     static v8::Handle<v8::Value> setTimeoutImpl(const v8::Arguments& argv )
     {
-        if( argv.Length() < 2 )
+        if( argv.Length() < minArgC )
         {
             return v8::ThrowException( v8::String::New("setTimeout() requires two arguments!") );
         }
@@ -332,8 +379,10 @@ namespace v8 { namespace juice {
         v8::Locker locker;
         v8::HandleScope hsc; // this must exist to avoid a weird error
         Detail::js_thread_info * ji = new Detail::js_thread_info;
-        ji->delay = static_cast<uint32_t>( argv[1]->ToNumber()->Value() );
-        if( fh->IsString() )
+        ji->delay = (argv.Length()>1)
+            ? static_cast<uint32_t>( argv[1]->ToNumber()->Value() )
+            : defaultDelay;
+       if( fh->IsString() )
         {
             Local<Object> evalObj = v8::Context::GetCurrent()->Global();
             Local<Function> eval = v8::Function::Cast( *(evalObj->Get(v8::String::New("eval"))) );
@@ -357,30 +406,75 @@ namespace v8 { namespace juice {
 
     v8::Handle<v8::Value> setTimeout(const v8::Arguments& argv )
     {
-        return setTimeoutImpl<false>( argv );
+        return setTimeoutImpl<false,2,0>( argv );
     }
     
     v8::Handle<v8::Value> setInterval(const v8::Arguments& argv )
     {
-        return setTimeoutImpl<true>( argv );
+        return setTimeoutImpl<true,2,0>( argv );
     }
 
+
+    v8::Handle<v8::Value> spawnTimeoutThread(const v8::Arguments& argv )
+    {
+        return setTimeoutImpl<false,1,1>( argv );
+    }
+    
+    v8::Handle<v8::Value> spawnIntervalThread(const v8::Arguments& argv )
+    {
+        return setTimeoutImpl<true,1,1>( argv );
+    }
+
+    v8::Handle<v8::Value> clearIntervalThread(const v8::Arguments& argv )
+    {
+        return clearTimeout(argv);
+    }
+    v8::Handle<v8::Value> clearTimeoutThread(const v8::Arguments& argv )
+    {
+        return clearTimeout(argv);
+    }
+
+    namespace Detail
+    {
+        /**
+           Internal helper type to runtime-selection of whether or not
+           to use
+        */
+        template <bool IsLockable>
+        struct SleepUnlocker
+        {
+            SleepUnlocker(){}
+            ~SleepUnlocker(){}
+            v8::Unlocker proxy;
+        };
+        template <>
+        struct SleepUnlocker<false>
+        {
+            SleepUnlocker(){}
+            ~SleepUnlocker(){}
+        };
+    };
     /**
-       Internal impl of sleep()/mssleep()/usleep(). DelayMult
-       must be:
+       Internal impl of sleep()/mssleep()/usleep() and
+       wait()/mswait()/uwait(). DelayMult must be:
 
        sleep(): 1000*1000
        mssleep(): 1000
        usleep(): 1
+
+       useLocker: if it is true then v8::Unlocker is used to give
+       thread control back to v8 for the duration of the sleep. If it
+       is false then the current locker is not yielded.
     */
-    template <uint32_t DelayMult>
+    template <uint32_t DelayMult, bool useLocker>
     static v8::Handle<v8::Value> sleepImpl(const v8::Arguments& argv)
     {
         int32_t st = argv.Length() ? static_cast<int32_t>( argv[0]->ToInteger()->Value() ) : -1;
         int rc = -1;
         if(0 <= st)
         {
-            v8::Unlocker ul;
+            typedef Detail::SleepUnlocker<useLocker> SU;
+            SU ul;
             rc = ::usleep( static_cast<uint32_t>(st) * DelayMult );
         }
         return v8::Integer::New(rc);
@@ -388,17 +482,33 @@ namespace v8 { namespace juice {
 
     v8::Handle<v8::Value> sleep(const v8::Arguments& argv)
     {
-        return sleepImpl<1000*1000>( argv );
+        return sleepImpl<1000*1000,true>( argv );
     }
 
     v8::Handle<v8::Value> mssleep(const v8::Arguments& argv)
     {
-        return sleepImpl<1000>( argv );
+        return sleepImpl<1000,true>( argv );
     }
 
     v8::Handle<v8::Value> usleep(const v8::Arguments& argv)
     {
-        return sleepImpl<1>( argv );
+        return sleepImpl<1,true>( argv );
     }
     
+
+    v8::Handle<v8::Value> wait(const v8::Arguments& argv)
+    {
+        return sleepImpl<1000*1000,false>( argv );
+    }
+
+    v8::Handle<v8::Value> mswait(const v8::Arguments& argv)
+    {
+        return sleepImpl<1000,false>( argv );
+    }
+
+    v8::Handle<v8::Value> uwait(const v8::Arguments& argv)
+    {
+        return sleepImpl<1,false>( argv );
+    }
+
 }}
