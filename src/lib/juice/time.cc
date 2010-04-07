@@ -39,11 +39,11 @@
 #endif
 
 #include <sstream> /* only for formatting one exception message */
-#include <stdexcept>
+#include <stdexcept> /* only for throwing that formatted exception message. */
 
 
-#include <iostream> // only for debuggering
-#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
+//#include <iostream> // only for debuggering
+//#define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 
 namespace v8 { namespace juice {
 
@@ -185,7 +185,6 @@ namespace v8 { namespace juice {
                 // Generate unique timer ID, avoiding collisions after overflow:
                 while( ! this->set().insert( ++x ).second )
                 { (void)1; }
-                CERR << "SET LENGTH = "<<this->set().size()<<'\n';
                 return x;
             }
         };
