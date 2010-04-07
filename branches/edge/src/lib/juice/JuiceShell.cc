@@ -123,6 +123,9 @@ namespace juice {
         BIND("sleep", v8::juice::sleep);
         BIND("mssleep", v8::juice::mssleep);
         BIND("usleep", v8::juice::usleep);
+        BIND("wait", v8::juice::wait);
+        BIND("mswait", v8::juice::mswait);
+        BIND("uwait", v8::juice::uwait);
         BIND("setTimeout", v8::juice::setTimeout);
         BIND("setInterval", v8::juice::setInterval);
         BIND("clearTimeout", v8::juice::clearTimeout);
