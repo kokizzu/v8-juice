@@ -127,13 +127,13 @@ namespace juice {
         BIND("mswait", v8::juice::mswait);
         BIND("uwait", v8::juice::uwait);
         BIND("setTimeout", v8::juice::setTimeout);
-        BIND("setTimeoutThread", v8::juice::setTimeout);
         BIND("setInterval", v8::juice::setInterval);
-        BIND("setIntervalThread", v8::juice::setInterval);
         BIND("clearTimeout", v8::juice::clearTimeout);
-        BIND("clearTimeoutThread", v8::juice::clearTimeout);
         BIND("clearInterval", v8::juice::clearInterval);
-        BIND("clearIntervalThread", v8::juice::clearInterval);
+        BIND("spawnTimeoutThread", v8::juice::spawnTimeoutThread );
+        BIND("spawnIntervalThread", v8::juice::spawnIntervalThread );
+        BIND("clearTimeoutThread", v8::juice::clearTimeoutThread );
+        BIND("clearIntervalThread", v8::juice::clearIntervalThread );
         BIND("print", PrintToCout);
 
         this->impl->global->Set( v8::String::New("v8JuiceVersion"),

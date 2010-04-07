@@ -145,8 +145,8 @@ namespace juice {
 
            As of version 20100407:
 
-           - setTimeoutThread()
-           - setIntervalThread()
+           - spawnTimeoutThread()
+           - spawnIntervalThread()
            - clearTimeoutThread()
            - clearIntervalThread()
            
