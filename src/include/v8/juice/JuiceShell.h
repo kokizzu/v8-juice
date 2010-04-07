@@ -143,13 +143,34 @@ namespace juice {
            - clearInterval() (v8::juice::clearInterval())
            - print() (see PrintToCout())
 
+           As of version 20100407:
+
+           - setTimeoutThread()
+           - setIntervalThread()
+           - clearTimeoutThread()
+           - clearIntervalThread()
+           
+           Those functions use the setTimeout() (and friends)
+           implementations described in this documentation, and have
+           the same interfaces as their similarly-named counterparts
+           (without "Thread" suffix). The other (standard-named)
+           functions will eventually be replaced by another
+           implementation which behaves identical to browser-side
+           implementations (the current one works a bit differently,
+           due to threading details). When the standard-named
+           implementations are swapped, most clients won't notice the
+           difference (only those who try (really hard) to use them
+           for concurrency will have to switch).
+
            The following classes are added to the global object:
 
            - PathFinder (see v8::juice::SetupPathFinderClass()).
-           
-           The following properties are added to the global object:
 
-           - none yet
+           The following non-function properties are added to the
+           global object:
+
+           - 'v8JuiceVersion' = v8_juice_LIBRARY_VERSION (from
+           juice-config.h). Added in v. 20100407.
         */
         void SetupJuiceEnvironment();
 
