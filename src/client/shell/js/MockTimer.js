@@ -151,142 +151,242 @@ MockTimer.prototype.tick = function(ms)
     }
 };
 
-if( 'spawnIntervalThread' in this/* smells like v8-juice-shell or v8::juice::JuiceShell! */ )
+/**
+   Requires libv8-juice-specific functionality.
+
+   Starts an interval timer which calls this.tick(intervalMS) every
+   intervalMS milliseconds. It uses v8::juice::spawnIntervalThread()
+   for the underlying looping functionality.
+
+   If beforeTick is-a function then beforeTick(intervalMS) is called
+   just before every call to this.tick().
+   
+   Any current and previous timers created via this.setTimeout() or this.setInterval()
+   will be triggered using their own timing intervals, but only insofar as the
+   granularity of intervalMS allows them to do so. If intervalMS is larger than
+   any of the timers' intervals, then such timers may be called multiple times
+   in immediate succession to "catch up". See tick() for details.
+
+   IMO, a good default value for intervalMS is 100-250ms, or much
+   higher if all of your timers are "slow" (only run at long
+   intervals).  The library-wide default value is defined as
+   MockTimer.defaultLoopInterval, and that
+   default is used if no arguments are passed in or if
+   !intervalMS.
+
+   If intervalMS is very small, this loop will require
+   appropriately more runtime.
+
+   Returns this object on success.
+
+   It is illegal to call startTickLoop() more than once without a
+   subsequent call to this.stopAsyncLoop_JuiceThread() between the calls. Doing so will
+   cause this function to throw an exception.
+
+   After calling this, this.stopAsyncLoop() is an alias for
+   this.stopAsyncLoop_JuiceThread().
+*/
+MockTimer.prototype.startAsyncLoop_JuiceThread = function( intervalMS, beforeTick )
 {
-    /**
-       Starts an interval timer which calls this.tick(intervalMS) ever
-       intervalMS milliseconds. If beforeTick is-a function then beforeTick(intervalMS)
-       is called just before every call to this.tick().
-
-       Any current and previous timers created via this.setTimeout() or this.setInterval()
-       will be triggered using their own timing intervals, but only insofar as the
-       granularity of intervalMS allows them to do so. If intervalMS is larger than
-       any of the timers' intervals, then such timers may be called multiple times
-       in immediate succession to "catch up". See tick() for details.
-
-       IMO, a good default value for intervalMS is 100-250ms, or much
-       higher if all of your timers are "slow" (only run at long
-       intervals).  The library-wide default value is defined as
-       MockTimer.prototype.startTickLoop.defaultIntervalMS, and that
-       default is used if no arguments are passed in or if
-       !intervalMS.
-
-       If intervalMS is very small, this loop will require
-       appropriately more runtime.
-
-       Returns this object on success.
-
-       It is illegal to call startTickLoop() more than once without a
-       subsequent call to this.stopTickLoop() between the calls. Doing so will
-       cause this function to throw an exception.
-    */
-    MockTimer.prototype.startTickLoop = function( intervalMS, beforeTick )
+    if( this.loopInfo )
     {
-        if( this.loopInfo )
-        {
-            throw new Error( "MockTimer.startTickLoop() must only be called once!" );
-            return false;
-        }
-        if( ! arguments.length || !arguments[0] )
-        {
-            intervalMS = MockTimer.prototype.startTickLoop.defaultIntervalMS;
-        }
-        var loopInfo = { ms:0+intervalMS };
-        this.loopInfo = loopInfo;
-        var self = this;
-        loopInfo.timerID = spawnIntervalThread( function()
+        throw new Error( "MockTimer.startAsyncLoop_JuiceThread() must only be called once!" );
+        return false;
+    }
+    if( ! arguments.length || !arguments[0] )
+    {
+        intervalMS = MockTimer.defaultLoopInterval;
+    }
+    var loopInfo = { ms:0+intervalMS };
+    this.loopInfo = loopInfo;
+    var self = this;
+    this.stopAsyncLoop = this.stopAsyncLoop_JuiceThread;
+
+    loopInfo.timerID = spawnIntervalThread( function()
+                                            {
+                                                if( beforeTick instanceof Function )
                                                 {
-                                                    if( beforeTick instanceof Function )
-                                                    {
-                                                        beforeTick(loopInfo.ms);
-                                                    }
-                                                    self.tick(loopInfo.ms);
-                                                },
-                                                loopInfo.ms );
-        return this;
-    };
-    /**
-       This enters a mail event loop, running every intervalMS
-       milliseconds (insofar as the JS VM threading features allow us
-       to).
+                                                    beforeTick(loopInfo.ms);
+                                                }
+                                                self.tick(loopInfo.ms);
+                                            },
+                                            loopInfo.ms );
+    return this;
+};
+/**
+   Requires libv8-juice-specific functionality.
 
-       Each intervalMS ms, this.tick(intervalMS) is called. The wait
-       is achieved by sleep()ing for intervalMS ms. The various
-       v8-juice sleep() implementations explicitly unlock the v8 VM
-       during the sleep, giving other threads some time to work.
+   This enters a mail event loop, running every intervalMS
+   milliseconds (insofar as the JS VM threading features allow us
+   to).
 
-       If beforeTick is-a function, it is called like:
+   Each intervalMS ms, this.tick(intervalMS) is called. The wait
+   is achieved by sleep()ing for intervalMS ms. The various
+   v8-juice sleep() implementations explicitly unlock the v8 VM
+   during the sleep, giving other threads some time to work.
 
-       beforeTick( this, intervalMS )
+   If beforeTick is-a function, it is called like:
 
-       after sleeping but before any timer callbacks are checked or triggered.
+   beforeTick( this, intervalMS )
 
-       If beforeTick() returns true, the up-coming tick() is called,
-       otherwise tick() is not called and this function returns.
+   after sleeping but before any timer callbacks are checked or triggered.
 
-       If beforeTick() throw an exception it is propagated back to the
-       caller.  If a timer callback throws an exception, it will be
-       propagated back only if this.propagateTimerExceptions is true,
-       otherwise exceptions from timer callbacks are silently ignored.
+   If beforeTick() returns true, the up-coming tick() is called,
+   otherwise tick() is not called and this function returns.
 
-       This function does not return until it propagates an exception
-       or beforeTick() returns false.
-    */
-    MockTimer.prototype.runBlockingTickLoop = function( intervalMS, beforeTick )
+   If beforeTick() throw an exception it is propagated back to the
+   caller.  If a timer callback throws an exception, it will be
+   propagated back only if this.propagateTimerExceptions is true,
+   otherwise exceptions from timer callbacks are silently ignored.
+
+   This function does not return until it propagates an exception
+   or beforeTick() returns false.
+*/
+MockTimer.prototype.runBlockingTickLoop = function( intervalMS, beforeTick )
+{
+    if( this.loopInfo )
     {
-        if( this.loopInfo )
-        {
-            throw new Error( "MockTimer.startTickLoop() must only be called once!" );
-            return false;
-        }
-        if( ! arguments.length || !arguments[0] )
-        {
-            intervalMS = MockTimer.prototype.startTickLoop.defaultIntervalMS;
-        }
-        var loopInfo = { ms:0+intervalMS };
-        this.loopInfo = loopInfo;
-        var self = this;
-        loopInfo.stopBlockingTickLoop = false;
-        var keepGoing = true;
-        for( ; keepGoing ; )
-        {
-            mssleep( loopInfo.ms );
-            if( beforeTick instanceof Function )
-            {
-                //print("Calling beforeTick(",self,',',loopInfo.ms,')');
-                keepGoing = beforeTick(self,loopInfo.ms);
-                if( ! keepGoing ) break;
-            }
-            self.tick( loopInfo.ms );
-        };
-        return this;
-    };
-    MockTimer.prototype.startTickLoop.defaultIntervalMS = 200;
-    /**
-       Sticks the startTickLoop() loop. By default it also clears
-       all timers, but if passed the explicit boolean value
-       false (i.e. false===arguments[0]) then it will not clear
-       the timeouts. They will not be run, but they can be
-       started again by calling startTickLoop() again.
-    */
-    MockTimer.prototype.stopTickLoop = function()
+    throw new Error( "MockTimer.startTickLoop() must only be called once!" );
+    return false;
+    }
+    if( ! arguments.length || !arguments[0] )
     {
-        if( ! this.loopInfo || ! this.loopInfo.timerID )
+    intervalMS = MockTimer.defaultLoopInterval;
+    }
+    var loopInfo = { ms:0+intervalMS };
+    this.loopInfo = loopInfo;
+    var self = this;
+    loopInfo.stopBlockingTickLoop = false;
+    var keepGoing = true;
+    for( ; keepGoing ; )
+    {
+        mssleep( loopInfo.ms );
+        if( beforeTick instanceof Function )
         {
-            throw new Error( "MockTimer.startTickLoop() is not running!" );
-            return false;
+            //print("Calling beforeTick(",self,',',loopInfo.ms,')');
+            keepGoing = beforeTick(self,loopInfo.ms);
+            if( ! keepGoing ) break;
         }
-        clearIntervalThread( this.loopInfo.timerID );
-        if( !arguments.length || (false!==arguments[0]) )
-        {
-            this.resetTimers();
-        }
-        this.loopInfo = undefined;
-        delete this.loopInfo;
-        return this;
+        self.tick( loopInfo.ms );
     };
-}
+    return this;
+};
+/**
+   Stops the startTickLoop() loop. By default it also clears
+   all timers, but if passed the explicit boolean value
+   false (i.e. false===arguments[0]) then it will not clear
+   the timeouts. They will not be run, but they can be
+   started again by calling startTickLoop() again.
+*/
+MockTimer.prototype.stopAsyncLoop_JuiceThread = function()
+{
+    if( ! this.loopInfo || ! this.loopInfo.timerID )
+    {
+        throw new Error( "MockTimer.startAsyncLoop_JuiceThread() is not running!" );
+        return false;
+    }
+    clearIntervalThread( this.loopInfo.timerID );
+    if( !arguments.length || (false!==arguments[0]) )
+    {
+        this.resetTimers();
+    }
+    this.loopInfo = undefined;
+    delete this.loopInfo;
+    return this;
+};
 
+/**
+   Requires a standards-conformant (or mostly-so) implementations
+   of setTimeout() and clearTimeout().
+
+   Starts an interval timer which calls this.tick(intervalMS)
+   every intervalMS milliseconds, using setInterval() for the
+   interlying looping. If beforeTick is-a function then
+   beforeTick(intervalMS) is called just before every call to
+   this.tick().
+
+   Any current and previous timers created via this.setTimeout()
+   or this.setInterval() will be triggered using their own timing
+   intervals, but only insofar as the granularity of intervalMS
+   allows them to do so. If intervalMS is larger than any of the
+   timers' intervals, then such timers may be called multiple
+   times in immediate succession to "catch up". See tick() for
+   details.
+
+   The library-wide default value for intervalMS is defined as
+   MockTimer.defaultLoopInterval, and that
+   default is used if no arguments are passed in or if
+   !intervalMS.
+
+   If intervalMS is very small, this loop will require
+   appropriately more runtime.
+
+   Returns this object on success.
+
+   It is illegal to call startAsyncLoop_setInterval() more than once
+   without a subsequent call to this.stopAsyncLoop_setInterval()
+   between the calls. Doing so will cause this function to throw an
+   exception.
+
+   After calling this, this.stopAsyncLoop() is an alias for
+   this.stopAsyncLoop_setInterval().
+*/
+MockTimer.prototype.startAsyncLoop_setInterval = function( intervalMS, beforeTick )
+{
+    if( this.loopInfo )
+    {
+        throw new Error( "MockTimer.startAsyncLoop_setInterval() must only be called once!" );
+        return false;
+    }
+    if( ! arguments.length || !arguments[0] )
+    {
+        intervalMS = MockTimer.defaultLoopInterval;
+    }
+    var loopInfo = { ms:0+intervalMS };
+    this.loopInfo = loopInfo;
+    var self = this;
+    this.stopAsyncLoop = this.stopAsyncLoop_setInterval;
+    loopInfo.timerID = setInterval( function()
+                                    {
+                                        if( beforeTick instanceof Function )
+                                        {
+                                            beforeTick(loopInfo.ms);
+                                        }
+                                        self.tick(loopInfo.ms);
+                                    },
+                                    loopInfo.ms );
+    return this;
+};
+/**
+   Stops the startAsyncLoop_setInterval() loop. By default it also clears
+   all timers, but if passed the explicit boolean value
+   false (i.e. false===arguments[0]) then it will not clear
+   the timeouts. They will not be run, but they can be
+   started again by calling startAsyncLoop_setInterval() again.
+*/
+MockTimer.prototype.stopAsyncLoop_setInterval = function()
+{
+    if( ! this.loopInfo || ! this.loopInfo.timerID )
+    {
+        throw new Error( "MockTimer.startAsyncLoop_setInterval() is not running!" );
+        return false;
+    }
+    clearInterval( this.loopInfo.timerID );
+    if( !arguments.length || (false!==arguments[0]) )
+    {
+        this.resetTimers();
+    }
+    this.loopInfo.timerID = 0;
+    //this.loopInfo = undefined;
+    //delete this.loopInfo;
+    return this;
+};
+
+/** Defines the library-wide default interval value (in milliseconds) for various
+    timer-looping implementations. */
+MockTimer.defaultLoopInterval = 200;
+
+       
 /* Test/debug code. */
 if(1) (function(){
            function timestamp()
@@ -325,68 +425,73 @@ if(1) (function(){
 
            MockTimer.test2 = function()
            {
-               print("Blocking-loop tests...");
+               print("Non-blocking-loop tests...");
                var pt = new MockTimer();
+               var countdown = 10;
                pt.runCount = 0;
-               pt.countdown = 10;
                function labelFunc(s)
                {
                    var msg = s;
                    return function(){
-                       if( 1 == pt.countdown ) pt.reset();//clearInterval( pt.myID );
-                       --pt.countdown;
-                       if( pt.countdown > 0 )
+                       --countdown;
+                       if( countdown == 0 )
                        {
-                           print(pt.countdown, timestamp(),++pt.runCount,':',msg);
+                           clearInterval( pt.myID );
+                       }
+                       if( countdown > 0 )
+                       {
+                           print(countdown, timestamp(),++pt.runCount,':',msg);
                        }
                        else
                        {
                            // we were just cleared or we are remnant timers.
                        }
-                       return pt.countdown > 0;
+                       return countdown > 0;
                    };
                }
-               var timerRes = 50;
-               pt.startTickLoop( timerRes, function() {
-                                     print('tick...');
+               var timerRes = 100;
+               pt.myID = pt.startAsyncLoop_JuiceThread( timerRes, function() {
+                                     //print('tick...');
                                  } );
-               pt.ms = 250;
-               pt.myID = pt.setInterval( labelFunc("tock!"), pt.ms );
-               print("setInterval(",pt.ms,") =",pt.myID,'Timer resolution =',timerRes);
-               for( ; pt.countdown > 0; ) {
-                   print('... main thread still waiting ...',pt.countdown);
-                   sleep(1); // if we don't sleep, the interval threads get blocked
+               pt.ms = 300;
+               pt.setInterval( labelFunc("tock!"), pt.ms );
+               print("setInterval(",pt.ms,") =",pt.myID,', timer resolution =',timerRes);
+               var sltms = pt.ms*2;
+               for( ; countdown > 0; ) {
+                   print('... main thread waiting',sltms+'ms, still awaiting',countdown,' timer run(s) ...');
+                   mssleep(sltms); // if we don't sleep, the interval threads get blocked
                }
+               pt.stopAsyncLoop_JuiceThread();
                print('Main thread done.');
-               pt.stopTickLoop();
            };
 
            MockTimer.test3 = function()
            {
+               print("Blocking-loop tests...");
                var pt = new MockTimer();
                pt.runCount = 0;
-               pt.countdown = 10;
+               var countdown = 10;
                function labelFunc(s)
                {
                    var msg = s;
                    return function(mock,ms){
-                       if( ! mock && (pt.countdown>0))
+                       if( ! mock && (countdown>0))
                        { /* interval mode */
-                           if( ! --pt.countdown ) pt.clearInterval( pt.myID );
-                           print(pt.countdown, timestamp(), ++pt.runCount,':',msg);
-                           return pt.countdown > 0;
+                           if( ! --countdown ) pt.clearInterval( pt.myID );
+                           print(countdown, timestamp(), ++pt.runCount,':',msg);
+                           return countdown > 0;
                        }
                        else /* beforeTick() mode */
                        {
-                           print(pt.countdown, timestamp(),':',msg);
-                           return pt.countdown > 0;
+                           print(countdown, timestamp(),':',msg);
+                           return countdown > 0;
                        }
                    };
                }
                var timerRes = 500;
                pt.ms = 800;
                pt.myID = pt.setInterval( labelFunc("tock!"), pt.ms );
-               print("setInterval(",pt.ms,") =",pt.myID,'Timer resolution =',timerRes);
+               print("setInterval(",pt.ms,") =",pt.myID,', timer resolution =',timerRes);
                print("Entering blocking loop...");
                pt.runBlockingTickLoop( timerRes, labelFunc("tick!") );
                print("blocking loop done.");
@@ -394,8 +499,8 @@ if(1) (function(){
 
            if( 1 && ('v8JuiceVersion' in this /* == is v8-juice-shell or v8::juice::JuiceShell client*/) )
            {
-               MockTimer.test1();
-               //MockTimer.test2();
+               //MockTimer.test1();
+               MockTimer.test2();
                MockTimer.test3();
                //sleep(3);
            }
