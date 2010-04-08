@@ -52,7 +52,7 @@ See [PathFinderClass].
 
 Added to the API on 20090912.
 
-*ACHTUNG:* For any of these functions to work, a `v8::Locker` instance must have been instantiated before the JS code which uses them starts executing. If you're using `v8-juice-shell` then this is done for you, but if you're writing your own app, you'll need to add a `v8::Locker` sentry somewhere in your main app. If no locker is in place, these functions _will_ cause v8 to crash (with an error message if v8 is built in debug mode, otherwise silently). There is an example of how to set up the locker in the [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/shell.cc|v8-juice-shell source code].
+*ACHTUNG:* For any of these functions to work, a `v8::Locker` instance must have been instantiated before the JS code which uses them starts executing. If you're using `v8-juice-shell` then this is done for you, but if you're writing your own app, you'll need to add a `v8::Locker` sentry somewhere in your main app. If no locker is in place, these functions _will_ cause v8 to crash (with an error message if v8 is built in debug mode, otherwise silently). There is an example of how to set up the locker in the [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/shell.cc v8-juice-shell source code].
 
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
@@ -82,6 +82,6 @@ It has come to my attention that there is a JS-only implementation of `setTimeou
 
 and that one seems to be more browser-compliant. i've forked a copy of that code, cleaned it up, expanded it a bit, and documented it:
 
-  * [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/js/MockTimer.js]
+  * http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/js/MockTimer.js
 
 That code requires that the client provide his own timing loop, but that is simple to add. The forked copy demonstrates at least three ways of implementing such a loop from JS code, using various combinations of the above functions. For browser environments it uses the standard `setInterval()` to control the pseudo-timer loop, while providing its own timers on top of that.
