@@ -29,9 +29,11 @@ the functions won't do anything useful.
 
 =Building the plugins=
 
+First off, be warned: the plugin model used by v8-juice _cannot_ work with static libraries. The plugin model relies on code being executed during the static initialization phase (when an app/dll is opened), and that phase doesn't happen for symbols in static libraries. Plugins _must_ be built as shared libraries.
+
 There are two options for building the plugins, both of which require that v8-juice is installed and that its headers can be found.
 
-For scons, simply run `scons` from the top of the build tree. That will build all of the plugins. Simply copy them to `prefix/lib/v8/juice`, where `prefix` is explained in the build options, below.
+For scons: edit the `SConstruct` file to tell it where your v8/v8-juice live. Then simply run `scons` from the top of the build tree. That will build all of the plugins. Simply copy them to `prefix/lib/v8/juice`, where `prefix` is explained in the build options, below.
 
 The `make` build requires that v8-juice be installed and that `libv8-juice-config` be in the `$PATH` (it is installed via the normal v8-juice installation process). If those conditions are met one can do:
 
@@ -41,7 +43,7 @@ The `make` build requires that v8-juice be installed and that `libv8-juice-confi
 ~> make install
 }}}
 
-It will install to `$(libv8-juice-config --prefix)/lib/v8/juice/VERSION`, where `VERSION` is the version of v8-juice it is compiled against. This path is in the default v8-juice plugins search path.
+It will install to `$(libv8-juice-config --prefix)/lib/v8/juice/VERSION`, where `VERSION` is the version of v8-juice it is compiled against. This directory is in the default v8-juice plugins search path.
 
 =C++-side=
 
@@ -63,8 +65,7 @@ That's all you need to do to enable the plugins support.
 
 On Linux systems (and probably other Unices), your application must be linked
 with the `-export-dynamic` (also known as `-rdynamic`) flag, or DLLs may not
-be able to load properly (they won't be able to see the native v8::juice::plugin API
-provided by the application/v8-juice!).
+be able to load properly (they won't be able to see the native v8::juice::plugin API provided by the application/v8-juice!).
 
 Now, in the code which you want to link as a DLL you need to add a few small
 bits of code. First, we will assume you have a function with this signature:
