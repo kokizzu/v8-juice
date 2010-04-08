@@ -12,10 +12,11 @@ can be added to a client instance of v8 by binding them using normal
 v8 conventions, e.g.:
 
 {{{
-myGlobal->Set(v8::String::New("sleep"), v8::FunctionTemplate::New(v8::juice::sleep));
+myJSObject->Set(v8::String::New("sleep"),
+              v8::FunctionTemplate::New( v8::juice::sleep )->GetFunction() );
 }}}
 
-The supported "extra" functions are listed below, grouped by the header file they are declared in. They are documented in their header files. Most of them are enabled in the v8-juice-shell app.
+The supported "extra" functions are listed below, grouped by the header file they are declared in. They are documented in their header files. Most of them are enabled by default in the [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/|v8-juice-shell app].
 
 ==juice.h==
 
@@ -23,7 +24,7 @@ The supported "extra" functions are listed below, grouped by the header file the
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/juice.cc juice.cc]
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
-|| `v8::juice::IncludeScript` || `include(filename)` || Includes external JS files. See [PathFinderClass]. ||
+|| `v8::juice::IncludeScript` || `include(string filename)` || Includes external JS files. See [PathFinderClass]. ||
 
 ==!PathFinder.h==
 
@@ -34,7 +35,7 @@ See [PathFinderClass].
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/plugin.cc plugin.cc]
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
-|| `v8::juice::plugin::LoadPlugin` || `loadPlugin(pluginName)` || Loads an external plugin from a DLL. See [Plugins]. ||
+|| `v8::juice::plugin::LoadPlugin` || `loadPlugin( stringpluginName)` || Loads an external plugin from a DLL. See [Plugins]. ||
 
 
 ==sprintf.h==
@@ -42,7 +43,7 @@ See [PathFinderClass].
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/jssprintf.cc jssprintf.cc]
 
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
-|| `v8::juice::sprintf` || `sprintf(fmt,args...)` || Similar to conventional `sprintf()` implementations, plus some extensions. ||
+|| `v8::juice::sprintf` || `sprintf(string fmt,args...)` || Similar to conventional `sprintf()` implementations, plus some extensions. Any Objects passed this way will be `toString()`'d. ||
 
 ==time.h==
 
@@ -50,7 +51,6 @@ See [PathFinderClass].
 [http://code.google.com/p/v8-juice/source/browse/trunk/src/lib/juice/time.cc time.cc]
 
 Added to the API on 20090912.
-
 
 *ACHTUNG:* For any of these functions to work, a `v8::Locker` instance must have been instantiated before the JS code which uses them starts executing. If you're using `v8-juice-shell` then this is done for you, but if you're writing your own app, you'll need to add a `v8::Locker` sentry somewhere in your main app. If no locker is in place, these functions _will_ cause v8 to crash (with an error message if v8 is built in debug mode, otherwise silently). There is an example of how to set up the locker in the [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/shell.cc|v8-juice-shell source code].
 
@@ -74,7 +74,7 @@ Due to internal details, `clearTimeout()` and `clearInterval()` are interchangea
 
 Speaking of `setTimeout()`:
 
-*ACHTUNG:* (Yes, another one!) These functions do not work _identically_ to their browser-side counterparts. These actually run in a different thread, whereas browsers use a single thread and once the timeout function is called it will run until finished before returning control to the main code (or another timeout function, or whatever). In practice, however, i don't believe that this will make a big difference in how these functions are used, compared to the same-named browser-side functions. These functions are likely to be renamed at some point, in any case (just waiting on some good names). The current `setTimeout()` and `setInterval()` implementations will be replaced at some point to behave more like their browser-side counterparts (assuming i can figure out how to do it).
+*ACHTUNG:* (Yes, another one!) These functions do not work _identically_ to their browser-side counterparts. These actually run in a different thread, whereas browsers use a single thread and once the timeout function is called it will run until finished before returning control to the main code (or another timeout function, or whatever). In practice, however, i don't believe that this will make a big difference in how these functions are used, compared to the same-named browser-side functions. The current `setTimeout()` and `setInterval()` implementations will be replaced at some point to behave more like their browser-side counterparts (assuming i can figure out how to do it).
 
 It has come to my attention that there is a JS-only implementation of `setTimeout()` and friends available here:
 
@@ -84,3 +84,4 @@ and that one seems to be more browser-compliant. i've forked a copy of that code
 
   * [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/js/MockTimer.js]
 
+That code requires that the client provide his own timing loop, but that is simple to add. The forked copy demonstrates at least three ways of implementing such a loop from JS code, using various combinations of the above functions. For browser environments it uses the standard `setInterval()` to control the pseudo-timer loop, while providing its own timers on top of that.
