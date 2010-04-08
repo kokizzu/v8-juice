@@ -88,11 +88,14 @@ namespace v8 { namespace juice {
     */
     v8::Handle<v8::Value> spawnTimeoutThread(const v8::Arguments& argv );
     /**
-       Identical to spawnTimeoutThread() except that the
-       client-supplied callback is executed in a loop, ending only
-       when the client passes the return value from this function to
-       clearIntervalThread() (or clearTimeoutThread(), which is
+       Identical to spawnTimeoutThread() except that:
+
+       1) the client-supplied callback is executed in a loop, ending
+       only when the client passes the return value from this function
+       to clearIntervalThread() (or clearTimeoutThread(), which is
        actually the same function).
+
+       2) It requires a second parameter.
     */
     v8::Handle<v8::Value> spawnIntervalThread(const v8::Arguments& argv );
     /**
