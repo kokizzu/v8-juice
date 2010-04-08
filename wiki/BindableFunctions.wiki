@@ -52,28 +52,35 @@ See [PathFinderClass].
 Added to the API on 20090912.
 
 
+*ACHTUNG:* For any of these functions to work, a `v8::Locker` instance must have been instantiated before the JS code which uses them starts executing. If you're using `v8-juice-shell` then this is done for you, but if you're writing your own app, you'll need to add a `v8::Locker` sentry somewhere in your main app. If no locker is in place, these functions _will_ cause v8 to crash (with an error message if v8 is built in debug mode, otherwise silently). There is an example of how to set up the locker in the [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/shell.cc|v8-juice-shell source code].
+
+
 || *Native Function* (of type `v8::InvocationCallback`) || *JS Signature* || *Description* ||
-|| `v8::juice::setTimeout` || `setTimeout(Function | string, milliseconds)` || Like the browser-standard function, but runs in a separate thread. ||
-|| `v8::juice::clearTimeout` || `clearTimeout(timerID)` || Removes a scheduled `setTimeout()` callback. ||
-|| `v8::juice::setInterval` || `setInterval(Function | string, milliseconds)` || Like `setTimeout()`, but runs the given callback at the given interval. ||
-|| `v8::juice::clearInterval` || `clearInterval(timerID)` || Removes a scheduled `setInterval()` callback. ||
-|| `v8::juice::sleep` || `sleep(seconds)` || Sleeps for a given number of seconds, unlocking the v8 VM for use by other threads during that time. ||
-|| `v8::juice::mssleep` || `mssleep(milliseconds)` || Sleeps for a given number of milliseconds, unlocking the v8 VM for use by other threads during that time. ||
-|| `v8::juice::usleep` || `usleep(microseconds)` || Sleeps for a given number of microseconds, unlocking the v8 VM for use by other threads during that time. ||
+|| `v8::juice::setTimeout()` || `setTimeout(Function | string, milliseconds)` || Like the browser-standard function, but runs in a separate thread. ||
+|| `v8::juice::clearTimeout()` || `clearTimeout(timerID)` || Removes a scheduled `setTimeout()` callback. ||
+|| `v8::juice::setInterval()` || `setInterval(Function | string, milliseconds)` || Like `setTimeout()`, but runs the given callback at the given interval. ||
+|| `v8::juice::clearInterval()` || `clearInterval(timerID)` || Removes a scheduled `setInterval()` callback. ||
+|| `v8::juice::spawnTimeoutThread()` || `spawnTimeoutThread(Function | string, milliseconds)` || Like setTimeout() but explicitly uses a separate thread of execution. ||
+|| `v8::juice::clearTimeoutThread()` || `clearTimeoutThread(timerID)` || Removes a scheduled `setTimeoutThreadt()` callback. ||
+|| `v8::juice::spawnIntervalThread()` || `spawnIntervalThread(Function | string, milliseconds)` || Like `spawnTimeoutThread()`, but runs the given callback at the given interval. ||
+|| `v8::juice::clearIntervalThread()` || `clearIntervalThread(timerID)` || Removes a scheduled `setIntervalThread()` callback. ||
+|| `v8::juice::sleep()` || `sleep(seconds)` || Sleeps for a given number of seconds, unlocking the v8 VM for use by other threads during that time. ||
+|| `v8::juice::mssleep()` || `mssleep(milliseconds)` || Sleeps for a given number of milliseconds, unlocking the v8 VM for use by other threads during that time. ||
+|| `v8::juice::usleep()` || `usleep(microseconds)` || Sleeps for a given number of microseconds, unlocking the v8 VM for use by other threads during that time. ||
 
+Passing 0 to any of the `sleep` variants will briefly unlock the v8 engine for other threads, and this can be used to implement a `yield` operation.
 
-*ACHTUNG:* the names of setTimeout() and friends WILL BE RENAMED at some point because these implementations are not 100% usage-compatible with browser-side implementations. See below for more details.
+Due to internal details, `clearTimeout()` and `clearInterval()` are interchangeable, and either can be used to clear IDs returned from `setTimeout()` or `setInterval()`. Likewise for `spawnXXXThead()` and `clearXXXThread()`.
 
-It has come to my attention that there is a JS-only implementation of setTimeout() and friends available here:
+Speaking of `setTimeout()`:
+
+*ACHTUNG:* (Yes, another one!) These functions do not work _identically_ to their browser-side counterparts. These actually run in a different thread, whereas browsers use a single thread and once the timeout function is called it will run until finished before returning control to the main code (or another timeout function, or whatever). In practice, however, i don't believe that this will make a big difference in how these functions are used, compared to the same-named browser-side functions. These functions are likely to be renamed at some point, in any case (just waiting on some good names). The current `setTimeout()` and `setInterval()` implementations will be replaced at some point to behave more like their browser-side counterparts (assuming i can figure out how to do it).
+
+It has come to my attention that there is a JS-only implementation of `setTimeout()` and friends available here:
 
   * http://github.com/visionmedia/js-mock-timers/
 
-and that one seems to be more browser-compliant.
+and that one seems to be more browser-compliant. i've forked a copy of that code, cleaned it up, expanded it a bit, and documented it:
 
-Due to internal details, `clearTimeout()` and `clearInterval()` are interchangeable, and either can be used
-to clear IDs returned from `setTimeout()` or `setInterval()`. Passing 0 to any of the `sleep` variants will briefly unlock the v8 engine for other threads, and this can be used to implement a `yield` operation.
-
-For the timeout functions to work, a `v8::Locker` instance must have been instantiated before the JS code which uses them starts executing. Don't as me why. If you're using `v8-juice-shell` then this is done for you, but if you're writing your own app, you'll need to add that.
-
-*ACHTUNG:* these functions do not work _identically_ to their browser-side counterparts. These actually run in a different thread, whereas browsers use a single thread and once the timeout function is called it will run until finished before returning control to the main code (or another timeout function, or whatever). In practice, however, i don't believe that this will make a big difference in how these functions are used, compared to the same-named browser-side functions. These functions are likely to be renamed at some point, in any case (just waiting on some good names).
+  * [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/js/MockTimer.js]
 
