@@ -16,7 +16,7 @@ myJSObject->Set(v8::String::New("sleep"),
               v8::FunctionTemplate::New( v8::juice::sleep )->GetFunction() );
 }}}
 
-The supported "extra" functions are listed below, grouped by the header file they are declared in. They are documented in their header files. Most of them are enabled by default in the [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/|v8-juice-shell app].
+The supported "extra" functions are listed below, grouped by the header file they are declared in. They are documented in their header files. Most of them are enabled by default in the [http://code.google.com/p/v8-juice/source/browse/branches/edge/src/client/shell/ v8-juice-shell app].
 
 ==juice.h==
 
