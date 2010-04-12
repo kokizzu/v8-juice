@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2010 April 8*
+  * Integrated a fix for issue #19. Thanks go to Feng Fillano for localizing and reporting the problem.
+
 *2010 April 7*
   * Added `spawnTimeoutThread()` and friends, which are multi-threaded variants of the standard `setTimeout()` (and friends) functions). The current `setTimeout()` (and friends) impls are not strictly standards-conformant, and will eventually be replaced by something that is. Until then, `setTimeout()` is simply an alias for `spawnTimeoutThread()`.
 
