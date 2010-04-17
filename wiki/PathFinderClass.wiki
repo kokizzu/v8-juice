@@ -56,7 +56,7 @@ obj.pathArray = ["/usr/local/bin", "/usr/bin"];
 obj.setPathArray( '/usr/local/bin', '/usr/bin' );
 }}}
 
-And setting one property will change the value of the other (but see the caveat above about not being able to change these properties without the setter functions).
+And setting one property will change the value of the other (but see the caveat above about not being able to directly change these properties!).
 
 =Shared !PathFinder Instances=
 
