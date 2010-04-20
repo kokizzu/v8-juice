@@ -3,7 +3,7 @@
 
 *See also:* [Plugins]
 
-<wiki:toc max_depth='3'/>
+<wiki:toc max_depth='3'></wiki:toc>
 
 = Curl Plugin =
 
