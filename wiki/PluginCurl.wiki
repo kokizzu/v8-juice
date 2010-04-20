@@ -463,6 +463,63 @@ c.easyPerform() rc = 0
 }
 }}}
 
+= Example #2: Fetch Wiki Pages from any Google Code Project = 
+
+The following script pulls a Wiki page from an arbitrary Google Code project. It is intended to use with the v8-juice-shell and the [PluginCurl curl plugin], to be called like:
+
+{{{
+  ~> v8-juice-shell this_script.js -- GoogleCodeProjectName WikiPageName
+}}}
+
+The script:
+
+{{{
+/**
+    Test/demo app for GoogleCodeWikiParser. Requires
+    the v8-juice (http://code.google.com/p/v8-juice) JS shell
+    and the libcurl plugin for that shell.
+
+    Usage:
+
+    v8-juice-shell thisScript.js -- GoogleCodeProjectName WikiPageName
+
+    Output:
+
+    The wiki page is pulled from the GoogleCode SVN repo and dumped
+    to stdout using print().
+*/
+loadPlugin('v8-juice-libcurl');
+
+var proj = arguments[0];
+var page = arguments[1];
+
+if( ! proj || !page )
+{
+    throw new Error("Requires two arguments: Google Code Project and Wiki Page name.");
+}
+
+var url = 'http://'+proj+'.googlecode.com/svn/wiki/'+page+'.wiki';
+
+var curl = new Curl();
+var wikiOutput = [];
+curl.setOpt({
+    url:url,
+    userAgent:"Google Chrome, kind of.",
+    writeFunction:function writeFunction(data,len,ud)
+    {
+        wikiOutput.push(data);
+        return data.length;
+    },
+    writeData:null
+});
+var rc = curl.easyPerform();
+curl.destroy();
+if( rc )
+{
+    throw new Error("curl.easyPerform() returned error code "+rc+"!");
+}
+}}}
+
 = TODOs =
 
   * Give some thought to how we might bind the curl "multi" interface, which apparently allows asynchronous communication.
