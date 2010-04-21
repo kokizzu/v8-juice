@@ -7,7 +7,7 @@
 
 = Introduction =
 
-(Add in commit r1112 (20100318).)
+(Added in commit r1112 (20100318).)
 
 The `PosixFILE` plugin started out as a test/demonstration of the [ClassWrap] API, but it turns out it's useful in its own right. It provides an API nearly identical to the POSIX-standard `FILE` API, and it provides both C-like and OO-style interfaces (which can be used together). This plugin is different from [PluginWhio the whio plugin]: whio provides a more abstract i/o interface, but this one deals only with the POSIX-defined APIs for `FILE` handles.
 
