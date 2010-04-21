@@ -3,7 +3,7 @@
 
 *ACHTUNG:* The `ClassWrap` API was introduced on 20091025 - it is quite new and may still change significantly over time.
 
-<wiki:toc max_depth='3'/>
+<wiki:toc max_depth='3'></wiki:toc>
 
 =!ClassWrap =
 
