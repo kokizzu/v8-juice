@@ -414,7 +414,7 @@ namespace v8 { namespace juice { namespace curl {
 #define COPT_STR(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptString<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
 #define COPT_JVAL(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptJSVal<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
 #define COPT_SLIST(SUFFIX,KEY) template <> struct CurlOpt< CURLOPT_ ## SUFFIX > : CurlOptSList<CURLOPT_ ## SUFFIX> {OPTKEY(KEY)}
-    COPT_BOOL(FAILONERROR, "failOnErr");
+    COPT_BOOL(FAILONERROR, "failOnError");
     COPT_BOOL(FOLLOWLOCATION, "followLocation");
     COPT_BOOL(HEADER, "header");
     COPT_BOOL(NOBODY, "noBody");
