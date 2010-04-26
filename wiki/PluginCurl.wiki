@@ -26,10 +26,10 @@ memory cost (somewhere around 50 times the size of the input data, i.e.
 10kb of input would require roughly 500kb of memory).
 
 When a v8 string is created and it contains any "high bits" (anything
-non-ASCII), v8 assumes UC16 format and will try to convert it
+non-ASCII), v8 assumes UTF8 format and will try to convert it
 accordingly, and this will fail miserably if the data is not exactly
 the assumed format. This is unfortunately a limitation of v8. Thus this
-plugin cannot be used to fetch images, zip files, PDFs, and the like.
+plugin cannot be used to fetch images, zip files, PDFs, and the like. Be aware that when reading UTF8 data, the _by length_ may differ from the _character length_ of the string, and the JS-side `String.length` property returns the number of _characters_.
 
 == Loading from JS ==
 
