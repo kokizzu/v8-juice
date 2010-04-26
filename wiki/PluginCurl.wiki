@@ -518,6 +518,7 @@ if( rc )
 {
     throw new Error("curl.easyPerform() returned error code "+rc+"!");
 }
+print( wikiOutput.join('') );
 }}}
 
 = TODOs =
