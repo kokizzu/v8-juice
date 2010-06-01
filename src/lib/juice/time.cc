@@ -281,18 +281,10 @@ namespace v8 { namespace juice {
         {
             if( v8::V8::IsDead() ) break;
             int src = 0;
-#if 0
             if(udelay
                || ji.isInterval/*always Unlock for an intervals, to avoid choking other threads if (0==udelay)*/
                )
-#endif
             {
-                /**
-                   We use Unlocker to give v8 a chance to run other
-                   threads or gc. If we do not unlock before sleeping
-                   then the v8 VM (including ALL threads using the v8 locking
-                   mechanism) will block on the sleep.
-                */
                 v8::Unlocker ul;
                 /**
                    FIXME: for long waits, wake up periodically and see if
@@ -310,10 +302,10 @@ namespace v8 { namespace juice {
                 if(udelay)
                 {
                     src = ::usleep( udelay );
-                    // Check for cancellation resp. unregister the timer ID:
-                    Detail::TimerLock lock;
-                    if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) break;
                 }
+                // Check for cancellation resp. unregister the timer ID:
+                Detail::TimerLock lock;
+                if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) break;
             }
             if( v8::V8::IsDead() ) break;
             //v8::Locker locker3;
@@ -370,7 +362,9 @@ namespace v8 { namespace juice {
        minArgC is the minimum number of arguments (should be 1 or 2, but
        is int b/c that's the type of argv.Length()).
 
-       defaultDelay is only used if (minArgC<2) and (argv.Length()<2).
+       defaultDelay is only used if (minArgC<2) and (argv.Length()<2),
+       and are intended only for spawnTimeoutThread() and friends, and not
+       setTimeout() and friends.
     */
     template <bool isInterval,int minArgC,uint32_t defaultDelay>
     static v8::Handle<v8::Value> setTimeoutImpl(const v8::Arguments& argv )
@@ -425,12 +419,12 @@ namespace v8 { namespace juice {
 
     v8::Handle<v8::Value> spawnTimeoutThread(const v8::Arguments& argv )
     {
-        return setTimeoutImpl<false,1,0>( argv );
+        return setTimeoutImpl<false,1,1>( argv );
     }
     
     v8::Handle<v8::Value> spawnIntervalThread(const v8::Arguments& argv )
     {
-        return setTimeoutImpl<true,2,0>( argv );
+        return setTimeoutImpl<true,1,1>( argv );
     }
 
     v8::Handle<v8::Value> clearIntervalThread(const v8::Arguments& argv )
@@ -445,8 +439,8 @@ namespace v8 { namespace juice {
     namespace Detail
     {
         /**
-           Internal helper type to runtime-selection of whether or not
-           to use
+           Internal helper type to compile-time select whether or not
+           to yield the thread to v8 during a sleep-like function.
         */
         template <bool IsLockable>
         struct SleepUnlocker
