@@ -1109,18 +1109,24 @@ namespace convert {
             this->os << CastFromJS<std::string>( t );
             return *this;
         }
+        /**
+           Appends to the message using CastFromJS<std::string>(t)
+
+           Reminder to self: if this function is changed to take
+           a const reference instead of a copy, we get overload
+           ambiguity errors in some contexts. See:
+
+           http://code.google.com/p/v8-juice/issues/detail?id=19
+
+           (And thanks to Feng Fillano for reporting and localizing
+           the problem.)           
+        */
         template <typename T>
-        inline StringBuffer & operator<<( v8::Local<T> const & t )
+        inline StringBuffer & operator<<( v8::Local<T> const t )
         {
             this->os << CastFromJS<std::string>( t );
             return *this;
         }
-//         template <typename T>
-//         inline StringBuffer & operator<<( v8::Local<T> const t )
-//         {
-//             this->os << CastFromJS<std::string>( t );
-//             return *this;
-//         }
 
         /**
            Appends t to the message via std::ostream<<.
