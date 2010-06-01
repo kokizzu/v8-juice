@@ -362,7 +362,9 @@ namespace v8 { namespace juice {
        minArgC is the minimum number of arguments (should be 1 or 2, but
        is int b/c that's the type of argv.Length()).
 
-       defaultDelay is only used if (minArgC<2) and (argv.Length()<2).
+       defaultDelay is only used if (minArgC<2) and (argv.Length()<2),
+       and are intended only for spawnTimeoutThread() and friends, and not
+       setTimeout() and friends.
     */
     template <bool isInterval,int minArgC,uint32_t defaultDelay>
     static v8::Handle<v8::Value> setTimeoutImpl(const v8::Arguments& argv )
@@ -437,8 +439,8 @@ namespace v8 { namespace juice {
     namespace Detail
     {
         /**
-           Internal helper type to runtime-selection of whether or not
-           to use
+           Internal helper type to compile-time select whether or not
+           to yield the thread to v8 during a sleep-like function.
         */
         template <bool IsLockable>
         struct SleepUnlocker
