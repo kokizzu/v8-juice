@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2010 June 6*
+  * Fixed an int64/(long long) ambiguity for some 64-bit platforms. The sqlite3 plugin now builds on those platforms.
+
 *2010 April 8*
   * Integrated a fix for issue #19. Thanks go to Feng Fillano for localizing and reporting the problem.
 
