@@ -932,7 +932,7 @@ namespace nc {
             ncobj->Set( JSTR("rippedOffLines"), rips );
         }
 
-#define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Integer::New(MAC), ::v8::ReadOnly)
+#define SET_MAC(MAC) ncobj->Set(String::New(# MAC), Number::New(MAC), ::v8::ReadOnly)
 	//FIXME: add KEY_F(n) as a JS function
 
 	SET_MAC(OK);
@@ -964,7 +964,7 @@ namespace nc {
 	SET_MAC(A_NORMAL);
 	SET_MAC(A_COLOR);
 	SET_MAC(A_CHARTEXT);
-	SET_MAC(A_ATTRIBUTES);
+	SET_MAC(A_ATTRIBUTES); // gcc on x86/64: warning: overflow in implicit constant conversion
 	SET_MAC(A_ALTCHARSET);
 	SET_MAC(A_INVIS);
 	SET_MAC(A_PROTECT);
