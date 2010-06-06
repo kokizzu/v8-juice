@@ -57,13 +57,13 @@ The following native types are supported out of the box by the conversion API:
   * `uint16_t`, `uint32_t`, `uint64_t`
   * `double`
   * `bool`
-  * `long`, `unsigned long` (these require some special handling, as described in the API docs).
+  * `long`, `unsigned long`
   * `std::string`
   * Conversion _from_ (`char const *`) to JS-string, but not the reverse (see below for why).
   *  `std::list<T>`, `std::vector<T>`, provided `T` is convertible.
   *  `std::map<K,T>`, provided `K` and `T` are convertible.
 
-(i don't recall why `int8_t`/`uint8_t` are missing, but it was possibly due to template type collisions with (`char const *`) on platforms where `int8_t` is `char`.)
+(`int8_t`/`uint8_t` are missing due to template type collisions with (`char const *`) on platforms where `int8_t` is `char`. The `long` internally requires special handling on some platforms to avoid a collision with one of the fixed-size integer types.)
 
 =Implementing custom conversions=
 
