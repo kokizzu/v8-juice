@@ -230,7 +230,7 @@ public:
        bind() impl for T, which must be one of: int, int64_t, double
      */
     template <typename T>
-    HV bindNum( int ndx, T val )
+    HV bindNum( int ndx, T const val )
     {
         return CastToJS( proxy.bind(ndx,val) );
     }
@@ -844,7 +844,7 @@ JS_WRAPPER(sq3_bind_int)
 JS_WRAPPER(sq3_bind_int64)
 {
     SETUP_STMTFWD((argc==3));
-    return st->bindNum( JSToInt32(argv[1]), JSToInt64(argv[2]) );
+    return st->bindNum( JSToInt32(argv[1]), static_cast<sq3::int64_t>(JSToInt64(argv[2])) );
 }
 
 JS_WRAPPER(sq3_bind_double)
@@ -994,7 +994,7 @@ static Handle<Value> SetupSQ3( Handle<Object> gl )
         wr.BindMemFunc< HV, &DBW::clear >("clear");
         wr.BindMemFunc< HV, std::string const &, &DBW::pragma >("execPragma");
         wr.BindMemFunc< HV, std::string const &, &DBW::executeT<int> >( "executeInt" );
-        wr.BindMemFunc< HV, std::string const &, &DBW::executeT<int64_t> >( "executeInt64" );
+        wr.BindMemFunc< HV, std::string const &, &DBW::executeT<sq3::int64_t> >( "executeInt64" );
         wr.BindMemFunc< HV, std::string const &, &DBW::executeT<double> >( "executeDouble" );
         wr.BindMemFunc< HV, std::string const &, &DBW::executeT<std::string> >( "executeString" );
         wr.Seal();
@@ -1014,7 +1014,7 @@ static Handle<Value> SetupSQ3( Handle<Object> gl )
         stmt.BindMemFunc< bool, &STW::isPrepared >("isPrepared");
         stmt.BindMemFunc< HV, int, &STW::bindNull >( "bindNull" );
         stmt.BindMemFunc< HV, int, int, &STW::bindNum<int> >( "bindInt" );
-        stmt.BindMemFunc< HV, int, int64_t, &STW::bindNum<int64_t> >( "bindInt64" );
+        stmt.BindMemFunc< HV, int, sq3::int64_t, &STW::bindNum<sq3::int64_t> >( "bindInt64" );
         stmt.BindMemFunc< HV, int, double, &STW::bindNum<double> >( "bindDouble" );
         stmt.BindMemFunc< HV, int, std::string const &, &STW::bindText >( "bindText" );
         stmt.BindMemFunc< HV, &STW::columnCount >( "columnCount" );
@@ -1041,7 +1041,7 @@ static Handle<Value> SetupSQ3( Handle<Object> gl )
         bind.BindMemFunc< HV, &CURW::columnNames >( "columnNames" );
         bind.BindMemFunc< HV, int, &CURW::isNull >( "isNull" );
         bind.BindMemFunc< HV, int, &CURW::getT<int> >( "getInt" );
-        bind.BindMemFunc< HV, int, &CURW::getT<int64_t> >( "getInt64" );
+        bind.BindMemFunc< HV, int, &CURW::getT<sq3::int64_t> >( "getInt64" );
         bind.BindMemFunc< HV, int, &CURW::getT<double> >( "getDouble" );
         bind.BindMemFunc< HV, int, &CURW::getT<std::string> >( "getString" );
         bind.Seal();
