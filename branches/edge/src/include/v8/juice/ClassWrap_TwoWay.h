@@ -320,6 +320,7 @@ namespace v8 { namespace juice { namespace cw {
             return;
         }
     };
+#undef CLASSWRAP_BOUND_TYPE_INHERITS
 #endif // CLASSWRAP_BOUND_TYPE_INHERITS
 
     
@@ -328,6 +329,10 @@ namespace v8 { namespace juice { namespace cw {
 
     namespace convert
     {
+        /**
+           NativeToJS<CLASSWRAP_BOUND_TYPE> specialization which uses
+           the TwoWay ClassWrap policy set to implement the conversion.
+         */
         template <>
         struct NativeToJS< CLASSWRAP_BOUND_TYPE > : v8::juice::cw::NativeToJSImpl< CLASSWRAP_BOUND_TYPE >
         {};
