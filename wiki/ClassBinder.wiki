@@ -202,7 +202,7 @@ var ar = ["hi", "world" ];
 myobj.list = ar; // COPIES ar!
 ar.push("!"); // does NOT modify myobj.list
 // myobj.list.length == 2
-// ar.length == 2
+// ar.length == 3
 }}}
 
 Thus it is not generically possible to update JS references
@@ -253,7 +253,7 @@ to figure out why my new objects kept disappearing.)
 ==Return values of native setter members==
 
 Be aware that the return value of a native setter function is
-_ignored_ for binding purposes because that's how the JS API works in
+_ignored_ for binding purposes because that's how the v8 API works in
 regards to assignment.  This example should clarify:
 
 {{{
