@@ -155,8 +155,8 @@ typedef TMemFuncForwarder<T,0> TMF;
 
 v8::InvocationCallback IC;
 // These are equivalent:
-IC = MF::Invocable<T,int,&T::Func>
-IC = TMF::Invocable<int,&T::Func>
+IC = MF::Invocable<T,int,&T::func>
+IC = TMF::Invocable<int,&T::func>
 }}}
 
 == Limitations vis-a-vis inheritance ==
