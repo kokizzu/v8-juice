@@ -103,6 +103,8 @@ of the DLL opening process).
 
 The function name passed to the macro may not be namespace-qualified because its name is used as part of a generated variable's name (to allow multiple registrations per source file).
 
+Note that there is nothing magical about the `V8_JUICE_PLUGIN_STATIC_INIT` macro. Any code which is functionally equivalent to what it generates will do.
+
 =JS-side=
 
 {{{
