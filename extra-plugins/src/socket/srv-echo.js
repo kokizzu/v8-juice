@@ -35,31 +35,38 @@ function echoServer()
                     print("Presuming a timeout and continuing...");
                     continue;
                 }
-                print("Got peer: "+c.peerInfo);
+                print("Got peer: "+c.peerInfo.join(':'));
                 function doit(conn) {
-                    setTimeout(function(){
                     var buf = "";
                     var x;
                     while( undefined != (x = conn.read(1024)) ) {
                         buf += x;
                     }
-                    print("Read in "+buf.length+" bytes:\n"+buf);
-                    conn.write(buf);
+                    print("Writing back "+buf.length+" bytes to the client:\n"+buf);
+                    conn.write(buf, buf.length);
                     conn.close();
-                    },100);
+                    //},100);
                 };
-                if(1) { doit(c); }
+                if(1) {
+                    setTimeout(function(){doit(c);},1);
+                    //doit(c);
+                }
                 continue;
             }
         }
         else if( echo.Socket.SOCK_DGRAM == s.type )
         {
-            var len = 1;
-            for( ;; )
-            {
+            var len = 5;
+            // Is it normal tha i can only read a dgram socket 1 time?
+            for( ; ; ) {
                 print("Waiting on datagram read...");
-                var rc = s.read(len);
-                print("s.read() rc =",rc);
+                var buf = "";
+                while( undefined !== (rc = s.read(len)) ) {
+                    buf += rc;
+                }
+                if( buf.length > 0 ) {
+                    print("s.read() rc =",rc,"Content=[\n"+buf+'\n]');
+                }
             }
         }
         else

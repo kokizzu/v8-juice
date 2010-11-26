@@ -38,13 +38,16 @@ function echoClient()
         }
         else if( echo.Socket.SOCK_DGRAM == s.type )
         {
-            rc = s.sendTo( echo.host, echo.port, msg );
+            rc = s.sendTo( echo.host, echo.port, msg, msg.length );
             print('s.sendTo() rc =',rc);
         }
         else
         {
             throw new Error("Unknown socket type!");
         }
+    }
+    catch(e) {
+        print("EXCEPTION: "+e);
     }
     finally
     {
@@ -57,7 +60,15 @@ function echoClient()
 
 try
 {
-    echoClient();
+    if(0) { // is crashing on me :(
+        for( var i = 1; i < 4; ++i ) {
+            setTimeout( echoClient, 1 );
+        }
+        sleep(7);
+    }
+    else {
+        echoClient();
+    }
     print("Done!");
 }
 catch(e)

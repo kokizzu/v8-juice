@@ -1,7 +1,7 @@
 var echo = {
 host:'localhost',//127.0.0.1',
-port:9091,
-//port:8080,
+//port:9090,
+port:8080,
 crnl:'\r\n'
 };
 loadPlugin("v8-juice-Socket",echo);

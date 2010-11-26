@@ -32,6 +32,7 @@ by Ondrej Zara
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #  define close(s) closesocket(s)
+#  define USE_SIGNALS 0
 #else
 #  include <unistd.h>
 #  include <sys/socket.h>
@@ -40,10 +41,60 @@ by Ondrej Zara
 #  include <arpa/inet.h>
 #  include <netinet/in.h>
 #  include <netdb.h>
-#endif 
+#  define USE_SIGNALS 1
+#endif
 
+#if USE_SIGNALS
+#include <signal.h>
+static void signal_ignore(int)
+{
+    /*
+      Weird: if i don't install a signal handler, ctrl-c (SIGINT)
+      kills my app violently during Socket.accept(), as would be expected. If
+      i do install a handler then accept() returns with errno=EINTR.
+    */
+    //v8::ThrowException(v8::String::New("C signal caught!"));
+}
+#endif
 
-#ifndef CERR
+namespace {
+    /**
+       A sentry type to set a no-op signal handler for certain signals
+       for its lifetime.  When it destructs, it restores the original
+       signal handler.
+
+       Re-maps the following signals: SIGINT, SIGPIPE
+       
+       The purpose of this is to allow low-level calls like ::accept()
+       and ::bind() to fail with a EINTR when interrupted, instead of
+       having the signal handler kill the app.
+
+       FIXME: check into using sigprocmask() instead of signal()
+       internally.
+    */
+    struct CSignalSentry
+    {
+#if USE_SIGNALS
+        sighandler_t oldInt;
+        sighandler_t oldPipe;
+        CSignalSentry()
+            : oldInt(signal(SIGINT, signal_ignore)),
+              oldPipe(signal(SIGPIPE, signal_ignore))
+        {
+        }
+        ~CSignalSentry()
+        {
+            signal( SIGINT, oldInt );
+            signal( SIGPIPE, oldPipe );
+        }
+#else
+        CSignalSentry() {}
+        ~CSignalSentry(){}
+#endif /*USE_SIGNALS*/
+    };
+}
+
+#if 1 && !defined(CERR)
 #include <iostream> /* only for debuggering */
 #define CERR std::cerr << __FILE__ << ":" << std::dec << __LINE__ << " : "
 #endif
@@ -365,7 +416,8 @@ public:
         socklen_t len = 0;
         int rc = 0;
         {
-            v8::Unlocker unl;
+            v8::Unlocker const unl;
+            CSignalSentry const sigSentry;
             rc = create_addr( where, port, this->family, &addr, &len );
         }
         cv::StringBuffer msg;
@@ -376,7 +428,8 @@ public:
             if( ! ip.IsEmpty() )
             {
                 std::string const & ips = cv::JSToStdString(ip);
-                v8::Unlocker unl;
+                v8::Unlocker const unl;
+                CSignalSentry const sigSentry;
                 rc = create_addr( ips.c_str(), port, this->family, &addr, &len );
             }
             if( 0 != rc )
@@ -388,7 +441,8 @@ public:
         {
             CERR << "bind()ing...\n";
             {
-                v8::Unlocker unl;
+                v8::Unlocker const unl;
+                CSignalSentry const sigSentry;
                 rc = ::bind( this->fd, (sockaddr *)&addr, len );
                 CERR << "bind() rc="<<rc<<'\n';
             }
@@ -415,7 +469,12 @@ public:
     int listen( int backlog )
     {
         CERR << "WARNING: listen() IS UNTESTED!\n";
-        int rc = ::listen( this->fd, backlog );
+        int rc = -1;
+        {
+            v8::Unlocker const unlocker;
+            CSignalSentry const sigSentry;
+            rc = ::listen( this->fd, backlog );
+        }
         // ^^^^ does socket timeout value apply here???
         if( 0 != rc )
         {
@@ -469,12 +528,13 @@ public:
         int rc = 0;
         {
             v8::Unlocker unl;
+            CSignalSentry const sigSentry;
             rc = getaddrinfo(name, NULL, &hints, &servinfo);
         }
         if (rc != 0)
         {
             cv::StringBuffer msg;
-            msg << gai_strerror(rc);
+            msg << "getaddrinfo(\""<<name<<"\",...) failed: "<<gai_strerror(rc);
             return v8::ThrowException(msg);
         }
                 
@@ -519,6 +579,7 @@ public:
         int rc = 0;
         {
             v8::Unlocker unl;
+            CSignalSentry const sigSentry;
             rc = create_addr( addy, 0, family, &addr, &len );
         }
         if( 0 != rc )
@@ -531,6 +592,7 @@ public:
         if( 0 != rc )
         {
             cv::StringBuffer msg;
+            CSignalSentry const sigSentry;
             msg << "getnameinfo() failed with rc "<<rc <<
                 " ("<<gai_strerror(rc)<<")";
             return v8::ThrowException(msg);
@@ -561,6 +623,7 @@ public:
             v8::ThrowException( JSTR("Address may not be empty!") );
             return -1;
         }
+        // FIXME: consolidate the duplicate code here and in bind():
         sock_addr_t addr;
         memset( &addr, 0, sizeof(sock_addr_t) );
         socklen_t len = 0;
@@ -589,6 +652,7 @@ public:
         int errNo = 0;
         {
             v8::Unlocker unl;
+            CSignalSentry const sigSentry;
             rc = ::connect( this->fd, (sockaddr *)&addr, len );
             errNo = errno;
         }
@@ -618,7 +682,19 @@ public:
         enum { MaxLen = 129 };
         char buf[MaxLen];
         memset( buf, 0, MaxLen );
-        gethostname(buf, MaxLen-1 );
+        {
+            v8::Unlocker const unl;
+            CSignalSentry const sigSentry;
+            const int rc = gethostname(buf, MaxLen-1 );
+            if( 0 != rc )
+            {
+                cv::StringBuffer msg;
+                msg << "gethostname() failed: errno="<<errno
+                    << "( "<<strerror(errno)<<").";
+                v8::ThrowException(msg);
+                return std::string();
+            }
+        }
         return buf;
     }
 
@@ -702,7 +778,9 @@ public:
     /**
        JS Usage:
 
-       int sendTo( string hostNameOrAddress, ByteArray|string src [, int len=src.length] );
+       int sendTo( string hostNameOrAddress, int port, ByteArray|string src [, int len=src.length] );
+
+       
     */
     static v8::Handle<v8::Value> sendTo( v8::Arguments const & argv );
 
@@ -1110,7 +1188,7 @@ v8::Handle<v8::Value> JSSocket::sendTo( v8::Arguments const & argv )
             << " ("<<strerror(errno)<<")";
         return v8::ThrowException( msg );
     }
-    return cv::CastToJS( rc );
+    return cv::CastToJS( sendToRC );
 }
 v8::Handle<v8::Value> JSSocket::writeN( v8::Arguments const & argv )
 {
@@ -1165,13 +1243,14 @@ unsigned int JSSocket::write2( char const * src, unsigned int n )
     this->hitTimeout = false;
     ssize_t rc = 0;
     {
-        v8::Unlocker unl;
+        v8::Unlocker const unl;
+        CSignalSentry const sig;
         rc = ::write(this->fd, src, n );
         // reminder: ^^^^ affected by socket timeout reminder: through
         // src technically came from v8, it actually lives in a
         // std::string object (as a side-effect of the bindings' type
         // conversions) and therefore is not subject to v8 lifetime
-        // issues during our unlocked time. i hope.
+        // issues during our unlocked time. Or that's the theory.
     }
     if( (ssize_t)-1 == rc )
     {
@@ -1204,6 +1283,7 @@ v8::Handle<v8::Value> JSSocket::read( unsigned int n, bool binary )
     socklen_t len = 0;
     {
         v8::Unlocker unl;
+        CSignalSentry const sigSentry;
         //CERR << "read("<<n<<", "<<binary<<")...\n";
 #if 1
         rc = ::recvfrom(this->fd, &vec[0], n, 0, (sockaddr *) &addr, &len);
@@ -1219,14 +1299,13 @@ v8::Handle<v8::Value> JSSocket::read( unsigned int n, bool binary )
         if( (EAGAIN==errno) || (EWOULDBLOCK==errno) )
         { /* Presumably interrupted by a timeout. */
             this->hitTimeout = true;
-            return v8::Undefined();
+            return v8::Null();
         }
 #endif
         cv::StringBuffer msg;
         msg << "socket read() failed! errno="<<errno
             << " ("<<strerror(errno)<<")";
-        v8::ThrowException( msg );
-        return v8::Undefined();
+        return v8::ThrowException( msg );
     }
     else
     {
@@ -1273,18 +1352,17 @@ v8::Handle<v8::Value> JSSocket::read( unsigned int n, bool binary )
     
 JSSocket * JSSocket::accept()
 {
-    CERR << "WARNING: accept() is UNTESTED CODE!\n";
     int rc = 0;
     {
         v8::Unlocker unlocker;
+        CSignalSentry const sigSentry;
         rc = ::accept( this->fd, NULL, NULL );
-        // ^^^^ does socket timeout value apply here???
     }
     if( -1 == rc )
     {
         if( (errno == EAGAIN)
             || (errno == EWOULDBLOCK) )
-        { /** presumably(?) a timeout (or blocking on a non-blocking socket) */
+        { /** presumably we would block for a non-blocking socket(?) */
             return NULL;
         }
         cv::StringBuffer msg;
