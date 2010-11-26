@@ -11,10 +11,10 @@ import os
 
 print("********************************************************************************")
 print("BIG FAT HAIRY WARNING:");
-print("i am no scons expert and i hate python, so this build doesn't do very much!")
+print("\ni am no scons expert and i hate python, so this build doesn't do very much!")
 print("\nThis file assumes you have (and need) -ldl, and needs to be hacked to work on non-*nix.")
-print("\nFixes and additions for scons hackers are welcomed!")
-print("Edit this and set v8_home to the installation prefix of your libv8!")
+print("\nEdit this and set v8_home to the installation prefix of your libv8!")
+print("\nFixes and additions from scons hackers are welcomed!")
 print("********************************************************************************")
 v8_home = os.path.abspath('/home/stephan')
 v8_incdir = os.path.join(v8_home,'include')
