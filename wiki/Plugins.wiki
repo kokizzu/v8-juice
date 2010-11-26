@@ -31,6 +31,8 @@ the functions won't do anything useful.
 
 First off, be warned: the plugin model used by v8-juice _cannot_ work with static libraries. The plugin model relies on code being executed during the static initialization phase (when an app/dll is opened), and that phase doesn't happen for symbols in static libraries. Plugins _must_ be built as shared libraries.
 
+*On Linux platforms*, applications using v8-juice plugins must be linked with the `-export-dynamic` (a.k.a. `-rdynamic`) linker option. If they are not, the plugins will not be able to find the v8-juice symbols they need in order to register themselves with the client application. *On Windows platforms*, the "keep unreferenced data" compilation option _must_ be enabled or plugin registrations cannot work (for the same reason statically linking them doesn't work). In MSVC this option is called `/OPT:NOREF`. When building with MSVC, be sure to turn _off_ precompiled headers, as they have been shown to somehow interfere with the plugin model.
+
 There are two options for building the plugins, both of which require that v8-juice is installed and that its headers can be found.
 
 For scons: edit the `SConstruct` file to tell it where your v8/v8-juice live. Then simply run `scons` from the top of the build tree. That will build all of the plugins. Simply copy them to `prefix/lib/v8/juice`, where `prefix` is explained in the build options, below.
