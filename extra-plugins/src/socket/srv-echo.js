@@ -43,8 +43,9 @@ function echoServer()
                     while( undefined != (x = conn.read(1024)) ) {
                         buf += x;
                     }
-                    conn.close();
                     print("Read in "+buf.length+" bytes:\n"+buf);
+                    conn.write(buf);
+                    conn.close();
                     },100);
                 };
                 if(1) { doit(c); }
