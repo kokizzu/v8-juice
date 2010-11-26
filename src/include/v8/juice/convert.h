@@ -768,6 +768,7 @@ namespace convert {
     : v8::juice::convert::NativeToJS_int_big<int64_t>
     {
     };
+
     /**
        See the equivalent JSToNative kludge for unsigned long.
     */
@@ -776,6 +777,21 @@ namespace convert {
         v8::juice::tmp::SameType<long,int64_t>::Value,
         Detail::UselessConversionType<long>,
         long >::Type > : JSToNative<int64_t>
+    {
+    };
+
+    /**
+       See the equivalent JSToNative kludge for unsigned long.
+
+       Added 20100606 to please the sqlite3 plugin, where sqlite3_int64
+       collides with (long long) on some platforms and causes an invalid
+       conversion compile-time error.
+    */
+    template <>
+    struct JSToNative< v8::juice::tmp::IfElse<
+        v8::juice::tmp::SameType<long long int,int64_t>::Value,
+        Detail::UselessConversionType<long long>,
+        long long int >::Type > : JSToNative<int64_t>
     {
     };
 
