@@ -370,24 +370,27 @@ public:
         }
         cv::StringBuffer msg;
         if( 0 != rc )
-        {
-            v8::Handle<v8::Value> ip = nameToAddress( where );
+        { // By-address failed, so we'll try by hostname...
+            //CERR << "Bind to address "<<where<<" failed. Trying by name...\n";
+            v8::Handle<v8::Value> const ip = nameToAddress( where );
             if( ! ip.IsEmpty() )
             {
-                std::string const ips = cv::JSToStdString(ip);
+                std::string const & ips = cv::JSToStdString(ip);
                 v8::Unlocker unl;
                 rc = create_addr( ips.c_str(), port, this->family, &addr, &len );
             }
             if( 0 != rc )
             {
-                msg << "Malformed address: ["<<where<<"]";
+                msg << "Malformed address: ["<<where<<"] ";
             }
         }
-        if( 0 != rc )
+        if( 0 == rc )
         {
+            CERR << "bind()ing...\n";
             {
                 v8::Unlocker unl;
                 rc = ::bind( this->fd, (sockaddr *)&addr, len );
+                CERR << "bind() rc="<<rc<<'\n';
             }
             if( 0 != rc )
             {
@@ -735,7 +738,7 @@ public:
             else
             {
                 cv::StringBuffer msg;
-                msg << "getpeername() failed! errno="<<errno
+                msg << "getpeername("<<this->fd<<",...) failed! errno="<<errno
                     << " ("<<strerror(errno)<<")!";
                 return v8::ThrowException(msg);
             }
@@ -846,7 +849,7 @@ public:
 namespace v8 { namespace juice { namespace cw
 {
    
-    template <> struct DebugLevel<JSSocket> : Opt_Int<3> {};
+    template <> struct DebugLevel<JSSocket> : Opt_Int<1> {};
 
     template <>
     struct ToNative_SearchPrototypesForNative<JSSocket>
@@ -1164,11 +1167,11 @@ unsigned int JSSocket::write2( char const * src, unsigned int n )
     {
         v8::Unlocker unl;
         rc = ::write(this->fd, src, n );
-        // reminder: ^^^^ affected by socket timeout
-        // reminder: through src technically came from v8,
-        // it actually lives in a std::string object and therefore
-        // is not subject to v8 lifetime issues during our unlocked
-        // time. i hope.
+        // reminder: ^^^^ affected by socket timeout reminder: through
+        // src technically came from v8, it actually lives in a
+        // std::string object (as a side-effect of the bindings' type
+        // conversions) and therefore is not subject to v8 lifetime
+        // issues during our unlocked time. i hope.
     }
     if( (ssize_t)-1 == rc )
     {
@@ -1201,13 +1204,13 @@ v8::Handle<v8::Value> JSSocket::read( unsigned int n, bool binary )
     socklen_t len = 0;
     {
         v8::Unlocker unl;
-        CERR << "read("<<n<<", "<<binary<<")...\n";
+        //CERR << "read("<<n<<", "<<binary<<")...\n";
 #if 1
         rc = ::recvfrom(this->fd, &vec[0], n, 0, (sockaddr *) &addr, &len);
 #else
         rc = ::read(this->fd, &vec[0], n);
 #endif
-        CERR << "read("<<n<<", "<<binary<<") == "<<rc<<"\n";
+        //CERR << "read("<<n<<", "<<binary<<") == "<<rc<<"\n";
         if( 0 == rc ) /*EOF*/ return v8::Undefined();
     }
     if( (ssize_t)-1 == rc )
@@ -1271,8 +1274,12 @@ v8::Handle<v8::Value> JSSocket::read( unsigned int n, bool binary )
 JSSocket * JSSocket::accept()
 {
     CERR << "WARNING: accept() is UNTESTED CODE!\n";
-    int rc = ::accept( this->fd, NULL, NULL );
-    // ^^^^ does socket timeout value apply here???
+    int rc = 0;
+    {
+        v8::Unlocker unlocker;
+        rc = ::accept( this->fd, NULL, NULL );
+        // ^^^^ does socket timeout value apply here???
+    }
     if( -1 == rc )
     {
         if( (errno == EAGAIN)

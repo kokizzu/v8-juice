@@ -17,7 +17,7 @@ function echoServer()
         var rc;
         rc = s.bind( echo.host, echo.port );
         print( "s.bind(",echo.host+":"+echo.port,") rc =",rc);
-        rc = s.setTimeout( 5 );
+        rc = s.setTimeout( 3 );
         print("s.setTimeout() rc =",rc);
         //var c = s.accept();
         //print("s.accept() =",c);
@@ -35,7 +35,20 @@ function echoServer()
                     print("Presuming a timeout and continuing...");
                     continue;
                 }
-                break;
+                print("Got peer: "+c.peerInfo);
+                function doit(conn) {
+                    setTimeout(function(){
+                    var buf = "";
+                    var x;
+                    while( undefined != (x = conn.read(1024)) ) {
+                        buf += x;
+                    }
+                    conn.close();
+                    print("Read in "+buf.length+" bytes:\n"+buf);
+                    },100);
+                };
+                if(1) { doit(c); }
+                continue;
             }
         }
         else if( echo.Socket.SOCK_DGRAM == s.type )
@@ -53,6 +66,9 @@ function echoServer()
             throw new Error("Unknown socket type!");
         }
     }
+    catch(e) {
+        print("EXCEPTION: "+e);
+    }
     finally
     {
         print("Closing server socket...");
@@ -64,6 +80,7 @@ function echoServer()
 
 try
 {
+    //spawnIntervalThread(function(){print("tick...");},1000);
     echoServer();
     print("Done!");
 }
