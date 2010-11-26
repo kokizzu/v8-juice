@@ -11,6 +11,10 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2010 November 26*
+  * Happy birthday to my brother Gerald!
+  * Fixed another int64/(long long) ambiguity in the `v8::juice::convert` API for some 64-bit platforms, which fixes a link-time error in the sqlite3 plugin.
+
 *2010 June 6*
   * Fixed an int64/(long long) ambiguity for some 64-bit platforms. The sqlite3 plugin now builds on those platforms.
 
