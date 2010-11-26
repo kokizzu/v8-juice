@@ -252,11 +252,16 @@ namespace v8 { namespace juice {
        object. This function will free that object.
 
        Uses v8::Unlocker to unlock v8 for the duration of the timeout.
+
+       Bugs:
+
+       If the main() thread exits before this handler can go into
+       its timeout loop, it _might_ cause a crash (or otherwise mis-use
+       v8) during this thread's initialization.
     */
     static void * thread_setTimeout( void * arg )
     {
-#define THREAD_RETURN return NULL; //::pthread_exit( (void *)0 )
-        if( v8::V8::IsDead() ) return NULL;
+#define THREAD_RETURN return NULL /*::pthread_exit( (void *)0 )*/
         Detail::js_thread_info * jio = arg ? reinterpret_cast<Detail::js_thread_info*>( arg ) : 0;
         if( ! jio )
         {
@@ -269,9 +274,10 @@ namespace v8 { namespace juice {
         Detail::js_thread_info ji(*jio);
         delete jio;
         jio = NULL;
+        if( v8::V8::IsDead() ) return NULL;
         v8::Locker locker;
         v8::HandleScope hsc;
-        const uint32_t udelay = ji.delay * 1000;
+        const useconds_t udelay = ji.delay * 1000;
         bool isFunc = ji.jv->IsFunction();
         typedef v8::Local<v8::Function> LoF;
         LoF fh( ( isFunc ) ? LoF( v8::Function::Cast( *(ji.jv) ) ) : LoF() );
@@ -305,7 +311,10 @@ namespace v8 { namespace juice {
                 }
                 // Check for cancellation resp. unregister the timer ID:
                 Detail::TimerLock lock;
-                if( ! (ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) ) break;
+                if( !(ji.isInterval ? lock.has(ji.id) : lock.take(ji.id)) )
+                {
+                    break;
+                }
             }
             if( v8::V8::IsDead() ) break;
             //v8::Locker locker3;
@@ -334,7 +343,7 @@ namespace v8 { namespace juice {
             }
         } while( (!v8::V8::IsDead()) && ji.isInterval && Detail::TimerLock().has(ji.id) );
         Detail::TimerLock().take(ji.id); // make sure it's gone.
-    THREAD_RETURN;
+        THREAD_RETURN;
 #undef THREAD_RETURN
     }
 
