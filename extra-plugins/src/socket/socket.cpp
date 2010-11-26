@@ -252,7 +252,7 @@ public:
     
     static v8::Handle<v8::Value> indexedPropertyGetter(uint32_t index, const v8::AccessorInfo &info);
     static v8::Handle<v8::Value> indexedPropertySetter(uint32_t index, v8::Local< v8::Value > value, const v8::AccessorInfo &info);
-    static v8::Handle<v8::Boolean> indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info);
+    static v8::Handle<v8::Integer> indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info);
     static v8::Handle<v8::Boolean> indexedPropertyDeleter(uint32_t index, const v8::AccessorInfo &info);
     static v8::Handle<v8::Array> indexedPropertyEnumerator(const v8::AccessorInfo &info);
     static void SetupBindings( v8::Handle<v8::Object> dest );
@@ -583,15 +583,17 @@ public:
                 return rc;
             }
         }
+        int errNo = 0;
         {
             v8::Unlocker unl;
             rc = ::connect( this->fd, (sockaddr *)&addr, len );
+            errNo = errno;
         }
         if( 0 != rc )
         {
             cv::StringBuffer msg;
-            msg << "connect() failed: errno="<<errno
-                << " ("<<strerror(errno)<<')';
+            msg << "connect() failed: errno="<<errNo
+                << " ("<<strerror(errNo)<<')';
             v8::ThrowException(msg);
             return rc;
         }
@@ -1093,11 +1095,12 @@ v8::Handle<v8::Value> JSSocket::sendTo( v8::Arguments const & argv )
         else len = ba->length();
         buf = &ba->vec[0];
     }
+    ssize_t sendToRC = -1;
     {
         v8::Unlocker unl;
-        rc = ::sendto( so->fd, buf, len, 0, (sockaddr *)&addr, alen );
+        sendToRC = ::sendto( so->fd, buf, len, 0, (sockaddr *)&addr, alen );
     }
-    if( 0 != rc )
+    if( -1 == sendToRC )
     {
         cv::StringBuffer msg;
         msg << "::sendto("<<so->fd<<"["<<where<<":"<<port<<"], <buffer>, "<<len<<",...) failed: errno="<<errno
@@ -1213,7 +1216,7 @@ v8::Handle<v8::Value> JSSocket::read( unsigned int n, bool binary )
         if( (EAGAIN==errno) || (EWOULDBLOCK==errno) )
         { /* Presumably interrupted by a timeout. */
             this->hitTimeout = true;
-            return v8::Null();
+            return v8::Undefined();
         }
 #endif
         cv::StringBuffer msg;
@@ -1374,11 +1377,11 @@ v8::Handle<v8::Value> JSByteArray::indexedPropertySetter(uint32_t index, v8::Loc
     }
 }
 
-v8::Handle<v8::Boolean> JSByteArray::indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info)
+v8::Handle<v8::Integer> JSByteArray::indexedPropertyQuery(uint32_t index, const v8::AccessorInfo &info)
 {
     CERR << "indexed query "<<index<<'\n';
     JSByteArray * ar = cv::CastFromJS<JSByteArray*>( info.This() );
-    if( ! ar ) return v8::Handle<v8::Boolean>();
+    if( ! ar ) return v8::Handle<v8::Integer>();
     else
     {
 #if 0
@@ -1387,7 +1390,15 @@ v8::Handle<v8::Boolean> JSByteArray::indexedPropertyQuery(uint32_t index, const 
             : v8::False()
             ;
 #else
-        return v8::True();
+        return v8::Integer::New(0);
+        /*
+          The return type of this function changed from Boolean
+          sometime in 2010 and the bastards didn't document what the
+          new semantics are. They write only that the integer "encodes
+          information about the property." Poking around in v8's
+          sources seems to imply that any non-empty integer handle is
+          treated as "true" here.
+         */
 #endif
     }
 }

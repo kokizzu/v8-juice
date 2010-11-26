@@ -16,7 +16,7 @@ function echoServer()
         print('s.hostname =',s.hostname);
         var rc;
         rc = s.bind( echo.host, echo.port );
-        print( "s.bind() rc =",rc);
+        print( "s.bind(",echo.host+":"+echo.port,") rc =",rc);
         rc = s.setTimeout( 5 );
         print("s.setTimeout() rc =",rc);
         //var c = s.accept();
@@ -43,9 +43,9 @@ function echoServer()
             var len = 1;
             for( ;; )
             {
-                print("Waiting on read...");
+                print("Waiting on datagram read...");
                 var rc = s.read(len);
-                print("read rc =",rc);
+                print("s.read() rc =",rc);
             }
         }
         else

@@ -30,6 +30,11 @@ function echoClient()
             print('s.connect() rc =',rc);
             rc = s.write( msg );
             print( "s.write() rc =",rc);
+            var buf = "";
+            while( undefined != (rc = s.read(20) ) ) {
+                buf += rc;
+            }
+            print("Read in "+buf.length+" bytes:\n",buf);
         }
         else if( echo.Socket.SOCK_DGRAM == s.type )
         {
