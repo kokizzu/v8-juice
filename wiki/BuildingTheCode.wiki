@@ -21,7 +21,7 @@ make
 make install # installs under the path defined by --prefix=/path
 }}}
 
-My default build options is `make -j2` for parallel building, so the tree is believed to build okay with parallel builds (if it doesn't, please file a bug report). That said, certain parts of the tree enforce that certain directory branches are built before others, so certain branches may not allow parallelization. Even without parallelization it builds quickly (currently (20090312) it takes about 6 seconds on a 2GHz PC).
+My default build options is `make -j2` for parallel building, so the tree is believed to build okay with parallel builds (if it doesn't, please file a bug report). That said, certain parts of the tree enforce that certain directory branches are built before others, so certain branches may not allow parallelization. Even without parallelization it builds quickly (currently (20101126) it takes about 12 seconds on a 3GHz PC).
 
 The following configuration options are often helpful or necessary:
 
