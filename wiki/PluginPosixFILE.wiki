@@ -27,11 +27,11 @@ loadPlugin('v8-juice-PosixFILE');
 
 The class can be added to a JS engine by linking in
 [http://code.google.com/p/v8-juice/source/browse/extra-plugins/src/PosixFILE the relevant code]
-into your app and calling `PosixFILE::SetupBindings()`.
+into your app and calling `PosixFILE::SetupBindings()`, or it can be dynamically loaded using `v8::juice::plugin::LoadPlugin()`.
 
 = C-style API =
 
-The C-style API functions are as close to the real C API as JS calling conventions allow for. All of the following functions and properties are members of an object named `posix`.
+The C-style API functions are as close to the real C API as JS calling conventions allow for. All of the following functions and properties are members of an object named `posix` (that object is created by the plugin loading process if it does not already exist).
 
 || *Return Type* || *Signature* || *Notes* ||
 || `FILE` || `fopen(string filename, string mode)` || See `man fopen`. ||
@@ -49,8 +49,8 @@ The C-style API functions are as close to the real C API as JS calling conventio
 || `int` || `fsync(FILE | int)` || See `man fsync` ||
 || `int` || `ftruncate(FILE | int, int size)` || Truncates a file (or file descriptor ID) to the given size. ||
 || `int` || `fwrite( string src, int sizeEach, int n, FILE )` || Writes `n` objects, each of `sizeEach` bytes, from src. Returns the number of objects (not bytes) written. ||
-|| `int` || `fwrite( string src, int n, FILE )` || Writes up to n bytes from src to the file. ||
-|| `int` || `fwrite( string src, FILE )` || Writes src to the file. ||
+|| `int` || `fwrite( string src, int n, FILE )` || Writes up to n bytes from src to the file. Returns the number of bytes written. ||
+|| `int` || `fwrite( string src, FILE )` || Writes src to the file. Returns the number of bytes written. ||
 || `void` || `rewind(FILE)` || Resets the file's cursor to the beginning of the file. ||
 || `int` || `unlink( string )` || Removes the given filename from the system. Returns 0 on success. ||
 || *Properties (read-only!)* || *Type* || *Notes* ||
@@ -74,7 +74,7 @@ The members are:
 || `FILE` || `new posix.FILE(string filename, string mode)` || Eqivalent to `fopen()`. ||
 || `bool` || `close()` || Equivalent to `fclose()` ||
 || `void` || `clearerr()` ||  ||
-|| `int` || `datasync(int)` || See `man fdatasync`. ||
+|| `int` || `datasync()` || See `man fdatasync`. ||
 || `int` || `eof()` ||  ||
 || `int` || `error()` || Returns 0 if the file is in an OK state, else non-0. ||
 || `int` || `fileno()` || Returns the file descriptor number for the file. ||
@@ -95,7 +95,7 @@ The members are:
 || *Properties (read-only!)* || *Type* || *Notes* ||
 || `string` || `name` || The name passed to the ctor or `fopen()` ||
 || `string` || `mode` || The mode string passed to the ctor or `fopen()` ||
-|| `int` || `errno` || Corresponds to the C-global `errno`, which is set by many of the i/o routines on error. The values are system-specific. ||
+|| `int` || `errno` || Corresponds to the C-global `errno`, which is set by many of the i/o routines on error. The values are system-specific, and code other than this class might cause the value to change. ||
 
 = Example =
 
@@ -110,8 +110,8 @@ if( ! ('posix' in this) || (!posix.FILE) )
 var fi = { name:"my.file", mode:"w+" };
 var ns = posix;
 var f =
-    //new ns.FILE(fi.name,fi.mode)
     ns.fopen(fi.name,fi.mode)
+    //new ns.FILE(fi.name,fi.mode) // same thing
     ;
 print("f =",f);
 f.write("This is ["+f.name+"]["+f.mode+"].\n");
@@ -134,12 +134,8 @@ var c = ns.fread(4,f);
 print("read() =","["+c+"]");
 ns.fsync(f.fileno());
 ns.fflush(f);
-// c = ns.ftruncate(f,12);
-// c = f.truncate(8);
-// print("truncate rc =",c);
 print("file size =",f.size());
-ns.fclose(f);
-//f.close();
+ns.fclose(f); // or: f.close()
 posix.unlink(fi.name);
 print("Done!");
 }}}
