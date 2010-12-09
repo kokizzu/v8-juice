@@ -232,7 +232,7 @@ When implementing custom function forwarders and you need to pass a C-style stri
 
 This framework can also bind JS member properties to static or member variables. It does so by using templates to create proxies for the `v8::AccessorGetter` and `v8::AccessorSetter` interfaces. Because of this, it is only possible to bind members or static vars at the class (JS prototype) level, and not the level of the individual object.  As a side-effect of that, we can only bind statics to JS objects for which `CastFromJS<T>()` works (that feature is normally provided by a higher-level class creation mechanism like [ClassBinder]).
 
-As an example, assume we are creating a new JS class in C++. Assume the JS class is bound to the native class `MyNativeType`, and `JSToNative<MyNativeType>` has been specialized specialized so that `CastFromJS<MyNativeType>()` will work as expected. To bind a static variable as a member property to JS the objects:
+As an example, assume we are creating a new JS class in C++. Assume the JS class is bound to the native class `MyNativeType`, and `JSToNative<MyNativeType>` has been specialized specialized so that `CastFromJS<MyNativeType>()` will work as expected. To bind members (static or not) or non-member static variable as a member properties to JS the objects:
 
 {{{
 // Static members we want to bind:
@@ -250,10 +250,14 @@ PB::BindStaticVar<int,&sharedInt,&MyNativeType::sharedInt>( "sharedInteger", pro
 PB::BindStaticVar<double,&sharedDouble,&MyNativeType::sharedDouble>( "sharedDouble", proto );
 
 // Or bind to non-member statics:
-static int anInt = 42;
-static double aDouble = 42.42;
-PB::BindStaticVar<int,&anInt>( "anInt", proto );
-PB::BindStaticVar<double,&aDouble>( "aDouble", proto );
+static int staticInt = 42;
+static double staticDouble = 42.42;
+PB::BindStaticVar<int,&staticInt>( "staticInt", proto );
+PB::BindStaticVar<double,&staticDouble>( "staticDouble", proto );
+
+// Or bind to non-static members:
+PB::BindMemVar<int,&MyNativeType::anIntMember>( "anIntMember", proto );
+PB::BindMemVar<double,&MyNativeType::aDoubleMember>( "aDoubleMember", proto );
 }}}
 
 Now the following JS code will access the native integer shown above:
