@@ -339,6 +339,28 @@ The `FunctionForwarder` and `MemFuncForwarder` classes each have a function call
 
 It is not necessary (though it is legal) to use `InvocableVoid` instead of `Invokable` when the return type is actually `void`, as function overloads take care of dispatching `FunctionForwarder<N>::Invocable<void,...>` and `MemFuncForwarder<N>::Invocable<T,void,...>` via `InvocableVoid`.
 
+== Getting the native `this` pointer inside non-member bound functions ==
+
+When binding non-member `v8::InvocationCallback` functions to JS objects, the functions can get access to the native `this` pointer _if_ they are called via the binding framework. From inside the bound function:
+
+{{{
+  BoundNative * self = convert::JSToNative<BoundNative>( arguments.This() );
+}}}
+
+If that returns non-null then the function was called in the context of a `BoundNative` object.
+
+== Beware of `this` ==
+
+If references to bound member functions or variables are given to other objects of different types, accessing them might invoke an exception because the internal dispatching mechanism cannot find the associated native `this` object. For example:
+
+{{{
+var b = new BoundNative();
+var o = {};
+o.func = b.someBoundFunction;
+o.func(); // will throw an exception
+}}}
+
+
 = Examples =
 
 Here are some a complete example of what the binding process itself looks like:
