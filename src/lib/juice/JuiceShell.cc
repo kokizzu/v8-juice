@@ -134,6 +134,7 @@ namespace juice {
         BIND("spawnIntervalThread", v8::juice::spawnIntervalThread );
         BIND("clearTimeoutThread", v8::juice::clearTimeoutThread );
         BIND("clearIntervalThread", v8::juice::clearIntervalThread );
+        BIND("getStackTrace", v8::juice::GetV8StackTrace);
         BIND("print", PrintToCout);
 
         this->impl->global->Set( v8::String::New("v8JuiceVersion"),
