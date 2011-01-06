@@ -162,11 +162,17 @@ namespace juice {
        Each element in the returned array represents a stack frame and
        is a plain object with the following properties:
 
-       column = column number
-       line = line number
+       column = 1-based column number (note that this is different from most editors,
+       but this is how v8 returns this value.)
+       
+       line = 1-based line number
+
        scriptName = name of the script
+
        functionName = name of the function
+
        isConstructor = true if this is a constructor call
+
        isEval = true if this is part of an eval()
 
        TODO:
