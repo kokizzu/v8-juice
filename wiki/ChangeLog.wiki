@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 Jan 6*
+  * Added `v8::juice::GetV8StackTrace()`, which implements the `v8::InvocationCallback` interface and allows us to fetch stacktraces from our JS code.
+
 *2010 Dec 29*
   * Joel Reymont has made v8-juice available [https://github.com/wagerlabs/v8-juice via github].
 
