@@ -285,7 +285,6 @@ For example's sake, assume we have these functions which we want to bind to a si
 
 {{{
 bool BoundNative::overload();
-int BoundNative::overload(int i);
 int BoundNative_overload( int i );
 double BoundNative_overload( int i, double d );
 v8::Handle<v8::Value> BoundNative_overload( v8::Arguments const & argv );
