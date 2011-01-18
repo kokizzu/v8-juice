@@ -59,6 +59,7 @@
 
 #include <v8.h>
 #include <v8/juice/convert.h>
+#include <v8/juice/bind.h>
 #include <v8/juice/forwarding.h>
 #include <v8/juice/plugin.h>
 #include <v8/juice/cleanup.h>

@@ -1,4 +1,4 @@
-load_plugin('v8-juice-ncurses');
+loadPlugin('v8-juice-ncurses');
 nc_initscr();
 nc_capture_cout(stdscr);
 nc_scrollok(stdscr,true);

@@ -1,4 +1,4 @@
-load_plugin('v8-juice-ncurses');
+loadPlugin('v8-juice-ncurses');
 ncurses.initscr();
 ncurses.capture_cout(stdscr, ncurses.color_pair("white","blue"));
 ncurses.capture_cerr(stdscr,ncurses.BOLD | ncurses.color_pair("red","black"));

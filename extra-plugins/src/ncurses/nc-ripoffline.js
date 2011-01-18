@@ -1,4 +1,4 @@
-load_plugin('v8-juice-ncurses');
+loadPlugin('v8-juice-ncurses');
 function myrip(win,rownum) {
     myrip.lines[myrip.lines.length] = win;
 }
