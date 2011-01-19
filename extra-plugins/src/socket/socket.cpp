@@ -1507,7 +1507,7 @@ v8::Handle<v8::Array> JSByteArray::indexedPropertyEnumerator(const v8::AccessorI
         v8::ThrowException(JSTR("Native 'this' not found!"));
         return rv;
     }
-    rv = v8::Handle<v8::Array>( v8::Array::New() );
+    rv = v8::Handle<v8::Array>( v8::Array::New(ar->length()) );
     for( uint32_t i = 0; i < ar->length(); ++i )
     {
         rv->Set( i, cv::CastToJS(i) );
