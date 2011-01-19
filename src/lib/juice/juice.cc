@@ -250,5 +250,34 @@ namespace v8 { namespace juice {
         }
         return nso;
     }
-    
+
+
+    v8::Handle<v8::Value> GetV8StackTrace( v8::Arguments const & argv )
+    {
+        uint32_t limit = (argv.Length() > 0) ? convert::CastFromJS<uint32_t>(argv[0]) : 0;
+        if( limit == 0 ) limit = 8;
+        else if( limit > 100 ) limit = 100;
+
+        Local<StackTrace> const st = StackTrace::CurrentStackTrace( limit, StackTrace::kDetailed );
+        int const fcountI = st->GetFrameCount();
+        // Who the hell designed the StackTrace API to return an int in GetFrameCount() but take
+        // an unsigned int in GetFrame()???
+        uint32_t const fcount = static_cast<uint32_t>(fcountI);
+        Local<Array> jst = Array::New(fcount);
+#define STR(X) v8::String::New(X)
+        for( uint32_t i = 0; (i < fcount) && (i<limit); ++i )
+        {
+            Local<StackFrame> const & sf( st->GetFrame(i) );
+            Local<Object> jsf = Object::New();
+            jsf->Set(STR("column"), convert::CastToJS(sf->GetColumn()));
+            jsf->Set(STR("functionName"), sf->GetFunctionName());
+            jsf->Set(STR("line"), convert::CastToJS(sf->GetLineNumber()));
+            jsf->Set(STR("scriptName"), sf->GetScriptName());
+            jsf->Set(STR("isConstructor"), convert::CastToJS(sf->IsConstructor()));
+            jsf->Set(STR("isEval"), convert::CastToJS(sf->IsEval()));
+            jst->Set(i,jsf);
+        }
+        return jst;
+#undef STR
+    }
 }}

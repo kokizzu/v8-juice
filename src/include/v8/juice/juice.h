@@ -154,6 +154,34 @@ namespace juice {
     v8::Handle<v8::Object> GetNamespaceObject( v8::Handle<v8::Object> top, char const * ns );
     
 
+    /**
+       Implements the v8::InvocationCallback interface and has the following JS interface:
+
+       Array stracktrace([unsigned int limit = some reasonable default])
+
+       Each element in the returned array represents a stack frame and
+       is a plain object with the following properties:
+
+       column = 1-based column number (note that this is different from most editors,
+       but this is how v8 returns this value.)
+       
+       line = 1-based line number
+
+       scriptName = name of the script
+
+       functionName = name of the function
+
+       isConstructor = true if this is a constructor call
+
+       isEval = true if this is part of an eval()
+
+       TODO:
+
+       - Add a toString() member which creates a conventional-looking
+       stacktrace string.
+    */
+    v8::Handle<v8::Value> GetV8StackTrace( v8::Arguments const & argv );
+
 }} // namespace
 
 #endif // CODE_GOOGLE_COM_V8_JUICE_JUICE_H_INCLUDED

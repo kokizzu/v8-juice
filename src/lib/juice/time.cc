@@ -292,6 +292,7 @@ namespace v8 { namespace juice {
                )
             {
                 v8::Unlocker ul;
+                // FIXME: install a signal handler here. Steal the signal code from the socket plugin.
                 /**
                    FIXME: for long waits, wake up periodically and see if
                    we should still be waiting, otherwise this might keep
@@ -316,8 +317,8 @@ namespace v8 { namespace juice {
                     break;
                 }
             }
-            if( v8::V8::IsDead() ) break;
             //v8::Locker locker3;
+            if( v8::V8::IsDead() ) break;
             try
             {
                 // 2nd Locker: see http://groups.google.com/group/v8-users/browse_thread/thread/117ba3596c3ac9c1
