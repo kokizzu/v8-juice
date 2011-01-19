@@ -681,21 +681,25 @@ public:
     {
         enum { MaxLen = 129 };
         char buf[MaxLen];
+        int rc;
         memset( buf, 0, MaxLen );
         {
             v8::Unlocker const unl;
             CSignalSentry const sigSentry;
-            const int rc = gethostname(buf, MaxLen-1 );
-            if( 0 != rc )
-            {
-                cv::StringBuffer msg;
-                msg << "gethostname() failed: errno="<<errno
-                    << "( "<<strerror(errno)<<").";
-                v8::ThrowException(msg);
-                return std::string();
-            }
+            rc = gethostname(buf, MaxLen-1 );
         }
-        return buf;
+        if( 0 != rc )
+        {
+            cv::StringBuffer msg;
+            msg << "gethostname() failed: errno="<<errno
+                << "( "<<strerror(errno)<<").";
+            v8::ThrowException(msg);
+            return std::string();
+        }
+        else
+        {
+            return buf;
+        }
     }
 
     /**
