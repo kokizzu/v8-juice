@@ -142,6 +142,7 @@ namespace juice {
            - clearTimeout() (v8::juice::clearTimeout())
            - clearInterval() (v8::juice::clearInterval())
            - print() (see PrintToCout())
+           - getStackTrace() (v8::juice::GetV8StackTrace()) (added 20110106)
 
            As of version 20100407:
 
