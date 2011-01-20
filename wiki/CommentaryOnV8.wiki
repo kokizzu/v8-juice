@@ -19,12 +19,7 @@ good reason is that v8 allows us to register object destructors for use by the
 garbage collector. (However, i only found out later that the v8 GC is never
 guaranteed to call those destructors - see below for a rant on that topic.)
 
-Anyway... at this point my v8 usage is experimental in nature. It's got
-several design aspects which notably hinder some of my early use-cases (see
-below), and at this point it's not certain whether i'll be sticking with v8 or
-not.
-
-All of that said, i'm probably one of the world's biggest fans of Google's technology offerings, and i couldn't resist the chance to experiment with their JavaScript engine.
+All of that said, i'm probably one of the world's biggest fans of Google's technology offerings, and i couldn't resist the chance to experiment with their !JavaScript engine. Long term, i am convinced that v8 will become the dominant C++ ECMAScript implementation.
 
 ==Excellent Licensing Terms==
 
