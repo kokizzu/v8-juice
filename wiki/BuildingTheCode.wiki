@@ -9,7 +9,7 @@ Caveat #1: the main/complete build tree will ONLY work on GNU platforms, or Unix
 
 Caveat #2: there is a minimal build configuration for scons, but it can't do much and requires manual tweaking of the SConstruct file. See the section on scons down below.
 
-The sources have only two hard dependencies: [http://code.google.com/p/v8/ Google v8] and the STL (which comes with all sane C++ compilers and is also available separately via projects like [http://stlport.sourceforge.net STLPort]). For plugins to work it needs (on Unix platforms) libdl or libltdl. (For Windows platforms the DLL support needs no additional libraries.)
+The sources have only two hard dependencies: [http://code.google.com/p/v8/ Google v8] and the STL (which comes with all sane C++ compilers and is also available separately via projects like [http://stlport.sourceforge.net STLPort]). For plugins to work it needs (on Unix platforms) libdl or libltdl and v8-juice must be compiled as a shared library (the plugin model cannot work from within a static library for boring technical reasons). (For Windows platforms the DLL support needs no additional libraries.)
 
 =Configuring and compiling=
 
