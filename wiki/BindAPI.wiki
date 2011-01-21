@@ -1,6 +1,8 @@
 #summary Intro do the v8::juice::bind API
 #labels Topic-CPlusPlus,Phase-UserDocs
 
+2011-01-21: this API has mostly fallen out of use, surpassed by new binding mechanisms. It is a remnant of the initial draft of v8-juice, which was based off of older code for the !SpiderMonkey JS engine.
+
 <wiki:toc max_depth="3" />
 
 =An introduction to the `v8::juice::bind` API=
