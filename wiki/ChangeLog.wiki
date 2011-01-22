@@ -12,7 +12,7 @@ are at the top. Dates written extra large are release dates. This contains only 
 ----
 
 *2011 Jan 22*
-  * Inspired by the grace of vu8's API, i've started work on a spin-off of v8-juice called v8-convert. It currently contains only the [ConvertingTypes core type conversion] and [BindingFunctions function-binding] APIs, and is a header-only implementation. i plan on adding a very basic class-binding mechanism, but nothing so heavyweight/complex as that provided by v8-juice. The initial code is working well, and once i've added a few missing features and documented it, i will release it as a standalone sub-project of v8-juice.
+  * Inspired by the grace of vu8's API, i've started work on a spin-off of v8-juice called v8-convert. It currently contains only the [ConvertingTypes core type conversion] and a function-binding API similar to [BindingFunctions the current function-binding code], but using function-ptr-style template args to make it more human-readable. Unlike v8-juice, it is a header-only implementation, with the intention that it be easy to drop in to arbitrary v8 clients. i will add a basic class-binding mechanism, but nothing so heavyweight/complex as that provided by v8-juice. The initial code is working well, and once i've added a few missing features and documented it, i will release it as a standalone sub-project of v8-juice.
 
 *2011 Jan 6*
   * Added `v8::juice::GetV8StackTrace()`, which implements the `v8::InvocationCallback` interface and allows us to fetch stacktraces from our JS code. It is available in the `v8-juice-shell` (or via the `JuiceShell` class) with the JS name `getStackTrace()`.
