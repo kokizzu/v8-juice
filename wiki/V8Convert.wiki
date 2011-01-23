@@ -105,7 +105,7 @@ Because of issues regarding the ownership and lifetimes of raw C-style string, f
 When native functions return (`char const *`), they are converted to v8 Strings, and therefore have the same encoding limitations as for C-string function arguments.
 
 
-This support allows us to convert functions to `v8::InvocableCallback` functions like:
+This support allows us to convert functions like the following to `v8::InvocableCallback`s:
 
 {{{
 char const * cstring_test( char const * c )
@@ -204,7 +204,7 @@ This library currently doesn't have a generic mechanism for adding this support 
   * `forwardMethod()`
   * `forwardConstMethod()`
 
-Those functions allow the client to pass on `v8::Arguments` to non-bound functions "manually".
+Those functions allow the client to pass on `v8::Arguments` to non-bound functions "manually". These must not be used to implement "unlocked" operations (as shown above) because the conversions themselves must use v8, and doing them while v8 is unlocked results in undefined behaviour.
 
 
 =Notable TODOs=
