@@ -18,7 +18,8 @@ PACKAGE.NAME = libv8-plugin-$(PLUGIN_NAME)
 PACKAGE.VERSION := $(shell date +%Y%m%d)
 ShakeNMake.DOXYGEN.GENERATE_LATEX := NO
 ShakeNMake.DOXYGEN.USE_DOT := 0
-include ../shake-n-make.make
+PLUGINS_SRC_DIR ?= ../
+include $(PLUGINS_SRC_DIR)/shake-n-make.make
 
 jconfig := $(call ShakeNMake.CALL.FIND_BIN,libv8-juice-config)
 ifeq (,$(jconfig))
