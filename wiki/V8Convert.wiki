@@ -8,9 +8,9 @@
 The `v8::convert` API is a spin-off of the core-most components of the v8-juice library. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. It provides the following features:
 
   * Converting between v8 Value handles and "native types" using generic interface. This allows us to write generic algorithms which convert between JS/C++ without having to know the exact types we're dealing with.  The basic POD types and some STL types are supported out of the box and plugging in one's own types is normally quite simple.
-  * Converting free- and member functions into `v8::InvocationCallback` functions. These generated functions convert the JavaScript-originated function arguments into native counterparts, forward the data to the original native function, and convert the return values back to something JS can use. (The `void` return type is translated to the `undefined` JS value.)
+  * Converting free- and member functions into `v8::InvocationCallback` functions. These generated functions convert the !JavaScript-originated function arguments into native counterparts, forward the data to the original native function, and convert the return values back to something JS can use. (The `void` return type is translated to the `undefined` JS value.)
 
-Those two core features give us all we need in order to be able to bind near-arbitrary C/C++ functions with JavaScript, insofar as cross-language calling conventions and type conversions allow us to do so.
+Those two core features give us all we need in order to be able to bind near-arbitrary C/C++ functions with !JavaScript, insofar as cross-language calling conventions and type conversions allow us to do so.
 
 For cases where the "automatic" function-to-!InvocationCallback conversions are not possible or not suitable, the type-conversion API can simplify the implementation of custom `v8::InvocationCallback` functions.
 
@@ -96,7 +96,7 @@ Because of issues regarding the ownership and lifetimes of raw C-style string, f
   * The C-strings must be `NULL` or null-terminated. It cannot be used with binary data.
   * Non-const (`char *`) is not supported. We could partially implement it using a proxy, but the changes would get lost on their way back to JS space because the JS calling conventions do not allow us to pass changes to strings back this way.
   * The bound function must not hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself.
-  * The internal conversion process uses v8::String::Utf8Value, and "should" be safe for use with functions accepting ASCII or UTF8 input. Behaviour with any other encodings is undefined.
+  * The internal conversion process uses `v8::String::Utf8Value`, and "should" be safe for use with functions accepting ASCII or UTF8 input. Behaviour with any other encodings is undefined.
   * If passed a JS `null` or `undefined`, it converts to a literal `NULL`, otherwise it will convert to a string (though possibly empty). This is significant for functions which treat `NULL` different than an empty string (like `strlen()`, which may crash your app if passed `NULL`).
 
 When native functions return (`char const *`), they are converted to v8 Strings, and therefore have the same encoding limitations as for C-string function arguments.
