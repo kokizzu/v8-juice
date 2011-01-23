@@ -1,0 +1,211 @@
+#summary The v8::convert sub-project
+#labels Phase-UserDocs,Topic-CPlusPlus
+
+<wiki:toc max_depth=4></wiki:toc>
+
+= v8::convert =
+
+The `v8::convert` API is a spin-off of the core-most components of the v8-juice library. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. It provides the following features:
+
+  * Converting between v8 Value handles and "native types" using generic interface. This allows us to write generic algorithms which convert between JS/C++ without having to know the exact types we're dealing with.  The basic POD types and some STL types are supported out of the box and plugging in one's own types is normally quite simple.
+  * Converting free- and member functions into `v8::InvocationCallback` functions. These generated functions convert the JavaScript-originated function arguments into native counterparts, forward the data to the original native function, and convert the return values back to something JS can use. (The `void` return type is translated to the `undefined` JS value.)
+
+Those two core features give us all we need in order to be able to bind near-arbitrary C/C++ functions with JavaScript, insofar as cross-language calling conventions and type conversions allow us to do so.
+
+For cases where the "automatic" function-to-!InvocationCallback conversions are not possible or not suitable, the type-conversion API can simplify the implementation of custom `v8::InvocationCallback` functions.
+
+All of the conversions are compile-time typesafe where possible and fail gracefully (e.g. using a JS-side exception as opposed to an immediate crash) when such a determination can only be made at runtime.
+
+This code originated as the core-most component of the [http://code.google.com/p/v8-juice v8-juice library]. After a couple years i felt compelled to refactor it into a toolkit usable by arbitrary v8-using clients, doing a bit of cleanup along the way. The eventual intention is that this code will replace the v8::juice::convert code.
+
+The most important functions and types, from a user's perspective, are listed below. Most of the code in this library are internal template specializations which take care of the dirty work. Typical clients won't typically need more than what's listed here.
+
+=Implementing Custom Conversions=
+
+  * `JSToNative<T>`: template to convert JS values to `T` (almost always `T*` for non-POD types).
+  * `NativeToJS<T>`: template to convert `T` objects to JS counterparts. Adding this support for client-side types requires adding tooling which maps the native object to a JS instance.
+
+These work identically to the v8-juice APIs with the same names (see [ConvertingTypes]), the only client-visible difference being that the classes (and thus client-defined specializations) are defined in a different namespace than in v8-juice.
+
+=Converting Types=
+
+  * `CastToJS<T>()`: converts the given object to a `v8::Handle<v8::Value>`.
+  * `CastFromJS<T>()`: converts a v8 value to a `T` (or `T*` for most non-POD types).
+
+These are very thin wrappers around `NativeToJS<>` and `JSToNative<>`, and work identically to the v8-juice APIs with the same names (see [ConvertingTypes]). A few special-case overloads also exist to avoid call ambiguities in some cases (notably (`char *`)).
+
+=Converting Functions to `v8::InvocationCallback`=
+
+  * `FunctionToInvocationCallback()`
+  * `MethodToInvocationCallback()`
+  * `ConstMethodToInvocationCallback()`
+
+By using only those 3 function templates (all with identical interfaces) clients can bind
+near-arbitrary native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
+
+Note that binding to non-static member member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See the included demo code for how to set this up (we just have to create a `JSToNative<>` specialization).
+
+Support for const- and non-const methods are split into two implementations because some compilers reportedly cannot properly choose differing specializations when the difference is only in constness. (i have only heard of this being a problem on MSVC.)
+
+Because these templates _create_ `v8::InvocationCallback` functions at compile-time, they require no dynamically-allocated proxy objects or other hidden memory usage like some binding mechanisms require. The only overhead these templates add is the conversion of arguments/return values to/from JS. The library does as much work as possible at compile time to help detect type-conversion errors early and help avoid extra runtime costs.
+
+
+== Examples ==
+Some examples of binding functions and methods:
+
+{{{
+#include <cstdio> // puts()
+...
+namespace cv = v8::convert;
+v8::InvocationCallback cb;
+
+cb = cv::FunctionToInvocationCallback<
+       int (*)(char const *), ::puts
+     >; // note the (*) part!
+
+cb = cv::MethodToInvocationCallback<
+       MyType,
+       double (MyType::*)(double,double),
+       &MyType::multiply
+     >;
+
+cb = cv::ConstMethodToInvocationCallback<
+       MyType,
+       char const * (MyType::*)(int) const,
+       &MyType::errorCodeToString
+     >;
+}}}
+
+== Caveats and Unsupported Functions ==
+
+Some example of function signatures which _cannot_ (or must not) be converted using this framework:
+
+  * `int func( someType ** )`: pointer-to-pointer cannot be translated generically to JS
+  * `int func( void * )`: Giving access to `void *` in JS makes it really easy to crash your apps from script code.
+  * `int func(...)`: elipsis lists, `va_list`, and C++0x var-args are not directly supported.
+  * !JavaScript has no inherent support for binary data, and v8's string class does not support it. Thus this API must not be used with functions returning binary data (e.g. via `char [const]*`).
+
+Supported, but ill-advised:
+
+  * `anything * func(anything)`: if the function returns dynamically-allocated memory, it _will_ cause a leak unless that memory has been someone given over to v8 from within that function.
+
+== The (`char [const] *`) Problem ==
+
+Because of issues regarding the ownership and lifetimes of raw C-style string, functions taking `(char const *)` have a few relatively minor limitations:
+
+  * The C-strings must be `NULL` or null-terminated. It cannot be used with binary data.
+  * Non-const (`char *`) is not supported. We could partially implement it using a proxy, but the changes would get lost on their way back to JS space because the JS calling conventions do not allow us to pass changes to strings back this way.
+  * The bound function must not hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself.
+  * The internal conversion process uses v8::String::Utf8Value, and "should" be safe for use with functions accepting ASCII or UTF8 input. Behaviour with any other encodings is undefined.
+  * If passed a JS `null` or `undefined`, it converts to a literal `NULL`, otherwise it will convert to a string (though possibly empty). This is significant for functions which treat `NULL` different than an empty string (like `strlen()`, which may crash your app if passed `NULL`).
+
+When native functions return (`char const *`), they are converted to v8 Strings, and therefore have the same encoding limitations as for C-string function arguments.
+
+
+This support allows us to convert functions to `v8::InvocableCallback` functions like:
+
+{{{
+char const * cstring_test( char const * c )
+{
+    std::cerr << "cstring_test( @"<<(void const *)c
+              <<") ["<<(c ? c : "<NULL>")<<"]\n";
+    return c;
+}
+
+v8::InvocationCallback cb =
+   cv::FunctionToInvocationCallback<
+     char const * (*)(char const *),
+     cstring_test
+    >;
+}}}
+
+If we bind that to JS with the name `cstr`:
+
+{{{
+var jstr = "Hi, world!";
+jstr = cstr(jstr); print(jstr);
+jstr = cstr(undefined); print(jstr);
+jstr = cstr(null); print(jstr);
+jstr = cstr("Bye, world!"); print(jstr);
+}}}
+
+The output looks something like:
+
+{{{
+cstring_test( @0x984acbc) [Hi, world!]
+Hi, world!
+cstring_test( @0) [<NULL>]
+null
+cstring_test( @0) [<NULL>]
+null
+cstring_test( @0x984acbc) [Bye, world!]
+Bye, world!
+}}}
+
+==Special Case: `v8::InvocationCallback`-like Functions==
+
+The library provides special support for binding functions which "look like" a `v8::InvocationCallback`. The definition of "looks like" is: the function takes only a single `(v8::Arguments const &)` argument and returns any type.
+
+Such functions are treated like `v8::InvocationCallback` instances, in that they can accept any number of arguments of any type. The return value is converted to a `v8::Handle<v8::Value>` (or to JS `undefined` for `void` returns).
+
+Example of what we consider to be `v8::InvocationCallback`-like:
+
+{{{
+int my_callback( v8::Arguments const & );
+void MyType::callback( v8::Arguments const & );
+double MyType::constCallback( v8::Arguments const & ) const;
+}}}
+
+Free functions bound this way have a particularly interesting property: if such a function is bound as a member of a `T` native object, we can access the native `this` pointer from inside that function like this:
+
+{{{
+int my_callback( v8::Arguments const & argv )
+{
+   T * self = cv::CastFromJS<T>(argv.This());
+   if( !self ) {
+       // no native T found. This might or might not
+       // be an error, depending on app-specific conditions.
+   }
+   ...
+}
+}}}
+
+==Special Case: Unlocking the v8 Engine==
+
+Consider this function binding:
+
+{{{
+#include <unistd.h> // sleep(), or Sleep(N*1000) on Windows
+v8::InvocationCallback cb =
+    cv::FunctionToInvocationCallback<
+       unsigned int (*)(unsigned int), sleep
+     >;
+}}}
+
+When that callback is called, the calling code is locking v8, meaning that other v8-using threads cannot preempt it. When calling C-level APIs which themselves do not call back into v8, we normally instead want to tell v8 that other threads may run. That is done like this:
+
+{{{
+... somewhere inside a v8 callback function ...
+{
+  v8::Unlocker unlock;
+  nativeFunction(...);
+}
+... v8 is locked again here, so we can use v8 again ...
+}}}
+
+This library currently doesn't have a generic mechanism for adding this support via the provided templates. i have some ideas on how it might be done, but nothing has materialized yet.
+
+=Forwarding v8-supplied Function Arguments to non-bound Functions=
+
+  * `forwardFunction()`
+  * `forwardMethod()`
+  * `forwardConstMethod()`
+
+Those functions allow the client to pass on `v8::Arguments` to non-bound functions "manually".
+
+
+=Notable TODOs=
+
+- Yet another class-binding mechanism is in development for this lib, but just something very basic (as opposed to v8-juice's monster class-binding API).
+
+- Binding object accessors to native variables/members. We have this code in v8-juice but i'd like to re-implement it based on this API's conventions.
