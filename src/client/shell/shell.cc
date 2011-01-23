@@ -228,11 +228,25 @@ int my_bind_test( V8CxH & cx )
 }
 
 
-
-
-v8::juice::JuiceShell * ShellInstance = 0; 
-int main(int argc, char * argv[])
+#define USE_SIGNALS 0
+#if USE_SIGNALS
+#include <signal.h>
+void signal_int(int)
 {
+    //v8::ThrowException(v8::String::New("SIGINT caught."));
+    // Do nothing?
+    /*
+      Weird: if i don't install a signal handler, ctrl-c (SIGINT)
+      kills my app violently, as would be expected. If
+    */
+}
+#endif /*USE_SIGNALS*/
+v8::juice::JuiceShell * ShellInstance = 0; 
+int main(int argc, char * argv[])/*argv SHOULD be const, but v8::V8::SetFlagsFromCommandLine() requires non-const.*/
+{
+#if USE_SIGNALS
+    signal( SIGINT, signal_int );
+#endif
 #define JSTR(X) v8::String::New(X)
     if(0)
     { /** fuck - SetFlagsFromCommandLine() changes argv such that the
