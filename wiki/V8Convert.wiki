@@ -7,7 +7,7 @@
 
 The `v8::convert` API is a spin-off of the core-most components of the v8-juice library. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. It provides the following features:
 
-  * Converting between v8 Value handles and "native types" using generic interface. This allows us to write generic algorithms which convert between JS/C++ without having to know the exact types we're dealing with.  The basic POD types and some STL types are supported out of the box and plugging in one's own types is normally quite simple.
+  * Converting between v8 Value handles and "native types" using a generic interface. This allows us to write generic algorithms which convert between JS/C++ without having to know the exact types we're dealing with.  The basic POD types and some STL types are supported out of the box and plugging in one's own types is normally quite simple.
   * Converting free- and member functions into `v8::InvocationCallback` functions. These generated functions convert the !JavaScript-originated function arguments into native counterparts, forward the data to the original native function, and convert the return values back to something JS can use. (The `void` return type is translated to the `undefined` JS value.)
 
 Those two core features give us all we need in order to be able to bind near-arbitrary C/C++ functions with !JavaScript, insofar as cross-language calling conventions and type conversions allow us to do so.
@@ -81,7 +81,7 @@ cb = cv::ConstMethodToInvocationCallback<
 
 == Caveats and Unsupported Functions ==
 
-Some example of function signatures which _cannot_ (or must not) be converted using this framework:
+Some examples of function signatures which _cannot_ (or must not) be converted using this framework:
 
   * `int func( someType ** )`: pointer-to-pointer cannot be translated generically to JS
   * `int func( void * )`: Giving access to `void *` in JS makes it really easy to crash your apps from script code.
@@ -151,7 +151,7 @@ The library provides special support for binding functions which "look like" a `
 
 Such functions are treated like `v8::InvocationCallback` instances, in that they can accept any number of arguments of any type. The return value is converted to a `v8::Handle<v8::Value>` (or to JS `undefined` for `void` returns).
 
-Example of what we consider to be `v8::InvocationCallback`-like:
+Examples of what we consider to be `v8::InvocationCallback`-like:
 
 {{{
 int my_callback( v8::Arguments const & );
