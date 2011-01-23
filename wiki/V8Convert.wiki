@@ -1,5 +1,5 @@
 #summary The v8::convert sub-project
-#labels Phase-UserDocs,Topic-CPlusPlus
+#labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
 <wiki:toc max_depth=4></wiki:toc>
 
