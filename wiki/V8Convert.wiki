@@ -57,11 +57,14 @@ Some examples of binding functions and methods:
 #include <cstdio> // puts()
 ...
 namespace cv = v8::convert;
+
 v8::InvocationCallback cb;
 
 cb = cv::FunctionToInvocationCallback<
        int (*)(char const *), ::puts
-     >; // note the (*) part!
+     >; // note the (*) part! In my initial experimentation
+        // i couldn't get template selection working without that,
+        // so the API expects it to be there.
 
 cb = cv::MethodToInvocationCallback<
        MyType,
