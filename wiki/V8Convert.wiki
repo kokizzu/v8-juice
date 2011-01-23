@@ -61,20 +61,18 @@ namespace cv = v8::convert;
 v8::InvocationCallback cb;
 
 cb = cv::FunctionToInvocationCallback<
-       int (*)(char const *), ::puts
-     >; // note the (*) part! In my initial experimentation
-        // i couldn't get template selection working without that,
-        // so the API expects it to be there.
+       int (char const *), ::puts
+     >;
 
 cb = cv::MethodToInvocationCallback<
        MyType,
-       double (MyType::*)(double,double),
+       double (double,double),
        &MyType::multiply
      >;
 
 cb = cv::ConstMethodToInvocationCallback<
        MyType,
-       char const * (MyType::*)(int) const,
+       char const * (int),
        &MyType::errorCodeToString
      >;
 }}}
@@ -117,7 +115,7 @@ char const * cstring_test( char const * c )
 
 v8::InvocationCallback cb =
    cv::FunctionToInvocationCallback<
-     char const * (*)(char const *),
+     char const * (char const *),
      cstring_test
     >;
 }}}
@@ -181,7 +179,7 @@ Consider this function binding:
 #include <unistd.h> // sleep(), or Sleep(N*1000) on Windows
 v8::InvocationCallback cb =
     cv::FunctionToInvocationCallback<
-       unsigned int (*)(unsigned int), sleep
+       unsigned int (unsigned int), sleep
      >;
 }}}
 
