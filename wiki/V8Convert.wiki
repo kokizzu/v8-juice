@@ -20,6 +20,8 @@ This code originated as the core-most component of the [http://code.google.com/p
 
 The most important functions and types, from a user's perspective, are listed below. Most of the code in this library are internal template specializations which take care of the dirty work. Typical clients won't typically need more than what's listed here.
 
+My many thanks to James Pike, author of [https://github.com/tsa/vu8 vu8], for his helpful tips on getting function-pointer-style template arguments working.
+
 =Implementing Custom Conversions=
 
   * `JSToNative<T>`: template to convert JS values to `T` (almost always `T*` for non-POD types).
