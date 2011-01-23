@@ -79,9 +79,9 @@ function test1()
         }
         if( c.type === ns.Socket.SOCK_STREAM )
         {
-            n = 64;
+            n = 128;
             print("Reading...");
-            while( undefined !== (rc = c.read(n,false)) )
+            while( undefined !== (rc = c.read(n,true)) )
             {
                 if( null === rc )
                 {

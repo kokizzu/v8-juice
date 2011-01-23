@@ -611,6 +611,40 @@ struct CtorForwarder${count}
 EOF
 } # makeCtorForwarder
 
+########################################################################
+# Create FunctionSignature<> and friends...
+# EXPERIMENTAL! DO NOT USE!
+function makeSignature()
+{
+    cat <<EOF
+template <typename RV, ${aTDecl} >
+struct FunctionSignature< RV (${aTParam}) > : SignatureBase< RV, ${count} >
+{
+    typedef RV (*FunctionType)(${aTParam});
+};
+
+template <typename RV, ${aTDecl} >
+struct FunctionSignature< RV (*)(${aTParam}) >
+  : FunctionSignature< RV (${aTParam}) >
+{};
+
+template <typename T, typename RV, ${aTDecl} >
+struct MethodSignature< T, RV (T::*)(${aTParam}) > : SignatureBase< RV, ${count} >
+{
+    typedef T Type;
+    typedef RV (T::*FunctionType)(${aTParam});
+};
+
+template <typename T, typename RV, ${aTDecl} >
+struct ConstMethodSignature< T, RV (T::*)(${aTParam}) const > : SignatureBase< RV, ${count} >
+{
+    typedef T Type;
+    typedef RV (T::*FunctionType)(${aTParam}) const;
+};
+
+EOF
+}
+
 
 ##########################################################
 # here we go...
@@ -638,6 +672,9 @@ case $command in
         ;;
     'CtorForwarder')
 	makeCtorForwarder
+	;;
+    'Signature')
+	makeSignature
 	;;
     *)
 	echo "Unhandled command: ${command}"

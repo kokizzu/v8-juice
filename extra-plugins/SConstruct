@@ -32,7 +32,7 @@ def buildPlugin(name,src,ldflags = []):
     env.SharedLibrary( target = 'v8-juice-'+name,
                        SHLIBPREFIX = '',
                        LIBS = ldflags,
-                       source = src,
+                       source = src
                  )
 
 ########################################################################

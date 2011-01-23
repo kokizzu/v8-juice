@@ -1076,7 +1076,46 @@ namespace convert {
     template <typename T>
     struct JSToNative< std::vector<T> > : JSToNative_list< std::vector<T> > {};
 
+#if 0 // untested code
+    /**
+       UNTESTED!
 
+       Intended as a base class for JSToNative specializations
+       which proxy a std::map-like map.
+    */
+    template <typename MapT,
+              typename KeyType = typename MapT::mapped_type,
+              typename ValueType = typename MapT::value_type>
+    struct JSToNative_map
+    {
+	typedef MapT ResultType;
+        /**
+           Converts jv to a MapT object.
+
+           If jv->IsObject() then the returned object is populated from
+           jv, otherwise the returned object is empty. Since it is
+           legal for an object to be empty, it is not generically
+           possible to know if this routine got an empty Array object
+           or a non-Array object.
+        */
+	ResultType operator()( v8::Handle<v8::Value> jv ) const
+	{
+            typedef ValueType VALT;
+	    MapT map;
+	    if( jv.IsEmpty() || ! jv->IsObject() ) return map;
+	    Local<Object> obj( Object::Cast(*jv) );
+            Local<Array> ar( obj->GetPropertyNames() );
+	    uint32_t ndx = 0;
+	    for( ; ar->Has(ndx); ++ndx )
+	    {
+                Local<Value> const & k = ar->Get(Integer::New(ndx));
+                if( ! obj->HasRealNamedProperty(k) ) continue;
+                map[CastFromJS<KeyType>(k)] = CastFromJS<ValueType>(obj->Get(k));
+	    }
+	    return map;
+	}
+    };
+#endif
     /**
        A utility class for building up message strings, most notably
        exception messages, using a mixture of native and JS message
