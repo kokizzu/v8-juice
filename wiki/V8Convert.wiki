@@ -88,7 +88,7 @@ Some example of function signatures which _cannot_ (or must not) be converted us
 
 Supported, but ill-advised:
 
-  * `anything * func(anything)`: if the function returns dynamically-allocated memory, it _will_ cause a leak unless that memory has been someone given over to v8 from within that function.
+  * `anything * func(anything)`: if the function returns dynamically-allocated memory, it _will_ cause a leak unless that memory has been somehow given over to v8 from within that function.
 
 == The (`char [const] *`) Problem ==
 
