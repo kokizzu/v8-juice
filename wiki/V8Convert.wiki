@@ -208,7 +208,9 @@ This library currently doesn't have a generic mechanism for adding this support 
   * `forwardMethod()`
   * `forwardConstMethod()`
 
-Those functions allow the client to pass on `v8::Arguments` to non-bound functions "manually". These must not be used to implement "unlocked" operations (as shown above) because the conversions themselves must use v8, and doing them while v8 is unlocked results in undefined behaviour.
+Those functions allow the client to pass on `v8::Arguments` to non-bound functions "manually".
+
+_Achtung:_ these _must not_ be used to implement "unlocked" operations (as shown above) because the conversions themselves _must_ "use" v8, and doing them while v8 is unlocked results in undefined behaviour. (To "use" v8 means to do anything with its API, including dereferencing value handles, which the conversions must do in order to convert them for passing on the calls.)
 
 
 =Notable TODOs=
