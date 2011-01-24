@@ -81,6 +81,8 @@ cb = cv::ConstMethodToInvocationCallback<
      >;
 }}}
 
+Those three examples demonstrate _all_ of the public API needed for converting functions to `v8::InvocationCallback` equivalents!
+
 == Caveats and Unsupported Functions ==
 
 Some examples of function signatures which _cannot_ (or must not) be converted using this framework:
