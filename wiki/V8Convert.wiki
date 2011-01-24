@@ -36,7 +36,7 @@ These work identically to the v8-juice APIs with the same names (see [Converting
   * `CastToJS<T>()`: converts the given object to a `v8::Handle<v8::Value>`.
   * `CastFromJS<T>()`: converts a v8 value to a `T` (or `T*` for most non-POD types).
 
-These are very thin wrappers around `NativeToJS<>` and `JSToNative<>`, and work identically to the v8-juice APIs with the same names (see [ConvertingTypes]). A few special-case overloads also exist to avoid call ambiguities in some cases (notably (`char *`)).
+These are very thin wrappers around `NativeToJS<>` and `JSToNative<>`, and work identically to the v8-juice APIs with the same names (see [ConvertingTypes]). A few special-case overloads also exist to avoid call ambiguities in some cases or to cover special cases (most notably those taking (`char *`) and `v8::InvocationCallback` arguments).
 
 =Converting Functions to `v8::InvocationCallback`=
 
