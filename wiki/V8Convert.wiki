@@ -92,7 +92,7 @@ Some examples of function signatures which _cannot_ (or must not) be converted u
 
 Supported, but ill-advised:
 
-  * `anything * func(anything)`: if the function returns dynamically-allocated memory, it _will_ cause a leak unless that memory has been somehow given over to v8 from within that function.
+  * `anything * func(anything)`: if the function returns dynamically-allocated memory, or transfers ownership of the returned memory to the caller, it _will_ cause a leak unless that memory has been somehow given over to v8 from within that function.
 
 == The (`char [const] *`) Problem ==
 
