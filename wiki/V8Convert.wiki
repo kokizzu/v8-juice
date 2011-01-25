@@ -166,6 +166,8 @@ cstring_test( @0x984acbc) [Bye, world!]
 Bye, world!
 }}}
 
+(The fact that the pointer addresses are the same in the first and last calls is a mere fluke of memory re-allocation, and must not be understood to mean that the address is somehow stable across calls.)
+
 ==Special Case: `v8::InvocationCallback`-like Functions==
 
 The library provides special support for binding functions which "look like" a `v8::InvocationCallback`. The definition of "looks like" is: the function takes only a single `(v8::Arguments const &)` argument and returns any type.
