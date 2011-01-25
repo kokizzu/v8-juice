@@ -3,6 +3,8 @@
 
 <wiki:toc max_depth="3" />
 
+See also: [V8Convert], which provides a standalone distribution of this API.
+
 = An introduction to the `v8::juice::convert` API =
 
 Juice comes with an API for casting between JS types and native types. While v8 of course provides convenience routines like `Value::IntegerValue()` and `Value::ToString()`, that leaves us with two limitations:
