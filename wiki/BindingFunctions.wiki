@@ -3,6 +3,8 @@
 
 <wiki:toc max_depth=3/>
 
+*See also:* [V8Convert], which provides a standalone distribution of an improved version of the API described below.
+
 = Introduction =
 
 The function forwarding API is an extension of the [ConvertingTypes type conversion API], and it will help to first understand the concepts described on that page before continuing with this topic.
