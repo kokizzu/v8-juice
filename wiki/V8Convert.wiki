@@ -182,6 +182,25 @@ void MyType::callback( v8::Arguments const & );
 double MyType::constCallback( v8::Arguments const & ) const;
 }}}
 
+And we can create `v8::InvocationCallback` functions from them like:
+
+{{{
+InvocationCallback cb;
+
+cb = FunctionToInvocationCallback< int (Arguments const &),
+                                my_callback >;
+
+cb = MethodInvocationCallback< MyType,
+                               void (Arguments const &),
+                               &MyType::callback >;
+
+cb = ConstMethodInvocationCallback< MyType,
+                               double (Arguments const &),
+                               &MyType::constCallback >;
+}}}
+
+(Pretty simple, huh?)
+
 Free functions bound this way have a particularly interesting property: if such a function is bound as a member of a `T` native object, we can access the native `this` pointer from inside that function like this:
 
 {{{
