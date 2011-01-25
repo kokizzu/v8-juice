@@ -76,7 +76,7 @@ cb = cv::MethodToInvocationCallback<
        &MyType::multiply
      >;
 
-// Const class method: char const * MyType::multiply(int)
+// Const class method: char const * MyType::errorCodeToString(int)
 cb = cv::ConstMethodToInvocationCallback<
        MyType,
        char const * (int),
