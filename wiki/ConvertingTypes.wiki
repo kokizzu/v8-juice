@@ -3,7 +3,7 @@
 
 <wiki:toc max_depth="3" />
 
-See also: [V8Convert], which provides a standalone distribution of this API.
+*See also:* [V8Convert], which provides a standalone distribution of the API described below.
 
 = An introduction to the `v8::juice::convert` API =
 
