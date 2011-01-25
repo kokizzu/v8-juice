@@ -218,6 +218,6 @@ _Achtung:_ these _must not_ be used to implement "unlocked" operations (as shown
 
 =Notable TODOs=
 
-- Yet another class-binding mechanism is in development for this lib, but just something very basic (as opposed to v8-juice's monster class-binding API).
+- Yet another class-binding mechanism is in development for this lib, but just something relatively basic (as opposed to v8-juice's monster class-binding APIs).
 
-- Binding object accessors to native variables/members. We have this code in v8-juice but i'd like to re-implement it based on this API's conventions.
+- Document the object accessor binding API in the wiki. But first re-name its API members to use  the same naming conventions as `FunctionToInvocationCallback()` and friends.
