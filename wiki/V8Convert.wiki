@@ -64,16 +64,19 @@ namespace cv = v8::convert;
 
 v8::InvocationCallback cb;
 
+// Function: int puts(char const *)
 cb = cv::FunctionToInvocationCallback<
        int (char const *), ::puts
      >;
 
+// Class method: double MyType::multiply(double, double)
 cb = cv::MethodToInvocationCallback<
        MyType,
        double (double,double),
        &MyType::multiply
      >;
 
+// Const class method: char const * MyType::multiply(int)
 cb = cv::ConstMethodToInvocationCallback<
        MyType,
        char const * (int),
