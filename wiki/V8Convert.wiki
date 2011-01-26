@@ -23,7 +23,7 @@ This code originated as the core-most component of the [http://code.google.com/p
 
 The most important functions and types, from a user's perspective, are listed below. Most of the code in this library are internal template specializations which take care of the dirty work. Typical clients won't typically need more than what's listed here.
 
-My many thanks to James Pike, author of [https://github.com/tsa/vu8 vu8], for his helpful tips on getting function-pointer-style template arguments working.
+A very special thanks goes to James Pike, author of [https://github.com/tsa/vu8 vu8], for his helpful tips on getting function-pointer-style template arguments working.
 
 =Implementing Custom Conversions=
 
@@ -250,9 +250,9 @@ Those functions allow the client to pass on `v8::Arguments` to non-bound functio
 
 _Achtung:_ these _must not_ be used to implement "unlocked" operations (as shown above) because the conversions themselves _must_ "use" v8, and doing them while v8 is unlocked results in undefined behaviour. (To "use" v8 means to do anything with its API, including dereferencing value handles, which the conversions must do in order to convert them for passing on the calls.)
 
+=But wait, there's more!=
 
-=Notable TODOs=
+The code includes the following additional utilities:
 
-- Yet another class-binding mechanism is in development for this lib, but just something relatively basic (as opposed to v8-juice's monster class-binding APIs).
-
-- Document the object accessor binding API in the wiki. But first re-name its API members to use  the same naming conventions as `FunctionToInvocationCallback()` and friends.
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/properties.hpp properties.hpp] - templates for binding native global or member variables to JS objects. These basically work like `FunctionToInvocationCallback()` and friends, but create `v8::AccessorSetter()` and `v8::AccessorGetter()` implementations using templates to bind JS properties directly to native variables or to functions which proxy all get/set access on the JS property.
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp ClassCreator.hpp] - yet another C++-to-JS class binding mechanism. Based on v8-juice's [ClassWrap], but not _quite_ as configurable.
