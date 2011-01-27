@@ -1,5 +1,3 @@
-#labels Phase-UserDocs,Topic-CPlusPlus,Featured
-
 #summary The v8::convert sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
@@ -274,27 +272,29 @@ void setSharedString(std::string const & s)
 
 ...
 
-// Assume: proto is the ObjectTemplate prototype.
-
 // Convenience typedef:
 typedef v8::convert::PropertyBinder PB;
 
-// Bind non-member to JS directly:
-PB::BindSharedVar<std::string, &sharedString>
-    ("sharedString", proto );
 
-// Use BindSharedVarRO() to bind it read-only
+// Assume: 'proto' is out ObjectTemplate prototype.
+
+// Bind non-member variable directly to a JS property:
+PB::BindSharedVar<std::string, &sharedString>
+                 ("sharedString", proto );
+
+// BindSharedVarRO() binds it read-only.
 
 // Or bind it read-only via a getter function:
 PB::BindGetterFunction<std::string (),
                       getSharedString>
-                      ("sharedString2", proto);
+                      ("sharedString", proto);
+
 // Or bind it via getter/setter functions:
 PB::BindGetterSetterFunctions<std::string (),
-                getSharedString,
-                void (std::string const &),
-                setSharedString>("sharedString2",
-                proto);
+                              getSharedString,
+                              void (std::string const &),
+                              setSharedString>
+                              ("sharedString", proto);
 }}}
 
-JS properties can be bound to native member properties similarly using the `MemberPropertyBinder` subclass of `PropertyBinder`.
+JS properties can be bound to native member properties similarly using the `MemberPropertyBinder` subclass of `PropertyBinder`. Note that for member binding to work, the JS class being bound must "wrap" that native class. i.e. that only works with "fully wrapped" classes.
