@@ -1,3 +1,5 @@
+#labels Phase-UserDocs,Topic-CPlusPlus,Featured
+
 #summary The v8::convert sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
@@ -257,6 +259,8 @@ The code includes the following additional utilities:
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/properties.hpp properties.hpp] - templates for binding native global or member variables to JS objects. These basically work like `FunctionToInvocationCallback()` and friends, but create `v8::AccessorSetter()` and `v8::AccessorGetter()` implementations using templates to bind JS properties directly to native variables or to functions which proxy all get/set access on the JS property.
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp ClassCreator.hpp] - yet another C++-to-JS class binding mechanism. Based on v8-juice's [ClassWrap], but not _quite_ as configurable.
 
+
+== Binding Native Variables/Properties to JS ==
 
 Some examples of binding native properties to JS:
 
