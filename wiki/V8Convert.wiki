@@ -42,7 +42,7 @@ These are very thin wrappers around `NativeToJS<>` and `JSToNative<>`, and work 
 Here's a silly trick you can do with `CastToJS()`:
 
 {{{
-Handle<Value> myInvocationCallback( v8::Arguments const & )
+Handle<Value> myInvocationCallback( v8::Arguments const & ) {
     try {
      ....
     }
@@ -256,3 +256,41 @@ The code includes the following additional utilities:
 
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/properties.hpp properties.hpp] - templates for binding native global or member variables to JS objects. These basically work like `FunctionToInvocationCallback()` and friends, but create `v8::AccessorSetter()` and `v8::AccessorGetter()` implementations using templates to bind JS properties directly to native variables or to functions which proxy all get/set access on the JS property.
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp ClassCreator.hpp] - yet another C++-to-JS class binding mechanism. Based on v8-juice's [ClassWrap], but not _quite_ as configurable.
+
+
+Some examples of binding native properties to JS:
+
+{{{
+// namespace- or global scope:
+std::string sharedString;
+std::string getSharedString()
+    { return sharedString; }
+void setSharedString(std::string const & s) 
+    { sharedString = s; }
+
+...
+
+// Assume: proto is the ObjectTemplate prototype.
+
+// Convenience typedef:
+typedef v8::convert::PropertyBinder PB;
+
+// Bind non-member to JS directly:
+PB::BindSharedVar<std::string, &sharedString>
+    ("sharedString", proto );
+
+// Use BindSharedVarRO() to bind it read-only
+
+// Or bind it read-only via a getter function:
+PB::BindGetterFunction<std::string (),
+                      getSharedString>
+                      ("sharedString2", proto);
+// Or bind it via getter/setter functions:
+PB::BindGetterSetterFunctions<std::string (),
+                getSharedString,
+                void (std::string const &),
+                setSharedString>("sharedString2",
+                proto);
+}}}
+
+JS properties can be bound to native member properties similarly using the `MemberPropertyBinder` subclass of `PropertyBinder`.
