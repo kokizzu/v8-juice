@@ -190,11 +190,11 @@ InvocationCallback cb;
 cb = FunctionToInvocationCallback< int (Arguments const &),
                                 my_callback >;
 
-cb = MethodInvocationCallback< MyType,
+cb = MethodToInvocationCallback< MyType,
                                void (Arguments const &),
                                &MyType::callback >;
 
-cb = ConstMethodInvocationCallback< MyType,
+cb = ConstMethodToInvocationCallback< MyType,
                                double (Arguments const &),
                                &MyType::constCallback >;
 }}}
