@@ -42,7 +42,8 @@ These are very thin wrappers around `NativeToJS<>` and `JSToNative<>`, and work 
 Here's a silly trick you can do with `CastToJS()`:
 
 {{{
-Handle<Value> myInvocationCallback( v8::Arguments const & ) {
+v8::Handle<v8::Value>
+myInvocationCallback( v8::Arguments const & ) {
     try {
      ....
     }
@@ -90,7 +91,8 @@ cb = cv::MethodToInvocationCallback<
        &MyType::multiply
      >;
 
-// Const class method: char const * MyType::errorCodeToString(int)
+// Const class method:
+//    char const * MyType::errorCodeToString(int) const
 cb = cv::ConstMethodToInvocationCallback<
        MyType,
        char const * (int),
@@ -99,6 +101,8 @@ cb = cv::ConstMethodToInvocationCallback<
 }}}
 
 Those three examples demonstrate _all_ of the public API needed for converting functions to `v8::InvocationCallback` equivalents!
+
+It might be interesting to note that the above three functions are created, but not actually called, by the above code (note that we pass no non-template parameters to them).
 
 == Caveats and Unsupported Functions ==
 
