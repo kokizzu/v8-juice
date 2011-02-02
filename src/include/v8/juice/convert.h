@@ -100,6 +100,9 @@ namespace convert {
     };
 
     template <typename T>
+    struct TypeInfo<T const> : TypeInfo<T> {};
+    
+    template <typename T>
     struct TypeInfo<T *> : TypeInfo<T> {};
 
     template <typename T>
@@ -160,6 +163,8 @@ namespace convert {
     */
     template <typename NT>
     struct NativeToJS<const NT &> : NativeToJS<NT> {};
+    template <typename NT>
+    struct NativeToJS<const NT> : NativeToJS<NT> {};
 
 #if 0
     /**
