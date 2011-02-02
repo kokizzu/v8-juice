@@ -375,7 +375,7 @@ namespace convert {
     template <typename T>
     v8::Handle<v8::Value> CastToJS( T const & v )
     {
-	typedef NativeToJS<T> F;
+	typedef NativeToJS<T const> F;
 	return F()( v );
     }
 
