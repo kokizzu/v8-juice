@@ -11,7 +11,7 @@
    using the MPL license. i wrote that code, and an re-licensing it
    here by dedicating it into the Public Domain.
 */
-#include <stdint.h> // hope the client's platform is recent!
+#include <v8stdint.h> // hope the client's platform is recent!
 #include <string>
 #include <sstream>
 // #include <cstring>

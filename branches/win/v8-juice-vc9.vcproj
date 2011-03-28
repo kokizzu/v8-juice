@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="v8-juice"
 	ProjectGUID="{9423AF8D-4B98-4E8F-9491-E4D08D90E21C}"
 	RootNamespace="v8-juice"
@@ -21,8 +21,9 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets=""
+			InheritedPropertySheets=".\v8-juice-vc9.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -87,8 +88,9 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets=""
+			InheritedPropertySheets=".\v8-juice-vc9.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -153,8 +155,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
+			OutputDirectory="$(ProjectDir)lib/vc9/debug/x86"
+			IntermediateDirectory="$(ProjectDir)obj/vc9/debug/x86"
 			ConfigurationType="4"
-			InheritedPropertySheets=""
+			InheritedPropertySheets=".\v8-juice-vc9.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -219,8 +223,9 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets=""
+			InheritedPropertySheets=".\v8-juice-vc9.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -404,11 +409,11 @@
 			>
 		</File>
 		<File
-			RelativePath=".\src\lib\juice\mutex.cpp"
+			RelativePath=".\src\lib\juice\mutex.hpp"
 			>
 		</File>
 		<File
-			RelativePath=".\src\lib\juice\mutex.hpp"
+			RelativePath=".\src\lib\juice\mutex.win32.cpp"
 			>
 		</File>
 		<File

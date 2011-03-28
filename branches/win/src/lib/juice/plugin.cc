@@ -174,10 +174,10 @@ namespace plugin {
 }}} // namespaces
 
 #if ! PLUGIN_USE_NOOP
-#    if v8_juice_plugin_CONFIG_HAVE_LIBLTDL || v8_juice_plugin_CONFIG_HAVE_LIBDL
-#      include "plugin.dl.cpp"
-#    elif defined(WIN32)
+#    if defined(_WIN32)
 #      include "plugin.win32.cpp"
+#    elif v8_juice_plugin_CONFIG_HAVE_LIBLTDL || v8_juice_plugin_CONFIG_HAVE_LIBDL
+#      include "plugin.dl.cpp"
 #    endif
 #endif // WIN32?
 

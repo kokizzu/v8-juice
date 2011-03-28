@@ -17,7 +17,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#ifndef _WIN32
 #include <strings.h>
+#endif
 //-----------------------------------------------------------------------------
 
 namespace v8 { namespace juice {
