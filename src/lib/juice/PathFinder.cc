@@ -5,11 +5,13 @@
 
 #include <v8/juice/PathFinder.h>
 
-#ifndef WIN32
-#  define WIN32 0
+#ifndef _WIN32
+#  define TARGET_WIN32 0
+#else
+#  define TARGET_WIN32 1
 #endif
 
-#if WIN32
+#if TARGET_WIN32
 #  include  <io.h>
 #  include  <stdio.h>
 #else
@@ -155,7 +157,7 @@ namespace v8 { namespace juice {
     // static
     bool PathFinder::IsAccessible( const std::string & path )
     {
-#if WIN32
+#if TARGET_WIN32
 #  define CHECKACCESS _access
 #  define CHECKRIGHTS 0
 #else
@@ -179,7 +181,7 @@ namespace v8 { namespace juice {
 
     std::string PathFinder::DirSeparator()
     {
-#if WIN32
+#if TARGET_WIN32
 	return std::string( "\\" );
 #else
 	return std::string( "/" );

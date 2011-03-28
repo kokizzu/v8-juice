@@ -25,7 +25,7 @@ get a more custom-fit/efficient solution.
 
 #include <string.h> /* strlen() */
 #include <stdlib.h> /* free/malloc() */
-#include <stdint.h>
+#include <v8stdint.h>
 #include <ctype.h>
 
 #include <iostream>
@@ -34,6 +34,11 @@ get a more custom-fit/efficient solution.
 
 #include <v8/juice/jssprintf.h>
 //#include <v8/juice/convert.h>
+
+#ifdef _WIN32
+#define snprintf _snprintf
+#endif
+
 
 namespace v8 {
 namespace juice {
@@ -88,7 +93,7 @@ but some compilers support variable-sized arrays even when not
 explicitly running in c99 mode.
 */
 #if !defined(WHPRINTF_HAVE_VARARRAY)
-#  if defined(__TINYC__)
+#  if defined(__TINYC__) || defined(_WIN32)
 #    define WHPRINTF_HAVE_VARARRAY 0
 #  else
     //#    if defined (__cplusplus)

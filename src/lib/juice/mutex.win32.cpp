@@ -69,15 +69,15 @@ namespace v8 { namespace juice {
 		DeleteCriticalSection(&m_critsec);
 	}
 
-        void mutex_win32::lock()
+    void mutex_win32::lock()
 	{
-		MUTEX_TRACE << "mutex_win32::lock()\n";
+//		MUTEX_TRACE << "mutex_win32::lock()\n";
 		EnterCriticalSection(&m_critsec);
 	}
 
-        void mutex_win32::unlock()
+    void mutex_win32::unlock()
 	{
-		MUTEX_TRACE << "mutex_win32::unlock()\n";
+//		MUTEX_TRACE << "mutex_win32::unlock()\n";
 		LeaveCriticalSection(&m_critsec);
 	}
 

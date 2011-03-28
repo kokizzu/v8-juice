@@ -28,7 +28,7 @@ remove certain features/extensions.
 #include <string.h> /* strlen() */
 #include <stdlib.h> /* free/malloc() */
 #include <ctype.h>
-#include <stdint.h>
+#include <v8stdint.h>
 
 #include "whprintf.h"
 typedef long double LONGDOUBLE_TYPE;
@@ -40,6 +40,11 @@ typedef long double LONGDOUBLE_TYPE;
 #ifndef WHPRINTF_OMIT_FLOATING_POINT
 #  define WHPRINTF_OMIT_FLOATING_POINT 0
 #endif
+
+#ifdef _WIN32
+#define snprintf _snprintf
+#endif
+
 
 /*
    If WHPRINTF_OMIT_SIZE is defined to a true value, then
@@ -79,7 +84,7 @@ but some compilers support variable-sized arrays even when not
 explicitly running in c99 mode.
 */
 #if !defined(WHPRINTF_HAVE_VARARRAY)
-#  if defined(__TINYC__)
+#  if defined(__TINYC__) || defined(_WIN32)
 #    define WHPRINTF_HAVE_VARARRAY 0
 #  else
 #    define WHPRINTF_HAVE_VARARRAY 1
@@ -1335,7 +1340,7 @@ static long whprintfv_appender_stringbuf( void * arg, char const * data, long n 
     {
 	const size_t asz = (npos * 1.5) + 1;
 	if( asz < npos ) return -1; /* overflow */
-	char * buf = realloc( sb->buffer, asz );
+	char * buf = (char *)realloc( sb->buffer, asz );
 	if( ! buf ) return -1;
 	memset( buf + sb->pos, 0, (npos + 1 - sb->pos) ); // the +1 adds our \0 for us
 	sb->buffer = buf;
