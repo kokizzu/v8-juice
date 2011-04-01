@@ -46,7 +46,7 @@ namespace juice {
                 typedef typename Wrapper::WrappedType WT;
                 WT * obj = CastFromJS<WT>( argv.This() );
 		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
-		return Call( obj, func, argv );
+		return Call<WT,RV>( obj, func, argv );
 	    }
 
 	    template <typename WeakWrappedType, typename RV>
@@ -57,7 +57,7 @@ namespace juice {
                 typedef typename Wrapper::WrappedType WT;
                 WT * obj = CastFromJS<WT>( argv.This() );
 		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
-		return Call( obj, func, argv );
+		return Call<WT,RV>( obj, func, argv );
 	    }
 
 	    template <typename WeakWrappedType>
@@ -68,7 +68,7 @@ namespace juice {
                 typedef typename Wrapper::WrappedType WT;
                 WT * obj = CastFromJS<WT>( argv.This() );
 		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
-		return Call( obj, func, argv );
+		return CallVoid( obj, func, argv );
 	    }
 
 	    template <typename WeakWrappedType>
@@ -79,7 +79,7 @@ namespace juice {
                 typedef typename Wrapper::WrappedType WT;
                 WT * obj = CastFromJS<WT>( argv.This() );
 		if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<0>::Call() could not find native 'this' object!"));
-		return Call( obj, func, argv );
+		return CallVoid<WT>( obj, func, argv );
 	    }
 	};
 
@@ -430,8 +430,8 @@ namespace juice {
 	template <typename RV, RV (WrappedType::*Func)()>
 	ClassBinder & BindMemFunc( char const * name )
 	{
-	    typedef Detail::MemFuncCallOp0< WrappedType, RV, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp<Caller>::Call );
+		typedef v8::juice::Detail::MemFuncCallOp0< WrappedType, RV, Func > Caller;
+	    this->Set(name, v8::juice::Detail::MemFuncCallOp<Caller>::Call );
 	    return *this;
 	}
 
@@ -440,10 +440,14 @@ namespace juice {
 	   arg and returning RV.
 	*/
 	template <typename RV, RV (WrappedType::*Func)() const>
+#ifdef _MSC_VER
+	ClassBinder & BindMemFuncConst( char const * name )
+#else
 	ClassBinder & BindMemFunc( char const * name )
+#endif
 	{
-	    typedef Detail::MemFuncCallOp0< const WrappedType, RV, Func > Caller;
-	    this->Set(name, Detail::MemFuncCallOp<Caller>::Call );
+	    typedef v8::juice::Detail::MemFuncCallOp0< const WrappedType, RV, Func > Caller;
+	    this->Set(name, v8::juice::Detail::MemFuncCallOp<Caller>::Call );
 	    return *this;
 	}
 
