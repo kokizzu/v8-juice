@@ -885,7 +885,7 @@ namespace juice {
 	*/
 	Handle<Object> NewInstance( int argc, Handle<Value> argv[], WrappedType * & obj )
 	{
-	    Local<Object> ji = JSClassCreator::NewInstance( argc, argv );
+	    Handle<Object> ji = JSClassCreator::NewInstance( argc, argv );
 	    if( ! ji.IsEmpty() && ji->IsObject() )
 	    {
 		obj = GetNative( ji );
@@ -1038,7 +1038,25 @@ namespace juice {
 	    WrappedType * obj = 0;
 	    try
 	    {
-		obj = ClassOpsType::Ctor( argv, err );
+
+#ifdef _DEBUG
+			TryCatch try_catch;
+#endif
+
+			obj = ClassOpsType::Ctor( argv, err );
+
+#ifdef _DEBUG
+			// this is to catch potential user errors in constructor
+			// for example, if user tries to do CastToJS() from within
+			// the constructor, it will raise the exception that can
+			// be difficult to trace
+			if(try_catch.HasCaught())
+			{
+				assert(false && "Performing operations from within constructor that are not allowed");
+				return try_catch.ReThrow();
+			}
+#endif
+
 	    }
 	    catch(std::exception const & ex)
 	    {

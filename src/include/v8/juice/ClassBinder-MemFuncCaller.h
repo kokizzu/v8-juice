@@ -1,5 +1,8 @@
 // GENERATED CODE! Edit at your own risk!
 #if !defined(DOXYGEN)
+
+// WARNING: This file has been modified for MSVC compatibility
+
 template <>
 struct WeakMemFuncCaller<1> : v8::juice::convert::MemFuncForwarder<1>
 {
@@ -35,7 +38,7 @@ struct WeakMemFuncCaller<1> : v8::juice::convert::MemFuncForwarder<1>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<1>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0 >
@@ -46,7 +49,7 @@ struct WeakMemFuncCaller<1> : v8::juice::convert::MemFuncForwarder<1>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<1>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0>( obj, func, argv );
     }
 
 };
@@ -85,7 +88,7 @@ struct WeakMemFuncCaller<2> : v8::juice::convert::MemFuncForwarder<2>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<2>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0,A1>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0,  typename A1 >
@@ -96,7 +99,7 @@ struct WeakMemFuncCaller<2> : v8::juice::convert::MemFuncForwarder<2>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<2>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0,A1>( obj, func, argv );
     }
 
 };
@@ -135,7 +138,7 @@ struct WeakMemFuncCaller<3> : v8::juice::convert::MemFuncForwarder<3>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<3>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0,A1,A2>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2 >
@@ -146,7 +149,7 @@ struct WeakMemFuncCaller<3> : v8::juice::convert::MemFuncForwarder<3>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<3>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0,A1,A2>( obj, func, argv );
     }
 
 };
@@ -185,7 +188,7 @@ struct WeakMemFuncCaller<4> : v8::juice::convert::MemFuncForwarder<4>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<4>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0,A1,A2,A3>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3 >
@@ -196,7 +199,7 @@ struct WeakMemFuncCaller<4> : v8::juice::convert::MemFuncForwarder<4>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<4>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0,A1,A2,A3>( obj, func, argv );
     }
 
 };
@@ -235,7 +238,7 @@ struct WeakMemFuncCaller<5> : v8::juice::convert::MemFuncForwarder<5>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<5>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0,A1,A2,A3,A4>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4 >
@@ -246,7 +249,7 @@ struct WeakMemFuncCaller<5> : v8::juice::convert::MemFuncForwarder<5>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<5>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0,A1,A2,A3,A4>( obj, func, argv );
     }
 
 };
@@ -285,7 +288,7 @@ struct WeakMemFuncCaller<6> : v8::juice::convert::MemFuncForwarder<6>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<6>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0,A1,A2,A3,A4,A5>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5 >
@@ -296,7 +299,7 @@ struct WeakMemFuncCaller<6> : v8::juice::convert::MemFuncForwarder<6>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<6>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0,A1,A2,A3,A4,A5>( obj, func, argv );
     }
 
 };
@@ -335,7 +338,7 @@ struct WeakMemFuncCaller<7> : v8::juice::convert::MemFuncForwarder<7>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<7>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0,A1,A2,A3,A4,A5,A6>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6 >
@@ -346,7 +349,7 @@ struct WeakMemFuncCaller<7> : v8::juice::convert::MemFuncForwarder<7>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<7>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0,A1,A2,A3,A4,A5,A6>( obj, func, argv );
     }
 
 };
@@ -385,7 +388,7 @@ struct WeakMemFuncCaller<8> : v8::juice::convert::MemFuncForwarder<8>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<8>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0,A1,A2,A3,A4,A5,A6,A7>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7 >
@@ -396,7 +399,7 @@ struct WeakMemFuncCaller<8> : v8::juice::convert::MemFuncForwarder<8>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<8>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0,A1,A2,A3,A4,A5,A6,A7>( obj, func, argv );
     }
 
 };
@@ -435,7 +438,7 @@ struct WeakMemFuncCaller<9> : v8::juice::convert::MemFuncForwarder<9>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<9>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0,A1,A2,A3,A4,A5,A6,A7,A8>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8 >
@@ -446,7 +449,7 @@ struct WeakMemFuncCaller<9> : v8::juice::convert::MemFuncForwarder<9>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<9>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0,A1,A2,A3,A4,A5,A6,A7,A8>( obj, func, argv );
     }
 
 };
@@ -485,7 +488,7 @@ struct WeakMemFuncCaller<10> : v8::juice::convert::MemFuncForwarder<10>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<10>::Call() could not find native 'this' object!"));
-	return Call( obj, func, argv );
+	return Call<WT,A0,A1,A2,A3,A4,A5,A6,A7,A8,A9>( obj, func, argv );
     }
     
     template <typename WeakWrappedType,  typename A0,  typename A1,  typename A2,  typename A3,  typename A4,  typename A5,  typename A6,  typename A7,  typename A8,  typename A9 >
@@ -496,7 +499,7 @@ struct WeakMemFuncCaller<10> : v8::juice::convert::MemFuncForwarder<10>
         typedef typename Wrapper::WrappedType WT;
         WT * obj = CastFromJS<WT>( argv.This() );
 	if( ! obj ) return ThrowException(String::New("WeakMemFuncCaller<10>::Call() could not find native 'this' object!"));
-        return Call( obj, func, argv );
+        return Call<WT,A0,A1,A2,A3,A4,A5,A6,A7,A8,A9>( obj, func, argv );
     }
 
 };
