@@ -39,6 +39,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <assert.h>
 
 #if 0
 #ifndef CERR
@@ -304,6 +305,16 @@ namespace juice {
     struct WeakJSClassCreator_Opt_AllowCtorWithoutNew : WeakJSClassCreator_Opt_Bool<true>
     {};
 
+	/**
+		Enable/Disable auto destruction of objects instantiated by this instance of the class.
+
+	*/
+
+	template <typename T>
+	struct WeakJSClassCreator_Opt_CleanupOwnedObjects : WeakJSClassCreator_Opt_Bool<true>
+	{};
+
+
     /**
        WeakJSClassCreator is a tool to simplify the creation of new
        wrapped classes, including addition of automatic cleanup handling
@@ -418,7 +429,7 @@ namespace juice {
        member functions for "casting" between the JS/Native worlds
        and for destroying instances of the generated class.
     */
-    template <typename WrappedT>
+    template <typename WrappedT> //, bool DestroyOwnedObjects = false>
     class WeakJSClassCreator : public JSClassCreator
     {
     public:
@@ -450,7 +461,8 @@ namespace juice {
         
         enum Options {
         OptSearchPrototypesForNative = 0,
-        OptAllowCtorWithoutNew = 1,
+		OptAllowCtorWithoutNew = 1,
+		OptCleanupOwnedObjects = 2,
         OptCount
         };
 
@@ -459,7 +471,8 @@ namespace juice {
             static int bob[OptCount] =
                 {
                 0, // OptSearchPrototypesForNative
-                WeakJSClassCreator_Opt_AllowCtorWithoutNew<WrappedT>::value ? 1 : 0  // OptAllowCtorWithoutNew
+				WeakJSClassCreator_Opt_AllowCtorWithoutNew<WrappedT>::value ? 1 : 0,  // OptAllowCtorWithoutNew
+				WeakJSClassCreator_Opt_CleanupOwnedObjects<WrappedT>::value ? 1 : 0  // OptCleanupOwnedObjects
                 };
             return bob;
         }
@@ -525,6 +538,14 @@ namespace juice {
             }
         }
 
+		typedef std::set<WrappedType*> OwnedObjectsSet;
+		OwnedObjectsSet ObjectsOwnedByThisInstance;
+		static OwnedObjectsSet & GetOwnedObjects()
+		{
+			static OwnedObjectsSet owned_set;
+			return owned_set;
+		}
+
     public:
 	/**
 	   Starts the setup of a new class. It will be populated into
@@ -561,7 +582,29 @@ namespace juice {
 	{
 	}
         /** Does nothing. Is virtual to satisfy inheritance rules and please my compiler. */
-	virtual ~WeakJSClassCreator(){}
+
+	/** EXPERIMENTAL: destroys all JS objects owned by this class */
+	virtual ~WeakJSClassCreator()
+	{
+		CleanupOwnedObjects();
+	}
+
+	void CleanupOwnedObjects()
+	{
+		if( options()[OptCleanupOwnedObjects] )
+		{
+			OwnedObjectsSet &Objects = GetOwnedObjects();
+			OwnedObjectsSet::iterator iter;
+			iter = Objects.begin();
+			while(iter != Objects.end())
+			{
+				DestroyObject(convert::CastToJS(*iter));
+//				Objects.erase(iter); // DestroyObject will do this...
+				iter = Objects.begin();
+			}
+		}
+
+	}
         
         /**
            Registers SubT as a subtype of WrappedType, but ONLY for
@@ -947,9 +990,33 @@ namespace juice {
 	    //CERR << "weak callback @"<<nobj<<"\n";
             HandleScope handle_scope;
 	    Local<Object> jobj( Object::Cast(*pv) );
-	    if( jobj->InternalFieldCount() != (FieldCount) ) return; // how to warn about this?
+	    if( jobj->InternalFieldCount() != (FieldCount) ) 
+		{
+			assert(false);
+			return; // how to warn about this?
+		}
 	    Local<Value> lv( jobj->GetInternalField(NativeFieldIndex) );
-	    if( lv.IsEmpty() || !lv->IsExternal() ) return; // how to warn about this?
+	    if( lv.IsEmpty() || !lv->IsExternal() )
+		{
+			// EXPERIMENTAL
+#if 1			
+
+			assert(!lv.IsEmpty());
+
+			bool b1 = lv->IsString();
+			bool b2 = lv->IsArray();
+			bool b3 = lv->IsNull();
+
+
+			assert(false);
+//			jobj->SetInternalField(NativeFieldIndex,Null());
+			pv.Dispose();
+			pv.Clear();
+#endif		
+			
+			return; // how to warn about this?
+		}
+
             if( ! OptShallowBind )
             {
                 TypeCheckIter it = typeCheck().find( nobj );
@@ -958,7 +1025,18 @@ namespace juice {
                     return;
                 }
                 WrappedType * victim = (*it).second.first;
+#if 1
+				Persistent<Value> xx = (*it).second.second;
+				xx.Dispose();
+				xx.Clear();
+#endif
                 typeCheck().erase(it);
+
+				if( options()[OptCleanupOwnedObjects] )
+				{
+					GetOwnedObjects().erase(victim);
+				}
+
                 ClassOpsType::Dtor( victim );
             }
             else
@@ -1079,6 +1157,12 @@ namespace juice {
 	    {
 		return ThrowException(String::New("Constructor failed for an unspecified reason!"));
 	    }
+
+		if( options()[OptCleanupOwnedObjects] )
+		{
+			GetOwnedObjects().insert(obj);
+		}
+
 	    return wrap_native( argv.This(), obj );
 	}
     };
