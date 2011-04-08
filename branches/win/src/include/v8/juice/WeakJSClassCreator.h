@@ -617,7 +617,7 @@ namespace juice {
            purposes of GetSelf() and GetJSObject() lookups. When
            GetSelf() or GetJSObject() is called, if they can find no
            native object in the WrappedType pool they will check each
-           type registered subtype here (in an inspecified order).
+           type registered via this function (in an inspecified order).
 
            Why? Because this allows us to properly get at the 'this'
            pointer from inherited member functions in wrapped classes,
