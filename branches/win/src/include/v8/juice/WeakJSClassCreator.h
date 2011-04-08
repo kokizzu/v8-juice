@@ -600,7 +600,7 @@ namespace juice {
 		if( options()[OptCleanupOwnedObjects] )
 		{
 			OwnedObjectsSet &Objects = GetOwnedObjects();
-			OwnedObjectsSet::iterator iter;
+			typename OwnedObjectsSet::iterator iter;
 			iter = Objects.begin();
 			while(iter != Objects.end())
 			{
