@@ -11,7 +11,7 @@ Anyone is welcomed to contribute to this project - just
 Particular areas where help is currently sought are:
 
   * Porting the build tree to scons, for platform portability
-  * Adding plugins, especially bindings for popular 3rd-party toolkits (e.g. libcurl).
+  * Adding plugins, especially bindings for popular 3rd-party toolkits.
 
 ==Contributing code==
 
@@ -19,7 +19,7 @@ Potential contributors must be willing to follow a very simple set of guidelines
 
 New code _must be documented_. The documentation belongs in the header files (e.g. doxygen style). Commenting of implementation code (the `.cc` or `.cpp` files) is left to personal judgement and taste - there are no rules. Any function, class, typedef, or macro which is not documented cannot be part of a public API. Internal/private functions/types/macros must also be documented if they are used in more than one implementation file.
 
-(And because of that rule, this library, at one week old, already has more API docs than v8 does.)
+(And because of that rule, this library, at one week old, already had more API docs than v8 does.)
 
 Nobody's asking for doctorate-level documentation, but some description of what the code does is a must. The existing API docs are good guideline (though sometimes there's admittedly a bit more documentation than is strictly necessary).
 
@@ -29,5 +29,6 @@ Other than that, i'm pretty much open to anything.
 
 So far they include:
   * [http://wanderinghorse.net/home/stephan Stephan Beal] is the primary architect and author.
+  * Anton Yemelyan joined the project in March 2011 to try to get the code working on Windows.
   * Rob Tsuk has contributed several fixes and made a number of suggestions which led to new features or fundamental improvements.
-  * The folks at http://groups.google.com/group/v8-users have been very helpful in all things related to v8.
+  * The folks at [http://groups.google.com/group/v8-users] have been very helpful in all things related to v8.
