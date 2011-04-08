@@ -81,6 +81,12 @@
     do {(void)1;} while (0)
 #endif
 
+#ifdef _DEBUG
+#define JUICE_RUNTIME_ASSERT(cond) assert(cond)
+#else
+#define JUICE_RUNTIME_ASSERT(cond)
+#endif
+
 namespace v8 {
 namespace juice {
 
@@ -311,7 +317,7 @@ namespace juice {
 	*/
 
 	template <typename T>
-	struct WeakJSClassCreator_Opt_CleanupOwnedObjects : WeakJSClassCreator_Opt_Bool<true>
+	struct WeakJSClassCreator_Opt_CleanupOwnedObjects : WeakJSClassCreator_Opt_Bool<false>
 	{};
 
 
@@ -429,7 +435,7 @@ namespace juice {
        member functions for "casting" between the JS/Native worlds
        and for destroying instances of the generated class.
     */
-    template <typename WrappedT> //, bool DestroyOwnedObjects = false>
+    template <typename WrappedT>
     class WeakJSClassCreator : public JSClassCreator
     {
     public:
@@ -992,58 +998,46 @@ namespace juice {
 	    Local<Object> jobj( Object::Cast(*pv) );
 	    if( jobj->InternalFieldCount() != (FieldCount) ) 
 		{
-			assert(false);
+			JUICE_RUNTIME_ASSERT(false && "JUICE: invalid field count");
 			return; // how to warn about this?
 		}
 	    Local<Value> lv( jobj->GetInternalField(NativeFieldIndex) );
 	    if( lv.IsEmpty() || !lv->IsExternal() )
 		{
-			// EXPERIMENTAL
-#if 1			
-
-			assert(!lv.IsEmpty());
-
-			bool b1 = lv->IsString();
-			bool b2 = lv->IsArray();
-			bool b3 = lv->IsNull();
-
-
-			assert(false);
-//			jobj->SetInternalField(NativeFieldIndex,Null());
+			JUICE_RUNTIME_ASSERT(false && "JUICE: unrecognized object received by weak_callback()");
 			pv.Dispose();
 			pv.Clear();
-#endif		
-			
-			return; // how to warn about this?
+			return;
 		}
 
-            if( ! OptShallowBind )
+        if( ! OptShallowBind )
+        {
+            TypeCheckIter it = typeCheck().find( nobj );
+            if( typeCheck().end() == it ) // serious error
             {
-                TypeCheckIter it = typeCheck().find( nobj );
-                if( typeCheck().end() == it ) // serious error
-                {
-                    return;
-                }
-                WrappedType * victim = (*it).second.first;
+				JUICE_RUNTIME_ASSERT(false && "JUICE: fatal error; object failed type check during weak_callback()");
+                return;
+            }
+            WrappedType * victim = (*it).second.first;
 #if 1
-				Persistent<Value> xx = (*it).second.second;
-				xx.Dispose();
-				xx.Clear();
+			Persistent<Value> self = (*it).second.second;
+			self.Dispose();
+			self.Clear();
 #endif
-                typeCheck().erase(it);
+            typeCheck().erase(it);
 
-				if( options()[OptCleanupOwnedObjects] )
-				{
-					GetOwnedObjects().erase(victim);
-				}
+			if( options()[OptCleanupOwnedObjects] )
+			{
+				GetOwnedObjects().erase(victim);
+			}
 
-                ClassOpsType::Dtor( victim );
-            }
-            else
-            {
-                //CERR << "SHALLOW-CAST DTOR!!!\n";
-                ClassOpsType::Dtor( static_cast<WrappedType*>(nobj) );
-            }
+            ClassOpsType::Dtor( victim );
+        }
+        else
+        {
+            //CERR << "SHALLOW-CAST DTOR!!!\n";
+            ClassOpsType::Dtor( static_cast<WrappedType*>(nobj) );
+        }
 	    /**
 	       We have to ensure that we have no dangling External in JS space. This
 	       is so that functions like IODevice.close() can act safely with the
