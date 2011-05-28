@@ -19,7 +19,6 @@ PLUGIN_OBJECTS := $(addsuffix .o, \
 	ncwidgets \
 	ncwindow \
 	v8-nc \
-	winny \
 	)
 PLUGIN_LDADD := -lpanel -lncurses
 include ../plugin_template.make
