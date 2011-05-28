@@ -1180,6 +1180,7 @@ namespace cw {
                           << ", Converted to Native=@"<<(void const *)nh
                           << "\nTHIS MAY LEAD TO A CRASH IF THIS JS HANDLE IS USED AGAIN!!!\n"
                     ;
+                // Should we Dispose()/Clear() pv here?
                 Factory::Destruct( jobj, nh );
                 return;
             }
@@ -1200,6 +1201,8 @@ namespace cw {
                    another object allocated at the same address).
                 */
                 nholder->SetInternalField(InternalFields::NativeIndex,Null());
+                pv.Dispose();
+                pv.Clear();
             }
 	}
 
