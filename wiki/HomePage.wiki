@@ -16,7 +16,7 @@ v8-juice is believed to work well, without any undocumented crash conditions and
 
 ==Related work==
 
-  * [https://github.com/tsa/vu8 vu8] provides many of the same features as v8-juice, and is one of the few bindings frameworks i've seen which uses templates to generate the bindings (as opposed to macros). Its class- and module-binding system is also easier to use that juice's. <em>If i wasn't using v8-juice, i'd be using v8u.</em>
+  * [https://github.com/tsa/vu8 vu8] provides many of the same features as v8-juice, and is one of the few bindings frameworks i've seen which uses templates to generate the bindings (as opposed to macros). Its class- and module-binding system is also easier to use that juice's. <em>If i wasn't using v8-juice, i'd be using vu8.</em>
   * [http://code.google.com/p/cproxyv8/ cproxyv8] is very similar in purpose to v8-juice, and appears to provide largely the same feature set for binding C++ types to v8.
   * [http://code.google.com/p/v8cgi/ v8cgi] encapsulates features for hosting web applications written in !JavaScript.
   * [http://nodejs.org/ nodejs] has a very impressive set of functionality and a well-thought-out module loading system. It is arguably the most popular v8-using project aside from the various Chromium-based browsers.
