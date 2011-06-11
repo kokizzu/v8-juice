@@ -19,7 +19,7 @@ Supported Drivers:
   * sqlite3
   * MySQLv5
 
-See the [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo home page] for more info than you could possibly want to know about it.
+See the [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo home page] for more info than you could possibly want to know about it. The source tree includes a complete copy of the cpdo library - it does not need to be installed separately.
 
 ==Notable TODOs==
 
