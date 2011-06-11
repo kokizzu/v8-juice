@@ -203,12 +203,13 @@ These objects are _only_ created by calling `JSPDO.prepare()`, and not via a con
 
 || *Method* || *Description* ||
 || `void bind(index[,value])` || Binds a value (default=NULL) to the given _1-based_ parameter index. ||
-|| `mixed get(index)` || Returns a value from a fetched row, using the given _0-based_ column index. (The inconsistency is not mine - that's just how SQL APIs work!) This function _must not ever_ be called unless `step()` has returned true. Violating that leads to undefined behaviour. ||
+|| `bool step()` || "Steps" one row through a result set or executes a non-result query. Returns false if it is at the end of the set (or the query had no data to return, like an `INSERT`) or true if it successfully fetched a row. ||
+|| `Array stepArray()` || Like `step()` but returns all of the columns from the fetched row as an array of values. It returns `null` at the end of the result set. ||
+|| `mixed get(index)` || Returns a value from a fetched row, using the given _0-based_ column index. (The inconsistency is not mine - that's just how SQL APIs work!) This function _must not ever_ be called unless `step()` has returned true. Violating that leads to undefined behaviour. The JS type of the returned value will be deduced based on the database's data type. ||
 || `string columnName(index)` || The name of the 0-based result set column. ||
 || `int columnType(index)` || The cpdo-defined type ID for row data from the given 0-based column index. ||
 || `void reset()` || Re-sets all bound parameters to their pre-`bind()` state. Not normally needed, but useful when looping over a statement and only updating a subset of the columns on each iteration. ||
 || `int paramIndex(string)` || Returns the index of the given named bound parameter. When using MySQL (which doesn't natively support named parameters), please read [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 the fine manual] regarding potential caveats. ||
-|| `bool step()` || "Steps" one row through a result set. Returns false if it is at the end of the set (or the query had no data to return, like an `INSERT`) or true if it successfully fetched a row. ||
 || *Property* (read-only!) || *Description* ||
 || `int errorCode` || The most recent error code (driver-specific). May be cleared by the next call into the API. The code 0 is universally understood as success and a non-0 value is driver-dependent. ||
 || `string errorText` || The most recent error string (driver-specific). May be cleared by the next call into the API. ||
