@@ -98,11 +98,15 @@ cb = cv::ConstMethodToInvocationCallback<
        char const * (int),
        &MyType::errorCodeToString
      >;
+
+// Here's how we can bind a JS-side garbage-collection-triggering
+// function:
+cb = cv::FunctionToInvocationCallback<bool (),v8::V8::IdleNotification>;
 }}}
 
-Those three examples demonstrate _all_ of the public API needed for converting functions to `v8::InvocationCallback` equivalents!
+Those examples demonstrate _all_ of the public API needed for converting functions to `v8::InvocationCallback` equivalents!
 
-It might be interesting to note that the above three functions are created, but not actually called, by the above code (note that we pass no non-template parameters to them).
+It might be interesting to note that the above functions are created, but not actually called, by the above code (note that we pass no non-template parameters to them).
 
 == Caveats and Unsupported Functions ==
 
