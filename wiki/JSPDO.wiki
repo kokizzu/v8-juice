@@ -1,0 +1,153 @@
+#summary A PDO-like db access abstraction binding for v8.
+#labels Phase-UserDocs
+
+<wiki:toc max_depth='4'></wiki:toc>
+
+*Achtung:* JSPDO is very new (born on 2011-06-11), thus it is beta. i may still randomly change how it behaves, it is quite lacking in documentation, and it is possibly missing some significant features.
+
+=About JSPDO=
+
+JSPDO is a database access abstraction API, modelled heavily off of the [http://php.net/manual/en/book.pdo.php PHP PDO] API. The underlying database abstraction library is called [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo] and is implemented in C. JSPDO provides a v8 wrapper around cpdo.
+
+Requirements:
+
+  * libv8, of course
+  * [V8Convert] (it's a header-only library), so there is no major installation hassle).
+  * Some patience - the build tree is currently only designed to build directly from [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons/jspdo the original source tree] packaged together with [V8Convert]. i hope to modularize it someday to make it easy to drop in to arbitrary `v8::convert`-using clients.
+
+Supported Drivers:
+  * sqlite3
+  * !MySQLv5
+
+See the [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo home page] for more info than you could possibly want to know about it.
+
+==Notable TODOs==
+
+The more significant ones:
+
+  * Document it. i'll do that once i'm happy with it.
+  * Add several convenience functions for fetching column data as an array or an object (key/value pairs).
+  * The underlying C lib is missing a couple of features which might be needed for advanced use, but it's function enough for everything i've needed to do so far.
+
+==Plugging JSPDO into your Application==
+
+TODO: document how to do this.
+
+
+=Connecting to a Database=
+
+{{{
+var db = new JSPDO("sqlite3:/path/to/db.sqlite3");
+// For MySQL use:
+db = new JSPDO("mysql5:dbname=mydb;host=localhost","username", "password");
+}}}
+
+The !MySQL driver supports several options not shown here, [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 as documented in the cpdo wiki].
+
+=Important Details to Keep in Mind=
+
+==#1: Lifetime Issues==
+
+Database connections and the objects they create have very strict rules about when they must be cleaned up. The JSPDO class has a method called `close()` to release all resources owned by the database connection. The "anonymous" statement handle class (returned by `JSPDO.prepare()`) has a `finalize()` method which _must_ be called _before_ the parent `JSPDO` instance is `close()`ed, or Undefined Behaviour will ensue.
+
+==#2: Error Reporting/Handling==
+
+The vast majority of the functions in this API report errors via exceptions. Exceptions, for all their merits, make it easy to write code which does not properly finalize query/result set data. Get in the habit of using a `try/finally` block, as shown in the examples below, to ensure that statement handles are properly cleaned up. If a single statement handle is closed _after_ its database connection is closed, the v8 engine may very well crash as the statement handle steps on an invalidated database handle.
+
+==#3: No Binary Data!==
+
+This API will optimistically try to read BLOB fields as !JavaScript string data (because my databases of uses BLOB fields for storing string, e.g. !JSON, data). If you tell it to read, e.g. binary image data, results are undefined. v8 makes its own assumptions about encoding and it assumes that we will feed it the proper type of data.
+
+There are _no plans_ to add any direct binary data support to this API, as binary data is well outside of !JavaScript's comfort zone and i don't want to open up that can of worms.
+
+==#4: Ummm...==
+
+i had another point to make and it's slipped my mind for the time being.
+
+=Queries=
+
+==Running simple Queries==
+
+{{{
+drv.exec("SQL GOES HERE");
+}}}
+
+The JS API does not yet have routines for handling escaping. To avoid escaping problems altogether, and help avoid potential SQL injection attacks, always use prepared statements. i so strongly believe in the value of prepared statements that i currently have no plans to ever add escaping-related functions to the JS API.
+
+==Preparing INSERT Statement==
+
+{{{
+var st;
+try {
+    st = drv.prepare("INSERT INTO mytbl(a,b,c) VALUES(?,?,?)");
+    st.bind(1, "value of a");
+    st.bind(2, 32);
+    st.bind(3, null); // same as: st.bind(3)
+ 
+    // Now execute the query:
+    st.step();
+}
+finally {
+    if( st ) st.finalize(); // this is very important!!!
+}
+}}}
+
+Note that when binding parameters, databases use _1-based_ indexes, whereas when _fetching_ data (see the next example), _0-based_ indexes are used. i didn't create these conventions - i just try to follow them.
+
+TODO: add binding by name support. The C code can do it, i just need to wrap those bits.
+
+==Preparing SELECT Queries==
+
+
+{{{
+var st;
+try {
+    st = drv.prepare("SELECT a as a, b as b from mytbl");
+    // st is now a Statement object. These objects are not
+    // to be instantiated directly by clients (the constructor
+    // is an anonymous function, in fact!), but only via
+    // JSPDO.prepare().
+
+    // You can also bind parameters here if you need to,
+    // as demonstrated for INSERT queries.
+
+    // Now execute the query, stepping over each row in the
+    // result set:
+
+
+    // Display a header line with the column names:    
+    var separator = '\t';
+    var names = [], cols = [], i = 0;
+    for( i = 0; i < sp.columnCount; ++i ) {
+        names.push( sp.columnName(i) );
+    }
+    print( names.join(separator) );
+
+    // Now step through each row and print its columns out:
+    var cols = [];
+    while( st.step() ) {
+        cols.length = 0;
+        for( i = 0; i < sp.columnCount; ++i ) {
+            cols.push( st.get(i) );
+        }
+        print(cols.join(separator));
+    }
+}
+finally {
+    if( st ) st.finalize(); // this is very important!!!
+}
+}}}
+
+=Caveats and Gotchas=
+
+==Column Names might be Unpredictable! (Use "AS")==
+
+Database drivers do not always guaranty what the name of a given column will be. e.g. when using sqlite the names are not guaranteed to match how they are named in the query unless the client uses an `AS` clause, e.g. `SELECT a as a, b as b from t...`.
+
+==Opening Multiple Statement Concurrently (Don't do it!)==
+
+Drivers are not required to allow more than one open result set for a given db connection (!MySQL, for example, does not allow it). Thus query code should be structured so that it does not need to open multiple queries at one time.
+
+==Multi-Threading (Don't do it!)==
+
+It is, in general, not legal (or not portable) for more than one thread to use the same connection (`JSPDO` instance), whether concurrently or not. If you use v8 in multiple threads, be sure that each thread has its own connection instance.
