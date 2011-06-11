@@ -1,5 +1,5 @@
 #summary A PDO-like db access abstraction binding for v8.
-#labels Phase-UserDocs
+#labels Phase-UserDocs,Topic-JS-API
 
 <wiki:toc max_depth='4'></wiki:toc>
 
