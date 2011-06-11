@@ -17,7 +17,7 @@ Requirements:
 
 Supported Drivers:
   * sqlite3
-  * !MySQLv5
+  * MySQLv5
 
 See the [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo home page] for more info than you could possibly want to know about it.
 
@@ -42,7 +42,7 @@ var db = new JSPDO("sqlite3:/path/to/db.sqlite3");
 db = new JSPDO("mysql5:dbname=mydb;host=localhost","username", "password");
 }}}
 
-The !MySQL driver supports several options not shown here, [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 as documented in the cpdo wiki].
+The MySQL driver supports several options not shown here, [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 as documented in the cpdo wiki].
 
 =Important Details to Keep in Mind=
 
