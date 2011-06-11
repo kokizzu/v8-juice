@@ -27,7 +27,7 @@ The more significant ones:
 
   * Document it. i'll do that once i'm happy with it.
   * Add several convenience functions for fetching column data as an array or an object (key/value pairs).
-  * The underlying C lib is missing a couple of features which might be needed for advanced use, but it's function enough for everything i've needed to do so far.
+  * The underlying C lib is missing a couple of features which might be needed for advanced use, but it's functional enough for everything i've needed to do so far.
 
 ==Plugging JSPDO into your Application==
 
