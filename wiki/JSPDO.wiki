@@ -66,7 +66,7 @@ The vast majority of the functions in this API report errors via exceptions. Exc
 
 ==#3: No Binary Data!==
 
-This API will optimistically try to read BLOB fields as !JavaScript string data (because my databases of uses BLOB fields for storing string, e.g. !JSON, data). If you tell it to read, e.g. binary image data, results are undefined. v8 makes its own assumptions about encoding and it assumes that we will feed it the proper type of data.
+This API will optimistically try to read BLOB fields as !JavaScript string data (because my databases of uses BLOB fields for storing string data, e.g. JSON data). If you tell it to read, e.g. binary image data, results are undefined. v8 makes its own assumptions about encoding and it assumes that we will feed it the proper type of data.
 
 There are _no plans_ to add any direct binary data support to this API, as binary data is well outside of !JavaScript's comfort zone and i don't want to open up that can of worms.
 
