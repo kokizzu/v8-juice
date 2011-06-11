@@ -49,7 +49,7 @@ The MySQL driver supports several options not shown here, [http://whiki.wanderin
 To disconnect:
 
 {{{
-drv.close();
+db.close();
 }}}
 
 After calling `close()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
@@ -79,7 +79,7 @@ i had another point to make and it's slipped my mind for the time being.
 ==Running simple Queries==
 
 {{{
-drv.exec("SQL GOES HERE");
+db.exec("SQL GOES HERE");
 }}}
 
 The JS API does not yet have routines for handling escaping. To avoid escaping problems altogether, and help avoid potential SQL injection attacks, always use prepared statements. i so strongly believe in the value of prepared statements that i currently have no plans to ever add escaping-related functions to the JS API.
@@ -89,7 +89,7 @@ The JS API does not yet have routines for handling escaping. To avoid escaping p
 {{{
 var st;
 try {
-    st = drv.prepare("INSERT INTO mytbl(a,b,c) VALUES(?,?,?)");
+    st = db.prepare("INSERT INTO mytbl(a,b,c) VALUES(?,?,?)");
     st.bind(1, "value of a");
     st.bind(2, 32);
     st.bind(3, null); // same as: st.bind(3)
@@ -112,7 +112,7 @@ TODO: add binding by name support. The C code can do it, i just need to wrap tho
 {{{
 var st;
 try {
-    st = drv.prepare("SELECT a as a, b as b from mytbl");
+    st = db.prepare("SELECT a as a, b as b from mytbl");
     // st is now a Statement object. These objects are not
     // to be instantiated directly by clients (the constructor
     // is an anonymous function, in fact!), but only via
