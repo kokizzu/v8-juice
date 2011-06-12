@@ -38,7 +38,7 @@ TODO: document how to do this.
 
 ==#1: Lifetime Issues==
 
-Database connections and the objects they create have very strict rules about when they must be cleaned up. The JSPDO class has a method called `close()` to release all resources owned by the database connection. The "anonymous" statement handle class (returned by `JSPDO.prepare()`) has a `finalize()` method which _must_ be called _before_ the parent `JSPDO` instance is `close()`ed, or Undefined Behaviour will ensue.
+Database connections and the objects they create have very strict rules about when they must be cleaned up. The JSPDO class has a method called `close()` to release all resources owned by the database connection. The statement handle class (returned by `JSPDO.prepare()`) has a `finalize()` method which _must_ be called _before_ the parent `JSPDO` instance is `close()`ed, or Undefined Behaviour will ensue.
 
 ==#2: Error Reporting/Handling==
 
@@ -93,7 +93,7 @@ Class-level properties (read-only!) (properties of the constructor function):
 
 This class represents both prepared SQL statements and "result-set" data. This merging of functionality was inspired by PHP's PDO (which i happen to quite like). Most functions in this class only make sense for one mode of operation or the other (e.g. a read operation (e.g. `SELECT`) vs. a write (e.g. `INSERT`)).
 
-These objects are _only_ created by calling `JSPDO.prepare()`, and not via a constructor call. The constructor for this class is, in fact, an anonymous function with no publicly-visible name.
+These objects are _only_ to be created by calling `JSPDO.prepare()`, and not via a constructor call. The constructor is visible as `JSPDO.Statement`, but it is only in the public API so that clients may use it for `instanceof` checks. It should not be called by client code and the constructor's arguments are not publicly documented.
 
 || *Method* || *Description* ||
 || `void bind(index[,value])` || Binds a value (default=NULL) to the given _1-based_ parameter index or name (in the form `:paramName`). The _type_ of the given value determines how the value is bound (e.g. as an integer, double, or string). ||
