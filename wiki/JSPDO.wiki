@@ -34,26 +34,6 @@ The more significant ones:
 TODO: document how to do this.
 
 
-=Connecting and Disconnecting=
-
-To make a connection:
-
-{{{
-var db = new JSPDO("sqlite3:/path/to/db.sqlite3");
-// For MySQL use:
-db = new JSPDO("mysql5:dbname=mydb;host=localhost","username", "password");
-}}}
-
-The MySQL driver supports several options not shown here, [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 as documented in the cpdo wiki].
-
-To disconnect:
-
-{{{
-db.close();
-}}}
-
-After calling `close()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
-
 =Important Details to Keep in Mind=
 
 ==#1: Lifetime Issues==
@@ -84,23 +64,23 @@ Unless noted otherwise, the APIs report any "serious" errors via exceptions. Som
 
 ==JSPDO Class==
 
-This class is synonymous with a database connection.
+This class is synonymous with a database connection. Its main responsibilities are establishing a connection and doling out "statement" objects via its `prepare()` method.
 
 || *Method* || *Description* ||
 || `JSPDO(dsn[,userName,password])` || Connects to the database described in the given DSN string. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki for details]. ||
 || `void exec(string)` || Executes simple SQL statements (those not returning values). ||
 || `Statement prepare(string)` || "Prepares" SQL code for execution. This is the only legal way to construct Statement objects. ||
-|| `close()` || Closes the db connection and frees any C-level resources allocated for the connection, _except_ for Statements, which _must_ be `finalize()`d _before_ their db is closed. ||
-|| `lastInsertId()` || Returns the "most recent" insertion ID for this connection, but this might not be the ID one may expect (triggers can cause IDs to be updated in ways opaque to the client application). ||
-|| `begin()` || Starts a transaction. Nested transactions are not supported. ||
-|| `commit()` || Commits the current opened transaction. ||
-|| `rollback()` || Rolls back the current transaction. ||
+|| `void close()` || Closes the db connection and frees any C-level resources allocated for the connection, _except_ for Statements, which _must_ be `finalize()`d _before_ their db is closed. ||
+|| `int lastInsertId()` || Returns the "most recent" insertion ID for this connection, but this might not be the ID one may expect (triggers can cause IDs to be updated in ways opaque to the client application). ||
+|| `void begin()` || Starts a transaction. Nested transactions are not supported. ||
+|| `void commit()` || Commits the current opened transaction. ||
+|| `void rollback()` || Rolls back the current transaction. ||
 
 Instance properties (read-only!):
 
 || `string driverName` || The name of the underlying driver ("sqlite3" or "mysql5"). ||
-|| `int errorCode` || The most recent error code (driver-specific). May be cleared by the next call into the API. The code 0 is universally understood as success and a non-0 value is driver-dependent. ||
-|| `string errorText` || The most recent error string (driver-specific). May be cleared by the next call into the API. ||
+|| `int errorCode` || The most recent error code (driver-specific). May be reset by the next call into the API. The code 0 is universally understood as success and a non-0 value is driver-dependent. ||
+|| `string errorText` || The most recent error string (driver-specific). May be reset by the next call into the API. ||
 
 
 Class-level properties (read-only!) (properties of the constructor function):
@@ -111,7 +91,7 @@ Class-level properties (read-only!) (properties of the constructor function):
 
 ==Statements/Result Sets==
 
-This class represents (like in PHP's PDO API) both prepared `INSERT` (or similar) statements and for the conventional "result-set" data. This merging of functionality was inspired by PHP's PDO (which i happen to quite like).
+This class represents both prepared SQL statements and "result-set" data. This merging of functionality was inspired by PHP's PDO (which i happen to quite like). Most functions in this class only make sense for one mode of operation or the other (e.g. a read operation (e.g. `SELECT`) vs. a write (e.g. `INSERT`)).
 
 These objects are _only_ created by calling `JSPDO.prepare()`, and not via a constructor call. The constructor for this class is, in fact, an anonymous function with no publicly-visible name.
 
@@ -125,7 +105,7 @@ These objects are _only_ created by calling `JSPDO.prepare()`, and not via a con
 || `mixed get(index)` || Returns a value from a fetched row, using the given _0-based_ column index. (The inconsistency is not mine - that's just how SQL APIs work!) This function _must not ever_ be called unless `step()` has returned true. Violating that leads to undefined behaviour. The JS type of the returned value will be deduced based on the database's data type. That basically means numbers "should" carry over as-is, SQL `NULL` translates to `null`, and everything else will be treated as a string. ||
 || `string columnName(index)` || The name of the 0-based result set column. ||
 || `int columnType(index)` || The cpdo-defined type ID for row data from the given 0-based column index. (Do not rely on stable values between releases!) ||
-|| `void reset()` || Re-sets all bound parameters to their pre-`bind()` state. Not normally needed, but useful when looping over a statement and only updating a subset of the columns on each iteration. ||
+|| `void reset()` || Re-sets a statement so that it can be re-executed. Call this after each iteration when changing the values of bound parameters in a loop. ||
 || `int paramIndex(string)` || Returns the 1-based index of the given named bound parameter, or 0 if no such parameter is found. When using MySQL (which doesn't natively support named parameters), please read [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 the fine manual] regarding potential caveats. ||
 
 Instance properties (read-only!):
@@ -161,106 +141,10 @@ finally { st.finalize(); }
 
 There _may_ a subtle difference, however, depending on the code's context. `mydb.prepare()` might throw. In the second example, we would not catch that exception, but instead propagate it up the stack chain. Because of that, the `finally` block doesn't need to check if `st` was set. However, in some code constructs blindly propagating that exception might lead to resource leaks stemming from _other_ native objects which have specific cleanup requirements.
 
-=Queries=
 
-==Running simple Queries==
+=How To ...=
 
-{{{
-db.exec("SQL GOES HERE");
-}}}
-
-The JS API does not yet have routines for handling escaping. To avoid escaping problems altogether, and help avoid potential SQL injection attacks, always use prepared statements. i so strongly believe in the value of prepared statements that i currently have no plans to ever add escaping-related functions to the JS API.
-
-==Preparing INSERT Statement==
-
-{{{
-var st;
-try {
-    st = db.prepare("INSERT INTO mytbl(a,b,c) VALUES(?,?,?)");
-    st.bind(1, "value of a");
-    st.bind(2, 32);
-    st.bind(3, null); // same as: st.bind(3)
- 
-    // Now execute the query:
-    st.step();
-}
-finally {
-    if( st ) st.finalize(); // this is very important!!!
-}
-}}}
-
-Note that when binding parameters, databases use _1-based_ indexes, whereas when _fetching_ data (see the next example), _0-based_ indexes are used. i didn't create these conventions - i just try to follow them.
-
-You can also bind parameters by name, but it is not recommended that one mix name- and index-based parameters because the abstraction API has no control over how the underlying driver may (or may not) handle such uses. Here is an example:
-
-{{{
-var st;
-try {
-   st = db.prepare("INSERT INTO mytbl(a,b,c) VALUES(:pA, :pB, :pC)");
-   st.bind(":pA", "hi, world");
-   // Bind several named parameters at once by using an object:
-   st.bind({":pB":42, ":pC": "..."});
-   st.step();
-}
-finally {
-  if( st ) st.finalize();
-}
-}}}
-
-TODO: `bind({pA:...,pB:...})`
-
-==Preparing SELECT Queries==
-
-
-{{{
-var st;
-try {
-    st = db.prepare("SELECT a as a, b as b from mytbl");
-    // st is now a Statement object. These objects are not
-    // to be instantiated directly by clients (the constructor
-    // is an anonymous function, in fact!), but only via
-    // JSPDO.prepare().
-
-    // You can also bind parameters here if you need to,
-    // as demonstrated for INSERT queries.
-
-    // Now execute the query, stepping over each row in the
-    // result set:
-
-
-    // Display a header line with the column names:    
-    var separator = '\t';
-    var names = [], cols = [], i = 0;
-    for( i = 0; i < sp.columnCount; ++i ) {
-        names.push( sp.columnName(i) );
-    }
-    print( names.join(separator) );
-
-    // Now step through each row and print its columns out:
-    var cols = [];
-    while( st.step() ) {
-        cols.length = 0;
-        for( i = 0; i < sp.columnCount; ++i ) {
-            cols.push( st.get(i) );
-        }
-        print(cols.join(separator));
-    }
-}
-finally {
-    if( st ) st.finalize(); // this is very important!!!
-}
-}}}
-
-==Cleaning Up==
-
-_Always_ call `finalize()` when you are done with statement/result set object:
-
-{{{
-st.finalize();
-}}}
-
-
-After calling `finalize()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
+See [JSPDO_HowTo].
 
 =Caveats and Gotchas=
 
