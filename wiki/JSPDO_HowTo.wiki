@@ -1,0 +1,183 @@
+#labels Phase-UserDocs,Topic-JS-API
+
+#summary How to use JSPDO
+
+<wiki:toc></wiki:toc>
+
+See also: [JSPDO]
+
+This page gives an overview of how to do just about everything there is to do with the [JSPDO] API.
+
+=Managing Connections=
+
+==Connecting==
+
+To connect to a database we need a so-called DSN string and possibly user credentials. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full descriptions of the DSN strings.
+
+Examples:
+
+{{{
+// For sqlite3:
+var db = new JSPDO("sqlite3:/path/to/db.sqlite3");
+// For MySQLv5:
+var dsn = ;
+// for mysql:
+// dsn = ;
+var db = new JSPDO("mysql5:dbname=abc;host=localhost;port=3306",
+                   "user","password");
+}}}
+
+
+==Disconnecting==
+
+It is imperative that client code always close a db handle when he is done with it, as opposed to relying on the garbage collector (which may literally never be called).
+
+To do that:
+
+{{{
+db.close();
+}}}
+
+
+After calling `close()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
+
+=Queries=
+
+==Running simple Queries==
+
+{{{
+db.exec("SQL GOES HERE");
+}}}
+
+The JS API does not yet have routines for handling escaping. To avoid escaping problems altogether, and help avoid potential SQL injection attacks, always use prepared statements. i so strongly believe in the value of prepared statements that i currently have no plans to ever add escaping-related functions to the JS API.
+
+==Preparing INSERT Statement==
+
+{{{
+var st;
+try {
+    st = db.prepare("INSERT INTO mytbl(a,b,c) VALUES(?,?,?)");
+
+    // Bind some values:
+    st.bind(1, "value of a");
+    st.bind(2, 32);
+    st.bind(3, null); // same as: st.bind(3)
+    // Alternately: st.bind(["value of a",32,null]);
+
+    // Now execute the query:
+    st.step();
+}
+finally {
+    if( st ) st.finalize(); // this is very important!!!
+}
+}}}
+
+Note that when binding parameters, databases use _1-based_ indexes, whereas when _fetching_ data (see the next example), _0-based_ indexes are used. i didn't create these conventions - i just try to follow them.
+
+You can also bind parameters by name, as demonstrated here:
+
+{{{
+var st;
+try {
+   st = db.prepare("INSERT INTO mytbl(a,b,c) VALUES(:pA, :pB, :pC)");
+   st.bind(":pA", "hi, world");
+   // Bind several named parameters at once by using an object:
+   st.bind({":pB":42, ":pC": "..."});
+   st.step();
+}
+finally {
+  if( st ) st.finalize();
+}
+}}}
+
+It is not recommended that one mix name- and index-based parameters because the abstraction API may have no control over how the underlying driver may (or may not) handle such uses.
+
+==Preparing SELECT Queries==
+
+{{{
+var st;
+try {
+    st = db.prepare("SELECT a as a, b as b from mytbl");
+    // st is now a Statement object. These objects are not
+    // to be instantiated directly by clients (the constructor
+    // is an anonymous function, in fact!), but only via
+    // JSPDO.prepare().
+
+    // You can also bind parameters here if you need to,
+    // as demonstrated for INSERT queries.
+
+    // Now execute the query, stepping over each row in the
+    // result set:
+
+    // Display a header line with the column names:    
+    var separator = '\t';
+    var names = [], cols = [], i = 0;
+    for( i = 0; i < sp.columnCount; ++i ) {
+        names.push( sp.columnName(i) );
+    }
+    print( names.join(separator) );
+
+    // Now step through each row and print its columns out:
+    var cols = [];
+    while( st.step() ) {
+        cols.length = 0;
+        for( i = 0; i < sp.columnCount; ++i ) {
+            cols.push( st.get(i) );
+        }
+        print(cols.join(separator));
+    }
+}
+finally {
+    if( st ) st.finalize(); // this is very important!!!
+}
+}}}
+
+==Binding Parameters==
+
+The API supports executing "plain SQL" and prepared statements, but it does not have APIs for escaping SQL. This is an intentional design decision intended to avoid the can of worms which comes along with escaping. Using prepared statements is superior in every way to executing "plain" SQL and doing the value escaping in the client code.
+
+We can bind parameters to queries before executing them, as demonstrated below...
+
+{{{
+st = db.prepare("SELECT ... WHERE a=? AND b=?");
+
+// The following are all equivalent:
+// Bind as array:
+st.bind(["v8-juice","JSPDO"]);
+
+// Two binds by index:
+st.bind(1,"v8-juice");
+st.bind(2,"JSPDO");
+}}}
+
+Or the same query but using named parameters:
+
+{{{
+st = db.prepare("SELECT ... WHERE a=:p1 AND b=:p2");
+
+// The following are all equivalent:
+// Bind as object:
+st.bind({":p1":"v8-juice",":p2":"JSPDO"});
+
+// Two binds by index:
+st.bind(':p1',"v8-juice");
+st.bind(':p2',"JSPDO");
+
+// The following _might_ work, depending on the driver:
+st.bind(1,"v8-juice");
+st.bind(2,"JSPDO");
+// Again: do not mix named and unnamed parameter binding!
+}}}
+
+*Achtung:* named parameters support is an _optional_ feature for the underlying db drivers. Both of the current drivers support them, however (they can optionally be _disabled_ [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 in the MySQL driver]).
+
+==Cleaning Up==
+
+_Always_ call `finalize()` when you are done with statement/result set object:
+
+{{{
+st.finalize();
+}}}
+
+
+After calling `finalize()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
