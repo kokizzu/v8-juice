@@ -107,6 +107,17 @@ any client code calls (however indirectly) `CastToJS<MyType>(...)`. If it is not
 the compiler will try to pick up another instantiation of the template. With luck
 it will fail loudly, but (and this depends on the implicit native conversions possible for `MyType`) it may pick up a different, inappropriate converter. A good place for such a routine is directly after the class' declaration, though other circumstances may require a later placement. e.g. when used together with `WeakJSClassCreator`, the casting specializations must come after the `WeakJSClassCreatorOps<>` specialization has been declared (they are all normally defined where the are declared (inline) since they are all templates).
 
+===Converting Enums===
+
+Converting from an arbitrary enum to JS via these APIs requires this small hack:
+
+{{{
+template <>
+struct NativeToJS<MyEnum> : NativeToJS<int32_t> {};
+}}}
+
+After that, `CastToJS(MY_ENUM_VALUE)` will convert the enum entry into a JS integer.
+
 ==Custom JS-to-native conversions==
 
 The converse of `NativeToJS<>` is of course `JSToNative<>`:
