@@ -12,7 +12,7 @@ JSPDO is a database access abstraction API, modelled heavily off of the [http://
 Requirements:
 
   * libv8, of course
-  * [V8Convert] (it's a header-only library), so there is no major installation hassle).
+  * [V8Convert] (it's a header-only library, so there is no major installation hassles).
   * Some patience - the build tree is currently only designed to build directly from [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons/jspdo the original source tree] packaged together with [V8Convert]. i hope to modularize it someday to make it easy to drop in to arbitrary `v8::convert`-using clients.
 
 Supported Drivers:
