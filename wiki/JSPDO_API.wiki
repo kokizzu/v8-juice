@@ -1,0 +1,90 @@
+#summary The JSPDO JS API.
+
+<wiki:toc/>
+
+See also: [JSPDO], [JSPDO_HowTo]
+
+=JS API Overview=
+
+This page provides an overview of the [JSPDO] JS API. See the [JSPDO_HowTo] page for examples of using it.
+
+Unless noted otherwise, the API reports any errors via exceptions. Some types of errors (e.g. trying to convert a string to an integer) will not trigger explicit errors but may result in confusion on the user's part (e.g. converting a string to a number will always result in the value zero).
+
+=JSPDO Class=
+
+This class is synonymous with a database connection. Its main responsibilities are establishing a connection and doling out "statement" objects via its `prepare()` method.
+
+|| *Method* || *Description* ||
+|| `JSPDO(dsn[,userName,password])` || Connects to the database described in the given DSN string. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki for details]. ||
+|| `void exec(string)` || Executes simple SQL statements (those not returning values). ||
+|| `Statement prepare(string)` || "Prepares" SQL code for execution. This is the only legal way to construct Statement objects. ||
+|| `void close()` || Closes the db connection and frees any C-level resources allocated for the connection, _except_ for Statements, which _must_ be `finalize()`d _before_ their db is closed. ||
+|| `int lastInsertId()` || Returns the "most recent" insertion ID for this connection, but this might not be the ID one may expect (triggers can cause IDs to be updated in ways opaque to the client application). ||
+|| `void begin()` || Starts a transaction. Nested transactions are not supported. ||
+|| `void commit()` || Commits the current opened transaction. ||
+|| `void rollback()` || Rolls back the current transaction. ||
+
+Instance properties (read-only!):
+
+|| `string driverName` || The name of the underlying driver ("sqlite3" or "mysql5"). ||
+|| `int errorCode` || The most recent error code (driver-specific). May be reset by the next call into the API. The code 0 is universally understood as success and a non-0 value is driver-dependent. ||
+|| `string errorText` || The most recent error string (driver-specific). May be reset by the next call into the API. ||
+
+
+Class-level properties (read-only!) (properties of the constructor function):
+
+|| `Array driverList` || A list of the names of all available database drivers. ||
+|| `Object columnTypes` || Mapping of symbolic names to integer values for use with the `columnType()` member of the statement class. ||
+
+
+=JSPDO.Statement=
+
+This class represents both prepared SQL statements and result-set data. This merging of functionality was inspired by PHP's PDO (which i happen to quite like). 
+
+These objects are _only_ to be created by calling `JSPDO.prepare()`, and not via a constructor call. The constructor is visible as `JSPDO.Statement`, but it is only in the public API so that clients may use it for `instanceof` checks. It should not be called by client code and the constructor's arguments are not publicly documented.
+
+|| *Method* || *Description* ||
+|| `void bind(index[,value])` || Binds a value (default=NULL) to the given _1-based_ parameter index or name (in the form `:paramName`). The _type_ of the given value determines how the value is bound (e.g. as an integer, double, or string). ||
+|| `void bind(Array)` || Binds each value in the given array to the next subsequent bindable paramter. e.g. `bind([7,null,11])` binds parameters 1 to 3 with the given values. ||
+|| `void bind(Object)` || Binds each key/value pair in the given object, treating the object's keys as bound parameter names. e.g. `bind({':p1',':p2':...})` ||
+|| `bool step()` || "Steps" one row through a result set or executes a non-result query. Returns false if it is at the end of the set (or the query had no data to return, like an `INSERT`) or true if it successfully fetched a row. ||
+|| `Array stepArray()` || Like `step()` but returns all of the columns from the fetched row as an array of values. It returns `null` at the end of the result set. ||
+|| `Array stepObject()` || Like `step()` but returns all of the columns from the fetched row as an Object, using the column names as the object keys. It returns `null` at the end of the result set. ||
+|| `mixed get(index)` || Returns a value from a fetched row, using the given _0-based_ column index. (The inconsistency is not mine - that's just how SQL APIs work!) This function _must not ever_ be called unless `step()` has returned true. Violating that leads to undefined behaviour. The JS type of the returned value will be deduced based on the database's data type. That basically means numbers "should" carry over as-is, SQL `NULL` translates to `null`, and everything else will be treated as a string. ||
+|| `string columnName(index)` || The name of the 0-based result set column. ||
+|| `int columnType(index)` || The cpdo-defined type ID for row data from the given 0-based column index. (Do not rely on stable values between releases!) ||
+|| `void reset()` || Re-sets a statement so that it can be re-executed. Call this after each iteration when changing the values of bound parameters in a loop. ||
+|| `int paramIndex(string)` || Returns the 1-based index of the given named bound parameter, or 0 if no such parameter is found. When using MySQL (which doesn't natively support named parameters), please read [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 the fine manual] regarding potential caveats. ||
+
+Instance properties (read-only!):
+
+|| `int errorCode` || The most recent error code (driver-specific). May be cleared by the next call into the API. The code 0 is universally understood as success and a non-0 value is driver-dependent. ||
+|| `string errorText` || The most recent error string (driver-specific). May be cleared by the next call into the API. ||
+|| `int paramCount` || The number of bound parameters in a prepared statement. ||
+|| `int columnCount` || The number of columns in the current result set. ||
+
+The majority of the functions report errors via exceptions. Because of that, statement-handling code _really really really should always_  be wrapped in a `try/finally` block, like this:
+
+{{{
+var st;
+try {
+    st = mydb.prepare(...);
+    ... use st ...
+}
+finally { if(st) st.finalize(); }
+}}}
+
+Note that the `catch` part is optional - if it's not there then the behaviour is as if we had written `catch(e){throw e;}`. The important part is that the `finally` block is always executed, regardless of whether or not we catch the exception.
+
+We could rewrite the above example a bit more briefly:
+
+
+{{{
+var st = mydb.prepare(...);
+try {
+    ... use st ...
+}
+finally { st.finalize(); }
+}}}
+
+There _may_ a subtle difference, however, depending on the code's context. `mydb.prepare()` might throw. In the second example, we would not catch that exception, but instead propagate it up the stack chain. Because of that, the `finally` block doesn't need to check if `st` was set. However, in some code constructs blindly propagating that exception might lead to resource leaks stemming from _other_ native objects which have specific cleanup requirements.
