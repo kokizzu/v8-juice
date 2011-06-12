@@ -1,9 +1,9 @@
 #summary How to use JSPDO
 #labels Phase-UserDocs,Topic-JS-API
 
-<wiki:toc></wiki:toc>
+<wiki:toc/>
 
-See also: [JSPDO]
+See also: [JSPDO], [JSPDO_API]
 
 This page gives an overview of how to do just about everything there is to do with the [JSPDO] API.
 
@@ -109,7 +109,7 @@ st = db.prepare("SELECT ... WHERE a=? AND b=?");
 // Bind as array:
 st.bind(["v8-juice","JSPDO"]);
 
-// Two binds by index:
+// Two binds by index: (remember: binding uses 1-based parameter indexes!
 st.bind(1,"v8-juice");
 st.bind(2,"JSPDO");
 }}}
@@ -136,6 +136,43 @@ st.bind(2,"JSPDO");
 
 *Achtung:* named parameters support is an _optional_ feature for the underlying db drivers. Both of the current drivers support them, however (it can optionally be _disabled_ [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 in the MySQL driver]).
 
+To get the index of a given parameter name:
+
+{{{
+var index = st.paramIndex(":paramName");
+}}}
+
+That will return 0 if the parameter is not found (bind parameters are 1-based), as opposed to throwing an exception.
+
+
+==Fetching Row Data==
+
+`step()` is used to fetch row data and `get()` is used to get individual values from a row. It is _absolutely illegal_ to call `get()` unless `step()` returns true.
+
+`get()` takes a _0-based_ column index and returns the JS value for that column (insofar as possible - it will throw if it can't figure out what to do).
+
+{{{
+var st = db.prepare("SELECT ...");
+var i, row;
+try {
+  while( row = st.step() ) {
+    for( i = 0; i < st.columnCount; ++i ) {
+      print('Column #'+i+' type='+st.columnType(i)+': '+st.get(i));
+    }
+  }
+}
+finally { if(st) st.finalize(); }
+}}}
+
+It is normally simpler (but arguably less efficient) to use one of the other `step()` variants:
+
+{{{
+while( var row = st.stepArray() ) print(row.join('\t'));
+// Or:
+while( var row = st.stepObject() ) print(JSON.stringify(row));
+}}}
+
+Using `stepArray()` _might_ not be notably less efficient than a manually loop (this is not entirely clear), but `stepObject()` is almost certainly less efficient, in large part because it has to re-calculate and copy the column names for each iteration.
 
 ==Preparing INSERT Statement==
 
