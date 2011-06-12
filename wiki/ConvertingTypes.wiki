@@ -129,8 +129,8 @@ namespace v8 { namespace juice { namespace convert {
 template <>
 struct JSToNative<MyType>
 {
-    typedef MyType * result_type;
-    result_type operator()( Handle<Value> const & h ) const
+    typedef MyType * ResultType;
+    ResultType operator()( Handle<Value> const & h ) const
     {
        // This impl works together with WeakJSClassCreator():
        return ::v8::juice::WeakJSClassCreator<MyType>::GetNative( h );
