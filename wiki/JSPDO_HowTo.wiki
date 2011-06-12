@@ -1,6 +1,5 @@
-#labels Phase-UserDocs,Topic-JS-API
-
 #summary How to use JSPDO
+#labels Phase-UserDocs,Topic-JS-API
 
 <wiki:toc></wiki:toc>
 
@@ -51,6 +50,60 @@ db.exec("SQL GOES HERE");
 
 The JS API does not yet have routines for handling escaping. To avoid escaping problems altogether, and help avoid potential SQL injection attacks, always use prepared statements. i so strongly believe in the value of prepared statements that i currently have no plans to ever add escaping-related functions to the JS API.
 
+==Preparing SQL Statements==
+
+"Non-simple" SQL, e.g. those require values acquired at runtime, requires the use of so-called "prepared statements", which are created like this:
+
+{{{
+var st = db.prepare("SQL GOES HERE");
+}}}
+
+That returns an object of the class `JSPDO.Statement` (a bit of a misnomer, since it is also holds result set data). It throws an exception on error, in which case `db.errorCode` and `db.errorText` _hopefully_ contain some useful information about the error.
+
+The next sections show how to use a prepared shatement for various types of queries.
+
+==Binding Parameters==
+
+The API supports executing "plain SQL" and prepared statements, but it does not have APIs for escaping SQL. This is an intentional design decision intended to avoid the can of worms which comes along with escaping. Using prepared statements is superior in every way to executing "plain" SQL and doing the value escaping in the client code.
+
+We can bind parameters to queries before executing them, as demonstrated below...
+
+{{{
+st = db.prepare("SELECT ... WHERE a=? AND b=?");
+
+// The following approaches are equivalent:
+
+// Bind as array:
+st.bind(["v8-juice","JSPDO"]);
+
+// Two binds by index:
+st.bind(1,"v8-juice");
+st.bind(2,"JSPDO");
+}}}
+
+Or the same query but using named parameters:
+
+{{{
+st = db.prepare("SELECT ... WHERE a=:p1 AND b=:p2");
+
+// The following approaches are equivalent:
+
+// Bind as object:
+st.bind({":p1":"v8-juice",":p2":"JSPDO"});
+
+// Two binds by index:
+st.bind(':p1',"v8-juice");
+st.bind(':p2',"JSPDO");
+
+// The following _might_ work, depending on the driver:
+st.bind(1,"v8-juice");
+st.bind(2,"JSPDO");
+// Again: do not mix named and unnamed parameter binding!
+}}}
+
+*Achtung:* named parameters support is an _optional_ feature for the underlying db drivers. Both of the current drivers support them, however (it can optionally be _disabled_ [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 in the MySQL driver]).
+
+
 ==Preparing INSERT Statement==
 
 {{{
@@ -99,8 +152,7 @@ var st;
 try {
     st = db.prepare("SELECT a as a, b as b from mytbl");
     // st is now a Statement object. These objects are not
-    // to be instantiated directly by clients (the constructor
-    // is an anonymous function, in fact!), but only via
+    // to be instantiated directly by clients, but only via
     // JSPDO.prepare().
 
     // You can also bind parameters here if you need to,
@@ -132,44 +184,7 @@ finally {
 }
 }}}
 
-==Binding Parameters==
-
-The API supports executing "plain SQL" and prepared statements, but it does not have APIs for escaping SQL. This is an intentional design decision intended to avoid the can of worms which comes along with escaping. Using prepared statements is superior in every way to executing "plain" SQL and doing the value escaping in the client code.
-
-We can bind parameters to queries before executing them, as demonstrated below...
-
-{{{
-st = db.prepare("SELECT ... WHERE a=? AND b=?");
-
-// The following are all equivalent:
-// Bind as array:
-st.bind(["v8-juice","JSPDO"]);
-
-// Two binds by index:
-st.bind(1,"v8-juice");
-st.bind(2,"JSPDO");
-}}}
-
-Or the same query but using named parameters:
-
-{{{
-st = db.prepare("SELECT ... WHERE a=:p1 AND b=:p2");
-
-// The following are all equivalent:
-// Bind as object:
-st.bind({":p1":"v8-juice",":p2":"JSPDO"});
-
-// Two binds by index:
-st.bind(':p1',"v8-juice");
-st.bind(':p2',"JSPDO");
-
-// The following _might_ work, depending on the driver:
-st.bind(1,"v8-juice");
-st.bind(2,"JSPDO");
-// Again: do not mix named and unnamed parameter binding!
-}}}
-
-*Achtung:* named parameters support is an _optional_ feature for the underlying db drivers. Both of the current drivers support them, however (they can optionally be _disabled_ [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 in the MySQL driver]).
+*Achtung:* if you do _not_ use an `AS` specifier for each column name, the database drivers _might_ return a string different than the one used in the select (this is driver-dependent). If you need specific column names, always use an `AS` clause, e.g. `SELECT A AS A, B AS B...`.
 
 ==Cleaning Up==
 
