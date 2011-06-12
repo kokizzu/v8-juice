@@ -11,21 +11,18 @@ This page gives an overview of how to do just about everything there is to do wi
 
 ==Connecting==
 
-To connect to a database we need a so-called DSN string and possibly user credentials. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full descriptions of the DSN strings.
+To connect to a database we need a so-called DSN string and possibly user credentials. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full descriptions of the DSN string format.
 
 Examples:
 
 {{{
 // For sqlite3:
 var db = new JSPDO("sqlite3:/path/to/db.sqlite3");
-// For MySQLv5:
-var dsn = ;
-// for mysql:
-// dsn = ;
-var db = new JSPDO("mysql5:dbname=abc;host=localhost;port=3306",
-                   "user","password");
-}}}
 
+// For MySQLv5:
+var db = new JSPDO("mysql5:dbname=abc;host=localhost",
+                   "user", "password");
+}}}
 
 ==Disconnecting==
 
@@ -40,15 +37,19 @@ db.close();
 
 After calling `close()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
 
+It is extremely important that _all_ objects returned from `db.prepare()` be destroyed (by calling their `finalize()` method) _before_ the db instance is destroyed. Violating this can lead to a crash when a dead object is stepped on (or another object re-allocated at the same address is mis-used! Thus clients _must not_ leave their destruction to the whims of the garbage collector. See below for how to easily ensure that such objects are cleaned up at the right time.
+
 =Queries=
 
 ==Running simple Queries==
+
+"Simple" SQL, without any runtime-bound arguments and/or returning no results, can most easily be run like this:
 
 {{{
 db.exec("SQL GOES HERE");
 }}}
 
-The JS API does not yet have routines for handling escaping. To avoid escaping problems altogether, and help avoid potential SQL injection attacks, always use prepared statements. i so strongly believe in the value of prepared statements that i currently have no plans to ever add escaping-related functions to the JS API.
+The JS API does not have routines for escaping SQL data. To avoid escaping problems altogether, and help avoid potential SQL injection attacks, always use prepared statements (see the next section). i so strongly believe in the value of prepared statements that i currently have no plans to ever add escaping-related functions to the JS API.
 
 ==Preparing SQL Statements==
 
@@ -60,11 +61,43 @@ var st = db.prepare("SQL GOES HERE");
 
 That returns an object of the class `JSPDO.Statement` (a bit of a misnomer, since it is also holds result set data). It throws an exception on error, in which case `db.errorCode` and `db.errorText` _hopefully_ contain some useful information about the error.
 
-The next sections show how to use a prepared shatement for various types of queries.
+For `SELECT`-like queries: after preparation, the `st.columnCount` property and the `st.columnName()` `st.columnType()` functions can be used to fetch information about a given column in the result set.
+
+==Executing Prepared Statements==
+
+`prepare()` compiles the SQL for use with the database but does not execute it. To run the SQL:
+
+{{{
+st.step();
+}}}
+
+That will execute the code and, in the case of queries returning data, populate `st` with the results from the first row of the result set.
+
+If the SQL is a `SELECT` statement then we need to loop over it:
+
+{{{
+while( st.step() ) {
+   ... we got a row ...
+   ... use st.get()
+}
+}}}
+
+`step()` returns true if a row was fetched, false at the end of a result set or non-returning query, and throws an exception on error. The functions `stepArray()` and `stepObject()` can be used to step/read the row data in a single operation:
+
+{{{
+var row;
+while( (row = st.stepArray()) ) print(row.join('\t'));
+// Or:
+while( (row = st.stepObject()) ) print(JSON.stringify(row));
+}}}
+
+The next sections show how to use a prepared statement for various types of queries.
 
 ==Binding Parameters==
 
 The API supports executing "plain SQL" and prepared statements, but it does not have APIs for escaping SQL. This is an intentional design decision intended to avoid the can of worms which comes along with escaping. Using prepared statements is superior in every way to executing "plain" SQL and doing the value escaping in the client code.
+
+Statement objects created from SQL containing bound parameters will have a numeric `paramCount` property telling the user how many parameters the query has for binding purposes.
 
 We can bind parameters to queries before executing them, as demonstrated below...
 
@@ -125,7 +158,7 @@ finally {
 }
 }}}
 
-Note that when binding parameters, databases use _1-based_ indexes, whereas when _fetching_ data (see the next example), _0-based_ indexes are used. i didn't create these conventions - i just try to follow them.
+Note that when binding parameters databases use _1-based_ indexes, whereas when _fetching_ data (via the `get()` method), _0-based_ indexes are used. i didn't create these conventions - i just follow them.
 
 You can also bind parameters by name, as demonstrated here:
 
@@ -184,7 +217,7 @@ finally {
 }
 }}}
 
-*Achtung:* if you do _not_ use an `AS` specifier for each column name, the database drivers _might_ return a string different than the one used in the select (this is driver-dependent). If you need specific column names, always use an `AS` clause, e.g. `SELECT A AS A, B AS B...`.
+*Achtung:* if you do _not_ use an `AS` specifier for each column name, the database drivers _might_ return a string different than the one used in the `SELECT` code (this is driver-dependent). If you need specific column names, always use an `AS` clause, e.g. `SELECT A AS A, B AS B...`.
 
 ==Cleaning Up==
 
