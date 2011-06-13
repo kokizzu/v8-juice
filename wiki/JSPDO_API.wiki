@@ -1,4 +1,5 @@
 #summary The JSPDO JS API.
+#labels Phase-UserDocs,Topic-JS-API
 
 <wiki:toc/>
 
