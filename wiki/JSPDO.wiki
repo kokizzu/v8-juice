@@ -30,6 +30,7 @@ The more significant ones:
   * Document it. i'll do that once i'm happy with it.
   * Add several convenience functions for fetching and binding column data as an object (key/value pairs).
   * The underlying C lib is missing a couple of features which might be needed for advanced use, but it's functional enough for everything i've needed to do so far.
+  * Refactor the build process to make it easily droppable into arbitrary client trees.
 
 ==Plugging JSPDO into your Application==
 
