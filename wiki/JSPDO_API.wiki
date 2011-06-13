@@ -59,10 +59,11 @@ The options supported by the function are:
 || `string sql` || The SQL code to run. ||
 || `mixed bind` || An object or array of data to bind to the statement before execution. If it is a function then `f(statement,bindData)` is called (one time!), where `bindData` is the value of this object's `bindData` member. ||
 || `any bindData` || Optional data passed to `bind` if it is a function. ||
-|| `function foreach(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. ||
+|| `function foreach(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. The 2nd argument is the value of this object's `foreachData` member. The 3rd argument is the statement itself. ||
 || `string mode` || If == "array", `foreach()` is passed an array object as the 1st parameter. "object" passes an object as the 1st parameter. Anything else causes the statement object itself to be passed. ||
 || `any foreachData` || Optional data passed as the 2nd argument to `foreach()`. ||
 
+Note that the `foreach()` function is passed the statement handle as its final parameter. This is _only_ so that clients can fetch the column names if they need to. _Do not_ call `step()` or `bind()` on the handle from the `foreach()` callback - doing so will lead to unpredictable results and/or errors.
 
 == fetchAll()==
 
