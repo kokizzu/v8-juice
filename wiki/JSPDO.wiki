@@ -34,7 +34,7 @@ The more significant ones:
 
 ==Plugging JSPDO into your Application==
 
-TODO: document how to do this.
+See [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/README.txt the README file] for details.
 
 
 =Important Details to Keep in Mind=
