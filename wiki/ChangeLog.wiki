@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 June 13*
+  * Added [JSPDO].
+
 *2011 Feb 2*
   * Added several const-overload-resolution fixes to templates in the the v8::juice::convert API. Thanks go to Sai Koushik for reporting the problem and providing code which demonstrated it.
 
