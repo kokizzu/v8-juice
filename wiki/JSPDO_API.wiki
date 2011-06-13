@@ -58,7 +58,7 @@ db.execForeach({
 
 The options supported by the function are:
 
-|| `mixed sql` || The SQL (string) code to run. It may also be a Statement object, but note that this function will finalize it (regardless of success or failure). ||
+|| `mixed sql` || The SQL (string) code to run. It may also be a Statement object, but this function _will not_ finalize it (regardless of success or failure). i.e. such an object is still owned by the caller. ||
 || `mixed bind` || An object or array of data to bind to the statement before execution. If it is a function then `f(statement,bindData)` is called (one time!), where `bindData` is the value of this object's `bindData` member. ||
 || `any bindData` || Optional data passed to `bind` if it is a function. ||
 || `function foreach(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. The 2nd argument is the value of this object's `foreachData` member. The 3rd argument is the statement itself. ||
