@@ -17,7 +17,7 @@ This class is synonymous with a database connection. Its main responsibilities a
 
 || *Method* || *Description* ||
 || `JSPDO(dsn[,userName,password])` || Connects to the database described in the given DSN string. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki for details]. ||
-|| `void exec(string)` || Executes simple SQL statements (those not returning values). ||
+|| `void exec(sql)` || Executes simple SQL string statements (those not returning values). If `sql` is-a Object, then it behaves identically to `execForeach()`. ||
 || `Statement prepare(string)` || "Prepares" SQL code for execution. This is the only legal way to construct Statement objects. ||
 || `void close()` || Closes the db connection and frees any C-level resources allocated for the connection, _except_ for Statements, which _must_ be `finalize()`d _before_ their db is closed. ||
 || `int lastInsertId()` || Returns the "most recent" insertion ID for this connection, but this might not be the ID one may expect (triggers can cause IDs to be updated in ways opaque to the client application). ||
@@ -40,9 +40,9 @@ Class-level properties (read-only!) (properties of the constructor function):
 || `Array driverList` || A list of the names of all available database drivers. ||
 || `Object columnTypes` || Mapping of symbolic names to integer values for use with the `columnType()` member of the statement class. ||
 
-== execForeach() ==
+== exec(Object) and execForeach(Object) ==
 
-`JSPDO.execForeach()` can be used to execute a query and call a callback function on each iteration:
+`exec(Object)` and `execForeach(Object)` can be used to execute a query and call a callback function on each iteration:
 
 {{{
 db.execForeach({
@@ -108,6 +108,7 @@ These objects are _only_ to be created by calling `JSPDO.prepare()`, and not via
 || `int columnType(index)` || The cpdo-defined type ID for row data from the given 0-based column index. (Do not rely on stable values between releases!) ||
 || `void reset()` || Re-sets a statement so that it can be re-executed. Call this after each iteration when changing the values of bound parameters in a loop. ||
 || `int paramIndex(string)` || Returns the 1-based index of the given named bound parameter, or 0 if no such parameter is found. When using MySQL (which doesn't natively support named parameters), please read [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 the fine manual] regarding potential caveats. ||
+|| `string paramName(index)` || Returns the bound parameter name at the given 1-based index, or null if the index is out of bounds (it does not throw on out-of-bounds like most other functions). ||
 
 Instance properties (read-only!):
 
@@ -116,6 +117,8 @@ Instance properties (read-only!):
 || `int paramCount` || The number of bound parameters in a prepared statement. ||
 || `int columnCount` || The number of columns in the current result set. ||
 || `string sql` || The SQL string passed to the constructor. ||
+|| `Array columnNames` || The names of the columns, for `SELECT`-like queries, else null. ||
+|| `Array paramNames` || The names of all bound column parameters, if any, else null. Note that the array indexes are 0-based whereas the `bind()` API uses 1-based indexes! ||
 
 The majority of the functions report errors via exceptions. Because of that, statement-handling code _really really really should always_  be wrapped in a `try/finally` block, like this:
 
