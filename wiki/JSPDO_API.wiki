@@ -24,8 +24,8 @@ This class is synonymous with a database connection. Its main responsibilities a
 || `void begin()` || Starts a transaction. Nested transactions are not supported. ||
 || `void commit()` || Commits the current opened transaction. ||
 || `void rollback()` || Rolls back the current transaction. ||
-|| `void execForeach()` || Executes a query and calls a callback for each row. ||
-|| `void fetchAll()` || Executes a query and returns all result records. ||
+|| `void execForeach(object)` || Executes a query and calls a callback for each row. Described in detail below. ||
+|| `void fetchAll(object)` || Executes a query and returns all result records. Described in detail below. ||
 
 Instance properties (read-only!):
 
