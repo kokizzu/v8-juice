@@ -1,320 +1,140 @@
-#summary How to use JSPDO
+#summary The JSPDO JS API.
 
 <wiki:toc/>
 
-See also: [JSPDO], [JSPDO_API]
+See also: [JSPDO], [JSPDO_HowTo]
 
-This page gives an overview of how to do just about everything there is to do with the [JSPDO] API.
+=JS API Overview=
 
-=Managing Connections=
+This page provides an overview of the [JSPDO] JS API. See the [JSPDO_HowTo] page for examples of using it.
 
-==Connecting==
+Unless noted otherwise, the API reports any errors via exceptions. Some types of errors (e.g. trying to convert a string to an integer) will not trigger explicit errors but may result in confusion on the user's part (e.g. converting a string to a number will always result in the value zero).
 
-To connect to a database we need a so-called DSN string and possibly user credentials. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full descriptions of the DSN string format.
+=JSPDO Class=
 
-Examples:
+This class is synonymous with a database connection. Its main responsibilities are establishing a connection and doling out "statement" objects via its `prepare()` method.
 
-{{{
-// For sqlite3:
-var db = new JSPDO("sqlite3:/path/to/db.sqlite3");
-// For an in-memory database use: "sqlite3::memory:"
+|| *Method* || *Description* ||
+|| `JSPDO(dsn[,userName,password])` || Connects to the database described in the given DSN string. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki for details]. ||
+|| `void exec(string)` || Executes simple SQL statements (those not returning values). ||
+|| `Statement prepare(string)` || "Prepares" SQL code for execution. This is the only legal way to construct Statement objects. ||
+|| `void close()` || Closes the db connection and frees any C-level resources allocated for the connection, _except_ for Statements, which _must_ be `finalize()`d _before_ their db is closed. ||
+|| `int lastInsertId()` || Returns the "most recent" insertion ID for this connection, but this might not be the ID one may expect (triggers can cause IDs to be updated in ways opaque to the client application). ||
+|| `void begin()` || Starts a transaction. Nested transactions are not supported. ||
+|| `void commit()` || Commits the current opened transaction. ||
+|| `void rollback()` || Rolls back the current transaction. ||
+|| `void execForeach()` || Executes a query and calls a callback for each row. ||
+|| `void fetchAll()` || Executes a query and returns all result records. ||
 
-// For MySQLv5:
-var db = new JSPDO("mysql5:dbname=abc;host=localhost",
-                   "user", "password");
-}}}
+Instance properties (read-only!):
 
-==Disconnecting==
-
-It is imperative that client code always close a db handle when he is done with it, as opposed to relying on the garbage collector (which may literally never be called).
-
-To do that:
-
-{{{
-db.close();
-}}}
+|| `string driverName` || The name of the underlying driver ("sqlite3" or "mysql5"). ||
+|| `int errorCode` || The most recent error code (driver-specific). May be reset by the next call into the API. The code 0 is universally understood as success and a non-0 value is driver-dependent. ||
+|| `string errorText` || The most recent error string (driver-specific). May be reset by the next call into the API. ||
 
 
-After calling `close()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
+Class-level properties (read-only!) (properties of the constructor function):
 
-It is extremely important that _all_ objects returned from `db.prepare()` be destroyed (by calling their `finalize()` method) _before_ the db instance is destroyed. Violating this can lead to a crash when a dead object is stepped on (or another object re-allocated at the same address is mis-used! Thus clients _must not_ leave their destruction to the whims of the garbage collector. See below for how to easily ensure that such objects are cleaned up at the right time.
+|| `Array driverList` || A list of the names of all available database drivers. ||
+|| `Object columnTypes` || Mapping of symbolic names to integer values for use with the `columnType()` member of the statement class. ||
 
-=Queries=
+== execForeach() ==
 
-==Running simple Queries==
-
-"Simple" SQL, without any runtime-bound arguments and/or returning no results, can most easily be run like this:
+`JSPDO.execForeach()` can be used to execute a query and call a callback function on each iteration:
 
 {{{
-db.exec("SQL GOES HERE");
-}}}
-
-The JS API does not have routines for escaping SQL data. To avoid escaping problems altogether, and help avoid potential SQL injection attacks, always use prepared statements (see the next section). i so strongly believe in the value of prepared statements that i currently have no plans to ever add escaping-related functions to the JS API.
-
-==Preparing SQL Statements==
-
-"Non-simple" SQL, e.g. those require values acquired at runtime, requires the use of so-called "prepared statements", which are created like this:
-
-{{{
-var st = db.prepare("SQL GOES HERE");
-}}}
-
-That returns an object of the class `JSPDO.Statement` (a bit of a misnomer, since it is also holds result set data). It throws an exception on error, in which case `db.errorCode` and `db.errorText` _hopefully_ contain some useful information about the error.
-
-For `SELECT`-like queries: after preparation, the `st.columnCount` property and the `st.columnName()` and `st.columnType()` functions can be used to fetch information about a given column in the result set.
-
-==Executing Prepared Statements==
-
-`prepare()` compiles the SQL for use with the database but does not execute it. To run the SQL:
-
-{{{
-st.step();
-}}}
-
-That will execute the code and, in the case of queries returning data, populate `st` with the results from the first row of the result set.
-
-If the SQL is a `SELECT` statement then we need to loop over it:
-
-{{{
-while( st.step() ) {
-   ... we got a row ...
-   ... use st.get()
-}
-}}}
-
-`step()` returns true if a row was fetched, false at the end of a result set or non-returning query, and throws an exception on error. On error its `errorCode` and `errorText` properties "should" give an indication of the problem.
-
-The functions `stepArray()` and `stepObject()` can be used to step/read the row data in a single operation.
-
-The next sections show how to use a prepared statement for various types of queries.
-
-==Binding Parameters==
-
-The API supports executing "plain SQL" and prepared statements, but it does not have APIs for escaping SQL. This is an intentional design decision intended to avoid the can of worms which comes along with escaping. Using prepared statements is superior in every way to executing "plain" SQL and doing the value escaping in the client code.
-
-Statement objects created from SQL containing bound parameters will have a numeric `paramCount` property telling the user how many parameters the query has for binding purposes.
-
-We can bind parameters to queries before executing them, as demonstrated below...
-
-{{{
-st = db.prepare("SELECT ... WHERE a=? AND b=?");
-
-// The following approaches are equivalent:
-
-// Bind as array:
-st.bind(["v8-juice","JSPDO"]);
-
-// Two binds by index: (remember: binding uses 1-based parameter indexes!
-st.bind(1,"v8-juice");
-st.bind(2,"JSPDO");
-}}}
-
-Or the same query but using named parameters:
-
-{{{
-st = db.prepare("SELECT ... WHERE a=:p1 AND b=:p2");
-
-// The following approaches are equivalent:
-
-// Bind as object:
-st.bind({":p1":"v8-juice",":p2":"JSPDO"});
-
-// Two binds by index:
-st.bind(':p1',"v8-juice");
-st.bind(':p2',"JSPDO");
-
-// The following _might_ work, depending on the driver:
-st.bind(1,"v8-juice");
-st.bind(2,"JSPDO");
-// Again: do not mix named and unnamed parameter binding!
-}}}
-
-*Achtung:* named parameters support is an _optional_ feature for the underlying db drivers. Both of the current drivers support them, however (it can optionally be _disabled_ [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 in the MySQL driver]).
-
-To get the index of a given parameter name:
-
-{{{
-var index = st.paramIndex(":paramName");
-}}}
-
-That will return 0 if the parameter is not found (bind parameters are 1-based), as opposed to throwing an exception.
-
-==Fetching Column Names and Type Info==
-
-The column names of `SELECT`-like queries can be fetched using `columnName(index)`, which takes a 0-based index and throws if the index is out of bounds.
-
-The db-declared type of a given column (as interpreted by the db abstraction layer) can be fetched via `columnType(index)`, which also takes a 0-based index and throws if the index is out of bounds. The integer returned by that function can be used in conjunction with `JSPDO.columnTypes` to figure out what type of data the field holds:
-
-{{{
-var ct = JSPDO.columnTypes;
-switch( st.columnType(0) ) {
-    case ct.STRING: ...; break;
-    case ct.NULL: ...; break;
-    ...
-}
-}}}
-
-That said, knowing a field's db-declared type is seldom useful at the level of JS code.
-
-The entries in `JSPDO.columnTypes` are: `ERROR`, `NULL`, `INT8`, `INT16`, `INT32`, `INT64`, `FLOAT`, `DOUBLE`, `STRING`, `BLOB`, `CUSTOM`
-
-Some things to keep in the back of your bind about JS/DB data type conversions:
-
-  * v8's integer type only supports 32 bits, so doubles are used for numeric values larger than 32 bits.
-  * This API optimistically assumes that `BLOB`-declared fields contain string data (e.g. JSON) and will pass the data to the `v8::String::New()` constructor. If the data is indeed non-UTF8 binary data, this will lead to undefined results.
-  * Depending on the database, binding a value of a different type to a field might or might not produce an error. e.g. sqlite3 will (normally) bind anything to any column regardless of their declared types whereas MySQL won't bind a string to a numeric column (whether or not it returns an error or sets the value to 0 is up to the driver!).
-
-==Fetching Row Data==
-
-`step()` is used to fetch row data and `get()` is used to get individual values from a row. It is _absolutely illegal_ to call `get()` unless `step()` returns true.
-
-`get()` takes a _0-based_ column index and returns the JS value for that column (insofar as possible - it will throw if it can't figure out what to do).
-
-{{{
-var st = db.prepare("SELECT ...");
-var i, row;
-try {
-  while( row = st.step() ) {
-    for( i = 0; i < st.columnCount; ++i ) {
-      print('Column #'+i+' type='+st.columnType(i)+': '+st.get(i));
-    }
+db.execForeach({
+  sql:"SELECT a,b,c FROM mytbl",
+  mode:'array',
+  foreachData:{rows:0},
+  foreach:function(row,data,st){
+      ++data.rows;
+      print(row.join('\n'));
   }
-}
-finally { if(st) st.finalize(); }
+});
 }}}
 
-It is often simpler (but arguably less efficient) to use one of the other `step()` variants:
+The options supported by the function are:
+
+|| `string sql` || The SQL code to run. ||
+|| `mixed bind` || An object or array of data to bind to the statement before execution. If it is a function then `f(statement,bindData)` is called (one time!), where `bindData` is the value of this object's `bindData` member. ||
+|| `any bindData` || Optional data passed to `bind` if it is a function. ||
+|| `function foreach(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. ||
+|| `string mode` || If == "array", `foreach()` is passed an array object as the 1st parameter. "object" passes an object as the 1st parameter. Anything else causes the statement object itself to be passed. ||
+|| `any foreachData` || Optional data passed as the 2nd argument to `foreach()`. ||
+
+
+== fetchAll()==
+
+`fetchAll()` is an `execForeach()` wrapper which returns _all_ matching rows of a select-style query in the following structure:
 
 {{{
-var row;
-while( row = st.stepArray() ) print(row.join('\t'));
-// Or:
-while( row = st.stepObject() ) print(JSON.stringify(row));
+{ columns:[ column names... ], rows:[ records... ] }
 }}}
 
-Using `stepArray()` _might_ not be notably less efficient than a manually loop (this is not entirely clear), but `stepObject()` is almost certainly less efficient, in large part because it has to re-calculate and copy the column names for each iteration.
+It requires a single Object argument with the following properties: `sql`, `bind`, `bindData`, `mode`. All of those have the same semantics as they do for `execForeach()` execept that `mode` must be one of the strings (`object`,`array`) and defaults to `array`.
 
-If memory usage is of no concern and your data sets are not too large, you can use `fetchAll()` to load all results for a query in a single call:
+Each record in the `rows` array will be either an Object or Array, depending on the `mode` option.
+
+Example:
 
 {{{
-var res = db.fetchAll({sql:"SELECT ..."}); // it also supports other options
+var res = db.fetchAll({
+    sql:"SELECT a AS a,b AS b,c AS c FROM mytbl",
+    mode:"object", // default == "array"
+});
 print(JSON.stringify(res));
 }}}
 
-==Example: INSERT==
+
+=JSPDO.Statement=
+
+This class represents both prepared SQL statements and result-set data. This merging of functionality was inspired by PHP's PDO (which i happen to quite like). 
+
+These objects are _only_ to be created by calling `JSPDO.prepare()`, and not via a constructor call. The constructor is visible as `JSPDO.Statement`, but it is only in the public API so that clients may use it for `instanceof` checks. It should not be called by client code and the constructor's arguments are not publicly documented.
+
+|| *Method* || *Description* ||
+|| `void bind(index[,value])` || Binds a value (default=NULL) to the given _1-based_ parameter index or name (in the form `:paramName`). The _type_ of the given value determines how the value is bound (e.g. as an integer, double, or string). ||
+|| `void bind(Array)` || Binds each value in the given array to the next subsequent bindable paramter. e.g. `bind([7,null,11])` binds parameters 1 to 3 with the given values. ||
+|| `void bind(Object)` || Binds each key/value pair in the given object, treating the object's keys as bound parameter names. e.g. `bind({':p1',':p2':...})` ||
+|| `bool step()` || "Steps" one row through a result set or executes a non-result query. Returns false if it is at the end of the set (or the query had no data to return, like an `INSERT`) or true if it successfully fetched a row. ||
+|| `Array stepArray()` || Like `step()` but returns all of the columns from the fetched row as an array of values. It returns `null` at the end of the result set. ||
+|| `Array stepObject()` || Like `step()` but returns all of the columns from the fetched row as an Object, using the column names as the object keys. It returns `null` at the end of the result set. ||
+|| `mixed get(index)` || Returns a value from a fetched row, using the given _0-based_ column index. (The inconsistency is not mine - that's just how SQL APIs work!) This function _must not ever_ be called unless `step()` has returned true. Violating that leads to undefined behaviour. The JS type of the returned value will be deduced based on the database's data type. That basically means numbers "should" carry over as-is, SQL `NULL` translates to `null`, and everything else will be treated as a string. ||
+|| `string columnName(index)` || The name of the 0-based result set column. ||
+|| `int columnType(index)` || The cpdo-defined type ID for row data from the given 0-based column index. (Do not rely on stable values between releases!) ||
+|| `void reset()` || Re-sets a statement so that it can be re-executed. Call this after each iteration when changing the values of bound parameters in a loop. ||
+|| `int paramIndex(string)` || Returns the 1-based index of the given named bound parameter, or 0 if no such parameter is found. When using MySQL (which doesn't natively support named parameters), please read [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 the fine manual] regarding potential caveats. ||
+
+Instance properties (read-only!):
+
+|| `int errorCode` || The most recent error code (driver-specific). May be cleared by the next call into the API. The code 0 is universally understood as success and a non-0 value is driver-dependent. ||
+|| `string errorText` || The most recent error string (driver-specific). May be cleared by the next call into the API. ||
+|| `int paramCount` || The number of bound parameters in a prepared statement. ||
+|| `int columnCount` || The number of columns in the current result set. ||
+
+The majority of the functions report errors via exceptions. Because of that, statement-handling code _really really really should always_  be wrapped in a `try/finally` block, like this:
 
 {{{
 var st;
 try {
-    st = db.prepare("INSERT INTO mytbl(a,b,c) VALUES(?,?,?)");
-
-    // Bind some values:
-    st.bind(1, "value of a");
-    st.bind(2, 32);
-    st.bind(3, null); // same as: st.bind(3)
-    // Alternately: st.bind(["value of a",32,null]);
-
-    // Now execute the query:
-    st.step();
-}
-finally {
-    if( st ) st.finalize(); // this is very important!!!
-}
-}}}
-
-Note that when binding parameters databases use _1-based_ indexes, whereas when _fetching_ data (via the `get()` method), _0-based_ indexes are used. i didn't create these conventions - i just follow them.
-
-You can also bind parameters by name, as demonstrated here:
-
-{{{
-var st;
-try {
-   st = db.prepare("INSERT INTO mytbl(a,b,c) VALUES(:pA, :pB, :pC)");
-   st.bind(":pA", "hi, world");
-   // Bind several named parameters at once by using an object:
-   st.bind({":pB":42, ":pC": "..."});
-   st.step();
-}
-finally {
-  if( st ) st.finalize();
-}
-}}}
-
-It is not recommended that one mix name- and index-based parameters because the abstraction API may have no control over how the underlying driver may (or may not) handle such uses.
-
-===Fetching the Most Recent Insertion ID===
-
-After inserting a row it is often desirable to find out its ID. _If_ a database table is set up with an auto-incrementing id field (its name is irrelevant, but we will call it `id` here). To fetch the "last insert ID":
-
-{{{
-var id = db.lastInsertId();
-// or: db.lastInsertId("tableOrSequenceHint")
-}}}
-
-The second form is not used by the current drivers, but the API supports it in case future drivers do.
-
-*Achtung:* when using server-side on-insert triggers in a db table and those triggers perform an insert as a side-effect of the client-performed insert, the id returned by `lastInsertId()` might not be id of the record the client inserted! It might instead by the id of the record inserted by the trigger (which is probably in a different table!).
-
-==Example: SELECT==
-
-{{{
-var st;
-try {
-    st = db.prepare("SELECT a as a, b as b from mytbl");
-    // st is now a Statement object. These objects are not
-    // to be instantiated directly by clients, but only via
-    // JSPDO.prepare().
-
-    // You can also bind parameters here if you need to,
-    // as demonstrated for INSERT queries.
-
-    // Now execute the query, stepping over each row in the
-    // result set:
-
-    // Display a header line with the column names:    
-    var separator = '\t';
-    var names = [], cols = [], i = 0;
-    for( i = 0; i < sp.columnCount; ++i ) {
-        names.push( sp.columnName(i) );
-    }
-    print( names.join(separator) );
-
-    // Now step through each row and print its columns out:
-    var cols = [];
-    while( st.step() ) {
-        cols.length = 0;
-        for( i = 0; i < sp.columnCount; ++i ) {
-            cols.push( st.get(i) );
-        }
-        print(cols.join(separator));
-    }
-}
-finally {
-    if( st ) st.finalize(); // this is very important!!!
-}
-}}}
-
-*Achtung:* if you do _not_ use an `AS` specifier for each column name, the database drivers _might_ return a string different than the one used in the `SELECT` code (this is driver-dependent). If you need specific column names, always use an `AS` clause, e.g. `SELECT A AS A, B AS B...`.
-
-==Cleaning Up==
-
-_Always_ call `finalize()` when you are done with statement/result set object:
-
-{{{
-st.finalize();
-}}}
-
-After calling `finalize()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
-
-As mentioned above, it is always best to put statement operations in a `try/finally` block:
-
-{{{
-var st;
-try {
-    st = db.prepare(...);
-    ...
+    st = mydb.prepare(...);
+    ... use st ...
 }
 finally { if(st) st.finalize(); }
 }}}
 
-You may of course include an explicit `catch` block if you like (if you do not, the exception is propagated but the statement is still cleaned up).
+Note that the `catch` part is optional - if it's not there then the behaviour is as if we had written `catch(e){throw e;}`. The important part is that the `finally` block is always executed, regardless of whether or not we catch the exception.
+
+We could rewrite the above example a bit more briefly:
+
+
+{{{
+var st = mydb.prepare(...);
+try {
+    ... use st ...
+}
+finally { st.finalize(); }
+}}}
+
+There _may_ a subtle difference, however, depending on the code's context. `mydb.prepare()` might throw. In the second example, we would not catch that exception, but instead propagate it up the stack chain. Because of that, the `finally` block doesn't need to check if `st` was set. However, in some code constructs blindly propagating that exception might lead to resource leaks stemming from _other_ native objects which have specific cleanup requirements.
