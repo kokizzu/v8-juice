@@ -142,7 +142,7 @@ That will return 0 if the parameter is not found (bind parameters are 1-based), 
 
 ==Fetching Column Names and Type Info==
 
-The column names of `SELECT`-like queries can be fetched using `columnName(index)`, which takes a 0-based index and throws if the index is out of bounds.
+The column names of `SELECT`-like queries can be fetched using `columnName(index)`, which takes a 0-based index and throws if the index is out of bounds. Alternately, the `columnNames` property (an array) can be used to get them. Bound parameter names can be fetched via `paramName(index)` (which throws on out-of bounds) or the `paramNames` array. The `column/paramNames` properties will have "a false value" (not an empty array) if the statement has no fetchable columns resp. named bound parameters.
 
 The db-declared type of a given column (as interpreted by the db abstraction layer) can be fetched via `columnType(index)`, which also takes a 0-based index and throws if the index is out of bounds. The integer returned by that function can be used in conjunction with `JSPDO.columnTypes` to figure out what type of data the field holds:
 
