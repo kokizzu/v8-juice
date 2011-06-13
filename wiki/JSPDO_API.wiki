@@ -32,6 +32,7 @@ Instance properties (read-only!):
 || `string driverName` || The name of the underlying driver ("sqlite3" or "mysql5"). ||
 || `int errorCode` || The most recent error code (driver-specific). May be reset by the next call into the API. The code 0 is universally understood as success and a non-0 value is driver-dependent. ||
 || `string errorText` || The most recent error string (driver-specific). May be reset by the next call into the API. ||
+|| `string dsn` || The DSN string passed to the constructor. ||
 
 
 Class-level properties (read-only!) (properties of the constructor function):
@@ -57,7 +58,7 @@ db.execForeach({
 
 The options supported by the function are:
 
-|| `string sql` || The SQL code to run. ||
+|| `mixed sql` || The SQL (string) code to run. It may also be a Statement object, but note that this function will finalize it (regardless of success or failure). ||
 || `mixed bind` || An object or array of data to bind to the statement before execution. If it is a function then `f(statement,bindData)` is called (one time!), where `bindData` is the value of this object's `bindData` member. ||
 || `any bindData` || Optional data passed to `bind` if it is a function. ||
 || `function foreach(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. The 2nd argument is the value of this object's `foreachData` member. The 3rd argument is the statement itself. ||
@@ -114,6 +115,7 @@ Instance properties (read-only!):
 || `string errorText` || The most recent error string (driver-specific). May be cleared by the next call into the API. ||
 || `int paramCount` || The number of bound parameters in a prepared statement. ||
 || `int columnCount` || The number of columns in the current result set. ||
+|| `string sql` || The SQL string passed to the constructor. ||
 
 The majority of the functions report errors via exceptions. Because of that, statement-handling code _really really really should always_  be wrapped in a `try/finally` block, like this:
 
