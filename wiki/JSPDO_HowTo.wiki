@@ -262,23 +262,18 @@ The second form is not used by the current drivers, but the API supports it in c
 var st;
 try {
     st = db.prepare("SELECT a as a, b as b from mytbl");
-    // st is now a Statement object. These objects are not
-    // to be instantiated directly by clients, but only via
-    // JSPDO.prepare().
+    // st is now a Statement object.
 
     // You can also bind parameters here if you need to,
-    // as demonstrated for INSERT queries.
-
-    // Now execute the query, stepping over each row in the
-    // result set:
+    // as demonstrated elsewhere.
 
     // Display a header line with the column names:    
     var separator = '\t';
-    var names = [], cols = [], i = 0;
-    for( i = 0; i < sp.columnCount; ++i ) {
-        names.push( sp.columnName(i) );
-    }
-    print( names.join(separator) );
+    print( sp.columnNames.join(separator) );
+
+
+    // Now execute the query, stepping over each row in the
+    // result set:
 
     // Now step through each row and print its columns out:
     var cols = [];
