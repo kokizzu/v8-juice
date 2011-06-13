@@ -18,6 +18,7 @@ Examples:
 {{{
 // For sqlite3:
 var db = new JSPDO("sqlite3:/path/to/db.sqlite3");
+// For an in-memory database use: "sqlite3::memory:"
 
 // For MySQLv5:
 var db = new JSPDO("mysql5:dbname=abc;host=localhost",
@@ -61,7 +62,7 @@ var st = db.prepare("SQL GOES HERE");
 
 That returns an object of the class `JSPDO.Statement` (a bit of a misnomer, since it is also holds result set data). It throws an exception on error, in which case `db.errorCode` and `db.errorText` _hopefully_ contain some useful information about the error.
 
-For `SELECT`-like queries: after preparation, the `st.columnCount` property and the `st.columnName()` `st.columnType()` functions can be used to fetch information about a given column in the result set.
+For `SELECT`-like queries: after preparation, the `st.columnCount` property and the `st.columnName()` and `st.columnType()` functions can be used to fetch information about a given column in the result set.
 
 ==Executing Prepared Statements==
 
@@ -82,14 +83,9 @@ while( st.step() ) {
 }
 }}}
 
-`step()` returns true if a row was fetched, false at the end of a result set or non-returning query, and throws an exception on error. The functions `stepArray()` and `stepObject()` can be used to step/read the row data in a single operation:
+`step()` returns true if a row was fetched, false at the end of a result set or non-returning query, and throws an exception on error. On error its `errorCode` and `errorText` properties "should" give an indication of the problem.
 
-{{{
-var row;
-while( (row = st.stepArray()) ) print(row.join('\t'));
-// Or:
-while( (row = st.stepObject()) ) print(JSON.stringify(row));
-}}}
+The functions `stepArray()` and `stepObject()` can be used to step/read the row data in a single operation.
 
 The next sections show how to use a prepared statement for various types of queries.
 
@@ -144,6 +140,30 @@ var index = st.paramIndex(":paramName");
 
 That will return 0 if the parameter is not found (bind parameters are 1-based), as opposed to throwing an exception.
 
+==Fetching Column Names and Type Info==
+
+The column names of `SELECT`-like queries can be fetched using `columnName(index)`, which takes a 0-based index and throws if the index is out of bounds.
+
+The db-declared type of a given column (as interpreted by the db abstraction layer) can be fetched via `columnType(index)`, which also takes a 0-based index and throws if the index is out of bounds. The integer returned by that function can be used in conjunction with `JSPDO.columnTypes` to figure out what type of data the field holds:
+
+{{{
+var ct = JSPDO.columnTypes;
+switch( st.columnType(0) ) {
+    case ct.STRING: ...; break;
+    case ct.NULL: ...; break;
+    ...
+}
+}}}
+
+That said, knowing a field's db-declared type is seldom useful at the level of JS code.
+
+The entries in `JSPDO.columnTypes` are: `ERROR`, `NULL`, `INT8`, `INT16`, `INT32`, `INT64`, `FLOAT`, `DOUBLE`, `STRING`, `BLOB`, `CUSTOM`
+
+Some things to keep in the back of your bind about JS/DB data type conversions:
+
+  * v8's integer type only supports 32 bits, so doubles are used for numeric values larger than 32 bits.
+  * This API optimistically assumes that `BLOB`-declared fields contain string data (e.g. JSON) and will pass the data to the `v8::String::New()` constructor. If the data is indeed non-UTF8 binary data, this will lead to undefined results.
+  * Depending on the database, binding a value of a different type to a field might or might not produce an error. e.g. sqlite3 will (normally) bind anything to any column regardless of their declared types whereas MySQL won't bind a string to a numeric column (whether or not it returns an error or sets the value to 0 is up to the driver!).
 
 ==Fetching Row Data==
 
@@ -164,17 +184,25 @@ try {
 finally { if(st) st.finalize(); }
 }}}
 
-It is normally simpler (but arguably less efficient) to use one of the other `step()` variants:
+It is often simpler (but arguably less efficient) to use one of the other `step()` variants:
 
 {{{
-while( var row = st.stepArray() ) print(row.join('\t'));
+var row;
+while( row = st.stepArray() ) print(row.join('\t'));
 // Or:
-while( var row = st.stepObject() ) print(JSON.stringify(row));
+while( row = st.stepObject() ) print(JSON.stringify(row));
 }}}
 
 Using `stepArray()` _might_ not be notably less efficient than a manually loop (this is not entirely clear), but `stepObject()` is almost certainly less efficient, in large part because it has to re-calculate and copy the column names for each iteration.
 
-==Preparing INSERT Statement==
+If memory usage is of no concern and your data sets are not too large, you can use `fetchAll()` to load all results for a query in a single call:
+
+{{{
+var res = db.fetchAll({sql:"SELECT ..."}); // it also supports other options
+print(JSON.stringify(res));
+}}}
+
+==Example: INSERT==
 
 {{{
 var st;
@@ -215,7 +243,20 @@ finally {
 
 It is not recommended that one mix name- and index-based parameters because the abstraction API may have no control over how the underlying driver may (or may not) handle such uses.
 
-==Preparing SELECT Queries==
+===Fetching the Most Recent Insertion ID===
+
+After inserting a row it is often desirable to find out its ID. _If_ a database table is set up with an auto-incrementing id field (its name is irrelevant, but we will call it `id` here). To fetch the "last insert ID":
+
+{{{
+var id = db.lastInsertId();
+// or: db.lastInsertId("tableOrSequenceHint")
+}}}
+
+The second form is not used by the current drivers, but the API supports it in case future drivers do.
+
+*Achtung:* when using server-side on-insert triggers in a db table and those triggers perform an insert as a side-effect of the client-performed insert, the id returned by `lastInsertId()` might not be id of the record the client inserted! It might instead by the id of the record inserted by the trigger (which is probably in a different table!).
+
+==Example: SELECT==
 
 {{{
 var st;
@@ -264,5 +305,17 @@ _Always_ call `finalize()` when you are done with statement/result set object:
 st.finalize();
 }}}
 
-
 After calling `finalize()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
+
+As mentioned above, it is always best to put statement operations in a `try/finally` block:
+
+{{{
+var st;
+try {
+    st = db.prepare(...);
+    ...
+}
+finally { if(st) st.finalize(); }
+}}}
+
+You may of course include an explicit `catch` block if you like (if you do not, the exception is propagated but the statement is still cleaned up).
