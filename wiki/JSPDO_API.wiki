@@ -74,9 +74,11 @@ Note that the `each()` function is passed the statement handle as its final para
 { columns:[ column names... ], rows:[ records... ] }
 }}}
 
-It requires a single Object argument with the following properties: `sql`, `bind`, `bindData`, `mode`. All of those have the same semantics as they do for `exec({...})` execept that `mode` must be one of the strings (`object`,`array`) and defaults to `array`.
+It requires a single Object argument with the following properties: `sql`, `bind`, `bindData`, `mode`. All of those have the same semantics as they do for `exec({...})` exeept that `mode` must be one of the strings (`object`,`array`) and defaults to `array`.
 
-Each record in the `rows` array will be either an Object or Array, depending on the `mode` option.
+Each record in the `columns` array corresponds to a result set column name. Their order is guaranteed to be the same as in the query.
+
+Each record in the `rows` array will be either an Object or Array, depending on the `mode` option. If it is an object, the keys (property names) are _not_  guaranteed to be in the same order as in the original query (the ordering depends on internal details of v8's Object class implementation). In practice, they appear to be the same, but it's not _guaranteed_, which is why the `columns` property is always provided (because the ordering can be guaranteed).
 
 Example:
 
