@@ -17,14 +17,13 @@ This class is synonymous with a database connection. Its main responsibilities a
 
 || *Method* || *Description* ||
 || `JSPDO(dsn[,userName,password])` || Connects to the database described in the given DSN string. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki for details]. ||
-|| `void exec(sql)` || Executes simple SQL string statements (those not returning values). If `sql` is-a Object, then it behaves identically to `execForeach()`. ||
+|| `void exec(string|Object)` || Executes simple SQL string statements (those not returning values) or, if passed an Object, allows executing a callback for each returned row. Described in detail below. ||
 || `Statement prepare(string)` || "Prepares" SQL code for execution. This is the only legal way to construct Statement objects. ||
 || `void close()` || Closes the db connection and frees any C-level resources allocated for the connection, _except_ for Statements, which _must_ be `finalize()`d _before_ their db is closed. ||
 || `int lastInsertId()` || Returns the "most recent" insertion ID for this connection, but this might not be the ID one may expect (triggers can cause IDs to be updated in ways opaque to the client application). ||
 || `void begin()` || Starts a transaction. Nested transactions are not supported. ||
 || `void commit()` || Commits the current opened transaction. ||
 || `void rollback()` || Rolls back the current transaction. ||
-|| `void execForeach(object)` || Executes a query and calls a callback for each row. Described in detail below. ||
 || `void fetchAll(object)` || Executes a query and returns all result records. Described in detail below. ||
 
 Instance properties (read-only!):
@@ -40,16 +39,16 @@ Class-level properties (read-only!) (properties of the constructor function):
 || `Array driverList` || A list of the names of all available database drivers. ||
 || `Object columnTypes` || Mapping of symbolic names to integer values for use with the `columnType()` member of the statement class. ||
 
-== exec(Object) and execForeach(Object) ==
+== exec(Object) ==
 
-`exec(Object)` and `execForeach(Object)` can be used to execute a query and call a callback function on each iteration:
+`exec(Object)` can be used to execute a query and call a callback function on each iteration:
 
 {{{
-db.execForeach({
+db.exec({
   sql:"SELECT a,b,c FROM mytbl",
   mode:'array',
-  foreachData:{rows:0},
-  foreach:function(row,data,st){
+  callbackData:{rows:0},
+  each:function(row,data,st){
       ++data.rows;
       print(row.join('\n'));
   }
@@ -61,21 +60,21 @@ The options supported by the function are:
 || `mixed sql` || The SQL (string) code to run. It may also be a Statement object, but this function _will not_ finalize it (regardless of success or failure). i.e. such an object is still owned by the caller. ||
 || `mixed bind` || An object or array of data to bind to the statement before execution. If it is a function then `f(statement,bindData)` is called (one time!), where `bindData` is the value of this object's `bindData` member. ||
 || `any bindData` || Optional data passed to `bind` if it is a function. ||
-|| `function foreach(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. The 2nd argument is the value of this object's `foreachData` member. The 3rd argument is the statement itself. ||
-|| `string mode` || If == "array", `foreach()` is passed an array object as the 1st parameter. "object" passes an object as the 1st parameter. Anything else causes the statement object itself to be passed. ||
-|| `any foreachData` || Optional data passed as the 2nd argument to `foreach()`. ||
+|| `function each(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. The 2nd argument is the value of this object's `callbackData` member. The 3rd argument is the statement itself. If this is not a function then the statement is `step()`ed only one time (this is only useful for `INSERTS` and such). ||
+|| `string mode` || If == "array", `each()` is passed an array object as the 1st parameter. "object" passes an object as the 1st parameter. Anything else causes the statement object itself to be passed. ||
+|| `any callbackData` || Optional data passed as the 2nd argument to `each()`. ||
 
-Note that the `foreach()` function is passed the statement handle as its final parameter. This is _only_ so that clients can fetch the column names if they need to. _Do not_ call `step()` or `bind()` on the handle from the `foreach()` callback - doing so will lead to unpredictable results and/or errors.
+Note that the `each()` function is passed the statement handle as its final parameter. This is _only_ so that clients can fetch the column names if they need to. _Do not_ call `step()` or `bind()` on the handle from the `each()` callback - doing so will lead to unpredictable results and/or errors.
 
 == fetchAll()==
 
-`fetchAll()` is an `execForeach()` wrapper which returns _all_ matching rows of a select-style query in the following structure:
+`fetchAll()` is an `exec({...})` wrapper which returns _all_ matching rows of a select-style query in the following structure:
 
 {{{
 { columns:[ column names... ], rows:[ records... ] }
 }}}
 
-It requires a single Object argument with the following properties: `sql`, `bind`, `bindData`, `mode`. All of those have the same semantics as they do for `execForeach()` execept that `mode` must be one of the strings (`object`,`array`) and defaults to `array`.
+It requires a single Object argument with the following properties: `sql`, `bind`, `bindData`, `mode`. All of those have the same semantics as they do for `exec({...})` execept that `mode` must be one of the strings (`object`,`array`) and defaults to `array`.
 
 Each record in the `rows` array will be either an Object or Array, depending on the `mode` option.
 
