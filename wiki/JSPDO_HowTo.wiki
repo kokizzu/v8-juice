@@ -7,6 +7,21 @@ See also: [JSPDO], [JSPDO_API]
 
 This page gives an overview of how to do just about everything there is to do with the [JSPDO] API.
 
+=Building and Installing=
+
+==Unix-like Setups==
+
+First, [http://code.google.com/p/v8-juice/source/checkout check out] the `convert` directory:
+
+  [http://code.google.com/p/v8-juice/source/browse/#svn/convert]
+
+Then see [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/README.txt README.txt] (after check-out: `convert/addons/jspdo/README.txt`).
+
+==Adding to Your Project==
+
+See the [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/README.txt the JSPDO README].
+
+
 =Managing Connections=
 
 ==Connecting==
