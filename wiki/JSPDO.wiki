@@ -3,7 +3,7 @@
 
 <wiki:toc max_depth='4'></wiki:toc>
 
-*Achtung:* JSPDO is very new (born on 2011-06-11), thus it is beta. i may still randomly change how it behaves, it is quite lacking in documentation, and it is possibly missing some significant features.
+*Achtung:* JSPDO is very new (born on 2011-06-11), thus it is beta. i may still randomly change how it behaves and it is possibly missing some significant features. That said, it seems to work as advertised here in the wiki pages (they are updated as changes are committed, and represent the current checked-in state of the code).
 
 See also: [JSPDO_API], [JSPDO_HowTo]
 
@@ -27,8 +27,6 @@ See the [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo home page] for more i
 
 The more significant ones:
 
-  * Document it. i'll do that once i'm happy with it.
-  * Add several convenience functions for fetching and binding column data as an object (key/value pairs).
   * The underlying C lib is missing a couple of features which might be needed for advanced use, but it's functional enough for everything i've needed to do so far.
   * Refactor the build process to make it easily droppable into arbitrary client trees.
 
@@ -45,7 +43,7 @@ Database connections and the objects they create have very strict rules about wh
 
 ==#2: Error Reporting/Handling==
 
-The vast majority of the functions in this API report errors via exceptions. Exceptions, for all their merits, make it easy to write code which does not properly finalize query/result set data. Get in the habit of using a `try/finally` block, as shown in the examples below, to ensure that statement handles are properly cleaned up. If a single statement handle is closed _after_ its database connection is closed, the v8 engine may very well crash as the statement handle steps on an invalidated database handle.
+The vast majority of the functions in this API report errors via exceptions. Exceptions, for all their merits, make it easy to write code which does not properly finalize query/result set data. Get in the habit of using a `try/finally` block, as shown in [JSPDO_HowTo the examples], to ensure that statement handles are properly cleaned up. If a single statement handle is closed _after_ its database connection is closed, the v8 engine may very well crash as the statement handle steps on an invalidated database handle.
 
 ==#3: No Binary Data!==
 
