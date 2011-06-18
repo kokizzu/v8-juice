@@ -1,7 +1,6 @@
 #summary Overview of the ClassWrap API
 #labels Topic-CPlusPlus,Phase-UserDocs
 
-*ACHTUNG:* The `ClassWrap` API was introduced on 20091025 - it is quite new and may still change significantly over time.
 
 <wiki:toc max_depth='3'></wiki:toc>
 
@@ -11,8 +10,10 @@
 v8-juice's type conversions API to add features to the class binding
 process.
 
-!ClassWrap is an alternate API to ClassBinder for binding native
-classes to JS. Where ClassBinder is "monolithic", !ClassWrap is
+*Users of the [V8Convert] API* should see [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp ClassCreator.hpp] instead, which is based on [ClassWrap] API but isn't _quite_ as configurable.
+
+!ClassWrap is an alternate API to [ClassBinder] for binding native
+classes to JS. Where [ClassBinder] is "monolithic", !ClassWrap is
 policy-based. That is, it implements only the most basic binding options, leaving the real work
 to various policy classes. Policy classes can be specialized for a given
 type to provide additional features, and sensible defaults are installed
