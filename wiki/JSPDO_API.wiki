@@ -101,6 +101,7 @@ These objects are _only_ to be created by calling `JSPDO.prepare()`, and not via
 || `void bind(index[,value])` || Binds a value (default=NULL) to the given _1-based_ parameter index or name (in the form `:paramName`). The _type_ of the given value determines how the value is bound (e.g. as an integer, double, or string). ||
 || `void bind(Array)` || Binds each value in the given array to the next subsequent bindable paramter. e.g. `bind([7,null,11])` binds parameters 1 to 3 with the given values. ||
 || `void bind(Object)` || Binds each key/value pair in the given object, treating the object's keys as bound parameter names. e.g. `bind({':p1',':p2':...})` ||
+|| `void bind(Statement)` || Binds all columns from the `Statement` object argument to the columns in the current statement. This can be used, e.g. to copy results from one table into another. TODO: accept array of param column numbers/names to copy, instead of copying all. ||
 || `bool step()` || "Steps" one row through a result set or executes a non-result query. Returns false if it is at the end of the set (or the query had no data to return, like an `INSERT`) or true if it successfully fetched a row. ||
 || `Array stepArray()` || Like `step()` but returns all of the columns from the fetched row as an array of values. It returns `null` at the end of the result set. ||
 || `Array stepObject()` || Like `step()` but returns all of the columns from the fetched row as an Object, using the column names as the object keys. It returns `null` at the end of the result set. ||
@@ -118,8 +119,10 @@ Instance properties (read-only!):
 || `int paramCount` || The number of bound parameters in a prepared statement. ||
 || `int columnCount` || The number of columns in the current result set. ||
 || `string sql` || The SQL string passed to the constructor. ||
-|| `Array columnNames` || The names of the columns, for `SELECT`-like queries, else null. ||
-|| `Array paramNames` || The names of all bound column parameters, if any, else null. Note that the array indexes are 0-based whereas the `bind()` API uses 1-based indexes! ||
+|| `Array columnNames` || The names of the columns, for `SELECT`-like queries, else null. Equivalent to the function `columnName(int)`. ||
+|| `Array columnTypes` || Array equivalent to `columnType(int)`. Is null if the query is not a result-returning query. ||
+|| `Array paramNames` || The names of all bound column parameters, if any, else null. _Note that_ the array indexes are 0-based whereas the `bind()` API uses 1-based indexes! ||
+
 
 The majority of the functions report errors via exceptions. Because of that, statement-handling code _really really really should always_  be wrapped in a `try/finally` block, like this:
 
