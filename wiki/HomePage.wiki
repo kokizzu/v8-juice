@@ -23,7 +23,7 @@ v8-juice is believed to work well, without any undocumented crash conditions and
   * [http://flusspferd.org/ Flusspferd] is a similar library written for use with the [https://developer.mozilla.org/en/SpiderMonkey SpiderMonkey JavaScript engine]. (No longer maintained, as of mid-2011.)
   * [http://spiderape.sourceforge.net SpiderApe] is another (no longer maintained) C++ wrapper for the !SpiderMonkey engine, and much of v8-juice's architecture was originally adapted from that library.
 
-One of the interesting things about vu8, cproxyv8, v8cgi, and nodejs is that they're not mutually exclusive with v8-juice. While there is some overlap in functionality, each can provide some parts which the other cannot. e.g., in my humble opinion v8-juice's main strengths lie in its native/JS type-conversion bits, whereas nodejs has a much nicer module-based plugin system that the one v8-juice provides. vu8 has a much nicer class/module-binding system as well.
+One of the interesting things about vu8, cproxyv8, v8cgi, and nodejs is that they're not mutually exclusive with v8-juice. While there is some overlap in functionality, each can provide some parts which the other cannot. e.g., in my humble opinion v8-juice's main strengths lie in its native/JS type-conversion bits, whereas nodejs has a much nicer module-based plugin system than the one v8-juice provides. vu8 has a much nicer class/module-binding system as well.
 
 ==License==
 
