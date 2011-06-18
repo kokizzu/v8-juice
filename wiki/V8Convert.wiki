@@ -1,3 +1,5 @@
+#labels Phase-UserDocs,Topic-CPlusPlus,Featured
+
 #summary The v8::convert sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
@@ -308,3 +310,7 @@ PB::BindGetterSetterFunctions<std::string (),
 (Pedantic note: v8 apparently does not allow us to bind a setter without also binding a getter. My attempts to do so caused crashes.)
 
 JS properties can be bound to native _member_ properties similarly using the `MemberPropertyBinder` subclass of `PropertyBinder`. Note that for member binding to work, the JS class being bound must "wrap" that native class. i.e. that only works with "fully wrapped" classes.
+
+=Code Demos and Sample Bindings=
+
+The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the `v8::convert` source tree includes some sample v8 bindings created using this API. For example, a `ByteArray` class and [JSPDO] database access abstraction. Each of the "addons" includes a basic v8 shell app which includes the JS bindings provided by that addon, making it simple to try out the code before including it into one's own project.
