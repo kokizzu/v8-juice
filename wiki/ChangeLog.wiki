@@ -136,7 +136,7 @@ are at the top. Dates written extra large are release dates. This contains only 
   * Released new tarball
 
 *2009 March 17*
-  * More work on the sqlite3 plugin. Reimplemented sqlite3_exec() using the newer OO API.
+  * More work on the sqlite3 plugin. Reimplemented `sqlite3_exec()` using the newer OO API.
 
 *2009 March 16*
   * Added support for binding JS/C++ member variables (as opposed to functions). Supports all types which work with `CastToJS()` and `CastFromJS()`.
