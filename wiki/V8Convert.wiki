@@ -223,6 +223,53 @@ int my_callback( v8::Arguments const & argv )
 }
 }}}
 
+
+==Special Case: Overloading based on Arity==
+
+The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). It's a bit verbose, but it works, and it looks something like this:
+
+{{{
+// The funcs we want to overload:
+int myfunc1(int); // 1 arg
+int myfunc2(int, int); // 2 args
+int myfuncN( v8::Arguments const & ); // fallback handler (optional)
+
+// Set up a couple typedefs so that the following code is more readable:
+typedef cv::InCa< cv::FunctionToInvocationCallback<int (int), myfunc1> > my1;
+typedef cv::InCa< cv::FunctionToInvocationCallback<int (int,int), myfunc2> > my2;
+typedef cv::InCa< cv::FunctionToInvocationCallback<int (v8::Arguments const &), myfuncN> > myN;
+
+// More readability typedefs...
+
+// Proxy for N arguments:
+typedef cv::InCaOverloader< -1, // arity
+                            myN::Call // callback when arity matches
+                           > OloadN;
+
+// Proxy for 2 or N:
+typedef cv::InCaOverloader< 2, // arity
+                            my2::Call, // callback when airty matches
+                            OloadN::Call // callback when arity does NOT match
+                           > Oload2;
+
+// Proxy for 1 or 2 or N arugments:
+typedef cv::InCaOverloader< 1, my1::Call, Oload2::Call > OloadAll;
+
+
+// Now we have an InvocationCallback proxy which will dispatch based
+// on the number of arguments:
+InvocationCallback cb = OloadAll::Call
+
+// cb is now a function which basically says:
+// If passed 1 arg, call myfunc1(), else... If passed 2 args, call
+// myfunc2(), else... if passed anything else (including no args),
+// call myfuncN().
+}}}
+
+`InCaOverloader` can be chained this way (with increasing code uglification!) to support an arbitrary number of varying arities. The 3rd (optional) parameter is the callback to call if the arity of the call (at runtime) does not match the number given to the template. The default fallback callback throws a JS-side exception warning about the argument count mismatch.
+
+If an overloaded function needs to be able to take any number of arguments, it must itself be "!InvocationCallback-like" and the `InCaOverloader` must be given an arity value of `-1`. In addition, that entry should be the _last_ one in the `InCaOverloader` chain (because of how the arity value check works).
+
 ==Special Case: Unlocking the v8 Engine==
 
 Consider this function binding:
@@ -264,7 +311,6 @@ The code includes the following additional utilities:
 
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/properties.hpp properties.hpp] - templates for binding native global or member variables to JS objects. These basically work like `FunctionToInvocationCallback()` and friends, but create `v8::AccessorSetter()` and `v8::AccessorGetter()` implementations using templates to bind JS properties directly to native variables or to functions which proxy all get/set access on the JS property.
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp ClassCreator.hpp] - yet another C++-to-JS class binding mechanism. Based on v8-juice's [ClassWrap], but not _quite_ as configurable.
-
 
 == Binding Native Variables/Properties to JS ==
 
