@@ -1,5 +1,3 @@
-#labels Phase-UserDocs,Topic-CPlusPlus,Featured
-
 #summary The v8::convert sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
@@ -313,4 +311,10 @@ JS properties can be bound to native _member_ properties similarly using the `Me
 
 =Code Demos and Sample Bindings=
 
-The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the `v8::convert` source tree includes some sample v8 bindings created using this API. For example, a `ByteArray` class and [JSPDO] database access abstraction. Each of the "addons" includes a basic v8 shell app which includes the JS bindings provided by that addon, making it simple to try out the code before including it into one's own project.
+The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the `v8::convert` source tree includes some sample v8 bindings created using this API. The code includes:
+
+  * A `ByteArray` class.
+  * The [JSPDO] database access abstraction.
+  * A [V8Convert_Socket socket API].
+
+Each of the "addons" includes a basic v8 shell app which includes the JS bindings provided by that addon, making it simple to try out the code before including it into one's own project (on many Unix-like platforms, at least).
