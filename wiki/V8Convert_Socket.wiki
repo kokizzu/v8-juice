@@ -68,4 +68,4 @@ This class is used by the `Socket` class to allow the moderately efficient usage
 
 Please see the various `.js` files at:
 
-  [http://code.google.com/p/v8-juice/source/browse/convert/addons/#addons/socket]
+  [http://code.google.com/p/v8-juice/source/browse/convert/addons/socket]
