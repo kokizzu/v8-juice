@@ -13,7 +13,7 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 *2011 June 19*
   * Added an experimental [V8Convert_Socket socket API] based on [V8Convert].
-  * The project hit its 1500th commit today, averaging just over 3 commits per day since the code was imported into Google Code (before that it was maintained elsewhere for a few months).
+  * The project hit its 1500th commit today, which averages out to just over 3 commits per day since the code was imported into Google Code (before that it was maintained elsewhere for a few months).
 
 *2011 June 13*
   * Added [JSPDO] a couple days ago.
