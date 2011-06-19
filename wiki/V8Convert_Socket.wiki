@@ -14,11 +14,11 @@ This code requires [V8Convert] (which is header-only). The sources are here:
 
   [http://code.google.com/p/v8-juice/source/browse/convert/addons/]
 
-This module needs both the `socket` and `bytearray` directories.
+This module needs both the `socket` and `bytearray` directories. If you are building it directly from a checked-out copy of the main source, running `make` will also build a sample/test shell which includes the bindings.
 
 ==Adding the Bindings to your App==
 
-Grab the above source code and add the `cpp` files to your project.
+Grab the above source code and add the `cpp` files to your project (optionally compiling them as a separate static library or DLL).
 
 {{{
 #include "path/to/socket.hpp"
