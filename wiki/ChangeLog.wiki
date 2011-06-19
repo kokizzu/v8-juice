@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 June 19*
+  * Added an experimental [V8Convert_Socket socket API] based on [V8Convert].
+
 *2011 June 13*
   * Added [JSPDO] a couple days ago.
   * Added [http://whiki.wanderinghorse.net/wikis/v8-juice/ an off-site editor for the main wiki], which i now use as a staging ground for wiki edits.
