@@ -33,7 +33,7 @@ The bindings will be added to the given object, which is normally the v8 context
 ==API Overview==
 
 || *Method* || *Description* ||
-|| `new Socket( [int family=AF_INET [, int type=SOCK_DGRAM [, int protocol=0]]] )` || Constructor. TODO: add a ctor taking a configuration Object ||
+|| `new Socket( [int family=AF_INET [, int type=SOCK_STREAM [, int protocol=0]]] )` || Constructor. TODO: add a ctor taking a configuration Object ||
 || `void close()` || Closes the socket and frees all resources. Further access to native methods or properties on this object will leads to JS-side exceptions.  ||
 || `string toString()` || Returns a debugging-style string. ||
 || `int bind( string hostNameOrAddress, int port )` || "Binds" the socket to a given host/port. Throws on error. ||
