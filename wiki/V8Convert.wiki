@@ -359,8 +359,8 @@ JS properties can be bound to native _member_ properties similarly using the `Me
 
 The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the `v8::convert` source tree includes some sample v8 bindings created using this API. The code includes:
 
-  * A `ByteArray` class.
-  * The [JSPDO] database access abstraction.
+  * A `ByteArray` class (for handling binary data in JS space).
+  * A [JSPDO database access abstraction API].
   * A [V8Convert_Socket socket API].
 
 Each of the "addons" includes a basic v8 shell app which includes the JS bindings provided by that addon, making it simple to try out the code before including it into one's own project (on many Unix-like platforms, at least).
