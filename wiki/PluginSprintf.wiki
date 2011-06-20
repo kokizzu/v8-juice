@@ -5,7 +5,7 @@
 
 20090325: sprintf was copied back into the core lib because it'll be useful from several plugins.
 
-=`sprintf()` for JavaScript=
+=`sprintf()` for !JavaScript=
 
 The files `jssprintf.{h,cc}` contain an implementation of sprintf() for JS. It is independent of the rest of the library - those two files can be plugged in to arbitrary v8-based source trees.
 
