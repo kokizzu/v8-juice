@@ -1,3 +1,5 @@
+#labels Phase-UserDocs,Topic-JS-API
+
 #summary The JSPDO JS API.
 #labels Phase-UserDocs,Topic-JS-API
 
@@ -120,7 +122,7 @@ Instance properties (read-only!):
 || `int columnCount` || The number of columns in the current result set. ||
 || `string sql` || The SQL string passed to the constructor. ||
 || `Array columnNames` || The names of the columns, for `SELECT`-like queries, else null. Equivalent to the function `columnName(int)`. ||
-|| `Array columnTypes` || Array equivalent to `columnType(int)`. Is null if the query is not a result-returning query. ||
+|| ~~Array columnTypes~~ || ~~Mapping of symbolic names to integer values for use with the `columnType()` member of the statement class.~~ (Removed 20110620 because of a semantic incompatibility with `columnType()`.) ||
 || `Array paramNames` || The names of all bound column parameters, if any, else null. _Note that_ the array indexes are 0-based whereas the `bind()` API uses 1-based indexes! ||
 
 
@@ -149,3 +151,42 @@ finally { st.finalize(); }
 }}}
 
 There _may_ a subtle difference, however, depending on the code's context. `mydb.prepare()` might throw. In the second example, we would not catch that exception, but instead propagate it up the stack chain. Because of that, the `finally` block doesn't need to check if `st` was set. However, in some code constructs blindly propagating that exception might lead to resource leaks stemming from _other_ native objects which have specific cleanup requirements.
+
+=How to...=
+
+==Get the logical type of a column===
+
+{{{
+var t = myStatement.columnType(zero_based_index);
+}}}
+
+The return value will map to one of the values stored in `JSPDO.columnTypes`, which is a static set of string/integer pairs containing the logical type names and their C-level values. _Do not_ rely on the values being stable between releases - use only the symbolic names (the keys of the `JSPDO.columnTypes` object).
+
+The full list of type symbol names is: `ERROR`, `NULL`, `INT8`, `INT16`, `INT32`, `INT64`, `FLOAT`, `DOUBLE`, `STRING`, `BLOB`, `CUSTOM`
+
+Note that because v8's C++ API only supports integer values of 32 bits or less, JSPDO treats values greater than 32 bits as doubles. This _might_, depending on the db driver and schema-level settings, cause errors when trying to insert, e.g., a 33-bit value in a numeric db field declared as being 4 bytes (32 bits). JS itself does not really differentiate between integers and doubles - they're both classified as "numbers" in JS.
+
+Note that drivers may report different types for the same column in different rows of the same result set. This is because:
+
+  * This is how they report that a value is an SQL `NULL`.
+  * sqlite3 allows any type to be stored in any column, regardless of the schema-declared types.
+
+The MySQL driver, because it is "strongly typed", will always return the schema-declared type (or _something approximating it_!) _except_ in the case of SQL `NULL` values. It reports "is it NULL?" via a column type of `JSPDO.columnTypes.NULL`.
+
+==Find out if a column is `NULL`==
+
+The simplest way:
+
+{{{
+var v = myStatement.get(zero_based_index);
+if( null === v ) { ... it is an SQL NULL ... }
+}}}
+
+It can also be determined by looking at the driver-reported type of the column:
+
+{{{
+var t = myStatement.columnType(zero_based_index);
+if( JSPDO.columnTypes.NULL == t ) {
+   ... the value is SQL NULL ...
+}
+}}}
