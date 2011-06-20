@@ -33,4 +33,4 @@ hi, [object Object]!
 The function supports a few extension formatting options, such as `%h` to escape HTML, `%q` and `%Q` for SQL escaping, and `%t/%T` for URL encoding/decoding.
 
 It might be interesting to know that the native implementation code was derived from:
-http://fossil.wanderinghorse.net/repos/whprintf/
+[http://fossil.wanderinghorse.net/repos/whprintf/]
