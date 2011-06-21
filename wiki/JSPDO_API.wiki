@@ -168,7 +168,7 @@ try {
 finally { st.finalize(); }
 }}}
 
-Note that some functions and properties, e.g. `get()` and `columnNames` are only valid in the context of a successful call to `step()`. If called before `step()` has succeeded, those functions/properties will likely throw an exception if used.
+Note that some functions and properties, namely `get()`, are only valid in the context of a successful call to `step()`. If called before `step()` has succeeded, those API members will likely throw an exception if used.
 
 It is often more convenient to fetch all columns from a result set row at once. We can fetch them as an array of values:
 
