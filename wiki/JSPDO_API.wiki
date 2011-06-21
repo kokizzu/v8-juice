@@ -152,6 +152,38 @@ There _may_ a subtle difference, however, depending on the code's context. `mydb
 
 =How to...=
 
+This sections provides a brief overview of how to do certain things with the API. Please see the [JSPDO_HowTo] page for more details.
+
+==Step through result sets...===
+
+The `Statement.step()` function is used to iterate through result sets. It returns true if the statement object now contains the data for the next row, false at the end of the result set, and thrown on error.
+
+{{{
+var st = mydb.prepare("SELECT ...");
+try {
+  while( st.step() ) {
+    ... use st.get() and friends to get the data ...
+  }
+}
+finally { st.finalize(); }
+}}}
+
+Note that some functions and properties, e.g. `get()` and `columnNames` are only valid in the context of a successful call to `step()`. If called before `step()` has succeeded, those functions/properties will likely throw an exception if used.
+
+It is often more convenient to fetch all columns from a result set row at once. We can fetch them as an array of values:
+
+{{{
+var list;
+while( (list = st.stepArray()) ) { ... }
+}}}
+
+Or a set of key/value pairs:
+
+{{{
+var obj;
+while( (obj = st.stepObject()) ) { ... }
+}}}
+
 ==Get the logical type of a column===
 
 {{{
