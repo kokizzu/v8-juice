@@ -40,6 +40,8 @@ The bindings will be added to the given object, which is normally the v8 context
 || `int write(string|ByteArray data [,int length=data.length])` || Writes the given data to the socket. Returns the number of bytes written. ||
 || `int setTimeout( unsigned int seconds[, unsigned int microseconds=0] )` || Sets the i/o timeout for read/write operations. ||
 || `int setTimeoutMs( unsigned int ms )` || Sets the timeout in milliseconds. ||
+|| `int listen([int backlog])` || Tells the socket to enter listening mode. Returns 0 on success, throws on error. See [http://linux.die.net/man/2/listen man 2 listen] for details. The default backlog size is unspecified (more than 1 and less than 10). ||
+|| `Socket accept()` || Listens for a connection, blocking until one arrives or the socket timeout expires. The socket must have been `bind()`ed and `listen()` must have succeeded before this is called. Returns null if a timeout was reached, a new `Socket` instance on a successful connection, and throws for any other condition. ||
 || *Property* || *Description* ||
 || `Array[string address,int port] peerInfo` || Only valid after a connection is established. ||
 || `bool timeoutReached` || If a `read()` or `write()` call fails due to a timeout then this will be `true`. The value is re-set on each call to `read()` or `write()`. ||
