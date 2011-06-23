@@ -248,7 +248,7 @@ int my_callback( v8::Arguments const & argv )
 
 ==Special Case: Overloading based on Arity==
 
-The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). Two approaches are shown here, but i highly recommend the second one except for very simple (only two overloads) cases.
+The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). Two approaches are shown here, but i highly recommend the second one except for very simple cases (only two overloads).
 
 ===Approach 1: `InCaOverloader`===
 
@@ -298,7 +298,7 @@ If an overloaded function needs to be able to take any number of arguments, it m
 
 ===Approach 2: `InCaOverloadList`===
 
-The second approach is a bit less verbose and significantly more readable than `InCaOverloader`. It uses a "type list" to construct the list of overloads:
+The second approach is a bit significantly less verbose and more readable than `InCaOverloader` and auto "automatically" determined the overload arities. It uses a "type list" to construct the list of overloads:
 
 {{{
 // Overload 4 variants of a member function:
@@ -313,9 +313,9 @@ typedef cv::InCaOverloadList< cv::tmp::TypeList<
 v8::InvocationCallback cb = MyOverloads::Call;
 }}}
 
-Note that only one line of that code is evaluated at runtime - the rest is all done at compile-time. The above generates a whole family of `v8::InvocationCallback` functions (at least (overload count + 1) of them, though there are a couple others hidden behind the scenes) and combines them into a single dispatcher function, `MyOverloads::Call`.
+Note that only one line of that code is evaluated at runtime - the rest is all done at compile-time. The above generates a whole family of `v8::InvocationCallback` functions (at least (overload count + 1) of them, though there are a couple others hidden behind the scenes) and combines them into a single `v8::InvocationCallback` dispatcher function, `MyOverloads::Call()`.
 
-There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is at least 10 (and the library can be built to support many more than that).
+There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is _at least_ 10 (and the library can be built to support many more than that). (If you're overloading 10+ variants of one function then the design probably needs to be reconsidered!)
 
 ==Special Case: Unlocking the v8 Engine==
 
@@ -342,6 +342,44 @@ When that callback is called, the calling code is locking v8, meaning that other
 
 This library currently doesn't have a generic mechanism for adding this support via the provided templates. i have some ideas on how it might be done, but nothing has materialized yet.
 
+==Special Case: Catching native Exceptions==
+
+v8 does not like for client-thrown exceptions to propagate through it, and therefore code like the following can be dangerous to an app's lifetime:
+
+{{{
+v8::InvocationCallback cb = cv::FunctionToInCa< int (),someFuncWhichThrows>::Call;
+}}}
+
+If that function throws in the context of a JS-initiated call, it might crash v8. The internal function binding mechanisms catch `(std::exception const &)` and convert it to a v8 exception. They catch all other exceptions and convert them to an "unknown error" in JS. However, that behaviour is largely for historical reasons and may be removed in favour of what follows...
+
+The `InCaCatcher` class template creates an `InvocationCallback` function which calls a client-specified callback function and catches any exceptions of a given type. It has a template option which specifies whether other exceptions should be propagated or converted into "unknown error" for JS, and this property allows us to chain the catchers to handle multiple concrete exception types.
+
+It can, in principal, catch and report any exception type which meets the following conditions: it must have a const member method taking no arguments and returning an error message value in a type which is convertible to JS using `CastToJS()`. e.g. `char const * std::exception::what()` qualifies nicely. A hypothetical (`int MyException::GetErrorCode()`) would also qualify, provided it is const. (The const limitation is unfortunate - my template-fu isn't quite good enough, i guess.)
+
+`InCaCatcher` has a relatively detailed interface, which is documented (in corresponding detail) here:
+
+  [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/detail/invocable_core.hpp invocable_core.hpp]
+
+Search that file for `struct InCaCatcher` and the API docs are just above that.
+
+The `InCaCatcher_std` template is a `InCaCatcher` convenience wrapper which handles `std::exception` errors.
+
+Example usage:
+
+{{{
+typedef InCaCatcher<
+       std::exception, // type to catch
+       char const *(), // signature of message-getter
+       &std::exception::what, // message-fetching method
+       MyCallbackWhichThrows, // the InvocationCallback to try/catch
+       false // whether to propagate other exceptions or not
+   > Catcher;
+
+v8::InvocationCallback cb = Catcher::Call;
+}}}
+
+For examples of chaining these to support multiple exception types, see the API documentation.
+
 =Forwarding v8-supplied Function Arguments to non-bound Functions=
 
   * `forwardFunction()`
@@ -358,6 +396,7 @@ The code includes the following additional utilities:
 
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/properties.hpp properties.hpp] - templates for binding native global or member variables to JS objects. These basically work like `FunctionToInvocationCallback()` and friends, but create `v8::AccessorSetter()` and `v8::AccessorGetter()` implementations using templates to bind JS properties directly to native variables or to functions which proxy all get/set access on the JS property.
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp ClassCreator.hpp] - yet another C++-to-JS class binding mechanism. Based on v8-juice's [ClassWrap], but not _quite_ as configurable.
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp V8Shell.hpp] provides a really simple way to get v8 integrated quickly into an application. Just create one object, optionally extend the JS environment with your functionality, and start running JS code through it. See [http://code.google.com/p/v8-juice/source/browse/convert/addons/shell-skel/shell.cpp shell.cpp] for sample application. 
 
 == Binding Native Variables/Properties to JS ==
 
