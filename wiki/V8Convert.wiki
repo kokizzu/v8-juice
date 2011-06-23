@@ -21,9 +21,9 @@ All of the conversions are compile-time typesafe where possible and fail gracefu
 
 This code originated as the core-most component of the [http://code.google.com/p/v8-juice v8-juice library]. After a couple years i felt compelled to refactor it into a toolkit usable by arbitrary v8-using clients, doing a bit of cleanup along the way. The eventual intention is that this code will replace the v8::juice::convert code.
 
-The most important functions and types, from a user's perspective, are listed below. Most of the code in this library are internal template specializations which take care of the dirty work. Typical clients won't typically need more than what's listed here.
+The most important functions and types, from a user's perspective, are listed below. Most of the code in this library are internal template specializations which take care of the dirty work. Typical clients won't normally need more than what's described on this page.
 
-A very special thanks goes to James Pike, author of [https://github.com/tsa/vu8 vu8], for his helpful tips on getting function-pointer-style template arguments working.
+A very special thanks goes to James Pike, author of [https://github.com/tsa/vu8 vu8], for his helpful tips on getting function-pointer-style template arguments working. These allow for more readable templates when compared to the v8-juice API.
 
 =Implementing Custom Conversions=
 
@@ -60,7 +60,7 @@ myInvocationCallback( v8::Arguments const & ) {
   * `ConstMethodToInvocationCallback()`
 
 By using only those 3 function templates (all with identical interfaces) clients can bind
-near-arbitrary native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
+a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
 
 Note that binding to non-static member member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See the included demo code for how to set this up (we just have to create a `JSToNative<>` specialization).
 
@@ -77,7 +77,10 @@ Some examples of binding functions and methods:
 ...
 namespace cv = v8::convert;
 
-v8::InvocationCallback cb;
+v8::InvocationCallback cb; // v8's generic callback function interface
+
+// Here's how we can "convert" various native functions to
+// v8::InvocationCallback functions:
 
 // Function: int puts(char const *)
 cb = cv::FunctionToInvocationCallback<
@@ -104,9 +107,9 @@ cb = cv::ConstMethodToInvocationCallback<
 cb = cv::FunctionToInvocationCallback<bool (),v8::V8::IdleNotification>;
 }}}
 
-Those examples demonstrate _all_ of the public API needed for converting functions to `v8::InvocationCallback` equivalents!
+Those examples demonstrate _all_ of the public API needed for converting functions to `v8::InvocationCallback` equivalents! There are some additional templates which add features on top of those, but those are all one really needs for most basic function bindings.
 
-It might be interesting to note that the above functions are created, but not actually called, by the above code (note that we pass no non-template parameters to them).
+It might be interesting to note that the above functions are _created_, but _not actually called_, by the above code (note that we pass no non-template parameters to them).
 
 == Caveats and Unsupported Functions ==
 
@@ -119,19 +122,19 @@ Some examples of function signatures which _cannot_ (or must not) be converted u
 
 Supported, but ill-advised:
 
-  * `anything * func(anything)`: if the function returns dynamically-allocated memory, or transfers ownership of the returned memory to the caller, it _will_ cause a leak unless that memory has been somehow given over to v8 from within that function.
+  * `anything * func(anything)`: if the function returns dynamically-allocated memory, or transfers ownership of the returned memory to the caller, it _will_ cause a leak unless that memory has been somehow given over to v8 from within that function. That said... when using a class-binding mechanism which creates the native object from JS code and has enough internal plumbing to support an implementation of `NativeToJS<MyType>`, we can in fact make this conversion legal for many client-defined types.
 
 == The (`char [const] *`) Problem ==
 
 Because of issues regarding the ownership and lifetimes of raw C-style string, functions taking `(char const *)` have a few relatively minor limitations:
 
-  * The C-strings must be `NULL` or null-terminated. It cannot be used with binary data.
+  * The C-strings _must_ be `NULL` or nul-terminated. It cannot be used with binary data because they are converted to JS strings.
   * Non-const (`char *`) is not supported. We could partially implement it using a proxy, but the changes would get lost on their way back to JS space because the JS calling conventions do not allow us to pass changes to strings back this way.
-  * The bound function must not hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself.
+  * The bound function _must not_ hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself.
   * The internal conversion process uses `v8::String::Utf8Value`, and "should" be safe for use with functions accepting ASCII or UTF8 input. Behaviour with any other encodings is undefined.
   * If passed a JS `null` or `undefined`, it converts to a literal `NULL`, otherwise it will convert to a string (though possibly empty). This is significant for functions which treat `NULL` different than an empty string (like `strlen()`, which may crash your app if passed `NULL`).
 
-When native functions return (`char const *`), they are converted to v8 Strings, and therefore have the same encoding limitations as for C-string function arguments.
+When native functions return (`char const *`), they are converted to v8 Strings, and therefore have the same encoding limitations as for C-string function arguments. A return value of `NULL` is converted to a JS `null`, as opposed to an empty string.
 
 
 This support allows us to convert functions like the following to `v8::InvocableCallback`s:
