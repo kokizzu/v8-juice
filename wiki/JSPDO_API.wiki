@@ -67,6 +67,7 @@ db.exec({
 The options supported by the function are:
 
 || `mixed sql` || The SQL (string) code to run. It may also be a Statement object, but this function _will not_ finalize it (regardless of success or failure). i.e. such an object is still owned by the caller, who must call `finalize()` on it. (TODO: consider changing this, and make `exec()` take over ownership.) ||
+|| `bool finalizeStatement` || IF `sql` is-a Statement object and this value is true then the statement will be finalized by `exec()`, regardless of success or failure. By default it does not finalize statement objects passed in by the caller. ||
 || `mixed bind` || An object or array of data to bind to the statement before execution. If it is a function then `f(statement,bindData)` is called (one time!), where `bindData` is the value of this object's `bindData` member. ||
 || `any bindData` || Optional data passed to `bind` if it is a function. If `bind` is _not_ a function then this data not used. ||
 || `function each(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. The 2nd argument is the value of this object's `callbackData` member. The 3rd argument is the statement itself. If this is not a function then the statement is `step()`ed only one time and the result of that call is returned (this is generally only useful for `INSERTS` and such). ||
@@ -83,11 +84,13 @@ Note that the `each()` function is passed the statement handle as its final para
 { columns:[ column names... ], rows:[ records... ] }
 }}}
 
-It requires a single Object argument with the following properties: `sql`, `bind`, `bindData`, `mode`. All of those have the same semantics as they do for `exec({...})` exeept that `mode` must be one of the strings (`object`,`array`) and defaults to `array`.
+It requires a single Object argument with the following properties: `sql`, `finalizeStatement`, `bind`, `bindData`, `mode`. All of those have the same semantics as they do for `exec()` except that `mode` must be one of the strings (`object`,`array`) and defaults to `array`.
 
-Each record in the `columns` array corresponds to a result set column name. Their order is guaranteed to be the same as in the query.
+Each record in the `columns` array corresponds to a result set column name. Their order is guaranteed to be the same as in the query but their names are _not_ guaranteed (at the native driver level) to be the same as given in the query _unless_ the client uses an `AS` specifier in the SQL (e.g. `SELECT A AS A, B AS B...`).
 
-Each record in the `rows` array will be either an Object or Array, depending on the `mode` option. If it is an object, the keys (property names) are _not_  guaranteed to be in the same order as in the original query (the ordering depends on internal details of v8's Object class implementation). In practice, they appear to be the same, but it's not _guaranteed_, which is why the `columns` property is always provided (because the ordering can be guaranteed).
+Each record in the `rows` array will be either an Object or Array, depending on the `mode` option.
+
+*Minor Achtung:*: in 'object' mode, the keys (property names) are _not_  guaranteed to be in the same order as in the original query (the ordering depends on internal details of v8's Object class implementation). In practice, they appear to be the same as their insertion order, but it's not _guaranteed_. When converting such Object-based row data to JSON for use by downstream client code, it is very possible that the key/value pairs of any given result object get re-ordered by down-stream JSON libraries. It is common to use string-keyed maps to store JSON object, and those often use alphabetically sorted keys. That is the real reason why the `columns` property is provided in the return results - because their ordering is guaranteed. This is useful when clients _need_ to know the query-side order of the fields (e.g. for printing them in tab format, so that the field data match up with the field headers).
 
 Example:
 
