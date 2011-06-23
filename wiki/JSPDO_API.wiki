@@ -236,7 +236,7 @@ var obj;
 while( (obj = st.stepObject()) ) { ... }
 }}}
 
-==Get the logical type of a column===
+==Get the logical type of a column==
 
 {{{
 var t = myStatement.columnType(zero_based_index);
