@@ -25,6 +25,7 @@ This class is synonymous with a database connection. Its main responsibilities a
 || `void commit()` || Commits the current opened transaction. ||
 || `void rollback()` || Rolls back the current transaction. ||
 || `void fetchAll(object)` || Executes a query and returns all result records. Described in detail below. ||
+|| `mixed selectValue(string|Object)` || Selects a single value from the database. Described below. ||
 
 Instance properties (read-only!):
 
@@ -41,7 +42,7 @@ Class-level properties (read-only!) (properties of the constructor function):
 
 == `JSPDO.exec()` ==
 
-`exec()` can be used to execute a "simple" query (an SQL string with no bound parameter and no return data) or a prepared query with bound parameters. It can optionally call a callback function on each iteration of a result set.
+`exec()` can be used to execute a "simple" query (an SQL string with no bound parameter and no return data) or a prepared query with bound parameters. It can optionally call a callback function on each iteration of a result set. It is kind of a Swiss Army Knife of query functionality, and is used as the basis for several other functions, e.g. `fetchAll()` and `selectValue()`.
 
 In its simplest form it is used like this:
 
@@ -66,15 +67,53 @@ db.exec({
 
 The options supported by the function are:
 
-|| `mixed sql` || The SQL (string) code to run. It may also be a Statement object, but this function _will not_ finalize it (regardless of success or failure). i.e. such an object is still owned by the caller, who must call `finalize()` on it. (TODO: consider changing this, and make `exec()` take over ownership.) ||
-|| `bool finalizeStatement` || IF `sql` is-a Statement object and this value is true then the statement will be finalized by `exec()`, regardless of success or failure. By default it does not finalize statement objects passed in by the caller. ||
+|| `mixed sql` || The SQL (string) code to run. It may also be a Statement object and `exec()` will, by default, finalize that statement regardless of success of failure. See the `finalizeStatement` option for how to keep ownership of a passed-in statement. ||
+|| `bool finalizeStatement` || Default=true. If `sql` is-a Statement object and this value is true (the default) then the statement will be finalized by `exec()`, regardless of success or failure. If it is false then `sql` will not finalized by `exec()` (i.e. it is still owned by the caller). ||
 || `mixed bind` || An object or array of data to bind to the statement before execution. If it is a function then `f(statement,bindData)` is called (one time!), where `bindData` is the value of this object's `bindData` member. ||
 || `any bindData` || Optional data passed to `bind` if it is a function. If `bind` is _not_ a function then this data not used. ||
-|| `function each(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. The 2nd argument is the value of this object's `callbackData` member. The 3rd argument is the statement itself. If this is not a function then the statement is `step()`ed only one time and the result of that call is returned (this is generally only useful for `INSERTS` and such). ||
+|| `function each(row,data,st)` || Called for each result set row. Described below. ||
 || `string mode` || If == "array", `each()` is passed an array object as the 1st parameter. "object" passes an object as the 1st parameter. Anything else causes the statement object itself to be passed. ||
 || `any callbackData` || Optional data passed as the 2nd argument to `each()`. ||
 
 Note that the `each()` function is passed the statement handle as its final parameter. This is _only_ so that clients can fetch the column names if they need to. _Do not_ call `step()` or `bind()` on the handle from the `each()` callback - doing so will lead to unpredictable results and/or errors.
+
+===The `finalizeStatement` Option===
+
+
+By default, if the `optObj.sql` parameter passed to  `exec(optObj)` is a `Statement` object then `exec()` assumes ownership of it, meaning that it will `finalize()` the statement before it returns to the caller (regardless of whether `exec()` succeeds or not). If you want to keep ownership of such a statement object, be sure to set `finalizeStatement` to a true value. The reason for why `exec()` takes ownership by default is basically ease of use. It is easier to manage statement lifetimes this way from client code, but provides a way for the client to keep the statement intact for the 1 in 200 use cases which might need it.
+
+Example:
+
+{{{
+var st = db.prepare("...");
+try {
+    db.exec({ sql:st, finalizeStatement: false ... });
+    ... do something else (what???) with st (it is still alive but has been fully traversed) ...
+}
+finally {
+   // st is still valid here, and must be finalized by the client
+   st.finalize();
+}
+}}}
+
+
+===The `each()` Callback===
+
+This `each()` callback function option used by `exec()` is called for each result set row fetched by `exec()`. If `each()` is not a function (or not set) then `exec()` `step()`s the statement only one time and the result of that call is returned (this is generally only useful for `INSERTS` and such).
+
+The callback is called with 3 arguments, `(row, callbackData, statement)`, as described below...
+
+The exact type of the first parameter depends on the `mode` property:
+
+  * `mode` == `"object"`: the first parameter will be the result of a `stepObject()` call.
+  * `mode` == `"array"`: the first parameter will be the result of a `stepArray()` call.
+  * Any other `mode` value will cause the statement object itself to be passed as the first parameter.
+
+The 2nd argument is the value of the `exec()` options object's `callbackData` member, or `undefined` if `callbackData` is not set.
+
+The 3rd argument is the statement itself. This is provided primarily so that clients can get the column names and whatnot, but the statement _must not_ be `step()`ed or `finalize()`d from the callback. The majority of callbacks won't need this parameter.
+
+If `each()` returns a literal `false` (as opposed to an arbitrary false-like value like `0`, `null`, or `undefined`) then looping stops without an error. To report an error `each()` should throw an exception.
 
 == `JSPDO.fetchAll()` ==
 
@@ -102,6 +141,29 @@ var res = db.fetchAll({
 print(JSON.stringify(res));
 }}}
 
+==`selectValue()`==
+
+`selectValue()` can be used to fetch a single value from a database. It is a thin wrapper around `exec()` and supports the same arguments `exec()` supports, with the following differences:
+
+  * The (`each`, `callbackData`, `mode`) options are ignored.
+  * If the `column` option is set then that result column (0-based index) is used for fetching the return value. The default is to use result column 0.
+
+The return value will be `undefined` if no results matched the query, else it will be a value pulled from the first result row (subsequent rows are not traversed).
+
+Examples:
+
+{{{
+var count = db.selectValue("SELECT COUNT(*) FROM T");
+var otherCount = db.selectValue({sql:"SELECT A, B, COUNT(*) FROM T", column:2});
+
+db.selectValue({sql: db.prepare("SELECT COUNT(*) FROM T WHERE ID=?"),
+                bind:[42]
+});
+/** ^^^ Note that exec() takes ownership of the prepared statement by default, and finalize()s
+    it before exec() returns. If you want to keep ownership, set the finalizeStatement option
+    in the exec() call to false.
+*/
+}}}
 
 =JSPDO.Statement=
 
