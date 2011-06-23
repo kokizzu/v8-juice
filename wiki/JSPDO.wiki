@@ -9,19 +9,24 @@ See also: [JSPDO_API], [JSPDO_HowTo]
 
 =About JSPDO=
 
-JSPDO is a database access abstraction API, modelled heavily off of the [http://php.net/manual/en/book.pdo.php PHP PDO] API. The underlying database abstraction library is called [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo] and is implemented in C. JSPDO provides a v8 wrapper around cpdo.
+JSPDO is a database access abstraction API, modelled heavily off of the [http://php.net/manual/en/book.pdo.php PHP PDO] API. The underlying database abstraction library is called [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo] and is implemented in C. JSPDO basically provides a v8 wrapper around cpdo, and some of the documentation here may refer the reader to the related [http://whiki.wanderinghorse.net/wikis/cpdo/ cpdo documentation].
 
 Requirements:
 
   * libv8, of course
   * [V8Convert] (it's a header-only library, so there is no major installation hassles).
+  * [V8Convert_ByteArray] - A `ByteArray` class binding using [V8Convert].
+  * At least one of sqlite3 and/or MySQLv5.
   * Some patience - the build tree is currently only designed to build directly from [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons/jspdo the original source tree] packaged together with [V8Convert]. i hope to modularize it someday to make it easy to drop in to arbitrary `v8::convert`-using clients.
+
+See [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/README.txt the README file] for much more detail about the requirements..
+
 
 Supported Drivers:
   * sqlite3
   * MySQLv5
 
-See the [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo home page] for more info than you could possibly want to know about it. The source tree includes a complete copy of the cpdo library - it does not need to be installed separately.
+See the [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo home page] for more info than you could possibly want to know about it. JSPDO's source tree includes a complete copy of the cpdo library - it does not need to be installed separately.
 
 ==Notable TODOs==
 
@@ -39,21 +44,19 @@ See [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/README
 
 ==#1: Lifetime Issues==
 
-Database connections and the objects they create have very strict rules about when they must be cleaned up. The JSPDO class has a method called `close()` to release all resources owned by the database connection. The statement handle class (returned by `JSPDO.prepare()`) has a `finalize()` method which _must_ be called _before_ the parent `JSPDO` instance is `close()`ed, or Undefined Behaviour will ensue.
+Database connections and the objects they create have very strict rules about when they must be cleaned up. The JSPDO class has a method called `close()` to release all resources owned by the database connection. The `Statement` handle class (returned by `JSPDO.prepare()`) has a `finalize()` method which _must_ be called _before_ the parent `JSPDO` instance is `close()`ed, or Undefined Behaviour will ensue.
 
 ==#2: Error Reporting/Handling==
 
-The vast majority of the functions in this API report errors via exceptions. Exceptions, for all their merits, make it easy to write code which does not properly finalize query/result set data. Get in the habit of using a `try/finally` block, as shown in [JSPDO_HowTo the examples], to ensure that statement handles are properly cleaned up. If a single statement handle is closed _after_ its database connection is closed, the v8 engine may very well crash as the statement handle steps on an invalidated database handle.
+The vast majority of the functions in this API report errors via exceptions. Exceptions, for all their merits, make it easy to write code which does not properly finalize query/result set data. Get in the habit of using a `try/finally` block, as shown in [JSPDO_HowTo the examples], to ensure that statement handles are properly cleaned up. If a single statement handle is closed _after_ its database connection is closed, the v8 engine may very well crash as the statement handle steps on an invalidated database handle. (We have since added some plumbing to avoid these crashes, but do not get lazy about this - clean up or Undefined Behaviour will eventually smack you in the face.)
 
-==#3: No Binary Data!==
+==#3: Beware of Binary Data!==
 
-This API will optimistically try to read BLOB fields as !JavaScript string data (because my databases of uses BLOB fields for storing string data, e.g. JSON data). If you tell it to read, e.g. binary image data, results are undefined. v8 makes its own assumptions about encoding and it assumes that we will feed it the proper type of data.
-
-There are _no plans_ to add any direct binary data support to this API, as binary data is well outside of !JavaScript's comfort zone and i don't want to open up that can of worms.
+!JavaScript has no APIs for working with binary data, and storing binary data in JS strings results in undefined behaviour. To try to avoid such undefined behaviour, this API treats `BLOB` fields not as strings, but as [V8Convert_ByteArray ByteArray] objects. When fetching `BLOB` fields the client get have a !ByteArray object and not a string, and the two are not 100% API-compatible (i.e. client code must behave slightly differently for them, even if they contain valid string data). There are examples of using binary data on the [JSPDO_HowTo JSPDO HowTo page] (search for "!ByteArray").
 
 ==#4: Data Types ==
 
-This code only explicitly accounts for numeric and string data, and there are some notable limitations regarding numbers. v8's `Integer` type only supports 32 bits. Thus this library tries to use `double` for integers of greater than 32 bits. It is conceivable that some floating-point numeric precision will be lost, depending on the underlying db driver and the exact field definitions.
+This code only explicitly accounts for numeric, string, and "blob" (generic binary) data, and there are some notable limitations regarding numbers. v8's `Integer` type only supports 32 bits. Thus this library tries to use `double` for integers of greater than 32 bits. It is conceivable that some floating-point numeric precision will be lost, depending on the underlying db driver and the exact field definitions.
 
 When binding JS values to database fields for purposes of inserting data, this code tries its best to do the right thing, but it is possible that a specific db driver, or slightly different database table definition, will behave differently than another when it comes to numeric precision, maximum field length, and similar details. It is recommended that databases used with this code avoid constructs like 1-byte integer fields and similar things which may cause unexpected failures at runtime (depending on the driver). e.g. if the underlying native driver returns an error because we inserted the value 500 to a 1-byte integer field, then that will show up as a JS-side exception via this interface.
 
@@ -70,8 +73,8 @@ Database drivers do not always guaranty what the name of a given column will be.
 
 ==Opening Multiple Statement Concurrently (Don't do it!)==
 
-Drivers are not required to allow more than one open result set for a given db connection (!MySQL, for example, does not allow it). Thus query code should be structured so that it does not need to open multiple queries at one time.
+Drivers are not required to allow more than one open result set for a given db connection (MySQL, for example, does not allow it). Thus query code should be structured so that it does not need to open multiple queries at one time.
 
 ==Multi-Threading (Don't do it!)==
 
-It is, in general, not legal (or not portable) for more than one thread to use the same connection (`JSPDO` instance), whether concurrently or not. If you use v8 in multiple threads, be sure that each thread has its own connection instance.
+It is, in general, not legal (or not portable) for more than one thread to use the same connection (`JSPDO` instance) or statement/result handle (`JSPDO.Statement` instance), whether concurrently or not. If you use v8 in multiple threads, be sure that each thread has its own connection instance and does not share statements handles with another instance or thread.
