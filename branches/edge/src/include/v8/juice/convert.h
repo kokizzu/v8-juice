@@ -1175,6 +1175,17 @@ namespace convert {
         }
 
         /**
+           Converts the message state to a v8::String (for use
+           with v8::Exception::Error() and friends).
+        */
+        inline operator v8::Handle<v8::String>() const
+        {
+            std::string const & str(this->os.str());
+            char const * cstr = str.c_str();
+            return v8::String::New( cstr ? cstr : "", cstr ? str.size() : 0 );
+        }
+
+        /**
            Appends to the message using CastFromJS<std::string>(t) 
         */
         template <typename T>
@@ -1211,6 +1222,16 @@ namespace convert {
             this->os << t;
             return *this;
         }
+
+        /**
+           Returns this buffer's value wrapped in
+           a JS Error object.
+        */
+        v8::Local<v8::Value> toError() const
+        {
+            return v8::Exception::Error(*this);
+        }
+
     };
 
     /** Outputs sb.Content() to os and returns os. */
