@@ -27,13 +27,6 @@ The most important functions and types, from a user's perspective, are listed be
 
 A very special thanks goes to James Pike, author of [https://github.com/tsa/vu8 vu8], for his helpful tips on getting function-pointer-style template arguments working. These allow for more readable templates when compared to the v8-juice API.
 
-=Implementing Custom Conversions=
-
-  * `JSToNative<T>`: template to convert JS values to `T` (almost always `T*` for non-POD types).
-  * `NativeToJS<T>`: template to convert `T` objects to JS counterparts. Adding this support for client-side types requires adding tooling which maps the native object to a JS instance.
-
-These work identically to the v8-juice APIs with the same names (see [ConvertingTypes]), the only client-visible difference being that the classes (and thus client-defined specializations) are defined in a different namespace than in v8-juice. Future (post-2010) development in the type conversions API will happen in this copy instead of the `v8::juice` copy.
-
 =Converting Types=
 
   * `CastToJS<T>()`: converts the given object to a `v8::Handle<v8::Value>`.
@@ -54,6 +47,15 @@ myInvocationCallback( v8::Arguments const & ) {
     }
 }
 }}}
+
+
+=Implementing Custom Conversions=
+
+  * `JSToNative<T>`: template to convert JS values to `T` (_almost_ always `T*` for non-POD types).
+  * `NativeToJS<T>`: template to convert `T` objects to JS counterparts. Adding this support for client-side types requires adding tooling which maps the native object to a JS instance (or that the bound type hold this information itself).
+
+These work identically to the v8-juice APIs with the same names (see [ConvertingTypes]), the only client-visible difference being that the classes (and thus client-defined specializations) are defined in a different namespace than in v8-juice. Future (post-2010) development in the type conversions API will happen in this copy instead of the `v8::juice` copy.
+
 
 =Converting Functions to `v8::InvocationCallback`=
 
