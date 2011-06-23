@@ -1674,7 +1674,7 @@ namespace v8 { namespace juice { namespace convert {
             }
             catch( ... )
             {
-                return ::v8::ThrowException( ::v8::String::New("Exception::Invocable() caught unknown native exception type!"));
+                return ::v8::ThrowException(::v8::Exception::Error(v8::String::New("Exception::Invocable() caught unknown native exception type!")));
             }
         }
     };
@@ -1699,7 +1699,7 @@ namespace v8 { namespace juice { namespace convert {
                         << argv.Callee()->GetName()
                         << "() called with "<<argv.Length()<<" arguments, "
                         << "but requires "<<FWD::Arity<<"!\n";
-                    return v8::ThrowException(msg);
+                    return v8::ThrowException(msg.toError());
                 }
             }
         };
@@ -1711,7 +1711,7 @@ namespace v8 { namespace juice { namespace convert {
         {
             static v8::Handle<v8::Value> Invocable( v8::Arguments const & argv )
             {
-                return v8::ThrowException(v8::String::New("FwdInvocableOne<> end-of-list specialization should not have been called!"));
+                return v8::ThrowException(v8::Exception::Error(v8::String::New("FwdInvocableOne<> end-of-list specialization should not have been called!")));
             }
         };
 
@@ -1750,7 +1750,7 @@ namespace v8 { namespace juice { namespace convert {
                 msg << "FwdInvocableList<>::Dispatch() there is no overload for "
                     << argv.Callee()->GetName()
                     << "() taking "<<argv.Length()<<" arguments!\n";
-                return v8::ThrowException( msg );
+                return v8::ThrowException( msg.toError() );
             }
         };
 
@@ -1767,7 +1767,7 @@ namespace v8 { namespace juice { namespace convert {
 
        And a static const integer value called Arity, which must specify the
        expected number of arguments, or be negative specify that the function
-       accepts any number.
+       accepts any number of arguments.
 
        In other words, all entries in FwdList must implement the
        InvocableInterface.
