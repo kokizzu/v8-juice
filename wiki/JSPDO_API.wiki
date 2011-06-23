@@ -74,6 +74,7 @@ The options supported by the function are:
 || `function each(row,data,st)` || Called for each result set row. Described below. ||
 || `string mode` || If == "array", `each()` is passed an array object as the 1st parameter. "object" passes an object as the 1st parameter. Anything else causes the statement object itself to be passed. ||
 || `any callbackData` || Optional data passed as the 2nd argument to `each()`. ||
+|| `int limit` || For `SELECT`-like queries, this option can be used to limit the number of values fetched. The default is 0, meaning no limit. This does not modify the SQL, but stops looping after this may rows have been fetched. ||
 
 Note that the `each()` function is passed the statement handle as its final parameter. This is _only_ so that clients can fetch the column names if they need to. _Do not_ call `step()` or `bind()` on the handle from the `each()` callback - doing so will lead to unpredictable results and/or errors.
 
@@ -145,8 +146,8 @@ print(JSON.stringify(res));
 
 `selectValue()` can be used to fetch a single value from a database. It is a thin wrapper around `exec()` and supports the same arguments `exec()` supports, with the following differences:
 
-  * The (`each`, `callbackData`, `mode`) options are ignored.
-  * If the `column` option is set then that result column (0-based index) is used for fetching the return value. The default is to use result column 0.
+  * The (`each`, `callbackData`, `mode`, `limit`) options are ignored.
+  * If the `column` option is set then that result column (0-based index) is used for fetching the return value. The default is to use column 0 of the result set.
 
 The return value will be `undefined` if no results matched the query, else it will be a value pulled from the first result row (subsequent rows are not traversed).
 
