@@ -1,4 +1,4 @@
-#summary One-sentence summary of this page.
+#summary V8Convert socket API
 #labels Phase-UserDocs,Topic-JS-API
 <wiki:toc/>
 
@@ -56,21 +56,7 @@ The `Socket` constructor also has the following numeric properties, all of which
 
 =!ByteArray Class=
 
-This class is used by the `Socket` class to allow the moderately efficient usage of binary data with !JavaScript. It is visible to client code via `Socket.ByteArray`. It is basically an Array-like class which is capable of holding arbitrary data (string or binary) read from or being written to a socket.
-
-`ByteArray` implements the index-of operator like arrays to, but each value at a given index is a single byte (a small integer).
-
-||*Function* || *Description* ||
-||`new ByteArray([int length=0])` || Creates a new byte array holding the given number of bytes. ||
-||`new ByteArray(string data [, int length=0])` || Creates a new byte array from the given string. ||
-||`new ByteArray(ByteArray data)` || Creates a new deep copy of the given byte array. ||
-|| `int index-operator[int index]` || Returns the byte value at the given index. When changing values, an out-of-range index leads to an exception. Set `length` to explicitly expand a `ByteArray`. TODO: add `autoExpand` option. ||
-|| `void append(Number|String|ByteArray)` || Appends either a single byte or a set of string/!ByteArray bytes to this buffer. ||
-|| `ByteArray gzip()` || Gzip-compresses this object's bytes into a new `ByteArray`. ||
-|| `ByteArray gunzip()` || Gunzip-decompresses this object's bytes into a new `ByteArray`. ||
-||*Property* || *Description* ||
-|| `int length` || The length of the object's data, in bytes. May be modified. When growing, new bytes have the value `0`. ||
-|| `stringValue` || Converts the data to a JS string. Results are undefined if the data is not UTF8-encoded string data. Note that it performs the conversion on each read access, so copy a reference if you want to refer to it multiple times! Setting this property will cause an exception to be thrown. ||
+The [V8Convert_ByteArray ByteArray class] is available to this API via the name `Socket.ByteArray`.
 
 =Code Examples=
 
