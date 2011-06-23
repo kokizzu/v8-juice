@@ -335,7 +335,44 @@ finally { if(st) st.finalize(); }
 
 You may of course include an explicit `catch` block if you like (if you do not, the exception is propagated but the statement is still cleaned up).
 
-=Misc. Tricks=
+=Binary Data (!ByteArray)=
+
+This API can bind and fetch binary data stored in BLOB fields. Since JS has no native binary data support, this requires another level of indirection, the [V8Convert_ByteArray ByteArray] class.
+
+To bind a binary value:
+
+{{{
+var ba = new JSPDO.ByteArray();
+... populate ba ...
+st.bind(index, ba);
+}}}
+
+`ByteArray`s can of course be used in the other `bind()` overloads, e.g. `st.bind([myByteArray,...])`.
+
+In general it is also legal (at least semantically) to bind a string value to a BLOB field, but whether or not this will work depends on the underlying db driver.
+
+
+When fetching column data (via `get()` or one of the `stepXXX()` variants), non-`NULL` values which come from fields declared to be of type `BLOB` (or similar, depending on the driver's SQL dialect) will be returned to the caller as `ByteArray` objects. Fetching BLOB data is just like fetching any other value:
+
+{{{
+var ba = st.get(index);
+if( ba instanceof JSPDO.ByteArray ) {
+  ... it came from a BLOB field and has a non-NULL value ...
+}
+}}}
+
+Note that a 0-byte BLOB value is returned as `null`, not as an empty `ByteArray`.
+
+If (and only if!) a `ByteArray` contains UTF-8 value is it legal to convert the contents to a string:
+
+{{{
+var str = ba.stringValue();
+}}}
+
+Note that `ByteArray.toString()` does _not_ convert the object to a JS string - it creates a string similar to one one returned by `Object.toString()` (`[object ByteArray...]`). It was decided that performing a string conversion here is too risky because it's easy to accidentally do from client code and can have undefined results (e.g. a crash) if the data is indeed not valid string content. Thus we require the call to `stringValue()` if the client wants to convert the data to a string.
+
+  Historical note of no real consequence: `stringValue` was originally a non-function property, but the conversion to `v8::String` had to be done on every access, so i switched it to a function to "force" clients to get/reuse a reference to the string. The previous behaviour could cause weird side-effects when used in seemingly intuitive (but semantically wrong) ways.
+
 
 ==De/Compressing Field Data==
 
