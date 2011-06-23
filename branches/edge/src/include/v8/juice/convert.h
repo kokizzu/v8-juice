@@ -720,7 +720,7 @@ namespace convert {
         struct UselessConversionType
         {
         };
-    };
+    }
 
     /**
         This specialization is a kludge/workaround for use in cases
