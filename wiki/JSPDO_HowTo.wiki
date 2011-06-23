@@ -181,7 +181,8 @@ The entries in `JSPDO.columnTypes` are: `ERROR`, `NULL`, `INT8`, `INT16`, `INT32
 Some things to keep in the back of your mind about JS/DB data type conversions:
 
   * v8's integer type only supports 32 bits, so doubles are used for numeric values larger than 32 bits.
-  * This API optimistically assumes that `VARCHAR` (and similar) fields contain UTF8-encoded string data and will pass the data to the `v8::String::New()` constructor. If the data is indeed not UTF8, this will lead to undefined results.
+  * This API optimistically assumes that string fields contain UTF-8-encoded string data and will pass the data to the `v8::String::New()` constructor. If the data is indeed not UTF-8, this will lead to undefined results.
+  * BLOB fields are returned as [V8Convert_ByteArray ByteArray] objects. _If_ they contain legal UTF-8 data then `ByteArray.stringValue()` can be used to convert it to a string.
   * Depending on the database, binding a value of a different type to a field might or might not produce an error. e.g. sqlite3 will (normally) bind anything to any column regardless of their declared types whereas MySQL won't bind a string to a numeric column (whether or not it returns an error or sets the value to 0 is up to the driver!).
 
 ==Fetching Row Data==
