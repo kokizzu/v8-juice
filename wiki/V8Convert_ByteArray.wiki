@@ -15,9 +15,10 @@ Note that this class _does not_ implement the [http://www.commonjs.org/specs/ Co
 ==API Overview==
 
 ||*Function* || *Description* ||
-||`new ByteArray([int length=0])` || Creates a new byte array holding the given number of bytes. ||
+||`new ByteArray([int length=0])` || Creates a new byte array holding the given number of bytes (all with the value 0). ||
 ||`new ByteArray(string data [, int length=0])` || Creates a new byte array from the given string. ||
 ||`new ByteArray(ByteArray data)` || Creates a new deep copy of the given byte array. ||
+|| `void destroy()` || Destroys all of the underlying native data. Further operations on this object will cause an exception to be thrown. This is optional, but can be used to free up memory before the garbage collector would normally do so. ||
 || `int index-operator[int index]` || Returns the byte value at the given index. When changing values, an out-of-range index leads to an exception. Set `length` to explicitly expand a `ByteArray`. TODO: add `autoExpand` option. ||
 || `void append(Number|String|ByteArray)` || Appends either a single byte or a set of string/!ByteArray bytes to this buffer. ||
 || `ByteArray gzip()` || Gzip-compresses this object's bytes into a new `ByteArray`. ||
