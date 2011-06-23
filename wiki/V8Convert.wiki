@@ -15,6 +15,8 @@ The `v8::convert` API is a spin-off of the core-most components of the v8-juice 
 
 The first two core features give us all we need in order to be able to bind near-arbitrary C/C++ functions with !JavaScript, insofar as cross-language calling conventions and type conversions allow us to do so. The last feature is really just "sugar" (but also quite convenient at times).
 
+While these features are easily summed up in a short list, their broader implications are quite large. The ability to convert functions from one signature to another (at compile time, by the way) has proven to be deceptively powerful, allowing users to bind new functions to v8 with unprecedented ease. We can combine this with template meta-programming techniques to do weird things like combine multiple native functions into a single `InvocationCallback` function which dispatches to the proper native function based on the number of arguments (see the examples of argument overload later on down this page).
+
 For cases where the "automatic" function-to-!InvocationCallback conversions are not possible or not suitable, the type-conversion API can still simplify the implementation of custom `v8::InvocationCallback` functions.
 
 All of the conversions are compile-time typesafe where possible and fail gracefully (e.g. using a JS-side exception as opposed to an immediate crash) when such a determination can only be made at runtime.
@@ -61,6 +63,21 @@ myInvocationCallback( v8::Arguments const & ) {
 
 By using only those 3 function templates (all with identical interfaces) clients can bind
 a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
+
+Each of those function has a corresponding class with a similar name. The class provides a "fully typed" conversion of the function and remembers the function's arity (how many arguments it takes):
+
+  * `FunctionToInCa<>`
+  * `MethodToInCa<>`
+  * `ConstMethodToInCa<>`
+
+In all three cases, the static `Call()` method of those classes is the function used by the function converters shown above. An example should clarify that point:
+
+{{{
+v8::InvocationCallback cb1 = FunctionToInvocationCallback<int (char const *),::puts>;
+v8::InvocationCallback cb2 = FunctionToInCa<int (char const *),::puts>::Call;
+}}}
+
+Those both refer to the same underlying function (though their memory addresses differ). The second form is actually a tad bit more efficient because the first approach creates another one-line wrapper function between v8 and the bound function. The first form is, however, more prevalently documented because the client-side value of the second form was not recognized as early on as it should have been.
 
 Note that binding to non-static member member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See the included demo code for how to set this up (we just have to create a `JSToNative<>` specialization).
 
@@ -229,7 +246,11 @@ int my_callback( v8::Arguments const & argv )
 
 ==Special Case: Overloading based on Arity==
 
-The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). It's a bit verbose, but it works, and it looks something like this:
+The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). Two approaches are shown here, but i highly recommend the second one except for very simple (only two overloads) cases.
+
+===Approach 1: `InCaOverloader`===
+
+The first approach is a bit verbose, but it works, and it looks something like this:
 
 {{{
 // The funcs we want to overload:
@@ -272,6 +293,27 @@ InvocationCallback cb = OloadAll::Call
 `InCaOverloader` can be chained this way (with increasing code uglification!) to support an arbitrary number of varying arities. The 3rd (optional) parameter is the callback to call if the arity of the call (at runtime) does not match the number given to the template. The default fallback callback throws a JS-side exception warning about the argument count mismatch.
 
 If an overloaded function needs to be able to take any number of arguments, it must itself be "!InvocationCallback-like" and the `InCaOverloader` must be given an arity value of `-1`. In addition, that entry should be the _last_ one in the `InCaOverloader` chain (because of how the arity value check works).
+
+===Approach 2: `InCaOverloadList`===
+
+The second approach is a bit less verbose and significantly more readable than `InCaOverloader`. It uses a "type list" to construct the list of overloads:
+
+{{{
+// Overload 4 variants of a member function:
+typedef cv::InCaOverloadList< cv::tmp::TypeList<
+        cv::MethodToInCa<T, void(), &T::overload0>,
+        cv::MethodToInCa<T, void(int), &T::overload1>,
+        cv::MethodToInCa<T, void(int,int), &BoundNative::overload2>,
+        cv::MethodToInCa<T, void(v8::Arguments const &), &T::overloadN>
+    > > MyOverloads;
+
+// Get the InvocationCallback proxy which does the arity-based dispatching:
+v8::InvocationCallback cb = MyOverloads::Call;
+}}}
+
+Note that only one line of that code is evaluated at runtime - the rest is all done at compile-time. The above generates a whole family of `v8::InvocationCallback` functions (at least (overload count + 1) of them, though there are a couple others hidden behind the scenes) and combines them into a single dispatcher function, `MyOverloads::Call`.
+
+There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is at least 10 (and the library can be built to support many more than that).
 
 ==Special Case: Unlocking the v8 Engine==
 
@@ -362,8 +404,9 @@ JS properties can be bound to native _member_ properties similarly using the `Me
 
 The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the `v8::convert` source tree includes some sample v8 bindings created using this API. The code includes:
 
-  * A `ByteArray` class (for handling binary data in JS space).
+  * The `ConvertDemo.?pp` and `test.js` files in this source tree's root directory give a very thorough demonstration, showing off just about every feature the library offers.
+  * A [V8Convert_ByteArray ByteArray class] for handling binary data in JS space.
   * A [JSPDO database access abstraction API].
-  * A [V8Convert_Socket socket API].
+  * A basic [V8Convert_Socket socket API].
 
 Each of the "addons" includes a basic v8 shell app which includes the JS bindings provided by that addon, making it simple to try out the code before including it into one's own project (on many Unix-like platforms, at least).
