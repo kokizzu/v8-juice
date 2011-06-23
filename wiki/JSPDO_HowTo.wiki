@@ -134,8 +134,10 @@ st = db.prepare("SELECT ... WHERE a=:p1 AND b=:p2");
 
 // Bind as object:
 st.bind({":p1":"v8-juice",":p2":"JSPDO"});
+// Is equivalent to:
+st.bind({p1:"v8-juice",p2:"JSPDO"}); // note the different property names
 
-// Two binds by index:
+// Is equivalent to using two binds by index:
 st.bind(':p1',"v8-juice");
 st.bind(':p2',"JSPDO");
 
@@ -145,7 +147,9 @@ st.bind(2,"JSPDO");
 // Again: do not mix named and unnamed parameter binding!
 }}}
 
-*Achtung:* named parameters support is an _optional_ feature for the underlying db drivers. Both of the current drivers support them, however (it can optionally be _disabled_ [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 in the MySQL driver]).
+*Achtung #1:* though `bind(Object)` allows object keys to be missing the `:` prefix character, `bind(string,value)` _does not_. e.g. `bind({p1:...})` and `bind({":p1":...})` are equivalent, but `bind('p1',...)` will not work (use `bind(':p1',...)` instead).
+
+*Achtung #2:* named parameters support is an _optional_ feature for the underlying db drivers. Both of the current drivers support them, however (it can optionally be _disabled_ [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 in the MySQL driver]).
 
 To get the index of a given parameter name:
 
@@ -170,19 +174,19 @@ switch( st.columnType(0) ) {
 }
 }}}
 
-That said, knowing a field's db-declared type is seldom useful at the level of JS code.
+That said, knowing a field's db-declared type is probably seldom useful at the level of JS code.
 
 The entries in `JSPDO.columnTypes` are: `ERROR`, `NULL`, `INT8`, `INT16`, `INT32`, `INT64`, `FLOAT`, `DOUBLE`, `STRING`, `BLOB`, `CUSTOM`
 
-Some things to keep in the back of your bind about JS/DB data type conversions:
+Some things to keep in the back of your mind about JS/DB data type conversions:
 
   * v8's integer type only supports 32 bits, so doubles are used for numeric values larger than 32 bits.
-  * This API optimistically assumes that `BLOB`-declared fields contain string data (e.g. JSON) and will pass the data to the `v8::String::New()` constructor. If the data is indeed non-UTF8 binary data, this will lead to undefined results.
+  * This API optimistically assumes that `VARCHAR` (and similar) fields contain UTF8-encoded string data and will pass the data to the `v8::String::New()` constructor. If the data is indeed not UTF8, this will lead to undefined results.
   * Depending on the database, binding a value of a different type to a field might or might not produce an error. e.g. sqlite3 will (normally) bind anything to any column regardless of their declared types whereas MySQL won't bind a string to a numeric column (whether or not it returns an error or sets the value to 0 is up to the driver!).
 
 ==Fetching Row Data==
 
-`step()` is used to fetch row data and `get()` is used to get individual values from a row. It is _absolutely illegal_ to call `get()` unless `step()` returns true.
+`step()` is used to fetch row data and `get()` is used to get individual values from a row. It is _absolutely illegal_ to call `get()` unless `step()` returns true. `step()` does not actually return a row - it modifies the statement object's internal SQL cursor to point to the data for the next row. `get()` can then be used to fetch the individual fields from that row.
 
 `get()` takes a _0-based_ column index and returns the JS value for that column (insofar as possible - it will throw if it can't figure out what to do).
 
