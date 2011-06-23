@@ -39,25 +39,34 @@ Class-level properties (read-only!) (properties of the constructor function):
 || `Array driverList` || A list of the names of all available database drivers. ||
 || `Object columnTypes` || Mapping of symbolic names to integer values for use with the `columnType()` member of the statement class. ||
 
-== exec(Object) ==
+== `JSPDO.exec()` ==
 
-`exec(Object)` can be used to execute a query and call a callback function on each iteration:
+`exec()` can be used to execute a "simple" query (an SQL string with no bound parameter and no return data) or a prepared query with bound parameters. It can optionally call a callback function on each iteration of a result set.
+
+In its simplest form it is used like this:
+
+{{{
+db.exec("SQL goes here");
+}}}
+
+However, it can also be used to bind values and iterate over result sets:
 
 {{{
 db.exec({
-  sql:"SELECT a,b,c FROM mytbl",
+  sql:"SELECT a,b,c FROM mytbl WHERE ID=?",
+  bind:[32],
   mode:'array',
   callbackData:{rows:0},
   each:function(row,data,st){
       ++data.rows;
-      print(row.join('\n'));
+      print(row.join('\t'));
   }
 });
 }}}
 
 The options supported by the function are:
 
-|| `mixed sql` || The SQL (string) code to run. It may also be a Statement object, but this function _will not_ finalize it (regardless of success or failure). i.e. such an object is still owned by the caller. ||
+|| `mixed sql` || The SQL (string) code to run. It may also be a Statement object, but this function _will not_ finalize it (regardless of success or failure). i.e. such an object is still owned by the caller, who must call `finalize()` on it. (TODO: consider changing this, and make `exec()` take over ownership.) ||
 || `mixed bind` || An object or array of data to bind to the statement before execution. If it is a function then `f(statement,bindData)` is called (one time!), where `bindData` is the value of this object's `bindData` member. ||
 || `any bindData` || Optional data passed to `bind` if it is a function. If `bind` is _not_ a function then this data not used. ||
 || `function each(row,data,st)` || Is called for each row. The exact type of the 1st parameter depends on the `mode` property. The 2nd argument is the value of this object's `callbackData` member. The 3rd argument is the statement itself. If this is not a function then the statement is `step()`ed only one time and the result of that call is returned (this is generally only useful for `INSERTS` and such). ||
@@ -66,7 +75,7 @@ The options supported by the function are:
 
 Note that the `each()` function is passed the statement handle as its final parameter. This is _only_ so that clients can fetch the column names if they need to. _Do not_ call `step()` or `bind()` on the handle from the `each()` callback - doing so will lead to unpredictable results and/or errors.
 
-== fetchAll()==
+== `JSPDO.fetchAll()` ==
 
 `fetchAll()` is an `exec({...})` wrapper which returns _all_ matching rows of a select-style query in the following structure:
 
@@ -98,14 +107,14 @@ This class represents both prepared SQL statements and result-set data. This mer
 These objects are _only_ to be created by calling `JSPDO.prepare()`, and not via a constructor call. The constructor is visible as `JSPDO.Statement`, but it is only in the public API so that clients may use it for `instanceof` checks. It should not be called by client code and the constructor's arguments are not publicly documented.
 
 || *Method* || *Description* ||
-|| `void bind(index[,value])` || Binds a value (default=NULL) to the given _1-based_ parameter index or name (in the form `:paramName`). The _type_ of the given value determines how the value is bound (e.g. as an integer, double, or string). ||
+|| `void bind(index[,value])` || Binds a value (default=NULL) to the given _1-based_ parameter index or name (in the form `:paramName`). The _type_ of the given value determines how the value is bound (e.g. as an integer, double, string, or BLOB ([V8Convert_ByteArray ByteArray]). ||
 || `void bind(Array)` || Binds each value in the given array to the next subsequent bindable paramter. e.g. `bind([7,null,11])` binds parameters 1 to 3 with the given values. ||
 || `void bind(Object)` || Binds each key/value pair in the given object, treating the object's keys as bound parameter names. e.g. `bind({':p1',':p2':...})` ||
 || `void bind(Statement)` || Binds all columns from the `Statement` object argument to the columns in the current statement. This can be used, e.g. to copy results from one table into another. TODO: accept array of param column numbers/names to copy, instead of copying all. ||
 || `bool step()` || "Steps" one row through a result set or executes a non-result query. Returns false if it is at the end of the set (or the query had no data to return, like an `INSERT`) or true if it successfully fetched a row. ||
 || `Array stepArray()` || Like `step()` but returns all of the columns from the fetched row as an array of values. It returns `null` at the end of the result set. ||
 || `Array stepObject()` || Like `step()` but returns all of the columns from the fetched row as an Object, using the column names as the object keys. It returns `null` at the end of the result set. ||
-|| `mixed get(index)` || Returns a value from a fetched row, using the given _0-based_ column index. (The inconsistency is not mine - that's just how SQL APIs work!) This function _must not ever_ be called unless `step()` has returned true. Violating that leads to undefined behaviour. The JS type of the returned value will be deduced based on the database's data type. That basically means numbers "should" carry over as-is, SQL `NULL` translates to `null`, and everything else will be treated as a string. ||
+|| `mixed get(index)` || Returns a value from a fetched row, using the given _0-based_ column index. (The inconsistency is not mine - that's just how SQL APIs work!) Described in more detail below. ||
 || `string columnName(index)` || The name of the 0-based result set column. ||
 || `int columnType(index)` || The cpdo-defined type ID for row data from the given 0-based column index. (Do not rely on stable values between releases!) ||
 || `void reset()` || Re-sets a statement so that it can be re-executed. Call this after each iteration when changing the values of bound parameters in a loop. ||
@@ -149,6 +158,46 @@ finally { st.finalize(); }
 }}}
 
 There _may_ a subtle difference, however, depending on the code's context. `mydb.prepare()` might throw. In the second example, we would not catch that exception, but instead propagate it up the stack chain. Because of that, the `finally` block doesn't need to check if `st` was set. However, in some code constructs blindly propagating that exception might lead to resource leaks stemming from _other_ native objects which have specific cleanup requirements.
+
+==`Statement.bind()`==
+
+`bind()` associates values with specific placeholder columns in a statement. It is only useful for statements which contain value placeholders, e.g. `SELECT ... WHERE ID=?` (the question mark is a placeholder) or `SELECT ... WHERE ID=:id` (`:id` is a named placeholder).
+
+It can be called several different ways:
+
+  * `bind(integer index [, value = null])` binds the given value to the given 1-based index.
+  * `bind( Array )` is basically a loop over `bind()`, binding each subsequent argument to the next value in the array. Note that while `bind()` uses 1-based indexes, the passed-in array uses 0-based indexes.
+  * `bind( Object )` binds parameters by _name_, as opposed to index, using key/value pairs from the given object. Note that named parameter support is an optional feature of the underlying db drivers, and may not be supported/activated for a given driver. (That said, the current drivers both support this.)
+
+Be aware that `bind()` uses _1-based index_, whereas `get()` uses 0-based index. Don't ask me why - i don't know.
+
+The JS type of a bound value determines how it is bound at the database level:
+
+  * JS `null` or `undefined` are bound as SQL `NULL`.
+  * JS numbers are bound to one of the lower-level numeric types supported by the db layer (possibly truncating them if the db uses small-precision fields!).
+  * JS strings are bound as strings, of course. (Though sometimes it is useful to use BLOB fields for strings.)
+  * [V8Convert_ByteArray ByteArray] objects are bound as BLOB fields.
+  * Other types will (or should) cause `bind()` to throw an exception.
+
+The underlying driver _might_ fail when binding types to columns declared to be a different type, or it might perform a conversion or store the data as-is (regardless of the field's declared type). sqlite3 can store any value in any column, and ignores the declared types. MySQL, on the other hand, _might_ report an error (causing an exception in the JS code) or _might_ convert, truncate, or other change the value. e.g. trying to stuff an invalid timestamp string into a `DATETIME` field will likely result in no error but the db will store a "zeroed out" timestamp value.
+
+==`Statement.get()`==
+
+The `get()` function returns the value for a specific _0-based_ column index (note that `bind()` uses 1-based indexes - this discrepancy is a mysterious part of SQL history).
+
+This function _must never, ever_ be called unless `step()` has returned true. Violating that leads to undefined behaviour.
+
+The type of the value it returns depends on the database-driver-reported typed:
+
+  * All driver-level integer/float/double types are converted to JS numbers.
+  * BLOB fields are returned as [V8Convert_ByteArray ByteArray] objects.
+  * String fields are of course returned as strings.
+  * Columns with `NULL` values will be returned as JS `null`, regardless of the declared field type of the column.
+
+=!ByteArray Class=
+
+The [V8Convert_ByteArray ByteArray class] is available to this API via the name `JSPDO.ByteArray`.
+
 
 =How to...=
 
