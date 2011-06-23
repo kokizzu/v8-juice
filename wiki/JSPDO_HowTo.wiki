@@ -329,3 +329,84 @@ finally { if(st) st.finalize(); }
 }}}
 
 You may of course include an explicit `catch` block if you like (if you do not, the exception is propagated but the statement is still cleaned up).
+
+=Misc. Tricks=
+
+==De/Compressing Field Data==
+
+The [V8Convert_ByteArray ByteArray] class, used for BLOB field data, supports gzip de/compression, and we can take advantage of that to de/compress db field data. Here is an example:
+
+(The `assert()` function used below comes from external test-related utility code.)
+
+{{{
+function testGzippedJSON(db)
+{
+    db.exec("DROP TABLE IF EXISTS ziptest");
+    db.exec("CREATE TABLE ziptest(name VARCHAR(50) NOT NULL, json BLOB DEFAULT NULL)");
+    var theObj = { // an object to store in the DB as compressed JSON
+        a:"Äaöoüu",
+        b:42,
+        db:db.toJSON(),
+        list:[]
+    };
+    // Add some filler so that the data can actually compress a bit...
+    var i;
+    for( i = 1; i <= 10; ++i ) { theObj.list.push("Line #"+i+"\n"); };
+    var json = JSON.stringify(theObj,0,4);
+    // Stuff it into the database...
+    var st;    
+    try {
+        print("Inserting compressed data....");
+        st = db.prepare("INSERT INTO ziptest (name,json) VALUES (?,?)");
+        st.bind(1,"bogo");
+        var bac, ba = new JSPDO.ByteArray( json );
+        bac = ba.gzip();
+        ba.destroy();
+        st.bind(2,bac);
+        bac.destroy();
+        st.step();
+        print("Inserted compressed data.");
+        st.finalize();
+        st = null;
+        // Now read it back and compare it ot the original...
+        db.exec({
+            sql:"SELECT name as name,json as json FROM ziptest",
+            each:function(st) {
+                var ba = st.get(1);
+                assert(ba instanceof JSPDO.ByteArray,'Field is-a ByteArray');
+                print("Got compressed field data: "+ba);
+                var buc = ba.gunzip();
+                ba.destroy();
+                var sv = buc.stringValue();
+                print("Uncompressed JSON data: "+buc+" Length: "+
+                    buc.length+" bytes/"+sv.length+' characters:\n'+sv);
+                buc.destroy();
+                assert( sv === json, "Decompressed JSON matches original" );
+            }
+        });
+    }
+    finally {
+        if(st) st.finalize();
+    }
+}
+}}}
+
+On my machine that produces output similar to:
+
+{{{
+Inserting compressed data....
+Inserted compressed data.
+Assertion OK: Field is-a ByteArray
+Got compressed field data: [object ByteArray@0x215d240, length=180]
+Uncompressed JSON data: [object ByteArray@0x2161270, length=379] Length: 379 bytes/376 characters:
+{
+    "a": "Äaöoüu",
+    "b": 42,
+    "db": {
+        "dsn": "sqlite3::memory:",
+        "id": "[cpdo::driver@0x211d750, driver=sqlite3]"
+    },
+...
+}
+Assertion OK: Decompressed JSON matches original
+}}}
