@@ -136,7 +136,7 @@ namespace v8 { namespace juice {
        Like sleep(), but naps for the given number of microseconds
        (millionths of a second).
     
-       JS Usage: usleep( nanoseconds )
+       JS Usage: usleep( microseconds )
 
        but be aware that you won't get really high resolution via JS
        when sleeping for very small intervals, due to the overhead involved
