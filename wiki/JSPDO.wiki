@@ -9,12 +9,12 @@ See also: [JSPDO_API], [JSPDO_HowTo]
 
 =About JSPDO=
 
-JSPDO is a database access abstraction API, modelled heavily off of the [http://php.net/manual/en/book.pdo.php PHP PDO] API. The underlying database abstraction library is called [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo] and is implemented in C. JSPDO basically provides a v8 wrapper around cpdo, and some of the documentation here may refer the reader to the related [http://whiki.wanderinghorse.net/wikis/cpdo/ cpdo documentation].
+JSPDO is a database access abstraction API, modelled heavily off of the [http://php.net/manual/en/book.pdo.php PHP PDO] API. The underlying database abstraction library is called [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo] and is implemented in C. (cpdo was originally written in the hopes of supporting this very library.) JSPDO basically provides a v8 wrapper around cpdo, and some of the JSPDO documentation may refer the reader to the related [http://whiki.wanderinghorse.net/wikis/cpdo/ cpdo documentation]. JSPDO is not a "thin wrapper", though - it extends the native C/C++ APIs with several useful features and hides some details which can become rather tedious in the native API. It's really, _really_ easy to use.
 
 Requirements:
 
   * libv8, of course
-  * [V8Convert] (it's a header-only library, so there is no major installation hassles).
+  * [V8Convert] (it's a header-only library, so there are no major installation hassles).
   * The [V8Convert_ByteArray] code (only two files).
   * At least one of sqlite3 and/or MySQLv5.
   * Some patience - the build tree is currently only designed to build directly from [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons/jspdo the original source tree] packaged together with [V8Convert]. i hope to modularize it someday to make it easy to drop in to arbitrary `v8::convert`-using clients.
