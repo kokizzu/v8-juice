@@ -30,7 +30,7 @@ A very special thanks goes to James Pike, author of [https://github.com/tsa/vu8 
 =Converting Types=
 
   * `CastToJS<T>()`: converts the given object to a `v8::Handle<v8::Value>`.
-  * `CastFromJS<T>()`: converts a v8 value to a `T` (or `T*` for most non-POD types).
+  * `CastFromJS<T>()`: converts a v8 value to a `T` (actually `T*` for most non-POD types).
 
 These are very thin wrappers around `NativeToJS<>` and `JSToNative<>`, and work identically to the v8-juice APIs with the same names (see [ConvertingTypes]). A few special-case overloads also exist to avoid call ambiguities in some cases or to cover special cases (most notably those taking (`char *`) and `v8::InvocationCallback` arguments).
 
@@ -47,7 +47,6 @@ myInvocationCallback( v8::Arguments const & ) {
     }
 }
 }}}
-
 
 =Implementing Custom Conversions=
 
@@ -250,6 +249,8 @@ int my_callback( v8::Arguments const & argv )
 
 The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). Two approaches are shown here, but i highly recommend the second one except for very simple cases (only two overloads).
 
+Both approaches shown below have one important thing in common: `InvocationCallback`-like functions can be used as a "catch-all" for handling calls with any number of arguments. Such functions are considered to have an "arity" (number of arguments) of "less than zero", which the library interprets as "any number" (which the `InvocationCallback` interface directly supports).
+
 ===Approach 1: `InCaOverloader`===
 
 The first approach is a bit verbose, but it works, and it looks something like this:
@@ -303,10 +304,10 @@ The second approach is significantly less verbose and more readable than `InCaOv
 {{{
 // Overload 4 variants of a member function:
 typedef cv::InCaOverloadList< cv::tmp::TypeList<
-        cv::MethodToInCa<T, void(), &T::overload0>,
-        cv::MethodToInCa<T, void(int), &T::overload1>,
-        cv::MethodToInCa<T, void(int,int), &BoundNative::overload2>,
-        cv::MethodToInCa<T, void(v8::Arguments const &), &T::overloadN>
+        cv::MethodToInCa<T, void (), &T::overload0>,
+        cv::MethodToInCa<T, void (int), &T::overload1>,
+        cv::MethodToInCa<T, void (int,int), &BoundNative::overload2>,
+        cv::MethodToInCa<T, void (v8::Arguments const &), &T::overloadN> // fallback for N args
     > > MyOverloads;
 
 // Get the InvocationCallback proxy which does the arity-based dispatching:
