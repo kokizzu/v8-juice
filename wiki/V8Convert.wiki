@@ -372,9 +372,13 @@ typedef InCaCatcher<
        char const *(), // signature of message-getter
        &std::exception::what, // message-fetching method
        MyCallbackWhichThrows, // the InvocationCallback to try/catch
-       false // whether to propagate other exceptions or not
+       false // whether to propagate other exceptions or not (default=false)
    > Catcher;
 
+// Or, more simply (for std::exception):
+typedef InCaCatcher_std< MyCallbackWhichThrows > Catcher;
+
+// Get the callback function with:
 v8::InvocationCallback cb = Catcher::Call;
 }}}
 
