@@ -230,10 +230,10 @@ char const * cstring_test( char const * c )
 }
 
 v8::InvocationCallback cb =
-   cv::FunctionToInvocationCallback<
+   cv::FunctionToInCa<
      char const * (char const *),
      cstring_test
-    >;
+    >::Call;
 }}}
 
 If we bind that to JS with the name `cstr`:
@@ -280,16 +280,30 @@ And we can create `v8::InvocationCallback` functions from them like:
 {{{
 InvocationCallback cb;
 
-cb = FunctionToInvocationCallback< int (Arguments const &),
-                                my_callback >;
+cb = FunctionToInCa< int (Arguments const &),
+                     my_callback >::Call;
+// Is equivalent to:
+cb = ToInCa<void,
+            int (Arguments const &),
+            my_callback>::Call;
 
-cb = MethodToInvocationCallback< MyType,
-                               void (Arguments const &),
-                               &MyType::callback >;
 
-cb = ConstMethodToInvocationCallback< MyType,
-                               double (Arguments const &),
-                               &MyType::constCallback >;
+cb = MethodToInCa< MyType,
+                   void (Arguments const &),
+                   &MyType::callback >::Call;
+// Is equivalent to:
+cb = ToInCa<MyType,
+            void (Arguments const &),
+            &MyType::callback>::Call;
+
+
+cb = ConstMethodToInCa< MyType,
+                        double (Arguments const &),
+                        &MyType::constCallback >::Call;
+// Is equivalent to:
+cb = ToInCa<MyType,
+            double (Arguments const &) const, // note the trailing 'const'!
+            &MyType::constCallback>::Call;
 }}}
 
 (Pretty simple, huh?)
@@ -319,6 +333,8 @@ Both approaches shown below have one important thing in common: `InvocationCallb
 
 The first approach is a bit verbose, but it works, and it looks something like this:
 
+(Don't use this unless you must - recent templating additions will allow us to reimplement this in a simpler form.)
+
 {{{
 // The funcs we want to overload:
 int myfunc1(int); // 1 arg
@@ -326,9 +342,9 @@ int myfunc2(int, int); // 2 args
 int myfuncN( v8::Arguments const & ); // fallback handler (optional)
 
 // Set up a couple typedefs so that the following code is more readable:
-typedef cv::InCa< cv::FunctionToInvocationCallback<int (int), myfunc1> > my1;
-typedef cv::InCa< cv::FunctionToInvocationCallback<int (int,int), myfunc2> > my2;
-typedef cv::InCa< cv::FunctionToInvocationCallback<int (v8::Arguments const &), myfuncN> > myN;
+typedef cv::FunctionToInCa<int (int), myfunc1> my1;
+typedef cv::FunctionToInCa<int (int,int), myfunc2> my2;
+typedef cv::FunctionToInCa<int (v8::Arguments const &), myfuncN> myN;
 
 // More readability typedefs...
 
@@ -389,9 +405,9 @@ Consider this function binding:
 {{{
 #include <unistd.h> // sleep(), or Sleep(N*1000) on Windows
 v8::InvocationCallback cb =
-    cv::FunctionToInvocationCallback<
+    cv::FunctionToInCa<
        unsigned int (unsigned int), sleep
-     >;
+     >::Call;
 }}}
 
 When that callback is called, the calling code is locking v8, meaning that other v8-using threads cannot preempt it. When calling C-level APIs which themselves do not call back into v8, we normally instead want to tell v8 that other threads may run. That is done like this:
