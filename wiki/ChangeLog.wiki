@@ -11,10 +11,14 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 June 24*
+  * The past several days have seen near record activity levels (some 120 commits in 5 days), almost exclusively in the [V8Convert] API, its demo/test/add-on code (like [JSPDO], [V8Convert_Socket], and [V8Convert_ByteArray]), and the related documentation. `v8::convert` has gotten a number of subtle additions and internal improvements over the past days. i'm half tempted to move it into its own Google Code project.
+  * i renamed several of the core-most templates in `v8::convert`, but i'm not aware of anyone else using that API yet, so i won't lose sleep over code compatibility breakage. If it affected you, it's your own fault for not telling me you're using the code ;).
+
 *2011 June 21*
   * Added some [V8Convert] demo code which shows how to add native-to-JS conversions.
   * Added `v8::convert::NativeToJSMap<>` to assist in creating native-to-JS mappings.
-  * Got binding to `T [const] & X::func() [const]` and `any X::func( T [const] & ) [const]` working, provided that `T` and `X` are (A) bound to JS and (B) convertible to/from JS using `CastToJS()` and `CastFromJS()`.
+  * Got binding to `T [const] & X::func() [const]` and `any X::func( T [const] & ) [const]` working, provided that `T` and `X` are (A) bound to JS and (B) convertible to/from JS using `CastFromJS()` and (for the first conversion) `CastToJS()`.
 
 *2011 June 19*
   * Added an experimental [V8Convert_Socket socket API] based on [V8Convert].
