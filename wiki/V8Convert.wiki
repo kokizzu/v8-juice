@@ -298,7 +298,7 @@ If an overloaded function needs to be able to take any number of arguments, it m
 
 ===Approach 2: `InCaOverloadList`===
 
-The second approach is a bit significantly less verbose and more readable than `InCaOverloader` and auto "automatically" determined the overload arities. It uses a "type list" to construct the list of overloads:
+The second approach is significantly less verbose and more readable than `InCaOverloader`, and it auto "automatically" determines the overload arities. It uses a "type list" to construct the list of overloads:
 
 {{{
 // Overload 4 variants of a member function:
@@ -444,6 +444,29 @@ PB::BindGetterSetterFunctions<std::string (),
 (Pedantic note: v8 apparently does not allow us to bind a setter without also binding a getter. My attempts to do so caused crashes.)
 
 JS properties can be bound to native _member_ properties similarly using the `MemberPropertyBinder` subclass of `PropertyBinder`. Note that for member binding to work, the JS class being bound must "wrap" that native class. i.e. that only works with "fully wrapped" classes.
+
+==Passing v8 Arguments directly to Constructors==
+
+The `CtorForwarder` class assists in forwarding `v8::Arguments` objects to constructors. Usage examples:
+
+{{{
+// Typedefs for 3 different ctors:
+typedef cv::CtorForwarder<MyType * ()> Ctor0;
+typedef cv::CtorForwarder<MyType * (int)> Ctor1;
+typedef cv::CtorForwarder<MyType * (argType1,argType2)> Ctor2;
+
+// We can call these individually:
+MyType * my = Ctor0::Ctor( argsObject );
+
+// Or we can group them together and dispatch based on the number of arguments pass in:
+typedef cv::CtorForwarderDispatcher<
+    cv::tmp::TypeList<
+        Ctor0, Ctor1, Ctor2
+    > > Dispatch;
+MyType * my = Dispatch::Ctor( argsObject );
+}}}
+
+Unlike with most other bindings, the argument types do not need to match _exactly_. The types declared in the `CtorForwarder` instantiation will be used for purposes of converting the arguments from JS to native values. As long as those types can be implicitly converted to the types accepted by the constructor(s) then it should work okay. e.g. you can declare the forwarder as having an `int` argument even though the ctor really takes a `double`. (However, that would cause any doubles passed in from JS space to first be converted to an integer, which would lose precision.)
 
 =Code Demos and Sample Bindings=
 
