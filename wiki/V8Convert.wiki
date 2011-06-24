@@ -72,7 +72,7 @@ These work identically to the v8-juice APIs with the same names (see [Converting
 
 =Converting Functions to `v8::InvocationCallback`=
 
-Quite possibly the simplest way in the world to convert free functions and member functions to `v8::InvocationCallback` functions is using the `ToInCa<>` template ("InCa" is short for "InvocationCallback"):
+Quite possibly the simplest way in the world to convert free functions and member functions to `v8::InvocationCallback` functions is using the `ToInCa<>` template ("!InCa" is short for "!InvocationCallback"):
 
 {{{
 v8::InvocationCallback cb;
@@ -107,15 +107,18 @@ Each of those three classes has a corresponding function with a similar name. Th
   * `MethodToInvocationCallback()`
   * `ConstMethodToInvocationCallback()`
 
+These exist largely for historical reasons - they have largely been obsoleted by restructuring of the underlying class templates.
 
-In all three cases, the static `Call()` method of the classes is the same function as when using to corresponding `ToInvocationCallback()` function template. An example should clarify that point:
+In all three cases, the static `Call()` method of the classes is the same function as the corresponding `xxxToInvocationCallback()` function template. An example should clarify that point:
 
 {{{
+// These are all functionally equivalent:
 v8::InvocationCallback cb2 = FunctionToInCa<int (char const *),::puts>::Call;
 v8::InvocationCallback cb1 = FunctionToInvocationCallback<int (char const *),::puts>;
+v8::InvocationCallback cb3 = ToInCa<void, int (char const *),::puts>::Call;
 }}}
 
-Those both refer to the same underlying function (though their memory addresses differ). The first form is actually a tad bit more efficient because the second approach creates another one-line wrapper function between v8 and the bound function. The second form is, however, more prevalently documented because the client-side value of the second form was not recognized as early on as it should have been.
+Those all refer to the same underlying function (though their memory addresses differ). The first and 3rd forms are actually a tad bit more efficient because the second approach creates another one-line wrapper function between v8 and the bound function. The second form is, however, more prevalently documented because the client-side value of the second form was not recognized as early on as it should have been (and the 3rd form was just introduced about 30 minutes ago, as of this writing).
 
 Note that binding to non-static member member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See the included demo code an example of one way to set this up (there are many ways).
 
@@ -136,31 +139,31 @@ v8::InvocationCallback cb; // v8's generic callback function interface
 // v8::InvocationCallback functions:
 
 // Function: int puts(char const *)
-cb = cv::FunctionToInvocationCallback<
+cb = cv::FunctionToInCa<
        int (char const *), ::puts
-     >;
+     >::Call;
 
 // Class method: double MyType::multiply(double, double)
-cb = cv::MethodToInvocationCallback<
+cb = cv::MethodToInCa<
        MyType,
        double (double,double),
        &MyType::multiply
-     >;
+     >::Call;
 
 // Const class method:
 //    char const * MyType::errorCodeToString(int) const
-cb = cv::ConstMethodToInvocationCallback<
+cb = cv::ConstMethodToInCa<
        MyType,
        char const * (int),
        &MyType::errorCodeToString
-     >;
+     >::Call;
 
 // Here's how we can bind a JS-side garbage-collection-triggering
 // function:
-cb = cv::FunctionToInvocationCallback<bool (),v8::V8::IdleNotification>;
+cb = cv::ToInCa<void, bool (),v8::V8::IdleNotification>::Call;
 }}}
 
-Those examples demonstrate _all_ of the public API needed for converting functions to `v8::InvocationCallback` equivalents! There are some additional templates which add features on top of those, but those are all one really needs for most basic function bindings.
+Those examples demonstrate of the public API one needs for converting functions to `v8::InvocationCallback` equivalents! There are some additional templates which add features on top of those, but those are all one really needs for most basic function bindings.
 
 It might be interesting to note that the above functions are _created_, but _not actually called_, by the above code (note that we pass no non-template parameters to them).
 
