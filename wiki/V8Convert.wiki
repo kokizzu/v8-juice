@@ -27,14 +27,28 @@ The most important functions and types, from a user's perspective, are listed be
 
 A very special thanks goes to James Pike, author of [https://github.com/tsa/vu8 vu8], for his helpful tips on getting function-pointer-style template arguments working. These allow for more readable templates when compared to the v8-juice API.
 
+==Notes about the Namespace==
+
+The library is rooted in the namespace `v8::convert`, but most of the sample code in the wiki (and lots of the real code, for that matter) uses the following namespace alias:
+
+{{{
+namespace cv = v8::convert;
+}}}
+
+In hindsight, it was "probably not the best idea" to add a sub-namespace of v8, and i "probably should have" used `v8cv` or something similar. If the v8 team ever decides to use the `convert` namespace for themselves, i'm screwed. In that case, v8cv would be my fall-back.
+
 =Converting Types=
+
+The public type conversions API is based on only two functions:
 
   * `CastToJS<T>()`: converts the given object to a `v8::Handle<v8::Value>`.
   * `CastFromJS<T>()`: converts a v8 value to a `T` (actually `T*` for most non-POD types).
 
 These are very thin wrappers around `NativeToJS<>` and `JSToNative<>`, and work identically to the v8-juice APIs with the same names (see [ConvertingTypes]). A few special-case overloads also exist to avoid call ambiguities in some cases or to cover special cases (most notably those taking (`char *`) and `v8::InvocationCallback` arguments).
 
-Here's a silly trick you can do with `CastToJS()`:
+Using these operations allows us to convert a wide variety of types between JS and C++, and the `NativeToJS<>` and `JSToNative<>` classes give us a way to extend the conversion operations to support custom conversions. This level of abstraction allows us, in turn, to implement all sorts of algorithms which are ignorant of the _types_ they are working on. The function-binding APIs, for example, rely on this for converting function argument and return values to/from JS/C++.
+
+Here's a silly trick we can do with `CastToJS()`:
 
 {{{
 v8::Handle<v8::Value>
@@ -58,31 +72,52 @@ These work identically to the v8-juice APIs with the same names (see [Converting
 
 =Converting Functions to `v8::InvocationCallback`=
 
-  * `FunctionToInvocationCallback()`
-  * `MethodToInvocationCallback()`
-  * `ConstMethodToInvocationCallback()`
+Quite possibly the simplest way in the world to convert free functions and member functions to `v8::InvocationCallback` functions is using the `ToInCa<>` template ("InCa" is short for "InvocationCallback"):
 
-By using only those 3 function templates (all with identical interfaces) clients can bind
-a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
+{{{
+v8::InvocationCallback cb;
 
-Each of those function has a corresponding class with a similar name. The class provides a "fully typed" conversion of the function and remembers the function's arity (how many arguments it takes):
+// A free function: int puts(char const *)
+cb = cv::ToInCa<void, int (char const *), ::puts>::Call;
+// The first 'void' parameter is only used for Function, not Method, conversions!
+
+// A non-const method: int MyType::nonConstMethod(char const *)
+cb = cv::ToInCa<MyType, int (char const *), &MyType::nonConstMethod>::Call;
+
+// A const method: int MyType::constMethod(char const *) const
+cb = cv::ToInCa<MyType, int (char const *) const, &MyType::constMethod>::Call;
+// Note the trailing 'const' qualifier on the function signature!
+}}}
+
+The `ToInCa` template is a thin wrapper around three primary class templates:
 
   * `FunctionToInCa<>`
   * `MethodToInCa<>`
   * `ConstMethodToInCa<>`
 
-In all three cases, the static `Call()` method of those classes is the function used by the function converters shown above. An example should clarify that point:
-
-{{{
-v8::InvocationCallback cb1 = FunctionToInvocationCallback<int (char const *),::puts>;
-v8::InvocationCallback cb2 = FunctionToInCa<int (char const *),::puts>::Call;
-}}}
-
-Those both refer to the same underlying function (though their memory addresses differ). The second form is actually a tad bit more efficient because the first approach creates another one-line wrapper function between v8 and the bound function. The first form is, however, more prevalently documented because the client-side value of the second form was not recognized as early on as it should have been.
-
-Note that binding to non-static member member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See the included demo code for how to set this up (we just have to create a `JSToNative<>` specialization).
+By using only those 3 templates (all with identical interfaces) clients can bind
+a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
 
 Support for const- and non-const methods are split into two implementations because some compilers reportedly cannot properly choose differing specializations when the difference is only in constness. (i have only heard of this being a problem on MSVC.)
+
+Each of those three classes has a corresponding function with a similar name. The class provides a "fully typed" conversion of the function and remembers the function's arity (how many arguments it takes), whereas the function variant is simply an unadorned function pointer:
+
+
+  * `FunctionToInvocationCallback()`
+  * `MethodToInvocationCallback()`
+  * `ConstMethodToInvocationCallback()`
+
+
+In all three cases, the static `Call()` method of the classes is the same function as when using to corresponding `ToInvocationCallback()` function template. An example should clarify that point:
+
+{{{
+v8::InvocationCallback cb2 = FunctionToInCa<int (char const *),::puts>::Call;
+v8::InvocationCallback cb1 = FunctionToInvocationCallback<int (char const *),::puts>;
+}}}
+
+Those both refer to the same underlying function (though their memory addresses differ). The first form is actually a tad bit more efficient because the second approach creates another one-line wrapper function between v8 and the bound function. The second form is, however, more prevalently documented because the client-side value of the second form was not recognized as early on as it should have been.
+
+Note that binding to non-static member member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See the included demo code an example of one way to set this up (there are many ways).
 
 Because these templates _create_ `v8::InvocationCallback` functions at compile-time, they require no dynamically-allocated proxy objects or other hidden memory usage like some binding mechanisms require. The only overhead these templates add is the conversion of arguments/return values to/from JS. The library does as much work as possible at compile time to help detect type-conversion errors early and help avoid extra runtime costs.
 
