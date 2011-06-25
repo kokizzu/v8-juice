@@ -421,7 +421,27 @@ When that callback is called, the calling code is locking v8, meaning that other
 ... v8 is locked again here, so we can use v8 again ...
 }}}
 
-This library currently doesn't have a generic mechanism for adding this support via the provided templates. i have some ideas on how it might be done, but nothing has materialized yet.
+As of the early morning of 20110625, the library includes support for optionally telling function bindings that they should unlock v8. This option is _off_ by default because it can be dangerous (e.g. if one of the converted types is a v8 type then results are undefined if we use it while unlocked).
+
+To create a "unlocked" version of a given binding, simply pass `true` as the final (optional) argument to `ToInCa` (and friends):
+
+{{{
+v8::InvocationCallback cb;
+
+cb = cv::ToInCa<void, int (char const *), ::puts, true >::Call;
+// Is equivalent to:
+cb = cv::FunctionToInCa<int (char const *), ::puts, true >::Call;
+}}}
+
+*Achtung:* this support has a couple notable caveats. The ones which immediately come to mind are:
+
+It is illegal for the unlock option to be enabled if ANY of the following applies:
+
+  * The callback itself will "use" v8. (This _might_ be okay if it uses `a v8::Locker`. We'll have to try and see.)
+  * Any of the return or argument types for the function are v8 types, e.g. `v8::Handle<Anything>` or `v8::Arguments`.
+  * `InvocationCallback`-like functions will, if unlocking is enabled, trigger a compile-time assertion because we cannot lock these because that would make using the `v8::Arguments` object illegal.
+  * There might be other corner cases where unlocking v8 is semantically illegal at this level of the API but are not caught as compile-time errors. A notable example is that if any function argument is a v8 type (e.g. `v8::Handle<Anything>`) then enabling unlocking will have undefined results at runtime. We might be able to add more template magic to catch even these cases at compile-time.
+
 
 ==Special Case: Catching native Exceptions==
 
