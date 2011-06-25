@@ -389,6 +389,7 @@ typedef cv::InCaOverloadList< cv::tmp::TypeList<
         cv::MethodToInCa<T, void (int,int), &BoundNative::overload2>,
         cv::MethodToInCa<T, void (v8::Arguments const &), &T::overloadN> // fallback for N args
     > > MyOverloads;
+// Note that the order of the list entries is irrelevant (for _most_ purposes).
 
 // Get the InvocationCallback proxy which does the arity-based dispatching:
 v8::InvocationCallback cb = MyOverloads::Call;
@@ -397,6 +398,21 @@ v8::InvocationCallback cb = MyOverloads::Call;
 Note that only one line of that code is evaluated at runtime - the rest is all done at compile-time. The above generates a whole family of `v8::InvocationCallback` functions (at least (overload count + 1) of them, though there are a couple others hidden behind the scenes) and combines them into a single `v8::InvocationCallback` dispatcher function, `MyOverloads::Call()`.
 
 There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is _at least_ 10 (and the library can be built to support many more than that). (If you're overloading 10+ variants of one function then the design probably needs to be reconsidered!)
+
+==Special Case: Non-Convertible Return Types==
+
+Sometimes we want to bind a function which has a return type which we cannot convert to JS. That means we can't bind it (compile errors if we try). There is, however, a half-workaround. If we don't mind simply losing the return type on the way to JS, we can use `ToInCaVoid<>` to generate an `v8::InvocationCallback` proxy which explicitly does not call `CastToJS()` to convert the return type. The implication of that is that we can then bind it, but JS will get the `undefined` value as the result:
+
+{{{
+v8::InvocationCallback cb;
+cb = cv::ToInCaVoid<void, SomeNonConvertibleType (args...), myFunction>::Call;
+// Equivalent to:
+cb = cv::FunctionToInCaVoid<SomeNonConvertibleType (args...), myFunction>::Call;
+}}}
+
+We can also use that to bind functions whos return types we _could_ convert but don't want to for some reason (e.g. we don't want native error goes going back to JS).
+
+Be careful not to leak resources this way. If the function returns dynamically-allocated resources from a function bound this way, they will be irrevocably leaked on every call to the function!
 
 ==Special Case: Unlocking the v8 Engine==
 
@@ -425,7 +441,7 @@ If the native function will only run very briefly then unlocking will probably b
 
 As of the early morning of 20110625, the library includes generic support for optionally telling function bindings that they should unlock v8 for the duration of the native call.
 
-The default value for this option depends on the several factors but it will normally be enabled. If the function signature involved contains any v8 types then unlocking is disabled and an assertion is triggered if the client explicitly enables it.
+The default value for this option (for any given instantiation of the templates, not globally) depends on several factors but it will normally be enabled. If the function signature involved contains any v8 types then unlocking is disabled and an assertion is triggered if the client explicitly enables it.
 
 To force a given function/method binding to run in "unlocked" mode, simply pass `true` as the final (optional) argument to `ToInCa` (and friends):
 
@@ -438,6 +454,7 @@ cb = cv::FunctionToInCa<int (char const *), ::puts, true >::Call;
 
 // Class methods are handled the same way:
 cb = cv::ToInCa<T, int (double), &T::foo>::Call;
+cb = cv::ToInCa<T, int (double) const, &T::fooConst>::Call;
 }}}
 
 *Achtung:* this support has a couple notable gotchas, caveats, and Things One Needs to Know. The ones which immediately come to mind are:
