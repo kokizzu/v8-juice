@@ -462,15 +462,16 @@ template <>
 cv::IsUnlockable<MyType> { { enum Value = 0 }; };
 }}}
 
-That effectively adds `MyType` to the "do not lock" list, and any bound JS functions which are members of that type, return that type, or have it in their arguments list will have unlocking support disabled by default. In such cases, explicitly enabling locking for any such function will cause a compile-time assertion to be triggered, just as it does for functions having v8 data types in their signatures. For example, assuming the above "blacklist specialization" is in place:
+That effectively adds `MyType` to the "do not unlock" blacklist, and any bound JS functions which are members of that type, return that type, or have it in their arguments list will have unlocking support disabled by default. In such cases, explicitly enabling locking for any such function will cause a compile-time assertion to be triggered, just as it does for functions having v8 data types in their signatures. For example, assuming the above "blacklist specialization" is in place:
 
 {{{
-v8::InvocationCallback cb = 
-  cv::FunctionToInCa< int (MyType *, double), some_function >::Call;
+v8::InvocationCallback cb;
 
+cb = cv::FunctionToInCa< int (MyType *, double), some_function >::Call;
 // That's legal b/c unlocking defaults to false. But this will fail to compile:
 cb =   cv::FunctionToInCa< int (MyType *, double), some_function, true >::Call;
-// because unlocking _cannot_ be enabled for that function (because of the `MyType` blacklist specialization).
+// because unlocking _cannot_ be enabled for that function (because of the
+// IsUnlockable<MyType> specialization).
 }}}
 
 ==Special Case: Catching native Exceptions==
