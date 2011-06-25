@@ -7,7 +7,7 @@
 
 Source code: [http://code.google.com/p/v8-juice/source/browse/#svn/convert] (see [http://code.google.com/p/v8-juice/source/checkout this link] for checkout instructions.)
 
-The `v8::convert` API is a spin-off of the core-most components of the v8-juice library. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. It provides the following features:
+The `v8::convert` API is a spin-off of the core-most components of the v8-juice library. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. It's main features/focus are:
 
   * Converting between v8 Value handles and "native types" using a generic interface. This allows us to write generic algorithms which convert between JS/C++ without having to know the exact types we're dealing with.  The basic POD types and some STL types are supported out of the box and plugging in one's own types is normally quite simple.
   * Converting free- and member functions into `v8::InvocationCallback` functions. These generated functions convert the !JavaScript-originated function arguments into native counterparts, forward the data to the original native function, and convert the return values back to something JS can use. (The `void` return type is translated to the `undefined` JS value.)
@@ -133,9 +133,9 @@ namespace cv = v8::convert;
 typedef ToInCa<void, int (char const *,double), my_function> MyFunc;
 
 assert( MyFunc::Arity == 2 ); // number of args the function takes.
-typedef cv::ArgTypeAt< MyFunc, 0 >::Type A0; // == (char const *)
-typedef cv::ArgTypeAt< MyFunc, 1 >::Type A1; // == double
-//typedef cv::ArgTypeAt< MyFunc, 2 >::Type A2; // compile-time error (arg out of bounds)
+typedef cv::SignatureParamAt< MyFunc, 0 >::Type A0; // == (char const *)
+typedef cv::SignatureParamAt< MyFunc, 1 >::Type A1; // == double
+//typedef cv::SignatureParamAt< MyFunc, 2 >::Type A2; // compile-time error (arg out of bounds)
 }}}
 
 We can use further templating techniques to do things like choose different code paths based on that type information, as in this rather contrived example which changes `int64_` to `double` (v8 does not internally support 64-bit integers):
@@ -325,61 +325,11 @@ int my_callback( v8::Arguments const & argv )
 
 ==Special Case: Overloading based on Arity==
 
-The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). Two approaches are shown here, but i highly recommend the second one except for very simple cases (only two overloads).
+The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). We have two approaches to doing this, but only one is shown here (the one which is far easier to use for most cases).
 
-Both approaches shown below have one important thing in common: `InvocationCallback`-like functions can be used as a "catch-all" for handling calls with any number of arguments. Such functions are considered to have an "arity" (number of arguments) of "less than zero", which the library interprets as "any number" (which the `InvocationCallback` interface directly supports).
+The `InCaOverloadList` template takes a `TypeList` of function binding templates (or something interface-compatible) and combines them into a single `v8::InvocationCallback` function which can dispatch script-side calls to a different native function depending on the number (not the types) of arguments.
 
-===Approach 1: `InCaOverloader`===
-
-The first approach is a bit verbose, but it works, and it looks something like this:
-
-(Don't use this unless you must - recent templating additions will allow us to reimplement this in a simpler form.)
-
-{{{
-// The funcs we want to overload:
-int myfunc1(int); // 1 arg
-int myfunc2(int, int); // 2 args
-int myfuncN( v8::Arguments const & ); // fallback handler (optional)
-
-// Set up a couple typedefs so that the following code is more readable:
-typedef cv::FunctionToInCa<int (int), myfunc1> my1;
-typedef cv::FunctionToInCa<int (int,int), myfunc2> my2;
-typedef cv::FunctionToInCa<int (v8::Arguments const &), myfuncN> myN;
-
-// More readability typedefs...
-
-// Proxy for N arguments:
-typedef cv::InCaOverloader< -1, // arity
-                            myN::Call // callback when arity matches
-                           > OloadN;
-
-// Proxy for 2 or N:
-typedef cv::InCaOverloader< 2, // arity
-                            my2::Call, // callback when airty matches
-                            OloadN::Call // callback when arity does NOT match
-                           > Oload2;
-
-// Proxy for 1 or 2 or N arugments:
-typedef cv::InCaOverloader< 1, my1::Call, Oload2::Call > OloadAll;
-
-
-// Now we have an InvocationCallback proxy which will dispatch based
-// on the number of arguments:
-InvocationCallback cb = OloadAll::Call
-
-// cb is now a function which basically says:
-// If passed 1 arg, call myfunc1(), else... If passed 2 args, call
-// myfunc2(), else... if passed anything else (including no args),
-// call myfuncN().
-}}}
-
-`InCaOverloader` can be chained this way (with increasing code uglification!) to support an arbitrary number of varying arities. The 3rd (optional) parameter is the callback to call if the arity of the call (at runtime) does not match the number given to the template. The default fallback callback throws a JS-side exception warning about the argument count mismatch.
-
-If an overloaded function needs to be able to take any number of arguments, it must itself be "!InvocationCallback-like" and the `InCaOverloader` must be given an arity value of `-1`. In addition, that entry should be the _last_ one in the `InCaOverloader` chain (because of how the arity value check works).
-
-===Approach 2: `InCaOverloadList`===
-
-The second approach is significantly less verbose and more readable than `InCaOverloader`, and it auto "automatically" determines the overload arities. It uses a "type list" to construct the list of overloads:
+It looks like this:
 
 {{{
 // Overload 4 variants of a member function:
@@ -398,6 +348,8 @@ v8::InvocationCallback cb = MyOverloads::Call;
 Note that only one line of that code is evaluated at runtime - the rest is all done at compile-time. The above generates a whole family of `v8::InvocationCallback` functions (at least (overload count + 1) of them, though there are a couple others hidden behind the scenes) and combines them into a single `v8::InvocationCallback` dispatcher function, `MyOverloads::Call()`.
 
 There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is _at least_ 10 (and the library can be built to support many more than that). (If you're overloading 10+ variants of one function then the design probably needs to be reconsidered!)
+
+In theory the API provides enough type information so that we could (theoretically) build advanced templates which can (theoretically) dispatch based (theoretically) on the types passed in at runtime. It would require some masterful _Template Fu_ and (likely) a boatload of `typedef`s, though. In principal such a construct is similar to templates-based parser generators (e.g. `Boost::Spirit`, and i've written 3 or 5 similar libraries in my time). If we approach it like a parser, with arguments being the tokens, building such dispatchers shouldn't be too conceptually difficult. Something along the lines of "PEG Parser for v8::Arguments." Well, now the challenge has been made. Let's see if it ever gets done.
 
 ==Special Case: Non-Convertible Return Types==
 
@@ -533,7 +485,7 @@ v8::InvocationCallback cb = Catcher::Call;
 
 For examples of chaining these to support multiple exception types, see the API documentation.
 
-=Forwarding v8-supplied Function Arguments to non-bound Functions=
+==Forwarding v8-supplied Function Arguments to non-bound Functions==
 
   * `forwardFunction()`
   * `forwardMethod()`
