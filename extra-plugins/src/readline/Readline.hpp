@@ -240,6 +240,6 @@ namespace readlinecpp {
         };
 
 
-}; // namespace readlinecpp
+} // namespace readlinecpp
 
 #endif // S11N_NET_READLINE_HPP_INCLUDED
