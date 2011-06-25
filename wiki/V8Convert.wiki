@@ -439,8 +439,9 @@ It is illegal for the unlock option to be enabled if ANY of the following applie
 
   * The callback itself will "use" v8. (This _might_ be okay if it uses `a v8::Locker`. We'll have to try and see.)
   * Any of the return or argument types for the function are v8 types, e.g. `v8::Handle<Anything>` or `v8::Arguments`.
-  * `InvocationCallback`-like functions will, if unlocking is enabled, trigger a compile-time assertion because we cannot lock these because that would make using the `v8::Arguments` object illegal.
-  * There might be other corner cases where unlocking v8 is semantically illegal at this level of the API but are not caught as compile-time errors. A notable example is that if any function argument is a v8 type (e.g. `v8::Handle<Anything>`) then enabling unlocking will have undefined results at runtime. We might be able to add more template magic to catch even these cases at compile-time.
+  * `InvocationCallback`-like functions will, if unlocking is enabled, trigger a compile-time assertion. We _cannot_ unlock for these because that would make using the `v8::Arguments` object illegal (which means we cannot legally pass on the arguments to the native function).
+
+There might be other corner cases where unlocking v8 is semantically illegal at this level of the API but are not caught as compile-time errors. A notable example is that if any function argument is a v8 type (e.g. `v8::Handle<Anything>`) then enabling unlocking will have undefined results at runtime. Since the function bindings maintain all their type-related information, we might be able to add more template magic to catch even these cases at compile-time and then automatically enable unlocking when it seems safe to do so.
 
 
 ==Special Case: Catching native Exceptions==
