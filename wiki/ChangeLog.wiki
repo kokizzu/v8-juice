@@ -11,6 +11,10 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 June 25*
+  * Added `ToInCa` template to [V8Convert], bringing function bindings/conversions to an all-new level of simplicity.
+  * The [V8Convert] function bindings now optionally (via a template parameter) support unlocking the v8 engine while the bound function is running.
+
 *2011 June 24*
   * The past several days have seen near record activity levels (some 120 commits in 5 days), almost exclusively in the [V8Convert] API, its demo/test/add-on code (like [JSPDO], [V8Convert_Socket], and [V8Convert_ByteArray]), and the related documentation. `v8::convert` has gotten a number of subtle additions and internal improvements over the past days. i'm half tempted to move it into its own Google Code project.
   * i renamed several of the core-most templates in `v8::convert`, but i'm not aware of anyone else using that API yet, so i won't lose sleep over code compatibility breakage. If it affected you, it's your own fault for not telling me you're using the code ;).
