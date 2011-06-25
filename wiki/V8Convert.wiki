@@ -421,7 +421,7 @@ When that callback is called, the calling code is locking v8, meaning that other
 ... v8 is locked again here, so we can use v8 again ...
 }}}
 
-If the native function will run very briefly then unlocking will probably be slower than leaving v8 locked, but if the function may run an arbitrarily long amount of time, unlocking it is wise because v8 can then allow other threads to continue instead of blocking while this call holds the v8 lock.
+If the native function will only run very briefly then unlocking will probably be slower than leaving v8 locked, but if the function may run an arbitrarily long amount of time, unlocking it is wise because v8 can then allow other threads to continue instead of blocking while this call holds the v8 lock.
 
 As of the early morning of 20110625, the library includes generic support for optionally telling function bindings that they should unlock v8 for the duration of the native call.
 
@@ -450,7 +450,7 @@ cb = cv::ToInCa<T, int (double), &T::foo>::Call;
 It is illegal for the unlock option to be enabled if ANY of the following applies:
 
   * The callback itself will "use" v8. If it uses a `v8::Locker` to fence its access then it _is_ legal to use v8 in that function even if unlocking is enabled at this API's level.
-  * Any of the return- or argument types, or the containing type itself for bound class methods, are  v8 types, e.g. `v8::Handle<Anything>` or `v8::Arguments`. These types cause unlocking to be disabled by default and a compile-time assertion is triggered if one explicitly tries to enable unlocking for such a function. By extension, but more concretely...
+  * Any of the return- or argument types, or the containing type itself for bound class methods, are  "blacklisted", meaning that `IsUnlockable<T>::Value` is false (that includes the common v8 types, e.g. `v8::Handle<Anything>` or `v8::Arguments`). These types cause unlocking to be disabled by default and a compile-time assertion is triggered if one explicitly tries to enable unlocking for such a function. By extension, but more concretely...
   * `InvocationCallback`-like functions will, if unlocking is enabled, trigger a compile-time assertion. We _cannot_ unlock for these because that would make using the `v8::Arguments` object illegal (which would mean that we could not legally convert and pass on the arguments to the native function!).
 
 There might be other corner cases where unlocking v8 is semantically illegal at this level of the API but are not caught as compile-time errors. A notable example is that if any function argument is a v8 type (e.g. `v8::Handle<Anything>`) then enabling unlocking will have undefined results at runtime. The "out of the box" behaviour uses template magic to disable unlocking by default for all such function/method signatures. See the `IsUnlockable<>` API docs for how to add additional types to "the blacklist" (it requires only a new template specialization with one enum value).
