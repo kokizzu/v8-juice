@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 June 26*
+  * Implemented prototype/proof-of-concept templates in [V8Convert] which allow us to dispatch JS-called native functions to different native functions depending on any rules we can apply to the arguments. e.g. we can have different overloads based on the number of arguments, their types, and can perform essentially arbitrary logic. Now that the concept is proven, it "shouldn't" be long before we have a useful API for composing dispatch rules in a manner similar to composing template-based parsers (like with the `Boost::Spirit` library).
+
 *2011 June 25*
   * Added `ToInCa` template to [V8Convert], bringing function bindings/conversions to an all-new level of simplicity.
   * The [V8Convert] function bindings now optionally (via a template parameter) support unlocking the v8 engine while the bound function is running.
