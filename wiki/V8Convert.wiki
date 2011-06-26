@@ -503,6 +503,10 @@ The code includes the following additional utilities:
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp ClassCreator.hpp] - yet another C++-to-JS class binding mechanism. Based on v8-juice's [ClassWrap], but not _quite_ as configurable.
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp V8Shell.hpp] provides a really simple way to get v8 integrated quickly into an application. Just create one object, optionally extend the JS environment with your functionality, and start running JS code through it. See [http://code.google.com/p/v8-juice/source/browse/convert/addons/shell-skel/shell.cpp shell.cpp] for sample application. 
 
+==Easily Binding C++ Classes==
+
+See [V8Convert_ClassCreator].
+
 == Binding Native Variables/Properties to JS ==
 
 Some examples of binding native properties to JS:
