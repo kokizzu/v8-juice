@@ -13,6 +13,7 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 *2011 June 26*
   * Implemented prototype/proof-of-concept templates in [V8Convert] which allow us to dispatch JS-called native functions to different native functions depending on any rules we can apply to the arguments. e.g. we can have different overloads based on the number of arguments, their types, and can perform essentially arbitrary logic. Now that the concept is proven, it "shouldn't" be long before we have a useful API for composing dispatch rules in a manner similar to composing template-based parsers (like with the `Boost::Spirit` library).
+  * Came up with a simple, lightweight mechanism to figure out if a JS object's native pointer _really_ is of the correct type, without having resorting to templates to do so. Refactored [V8Convert]'s class binding mechanism to use this, which closes a couple holes where it would be possible for (badly misbehaving) JS code to force an invalid `static_cast()` at the native level (and subsequent misuse of that native pointer).
 
 *2011 June 25*
   * Added `ToInCa` template to [V8Convert], bringing function bindings/conversions to an all-new level of simplicity.
