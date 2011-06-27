@@ -51,7 +51,7 @@ db.close();
 }}}
 
 
-After calling `close()`, calling any further calls to member functions will cause a JS-side exception to be triggered.
+After calling `close()`, any further calls to member functions will cause a JS-side exception to be triggered.
 
 It is extremely important that _all_ objects returned from `db.prepare()` be destroyed (by calling their `finalize()` method) _before_ the db instance is destroyed. Violating this can lead to a crash when a dead object is stepped on (or another object re-allocated at the same address is mis-used! Thus clients _must not_ leave their destruction to the whims of the garbage collector. See below for how to easily ensure that such objects are cleaned up at the right time.
 
@@ -94,11 +94,11 @@ If the SQL is a `SELECT` statement then we need to loop over it:
 {{{
 while( st.step() ) {
    ... we got a row ...
-   ... use st.get()
+   ... use st.get() to fetch the data ...
 }
 }}}
 
-`step()` returns true if a row was fetched, false at the end of a result set or non-returning query, and throws an exception on error. On error its `errorCode` and `errorText` properties "should" give an indication of the problem.
+`step()` returns true if a row was fetched, false at the end of a result set or non-fetching query (e.g. `INSERT`), and throws an exception on error. On error its `errorCode` and `errorText` properties "should" give an indication of the problem.
 
 The functions `stepArray()` and `stepObject()` can be used to step/read the row data in a single operation.
 
@@ -195,13 +195,16 @@ Some things to keep in the back of your mind about JS/DB data type conversions:
 var st = db.prepare("SELECT ...");
 var i, row;
 try {
+  var colCount = st.columnCount;
+  // ^^^^ This is more efficient than accessing (the native)
+  // st.columnCount in our loop.
   while( row = st.step() ) {
-    for( i = 0; i < st.columnCount; ++i ) {
+    for( i = 0; i < colCount; ++i ) {
       print('Column #'+i+' type='+st.columnType(i)+': '+st.get(i));
     }
   }
 }
-finally { if(st) st.finalize(); }
+finally { st.finalize(); }
 }}}
 
 It is often simpler (but arguably less efficient) to use one of the other `step()` variants:
@@ -297,9 +300,12 @@ try {
 
     // Now step through each row and print its columns out:
     var cols = [];
+    var colCount = sp.columnCount;
+    // ^^^ accessing sp.columnCount requires a native-level function
+    // call, so i recommend copying it if you want to loop over it.
     while( st.step() ) {
         cols.length = 0;
-        for( i = 0; i < sp.columnCount; ++i ) {
+        for( i = 0; i < colCount; ++i ) {
             cols.push( st.get(i) );
         }
         print(cols.join(separator));
