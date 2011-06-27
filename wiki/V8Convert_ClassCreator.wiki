@@ -84,7 +84,7 @@ void bind_MyType( v8::Handle<v8::Object> dest )
 }
 }}}
 
-If we instantiate that and simply construct/destruct a few of them:
+If we simply construct/destruct a few of them from JS code:
 
 {{{
 (new MyType()).destroy();
