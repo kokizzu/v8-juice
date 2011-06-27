@@ -1,53 +1,111 @@
-#summary v8-juice project introduction page
+#summary V8Convert ClassCreator class-binding mechanism
 #labels Topic-Project,Featured
 
-=Welcome to v8-juice!=
-v8-juice (v8 (J)avaScript (U)serland (I)ntegratable (C)omponents (E)mporium) is a C++ library for extending the [http://code.google.com/p/v8 v8 JavaScript engine]. It includes components such as [Plugins a plugins API], [ConvertingTypes a type-conversion API], utilities for [CreatingJSClasses creating new JS-side classes from C++], and for [BindingFunctions binding near-arbitrary native functions to arbitrary JS objects]. It has extensive API documentation, and supplemental documentation can be found via the Wiki link at the top of this page.
+[V8Convert]'s `ClassCreator` API is an easy-to-use template-based mechanism for binding native classes to JS. It was originally derived from [ClassWrap], making it the 3rd generation of class-binding mechanism since this project was started, and it is very similar to that binding mechanism. !ClassCreator's source code can be found [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp here].
 
-Alternately, the [V8Convert] API provides a header-only library which implements the core type conversions and class binding features, omitting features which would require non-header implementations.
+Let's just jump straight to an example...
 
-To any members of the Campbell Soup Company: i would really appreciate it if you guys [http://en.wikipedia.org/wiki/V8_(beverage) don't sue me over this project's name] :-D.  It's all in good fun! (And it took me 10 minutes to come up with a project name for which 'JUICE' is an appropriate acronym. So i beg you, please don't let that effort be in vain!)
+=Demo: Binding A Class in just Moments=
 
-==Code/Project status==
+{{{
+//-----------------------------------
+// My favourite debugging mechanism...
+#define CERR std::cerr << __FILE__ << ":" << \
+        std::dec << __LINE__ << ":" <<__FUNCTION__ << "(): "
 
-v8-juice is primarily an experimentation ground, and not a product which aims to have a "1.0" release (it uses the release date as its version number). That said, i like to keep my own client code working, and will try not to make any major changes which break things unless there is a good reason to do so. Also, the core library parts (primarily the [ConvertingTypes type conversions], which are the most-central component) are based off of [http://SpiderApe.sourceforge.net much older implementations i wrote for SpiderMonkey], and they've had a stable interface for some years now.
+//-----------------------------------
+// Required header(s):
+#include "v8/convert/ClassCreator.hpp"
 
-v8-juice is believed to work well, without any undocumented crash conditions and whatnot. It is used in at least one high-profile commercial product (which i unfortunately am not at liberty to name) to simplify the C++/JS binding process. In particular, the newer [V8Convert] API makes binding C/C++ functions and classes to !JavaScript really simple (making it any simpler would probably require a code generator).
+// Convenience typedef:
+namespace cv = v8::convert;
 
-Having said that: since mid-2011, v8-juice itself is relatively static. It _is_ actively maintained and reported bugs will be fixed insofar as is possible within the library's current architecture and compatibility constraints. Future work is going mostly into the [V8Convert] API, however, and at some point the main `v8::juice` API will likely be re-based on top of `v8::convert`, in effect becoming a 3rd-party user of the `v8::convert` API. [V8Convert] focuses primarily on the conversion of types and functions between C++/JS. `v8::juice` does that, plus adds several "heavy-weight" features like [Plugins a plugins API]. The main difference between the two APIs is that [V8Convert] is header-only, whereas v8-juice is much more heavyweight and cannot realistically be implemented as a header-only library.
+//-----------------------------------
+// The type we want to bind to v8.
+struct MyType
+{
+    MyType() {
+        CERR << "MyType::MyType() @ "<<this<<'\n';
+    }
+    MyType( int i, double d ) {
+        CERR << "MyType::MyType("<<i<<", "<<d<<") @ "<<this<<'\n';
+    }
+    MyType( char const * str ) {
+        CERR << "MyType::MyType("<<str<<") @ "<<this<<'\n';
+    }
+    MyType( v8::Arguments const & argv ) {
+        CERR << "MyType::MyType("<<argv.Length()<<" arg(s)) @ "<<this<<'\n';
+    }
+    ~MyType() {
+        CERR << "MyType::~MyType() @ "<<this<<'\n';
+    }
+    
+    // Ctors we want to bind to v8 (there are several other ways to do this):
+    typedef cv::Signature<MyType (
+        cv::CtorForwarder<MyType *()>,
+        cv::CtorForwarder<MyType *(char const *)>,
+        cv::CtorForwarder<MyType *( int, double )>,
+        cv::CtorForwarder<MyType *( v8::Arguments const &)>
+    )> Ctors;
 
-==Related work==
+    // Function we want visible to JS:
+    int func( double ) { return 42; }
+};
 
-  * [https://github.com/tsa/vu8 vu8] provides many of the same features as v8-juice, and is one of the few bindings frameworks i've seen which uses templates to generate the bindings (as opposed to macros). Its class- and module-binding system is also easier to use that juice's. <em>If i wasn't using v8-juice, i'd be using vu8.</em> The [V8Convert] spin-off API was largely inspired by vu8.
-  * [http://code.google.com/p/cproxyv8/ cproxyv8] is very similar in purpose to v8-juice, and appears to provide largely the same feature set for binding C++ types to v8.
-  * [http://code.google.com/p/v8cgi/ v8cgi] encapsulates features for hosting server-side web applications written in !JavaScript.
-  * [http://nodejs.org/ nodejs] has a very impressive set of functionality and a well-thought-out module loading system. It is arguably the most popular v8-using project aside from the various Chromium-based browsers.
-  * [http://flusspferd.org/ Flusspferd] is a similar library written for use with the [https://developer.mozilla.org/en/SpiderMonkey SpiderMonkey JavaScript engine]. (No longer maintained, as of mid-2011.)
-  * [http://spiderape.sourceforge.net SpiderApe] is another (no longer maintained) C++ wrapper for the !SpiderMonkey engine, and v8-juice's [ConvertingTypes type-conversion API] was originally adapted from that library.
+//-----------------------------------
+// Policies used by cv::ClassCreator (it also has others)
+namespace v8 { namespace convert {
 
-One of the interesting things about vu8, cproxyv8, v8cgi, and nodejs is that they're not mutually exclusive with v8-juice. While there is some overlap in functionality, each can provide some parts which the other cannot. e.g., in my humble opinion v8-juice's main strengths lie in its native/JS type-conversion bits, whereas nodejs has a much nicer module-based plugin system than the one v8-juice provides. vu8 has a much nicer class/module-binding system as well.
+    template <>
+    class ClassCreator_Factory<MyType>
+     : public ClassCreator_Factory_CtorForwarder< MyType, MyType::Ctors >
+    {};
+    template <>
+    struct JSToNative< MyType > : JSToNative_ClassCreator< MyType >
+    {};
+}}
 
-==License==
+//-----------------------------------
+// Ultra-brief ClassCreator demo. See ConvertDemo.?pp for MUCH more.
+void bind_MyType( v8::Handle<v8::Object> dest )
+{
+    typedef cv::ClassCreator<MyType> CC;
+    CC & cc(CC::Instance());
+    cc
+        ("destroy", CC::DestroyObjectCallback)
+        ("func", cv::ToInCa<MyType, int (double), &MyType::func>::Call)
+        .AddClassTo( "MyType", dest );
 
-The code base contains code of several licenses:
+    // Real-life issue: if this function _might_ be called multiple
+    // times in one app, we have to do a small bit more work to avoid
+    // duplicate initialization. But that normally is not the case.
+}
+}}}
 
-  * Most of the core library uses the same license as v8: the New BSD license
-  * Some of the core code is Public Domain and much of the code adopted from other source trees is Public Domain. Most future code will likely be Public Domain.
-  * [Plugins], which often use external libraries, may have arbitrary licenses. They are stored in their own source tree (outside of the main v8-juice sources) to avoid potential license contamination from viral licenses.
+While there are lots of possibilities to customize the class-binding process, what is shown above is all that's needed for the basic cases. We generally do not have to modify the to-be-bound classes, but we often (due to differences in how C++ and JS see the world) have to write additional bits of shim/glue code to make specific bindings possible or more flexible.
 
-The whole library _would_ be Public Domain, but Google Code neither recognizes nor allows Public Domain as a project license. Since v8-juice is an extension of v8, which has a BSD license, it is assumed that a BSD license will be acceptable to potential v8-juice users who have accepted v8's licensing terms.
+If we simply construct/destruct a few of them from JS code:
 
-Users needing other license conditions may request them from the code author(s). Tip: for any v8-juice code where i'm the attributed author (Stephan Beal), you've got blanket permission to do whatever the hell you want to with your copy of the code (including re-licensing it). The exception to that is any code which necessarily adopts viral licensing conditions from 3rd-party libraries it uses, such as the [PluginReadline GNU Readline plugin].
+{{{
+(new MyType()).destroy();
+(new MyType("hi")).destroy();
+(new MyType(1,2.3)).destroy();
+(new MyType(1,2,3,4,5)).destroy();
+}}}
 
-==Author==
+We will see something like:
 
-v8-juice's primary author is Stephan Beal (http://wanderinghorse.net/home/stephan/). v8-juice user Rob Tsuk contributed insightful suggestions which lead to new features and improvements in older features. e.g. the [ClassWrap] API was developed in response to his input.
+{{{
+demo.cpp:184:MyType(): MyType::MyType() @ 0x1308ee0
+demo.cpp:200:~MyType(): MyType::~MyType() @ 0x1308ee0
+demo.cpp:192:MyType(): MyType::MyType(hi) @ 0x1308ee0
+demo.cpp:200:~MyType(): MyType::~MyType() @ 0x1308ee0
+demo.cpp:188:MyType(): MyType::MyType(1, 2.3) @ 0x1308ee0
+demo.cpp:200:~MyType(): MyType::~MyType() @ 0x1308ee0
+demo.cpp:196:MyType(): MyType::MyType(5 arg(s)) @ 0x1308ee0
+demo.cpp:200:~MyType(): MyType::~MyType() @ 0x1308ee0
+}}}
 
-==Project Stats==
-Provided by [http://www.ohloh.net Ohloh.net]:
+Notice that the system's memory allocator re-allocated each new instance at the same address as the previously destroyed one. That is a mere fluke of the memory manager, and not a well-defined behaviour.
 
-<wiki:gadget url="http://www.ohloh.net/p/v8-juice/widgets/project_cocomo.xml" height="240"  border="0" />
-
-<wiki:gadget url="http://www.ohloh.net/p/v8-juice/widgets/project_basic_stats.xml" height="220" border="1" />
-
-Those stats would appear, however, to be largely skewed. As of now (April 2009), the tree (including plugins) contains code which took less than a year of part-time work, and not the 9 years Ohloh calculates. (Maybe it's because i use the terribly efficient [http://www.xemacs.org XEmacs] as my editor.)
+Real-world examples: the [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons directory] of the source tree contains several complete, non-trivial examples of custom bindings, e.g. [JSPDO], [V8Convert_Socket], and [V8Convert_ByteArray ByteArray].
