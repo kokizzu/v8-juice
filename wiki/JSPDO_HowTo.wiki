@@ -26,7 +26,7 @@ See the [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/RE
 
 ==Connecting==
 
-To connect to a database we need a so-called DSN string and possibly user credentials. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full descriptions of the DSN string format.
+To connect to a database we need a so-called DSN string and possibly user credentials. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full description of the DSN string format.
 
 Examples:
 
@@ -144,7 +144,7 @@ st.bind(':p2',"JSPDO");
 // The following _might_ work, depending on the driver:
 st.bind(1,"v8-juice");
 st.bind(2,"JSPDO");
-// Again: do not mix named and unnamed parameter binding!
+// For portable behaviour, Do Not mix named and unnamed parameter binding!
 }}}
 
 *Achtung #1:* though `bind(Object)` allows object keys to be missing the `:` prefix character, `bind(string,value)` _does not_. e.g. `bind({p1:...})` and `bind({":p1":...})` are equivalent, but `bind('p1',...)` will not work (use `bind(':p1',...)` instead).
@@ -345,6 +345,7 @@ To bind a binary value:
 var ba = new JSPDO.ByteArray();
 ... populate ba ...
 st.bind(index, ba);
+ba.destroy(); // not strictly necessary, but frees memory immediately.
 }}}
 
 `ByteArray`s can of course be used in the other `bind()` overloads, e.g. `st.bind([myByteArray,...])`.
@@ -358,6 +359,7 @@ When fetching column data (via `get()` or one of the `stepXXX()` variants), non-
 var ba = st.get(index);
 if( ba instanceof JSPDO.ByteArray ) {
   ... it came from a BLOB field and has a non-NULL value ...
+  ba.destroy(); // not strictly necessary, but frees memory immediately.
 }
 }}}
 
@@ -376,7 +378,7 @@ Note that `ByteArray.toString()` does _not_ convert the object to a JS string - 
 
 ==De/Compressing Field Data==
 
-The [V8Convert_ByteArray ByteArray] class, used for BLOB field data, supports gzip de/compression, and we can take advantage of that to de/compress db field data. Here is an example:
+The [V8Convert_ByteArray ByteArray] class used for BLOB field data supports gzip de/compression, and we can take advantage of that to de/compress large db data (e.g. large JSON documents). Here is an example:
 
 (The `assert()` function used below comes from external test-related utility code.)
 
