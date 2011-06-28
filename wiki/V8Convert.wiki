@@ -499,9 +499,9 @@ Those functions allow the client to pass on `v8::Arguments` to non-bound functio
 
 The code includes the following additional utilities:
 
-  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/properties.hpp properties.hpp] - templates for binding native global or member variables to JS objects. These basically work like `FunctionToInvocationCallback()` and friends, but create `v8::AccessorSetter()` and `v8::AccessorGetter()` implementations using templates to bind JS properties directly to native variables or to functions which proxy all get/set access on the JS property.
-  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp ClassCreator.hpp] - yet another C++-to-JS class binding mechanism. Based on v8-juice's [ClassWrap], but not _quite_ as configurable.
-  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp V8Shell.hpp] provides a really simple way to get v8 integrated quickly into an application. Just create one object, optionally extend the JS environment with your functionality, and start running JS code through it. See [http://code.google.com/p/v8-juice/source/browse/convert/addons/shell-skel/shell.cpp shell.cpp] for sample application. 
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/properties.hpp properties.hpp] - templates for binding native global or member variables to JS objects. These basically work like `FunctionToInCa` and friends, but create `v8::AccessorSetter()` and `v8::AccessorGetter()` implementations using templates to bind JS properties directly to native variables or to methods/functions which proxy all get/set access on the JS property.
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp ClassCreator.hpp] - yet another C++-to-JS class binding mechanism. Based on v8-juice's [ClassWrap], but not _quite_ as configurable. See [V8Convert_ClassCreator] for a demo.
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp V8Shell.hpp] provides a really simple way to get v8 integrated quickly into an application. Just create one object, optionally extend the JS environment with your functionality, and start running JS code through it. See [http://code.google.com/p/v8-juice/source/browse/convert/addons/shell-skel/shell.cpp shell.cpp] for a sample application. See: [V8Convert_Shell].
 
 ==Easily Binding C++ Classes==
 
