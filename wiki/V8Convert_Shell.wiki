@@ -4,7 +4,9 @@
 
 One of the minorly problematic things in integrating v8 into an application is the setup needed to get v8 initialized. We've got to create a context, a global object template, and a global object. We have to set up those object object and possibly make sure that we have the proper locking in place (this is app-specific and the documentation on the topic is sparse).
 
-The `V8Shell` class tries to fill that gap, making it a snap to get a v8 environment initialized. To demonstrate, the following simple program accepts a JS script filename on the command line and runs it:
+If the setup is not done in the exact right order then v8 will produce weird failures, like bound functions not being visible in JS. But since the v8 developers are apparently prohibited from documenting their code, the only way one finds out things like this is through trial and error.
+
+The `V8Shell` class tries to fill that gap and simplify the "bootstrapping" process, making it a snap (instead of "Aw, snap!" ;) to get a v8 environment initialized. To demonstrate, the following simple program accepts a JS script filename on the command line and runs it:
 
 {{{
 #include "v8/convert/V8Shell.hpp"
