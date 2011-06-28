@@ -393,7 +393,7 @@ If the native function will only run very briefly then unlocking will probably b
 
 As of the early morning of 20110625, the library includes generic support for optionally telling function bindings that they should unlock v8 for the duration of the native call.
 
-The default value for this option (for any given instantiation of the templates, not globally) depends on several factors but it will normally be enabled. If the function signature involved contains any v8 types then unlocking is disabled and an assertion is triggered if the client explicitly enables it.
+The default value for this option (for any given instantiation of the templates, not globally) depends on several factors but it will normally be enabled. If the function signature involved contains any v8 types then unlocking is disabled and a compile-time assertion is triggered if the client explicitly enables it.
 
 To force a given function/method binding to run in "unlocked" mode, simply pass `true` as the final (optional) argument to `ToInCa` (and friends):
 
@@ -414,7 +414,7 @@ cb = cv::ToInCa<T, int (double) const, &T::fooConst>::Call;
   * A compile-time assertion will be triggered if you pass `true` to enable it and the function cannot, due to one of the types in its signature, be run in unlocked mode. See the `IsUnlockable<>` and `SignatureIsUnlockable<>` API docs for all the gory details.
   * Unlocking tells v8 to perform some threading/mutex-related voodoo about which i know remarkably little. There is a performance hit for this, but it is marginal.
   * _Reacquiring_ the v8 lock after the native function returns can theoretically take arbitrarily long. This could happen if the code being run in another thread never releases the v8 lock and runs in a loop which v8 cannot interrupt (e.g. the loop never calls back into v8).
-  * There is a minimal hidden memory cost: in order to be able to handle all return types properly (mainly those which cannot be default-initialized, like references), we have to dynamically allocate a `v8::Unlocker`, but only for the duration of the native call (that's the only way we can scope/descope them properly). i.e. it costs us one small `malloc()`/`free()` in addition to the overhead of unlocking/re-locking the v8 engine.
+  * There is a minimal hidden memory cost: in order to be able to handle all return types properly (mainly those which cannot be default-initialized, like references), we have to dynamically allocate a `v8::Unlocker`, but only for the duration of the native call (that's the only way we can scope/descope them properly). i.e. it costs us one small `malloc()`/`free()` in addition to the overhead of unlocking/re-locking the v8 engine. That said: if you're using !JavaScript then _certainly_ a single `sizeof(v8::Unlocker)` `malloc()` won't bother you much. Instantiating a new JS String takes up more memory than that.
 
 It is illegal for the unlock option to be enabled if ANY of the following applies:
 
@@ -493,7 +493,7 @@ For examples of chaining these to support multiple exception types, see the API 
 
 Those functions allow the client to pass on `v8::Arguments` to non-bound functions "manually".
 
-_Achtung:_ these _must not_ be used to implement "unlocked" operations (as shown above) because the conversions themselves _must_ "use" v8, and doing them while v8 is unlocked results in undefined behaviour. (To "use" v8 means to do anything with its API, including dereferencing value handles, which the conversions must do in order to convert them for passing on the calls.)
+*Achtung:* Because these functions use `FunctionToInCa`, they inherit the "v8 unlocking" behaviour from that class. That is described in much more detail in another section of this page, but in short: if the arguments list or return value of the function does not have any v8 types (`v8::Handle`, `v8::Arguments`, etc.) then then the v8 engine is _unlocked_ for the duration of the native call. _If_ the function, despite having no v8-specific arguments/return type, internally uses v8 (or calls another function which does), then it _must_ also use a `v8::Locker` _or_ clients must use `FunctionToInCa` (or compatible) instead of these functions and explicitly disable locking (see the documentation and examples elsewhere on this page). If one of these two conditions are _not_ met, v8 will trigger an assertion at runtime (when the function is called from JS), killing the application (and frustrating the user). Debug builds of libv8 will dump an explanation of the error to `stderr`, but non-debug builds will silently crash.
 
 =But wait, there's more!=
 
