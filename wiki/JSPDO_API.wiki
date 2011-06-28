@@ -100,7 +100,7 @@ finally {
 
 ===The `each()` Callback===
 
-This `each()` callback function option used by `exec()` is called for each result set row fetched by `exec()`. If `each()` is not a function (or not set) then `exec()` `step()`s the statement only one time and the result of that call is returned (this is generally only useful for `INSERTS` and such).
+The `each()` callback function option used by `exec()` is called for each result set row fetched by `exec()`. If `each()` is not a function (or not set) then `exec()` `step()`s the statement only one time and the result of that call is returned (this is generally only useful for `INSERTS` and such).
 
 The callback is called with 3 arguments, `(row, callbackData, statement)`, as described below...
 
@@ -236,7 +236,7 @@ It can be called several different ways:
   * `bind( Array )` is basically a loop over `bind()`, binding each subsequent argument to the next value in the array. Note that while `bind()` uses 1-based indexes, the passed-in array uses 0-based indexes.
   * `bind( Object )` binds parameters by _name_, as opposed to index, using key/value pairs from the given object. Note that named parameter support is an optional feature of the underlying db drivers, and may not be supported/activated for a given driver. (That said, the current drivers both support this.)
 
-Be aware that `bind()` uses _1-based index_, whereas `get()` uses 0-based index. Don't ask me why - i don't know.
+Be aware that `bind()` uses _1-based index_, whereas `get()` uses 0-based indexes. Don't ask me why - i don't know - ask the people who created SQL.
 
 The JS type of a bound value determines how it is bound at the database level:
 
