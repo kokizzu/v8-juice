@@ -15,6 +15,8 @@ int main(int argc, char const * const * argv) {
     namespace cv = v8::convert;
     cv::Shell shell(NULL, argc, argv);
     //  ^^^^^ Shell is a convenience typedef for V8Shell<>, by the way.
+    // All argv args after "--" are passed on to the script in the global
+    // 'arguments' array. e.g. ./shell script.js -- these go to JS
     shell.SetupDefaultBindings()
         ("gc", cv::FunctionToInCa<bool (),v8::V8::IdleNotification>::Call )
     ;
