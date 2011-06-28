@@ -81,12 +81,12 @@ Note that the `each()` function is passed the statement handle as its final para
 ===The `finalizeStatement` Option===
 
 
-By default, if the `optObj.sql` parameter passed to  `exec(optObj)` is a `Statement` object then `exec()` assumes ownership of it, meaning that it will `finalize()` the statement before it returns to the caller (regardless of whether `exec()` succeeds or not). If you want to keep ownership of such a statement object, be sure to set `finalizeStatement` to a true value. The reason for why `exec()` takes ownership by default is basically ease of use. It is easier to manage statement lifetimes this way from client code, but provides a way for the client to keep the statement intact for the 1 in 200 use cases which might need it.
+By default, if the `optObj.sql` parameter passed to  `exec(optObj)` is a `Statement` object then `exec()` assumes ownership of it, meaning that it will `finalize()` the statement before it returns to the caller (regardless of whether `exec()` succeeds or not). If you want to keep ownership of such a statement object, be sure to set `finalizeStatement` to a false value _other than_ `undefined` (which is the JS-default value for unset properties, and `exec()` interprets this as `true` for this special case). The reason for why `exec()` takes ownership by default is basically ease of use. It is much easier to manage statement lifetimes this way from client code, but provides a way for the client to keep the statement intact for the 1 in 200 use cases which might need it.
 
 Example:
 
 {{{
-var st = db.prepare("...");
+var st = db.prepare("SELECT ...");
 try {
     db.exec({ sql:st, finalizeStatement: false ... });
     ... do something else (what???) with st (it is still alive but has been fully traversed) ...
@@ -157,12 +157,13 @@ Examples:
 var count = db.selectValue("SELECT COUNT(*) FROM T");
 var otherCount = db.selectValue({sql:"SELECT A, B, COUNT(*) FROM T", column:2});
 
-db.selectValue({sql: db.prepare("SELECT COUNT(*) FROM T WHERE ID=?"),
-                bind:[42]
+db.selectValue({
+    sql: db.prepare("SELECT COUNT(*) FROM T WHERE ID=?"),
+    bind:[42]
 });
 /** ^^^ Note that exec() takes ownership of the prepared statement by default, and finalize()s
     it before exec() returns. If you want to keep ownership, set the finalizeStatement option
-    in the exec() call to false.
+    in the selectValue() call to false.
 */
 }}}
 
@@ -210,7 +211,7 @@ try {
 finally { if(st) st.finalize(); }
 }}}
 
-Note that the `catch` part is optional - if it's not there then the behaviour is as if we had written `catch(e){throw e;}`. The important part is that the `finally` block is always executed, regardless of whether or not we catch the exception.
+Note that the `catch` part is optional - if it's not there then the behaviour is almost as if we had written `catch(e){throw e;}`, except that the stack trace stays intact. The important part is that the `finally` block is always executed, regardless of whether or not we catch the exception.
 
 We could rewrite the above example a bit more briefly:
 
@@ -251,7 +252,7 @@ The underlying driver _might_ fail when binding types to columns declared to be 
 
 The `get()` function returns the value for a specific _0-based_ column index (note that `bind()` uses 1-based indexes - this discrepancy is a mysterious part of SQL history).
 
-This function _must never, ever_ be called unless `step()` has returned true. Violating that leads to undefined behaviour.
+This function _must never, ever_ be called unless `step()` (or one of its variants) has returned a non-false value (the exact type depends on the `step()` variant). Violating that leads to undefined behaviour.
 
 The type of the value it returns depends on the database-driver-reported typed:
 
