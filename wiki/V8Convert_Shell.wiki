@@ -14,6 +14,7 @@ int main(int argc, char const * const * argv) {
     assert( argc >= 2 ); // obviously, user-friendly programs don't do this!
     namespace cv = v8::convert;
     cv::Shell shell(NULL, argc, argv);
+    //  ^^^^^ Shell is a convenience typedef for V8Shell<>, by the way.
     shell.SetupDefaultBindings()
         ("gc", cv::FunctionToInCa<bool (),v8::V8::IdleNotification>::Call )
     ;
