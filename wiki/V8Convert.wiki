@@ -389,8 +389,8 @@ cb = cv::ToInCa<void, int (char const *), ::puts, true >::Call;
 cb = cv::FunctionToInCa<int (char const *), ::puts, true >::Call;
 
 // Class methods are handled the same way:
-cb = cv::ToInCa<T, int (double), &T::foo>::Call;
-cb = cv::ToInCa<T, int (double) const, &T::fooConst>::Call;
+cb = cv::ToInCa<T, int (double), &T::foo, true>::Call;
+cb = cv::ToInCa<T, int (double) const, &T::fooConst, true>::Call;
 }}}
 
 *Achtung:* this support has a couple notable gotchas, caveats, and Things One Needs to Know. The ones which immediately come to mind are:
@@ -405,26 +405,29 @@ It is illegal for the unlock option to be enabled if ANY of the following applie
   * Any of the return- or argument types, or the containing type itself for bound class methods, are  "blacklisted", meaning that `IsUnlockable<T>::Value` is false (that includes the common v8 types, e.g. `v8::Handle<Anything>` or `v8::Arguments`). These types cause unlocking to be disabled by default and a compile-time assertion is triggered if one explicitly tries to enable unlocking for such a function. By extension, but more concretely...
   * `InvocationCallback`-like functions will, if unlocking is enabled, trigger a compile-time assertion. We _cannot_ unlock for these because that would make using the `v8::Arguments` object illegal (which would mean that we could not legally convert and pass on the arguments to the native function!).
 
-There might be other corner cases where unlocking v8 is semantically illegal at this level of the API but are not caught as compile-time errors. A notable example is that if any function argument is a v8 type (e.g. `v8::Handle<Anything>`) then enabling unlocking will have undefined results at runtime. The "out of the box" behaviour uses template magic to disable unlocking by default for all such function/method signatures. See the `IsUnlockable<>` API docs for how to add additional types to "the blacklist" (it requires only a new template specialization with one enum value).
+There might be other corner cases where unlocking v8 is semantically illegal at this level of the API but are not caught as compile-time errors. The "out of the box" behaviour uses template magic to disable unlocking by default for all known-illegal signatures. See the `IsUnlockable<>` API docs for how to add additional types to "the blacklist" (it requires only a new template specialization with one enum/boolean value).
 
 i have in fact seen binding cases where the default determination of "can we safely unlock v8?" is incorrect, leading to v8 assertions (app crashes) at runtime. In such cases v8's assertion dump showed me where the problem was (which function calls) and i could use that info to disable unlocking for those few functions. They caused this error because they outwardly (in their signatures) use only non-v8 types, but internally they use v8 without also using a `v8::Locker` (they assume it's being called from JS and therefore already locked). So they crashed. In such cases, unlocking should be explicitly disabled for that bind, as shown above. If you are binding a class and want to disable unlocking for _all_ bound member functions of that class, do:
 
 {{{
 template <>
-cv::IsUnlockable<MyType> { { enum Value = 0 }; };
+cv::IsUnlockable<MyType> : cv::tmp::BoolVal<false> {};
 }}}
 
-That effectively adds `MyType` to the "do not unlock" blacklist, and any bound JS functions which are members of that type, return that type, or have it in their arguments list will have unlocking support disabled by default. In such cases, explicitly enabling locking for any such function will cause a compile-time assertion to be triggered, just as it does for functions having v8 data types in their signatures. For example, assuming the above "blacklist specialization" is in place:
+That effectively adds `MyType` to the "do not unlock" blacklist, and any bound JS functions which are members of that type, return that type, or have it in their arguments list will have unlocking support disabled by default (this is a compile-time decision). In such cases, explicitly enabling locking for any such function will cause a compile-time assertion to be triggered, just as it does for functions having v8 data types in their signatures. For example, assuming the above "blacklist specialization" is in place:
 
 {{{
 v8::InvocationCallback cb;
 
 cb = cv::FunctionToInCa< int (MyType *, double), some_function >::Call;
-// That's legal b/c unlocking defaults to false. But this will fail to compile:
-cb =   cv::FunctionToInCa< int (MyType *, double), some_function, true >::Call;
-// because unlocking _cannot_ be enabled for that function (because of the
-// IsUnlockable<MyType> specialization).
+// That's legal b/c unlocking defaults to false.
+// But this will fail to compile:
+cb = cv::FunctionToInCa< int (MyType *, double), some_function, true >::Call;
+// because unlocking _cannot_ be legally enabled for that function (because of
+// the IsUnlockable<MyType> specialization).
 }}}
+
+Note, however, that _non-member functions_ bound as JS-side member functions to such a native do not "know" that they have been "upgraded" to be a member method, and do not consider the bound type for unlocking purpose (but parameter/return types are considered). In such a case, explicitly disabling locking for that function might be required (see above).
 
 ==Special Case: Catching native Exceptions==
 
