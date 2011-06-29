@@ -7,7 +7,7 @@
 
 Source code: [http://code.google.com/p/v8-juice/source/browse/#svn/convert] (see [http://code.google.com/p/v8-juice/source/checkout this link] for checkout instructions.)
 
-The `v8::convert` API is a spin-off of the core-most components of the v8-juice library. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. It's main features/focus are:
+The `v8::convert` API is a spin-off of the core-most components of the v8-juice library. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. v8-convert can be used in conjunction with other v8 libraries like [https://github.com/tsa/vu8 vu8] and [http://www.nodejs.org/ nodejs]. It's main features/focus are:
 
   * Converting between v8 Value handles and "native types" using a generic interface. This allows us to write generic algorithms which convert between JS/C++ without having to know the exact types we're dealing with.  The basic POD types and some STL types are supported out of the box and plugging in one's own types is normally quite simple.
   * Converting free- and member functions into `v8::InvocationCallback` functions. These generated functions convert the !JavaScript-originated function arguments into native counterparts, forward the data to the original native function, and convert the return values back to something JS can use. (The `void` return type is translated to the `undefined` JS value.)
@@ -101,28 +101,9 @@ The `ToInCa` template is a thin wrapper around three primary class templates:
 By using only those 3 templates (all with identical interfaces) clients can bind
 a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
 
-Support for const- and non-const methods are split into two implementations because some compilers reportedly cannot properly choose differing specializations when the difference is only in constness. (i have only heard of this being a problem on MSVC.)
+Support for const- and non-const methods are split into two implementations because some compilers reportedly cannot properly choose differing specializations when the difference is only in constness. (i have only heard of this being a problem on MSVC.) In hindsight, this self-imposed limitation has at times been a hindrance and has caused much unneeded code duplication, and i will probably quit coddling inadequate compilers at some point.
 
-Note that binding to non-static member member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See the included demo code an example of one way to set this up (there are many ways).
-
-Each of the class templates listed above has a corresponding function with a similar name. The class provides a "fully typed" conversion of the function and remembers the function's arity (how many arguments it takes) and the types of all arguments, whereas these function variants are simply unadorned function pointers without supplemental type information:
-
-  * `FunctionToInvocationCallback()`
-  * `MethodToInvocationCallback()`
-  * `ConstMethodToInvocationCallback()`
-
-These exist largely for historical reasons - they have been rendered redundant by restructuring of the underlying class templates. (And the new APIs have shorter names. :)
-
-In all three cases, the static `Call()` method of the classes is the same function as the corresponding `xxxToInvocationCallback()` function template. An example should clarify that point:
-
-{{{
-// These are all functionally equivalent:
-v8::InvocationCallback cb1 = FunctionToInCa<int (char const *),::puts>::Call;
-v8::InvocationCallback cb2 = FunctionToInvocationCallback<int (char const *),::puts>;
-v8::InvocationCallback cb3 = ToInCa<void, int (char const *),::puts>::Call;
-}}}
-
-Those all refer to the same underlying function (though their memory addresses differ). The first and third forms are actually a tad bit more efficient because the second approach creates another one-line wrapper function between v8 and the bound function. The second form is, however, more prevalently documented because the client-side value of the first form was not recognized as early on as it should have been (and the 3rd form was just introduced about 30 minutes ago, as of this writing).
+Note that binding to non-static member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See [V8Convert_ClassCreator] for an example of one way to set this up (there are many ways).
 
 ==Argument Type Information==
 
@@ -333,13 +314,16 @@ It looks like this:
 
 {{{
 // Overload 4 variants of a member function:
-typedef cv::InCaOverloadList< cv::tmp::TypeList<
+typedef cv::InCaOverloadList< cv::Signature<void (
         cv::MethodToInCa<T, void (), &T::overload0>,
         cv::MethodToInCa<T, void (int), &T::overload1>,
         cv::MethodToInCa<T, void (int,int), &BoundNative::overload2>,
         cv::MethodToInCa<T, void (v8::Arguments const &), &T::overloadN> // fallback for N args
-    > > MyOverloads;
+    )> > MyOverloads;
 // Note that the order of the list entries is irrelevant (for _most_ purposes).
+// The exception being that one taking v8::Arguments will always be called,
+// so it should come at the end of the list (since it overrides any coming
+// after it).
 
 // Get the InvocationCallback proxy which does the arity-based dispatching:
 v8::InvocationCallback cb = MyOverloads::Call;
@@ -414,7 +398,6 @@ cb = cv::ToInCa<T, int (double) const, &T::fooConst>::Call;
   * A compile-time assertion will be triggered if you pass `true` to enable it and the function cannot, due to one of the types in its signature, be run in unlocked mode. See the `IsUnlockable<>` and `SignatureIsUnlockable<>` API docs for all the gory details.
   * Unlocking tells v8 to perform some threading/mutex-related voodoo about which i know remarkably little. There is a performance hit for this, but it is marginal.
   * _Reacquiring_ the v8 lock after the native function returns can theoretically take arbitrarily long. This could happen if the code being run in another thread never releases the v8 lock and runs in a loop which v8 cannot interrupt (e.g. the loop never calls back into v8).
-  * There is a minimal hidden memory cost: in order to be able to handle all return types properly (mainly those which cannot be default-initialized, like references), we have to dynamically allocate a `v8::Unlocker`, but only for the duration of the native call (that's the only way we can scope/descope them properly). i.e. it costs us one small `malloc()`/`free()` in addition to the overhead of unlocking/re-locking the v8 engine. That said: if you're using !JavaScript then _certainly_ a single `sizeof(v8::Unlocker)` `malloc()` won't bother you much. Instantiating a new JS String takes up more memory than that.
 
 It is illegal for the unlock option to be enabled if ANY of the following applies:
 
@@ -561,14 +544,14 @@ typedef cv::CtorForwarder<MyType * (int)> Ctor1;
 typedef cv::CtorForwarder<MyType * (argType1,argType2)> Ctor2;
 
 // We can call these individually:
-MyType * my = Ctor0::Ctor( argsObject );
+MyType * my = Ctor0::Call( argsObject );
 
 // Or we can group them together and dispatch based on the number of arguments pass in:
 typedef cv::CtorForwarderDispatcher<
     cv::tmp::TypeList<
         Ctor0, Ctor1, Ctor2
     > > Dispatch;
-MyType * my = Dispatch::Ctor( argsObject );
+MyType * my = Dispatch::Call( argsObject );
 }}}
 
 Unlike with most other bindings, the argument types do not need to match _exactly_. The types declared in the `CtorForwarder` instantiation will be used for purposes of converting the arguments from JS to native values. As long as those types can be implicitly converted to the types accepted by the constructor(s) then it should work okay. e.g. you can declare the forwarder as having an `int` argument even though the ctor really takes a `double`. (However, that would cause any doubles passed in from JS space to first be converted to an integer, which would lose precision.)
