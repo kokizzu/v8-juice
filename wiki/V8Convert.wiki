@@ -535,7 +535,9 @@ PB::BindGetterSetterFunctions<std::string (),
 
 (Pedantic note: v8 apparently does not allow us to bind a setter without also binding a getter. My attempts to do so caused crashes.)
 
-JS properties can be bound to native _member_ properties similarly using the `MemberPropertyBinder` subclass of `PropertyBinder`. Note that for member binding to work, the JS class being bound must "wrap" that native class. i.e. that only works with "fully wrapped" classes.
+JS properties can be bound to native _member_ properties similarly using the `MemberPropertyBinder` subclass of `PropertyBinder`. Note that for member binding to work, the JS class being bound must "wrap" that native class. i.e. that only works with "fully wrapped" classes (e.g. see [V8Convert_ClassCreator]).
+
+The property-binding API has a much richer feature set than is demonstrated here, by the way.
 
 ==Passing v8 Arguments directly to Constructors==
 
