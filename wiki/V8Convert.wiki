@@ -13,19 +13,19 @@ v8-convert is not a "mutually exclusive solution" to its problem domain, and it 
 
 It's main features/focus are:
 
-  * Converting between v8 Value handles and "native types" using a generic interface. This allows us to write generic algorithms which convert between JS/C++ without having to know the exact types we're dealing with.  The basic POD types and some STL types are supported out of the box and plugging in one's own types is normally quite simple.
+  * Converting between v8 Value handles and "native types" using a generic interface. This allows us to write generic algorithms which convert between JS/C++ without having to know the exact types they're dealing with.  The basic POD types and some STL types are supported out of the box and plugging in one's own types is normally quite simple.
   * Converting free- and member functions into `v8::InvocationCallback` functions. These generated functions convert the !JavaScript-originated function arguments into native counterparts, forward the data to the original native function, and convert the return values back to something JS can use. (The `void` return type is translated to the `undefined` JS value.)
   * Binding JS object properties to native shared or member properties or accessor/mutator functions/methods.
 
 The first two core features give us all we need in order to be able to bind near-arbitrary C/C++ functions with !JavaScript, insofar as cross-language calling conventions and type conversions allow us to do so. The last feature is really just "sugar" (but also quite convenient at times). When combined, they give us everything we need to implement generic C++/JS class-binding mechanisms like [V8Convert_ClassCreator]. 
 
-While these features are easily summed up in a short list, their broader implications are quite large. The ability to convert functions from one signature to another (at compile time, by the way) has proven to be deceptively powerful, allowing users to bind new functions to v8 with unprecedented e. We can combine this with template meta-programming techniques to do weird things like combine multiple native functions into a single `InvocationCallback` function which dispatches to the proper native function based on the number of arguments (see the examples of argument overload later on down this page). We have [http://code.google.com/p/v8-juice/source/browse/convert/ConvertDemo.cpp?spec=svn1744&r=1730 proof-of-concept code showing] _compile-time-generated_ overloads being dispatched based on the _runtime-provided_ argument _types_ as well as their counts (search that link for `bogo_callback`).
+While these features are easily summed up in a short list, their broader implications are quite large. The ability to convert functions from one signature to another (at compile time, by the way) has proven to be deceptively powerful, allowing users to bind new functions to v8 with unprecedented ease. We can combine this with template meta-programming techniques to do weird things like combine multiple native functions into a single `InvocationCallback` function which dispatches to the proper native function based on the number of arguments (see the examples of argument overload later on down this page). We have [http://code.google.com/p/v8-juice/source/browse/convert/ConvertDemo.cpp?spec=svn1744&r=1730 proof-of-concept code showing] _compile-time-generated_ overloads being dispatched based on the _runtime-provided_ argument _types_ as well as their counts (search that link for `bogo_callback`).
 
 For cases where the "automatic" function-to-!InvocationCallback conversions are not possible or not suitable, the type-conversion API can still simplify the implementation of custom `v8::InvocationCallback` functions.
 
 All of the conversions are compile-time typesafe where possible and fail gracefully (e.g. using a JS-side exception as opposed to an immediate crash) when such a determination can only be made at runtime.
 
-The most important functions and types, from a user's perspective, are listed below. Most of the code in this library are internal template specializations which take care of the dirty work. Typical clients won't normally need more than what's described on this page.
+The most important functions and types, from a user's perspective, are listed below. Most of the code in this library is internal template specializations which take care of the dirty work. Typical clients won't normally need more than what's described on this page.
 
 A very special thanks goes to James Pike, author of [https://github.com/tsa/vu8 vu8], for his helpful tips on getting function-pointer-style template arguments working. These allow for more readable templates when compared to the v8-juice API.
 
@@ -37,7 +37,7 @@ The library is rooted in the namespace `v8::convert`, but most of the sample cod
 namespace cv = v8::convert;
 }}}
 
-In hindsight, it was "probably not the best idea" to add a sub-namespace of v8, and i "probably should have" used `v8cv` or something similar. If the v8 team ever decides to use the `convert` namespace for themselves, i'm screwed. In that case, v8cv would be my fall-back.
+In hindsight, it was "probably not the best idea" to add a sub-namespace of v8, and i "probably should have" used `v8cv` or something similar (`cvv8` is easier/faster to type on a U.S. keyboard layout). If the v8 team ever decides to use the `convert` namespace for themselves, i'm screwed. In that case, `cvv8` would be my fall-back.
 
 =Converting Types=
 
@@ -49,20 +49,6 @@ The public type conversions API is based on only two functions:
 These are very thin wrappers around `NativeToJS<>` and `JSToNative<>`, and work identically to the v8-juice APIs with the same names (see [ConvertingTypes]). A few special-case overloads also exist to avoid call ambiguities in some cases or to cover special cases (most notably those taking (`char *`) and `v8::InvocationCallback` arguments).
 
 Using these operations allows us to convert a wide variety of types between JS and C++, and the `NativeToJS<>` and `JSToNative<>` classes give us a way to extend the conversion operations to support custom conversions. This level of abstraction allows us, in turn, to implement all sorts of algorithms which are ignorant of the _types_ they are working on. The function-binding APIs, for example, rely on this for converting function argument and return values to/from JS/C++.
-
-Here's a silly trick we can do with `CastToJS()`:
-
-{{{
-v8::Handle<v8::Value>
-myInvocationCallback( v8::Arguments const & ) {
-    try {
-     ....
-    }
-    catch( std::exception const & ex ) {
-       return cv::CastToJS(ex); // triggers a JS-side exception
-    }
-}
-}}}
 
 =Implementing Custom Conversions=
 
@@ -310,7 +296,7 @@ int my_callback( v8::Arguments const & argv )
 
 The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). We have two approaches to doing this, but only one is shown here (the one which is far easier to use for most cases).
 
-The `InCaOverloadList` template takes a `TypeList` of function binding templates (or something interface-compatible) and combines them into a single `v8::InvocationCallback` function which can dispatch script-side calls to a different native function depending on the number (not the types) of arguments.
+The `InCaOverloadList` template takes a type-list of function binding templates (or something interface-compatible) and combines them into a single `v8::InvocationCallback` function which can dispatch script-side calls to a different native function depending on the number (not the types) of arguments.
 
 It looks like this:
 
@@ -323,9 +309,9 @@ typedef cv::InCaOverloadList< cv::Signature<void (
         cv::MethodToInCa<T, void (v8::Arguments const &), &T::overloadN> // fallback for N args
     )> > MyOverloads;
 // Note that the order of the list entries is irrelevant (for _most_ purposes).
-// The exception being that one taking v8::Arguments will always be called,
-// so it should come at the end of the list (since it overrides any coming
-// after it).
+// The exception being that one taking v8::Arguments will always match any
+// arity, so it should come at the end of the list (since it overrides any
+// coming after it).
 
 // Get the InvocationCallback proxy which does the arity-based dispatching:
 v8::InvocationCallback cb = MyOverloads::Call;
