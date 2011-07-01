@@ -9,8 +9,9 @@ v8-juice is the "main project". It has been online since early 2009 and has accu
 
   * [HomePage Home page]
   * [BuildingTheCode Build and installing]
-  * [Contributing] to v8-juice and v8-convert.
   * [ChangeLog Summary of changes]
+  * [Contributing] to v8-juice and v8-convert
+  * [BindingFunctions Binding native functions]
   * Binding native classes:
     * [CreatingJSClasses Intro to binding classes] using v8-juice.
     * [ClassBinder] - the libirary's first generation of class binding API.
@@ -39,9 +40,8 @@ v8-convert is a mid-2011 spinoff of v8-juice, providing a streamlined, header-on
   * [V8Convert Introduction/overview] of v8-convert's features.
   * [ChangeLog Summary of changes]
   * [Contributing] to v8-juice and v8-convert.
-  * [ConvertingTypes Converting between] C++ and JS types.
-  * Addon/plugins/demos:
-    * [V8Convert_ClassCreator Class-binding mechanism]
+  * Addons/plugins/demos:
+    * Yet another [V8Convert_ClassCreator class-binding mechanism]
     * [V8Convert_ByteArray ByteArray class]
     * [V8Convert_Shell V8Shell] simplifies bootstrapping of v8 in an application.
     * [V8Convert_Socket Posix-like socket API]
