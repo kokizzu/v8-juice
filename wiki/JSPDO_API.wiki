@@ -68,13 +68,13 @@ db.exec({
 The options supported by the function are:
 
 || `mixed sql` || The SQL (string) code to run. It may also be a Statement object and `exec()` will, by default, finalize that statement regardless of success of failure. See the `finalizeStatement` option for how to keep ownership of a passed-in statement. ||
-|| `bool finalizeStatement` || Default=true. If `sql` is-a Statement object and this value is true (the default) then the statement will be finalized by `exec()`, regardless of success or failure. If it is false then `sql` will not finalized by `exec()` (i.e. it is still owned by the caller). ||
+|| `bool finalizeStatement` || Default=true. If `sql` is-a Statement object and this value is true (the default) then the statement will be finalized by `exec()`, regardless of success or failure. If it is `false` (_not_ another "false value" like `undefined`, `0`, or `null`!) then `sql` will not finalized by `exec()` (i.e. it is still owned by the caller). ||
 || `mixed bind` || An object or array of data to bind to the statement before execution. If it is a function then `f(statement,bindData)` is called (one time!), where `bindData` is the value of this object's `bindData` member. ||
 || `any bindData` || Optional data passed to `bind` if it is a function. If `bind` is _not_ a function then this data not used. ||
 || `function each(row,data,st)` || Called for each result set row. Described below. ||
-|| `string mode` || If == "array", `each()` is passed an array object as the 1st parameter. "object" passes an object as the 1st parameter. Anything else causes the statement object itself to be passed. ||
+|| `string mode` || If == "array", `each()` is passed an Array as the 1st parameter. "object" passes an Object as the 1st parameter. Anything else causes the statement object itself to be passed. See examples below. ||
 || `any callbackData` || Optional data passed as the 2nd argument to `each()`. ||
-|| `int limit` || For `SELECT`-like queries, this option can be used to limit the number of values fetched. The default is 0, meaning no limit. This does not modify the SQL, but stops looping after this may rows have been fetched. ||
+|| `int limit` || For `SELECT`-like queries, this option can be used to limit the number of values fetched. The default is 0, meaning no limit. This does not modify the SQL, but stops looping after this many rows have been fetched. ||
 
 Note that the `each()` function is passed the statement handle as its final parameter. This is _only_ so that clients can fetch the column names if they need to. _Do not_ call `step()` or `bind()` on the handle from the `each()` callback - doing so will lead to unpredictable results and/or errors.
 
