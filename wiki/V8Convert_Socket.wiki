@@ -8,6 +8,8 @@ This page gives an overview of a `Socket` class binding implemented using [V8Con
 
 This API was released on 20110619 and is still (as of this writing) quite experimental.
 
+Minor achtung: this API technically provides UDP/datagram and raw socket interfaces, but it is untested with anything but TCP "stream" sockets.
+
 ==Getting the Source==
 
 This code requires [V8Convert] (which is header-only). The sources are here:
