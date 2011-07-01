@@ -8,7 +8,7 @@ This page gives an overview of a `Socket` class binding implemented using [V8Con
 
 This API was released on 20110619 and is still (as of this writing) quite experimental.
 
-Minor achtung: this API technically provides UDP/datagram and raw socket interfaces, but it is untested with anything but TCP "stream" sockets.
+Minor achtung: this API technically includes UDP/datagram, raw socket, and Unix filesystem sockets/pipes, but it is untested with anything but IPv4 TCP "stream" sockets (socket family `AF_INET` and type `SOCK_STREAM`). (Bug: Unix-style sockets can create a socket file but cannot yet delete it. This leads to an "address in use" error on the second usage. This is actually how the C-level API works, for some historical reason or other.)
 
 ==Getting the Source==
 
