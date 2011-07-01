@@ -27,7 +27,7 @@ v8-juice is the "main project". It has been online since early 2009 and has accu
     * [PluginPosixPoll poll()]
     * [PluginReadline readline]
     * [PluginSprintf sprintf()]
-    * [PluginSqlite3 sqlite3]
+    * [PluginSQLite3 sqlite3]
     * [PluginWhefs whefs] (embedded filesystem)
     * [PluginWhio whio] (i/o library)
   * [WhereToFindMoreDocs]
