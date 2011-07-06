@@ -595,6 +595,7 @@ But since the advent of `ToInCa` (7 hours ago, as of this writing ;), i've prett
 The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the `v8::convert` source tree includes some sample v8 bindings created using this API. The code includes:
 
   * The `ConvertDemo.?pp` and `test.js` files in this source tree's root directory give a very thorough demonstration, showing off just about every feature the library offers.
+  * [V8Convert_Shell] offers a simple way to bootstrap v8 support into an arbitrary client application.
   * A [V8Convert_ByteArray ByteArray class] for handling binary data in JS space.
   * The [JSPDO] database access abstraction API.
   * A basic [V8Convert_Socket socket API].
