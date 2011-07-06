@@ -542,9 +542,8 @@ MyType * my = Ctor0::Call( argsObject );
 
 // Or we can group them together and dispatch based on the number of arguments pass in:
 typedef cv::CtorForwarderDispatcher<
-    cv::tmp::TypeList<
-        Ctor0, Ctor1, Ctor2
-    > > Dispatch;
+        cv::Signature<MyType * (Ctor0, Ctor1, Ctor2)>
+    > Dispatch;
 MyType * my = Dispatch::Call( argsObject );
 }}}
 
