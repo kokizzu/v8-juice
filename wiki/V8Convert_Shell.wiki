@@ -43,3 +43,6 @@ int main(int argc, char const * const * argv) {
     return 0;
 }
 }}}
+
+For a more complete demonstration 
+see [http://code.google.com/p/v8-juice/source/browse/convert/addons/shell-skel/shell.cpp shell.cpp].
