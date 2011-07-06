@@ -34,7 +34,7 @@ The bindings will be added to the given object, which is normally the v8 context
 
 || *Method* || *Description* ||
 || `new Socket( [int family=AF_INET [, int type=SOCK_STREAM [, int protocol=0]]] )` || Constructor. TODO: add a ctor taking a configuration Object ||
-|| `void close()` || Closes the socket and frees all resources. Further access to native methods or properties on this object will leads to JS-side exceptions.  ||
+|| `void close()` || Closes the socket and frees all resources. Further access to native methods or properties on this object will leads to JS-side exceptions. For `AF_UNIX` _server_ sockets (for which `bind()` has succeeded), this also removes the socket's pipe file from the filesystem.  ||
 || `string toString()` || Returns a debugging-style string. ||
 || `int bind( string hostNameOrAddress, int port )` || "Binds" the socket to a given host/port. Throws on error. ||
 || `int connect( string hostNameOrAddress, int port )` || Connects to the given host/port. Throws on error ||
