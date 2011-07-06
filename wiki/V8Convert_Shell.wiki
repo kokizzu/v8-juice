@@ -6,7 +6,11 @@ One of the minorly problematic things in integrating v8 into an application is t
 
 If the setup is not done in the exact right order then v8 will produce weird failures, like bound functions not being visible in JS. But since the v8 developers are apparently prohibited from documenting their code, the only way one finds out things like this is through trial and error.
 
-The `V8Shell` class tries to fill that gap and simplify the "bootstrapping" process, making it a snap (instead of "Aw, snap!" ;) to get a v8 environment initialized. To demonstrate, the following simple program accepts a JS script filename on the command line and runs it:
+The `V8Shell` class tries to fill that gap and simplify the "bootstrapping" process, making it a snap (instead of "Aw, snap!" ;) to get a v8 environment initialized.
+
+Note that [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp the V8Shell source code] has no dependencies of any other [V8Convert] code (it just happens to be part of that source tree). This means it can be copied and used as-is in arbitrary v8-using clients.
+
+To demonstrate, the following simple program accepts a JS script filename on the command line and runs it:
 
 {{{
 #include "v8/convert/V8Shell.hpp"
