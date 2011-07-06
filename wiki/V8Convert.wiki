@@ -425,11 +425,11 @@ v8 does not like for client-thrown exceptions to propagate through it, and there
 v8::InvocationCallback cb = cv::FunctionToInCa< int (),someFuncWhichThrows>::Call;
 }}}
 
-If that function throws in the context of a JS-initiated call, it might crash v8. The internal function binding mechanisms catch `(std::exception const &)` and convert it to a v8 exception. They catch all other exceptions and convert them to an "unknown error" in JS. However, that behaviour is largely for historical reasons and may be removed in favour of what follows...
+If that function throws in the context of a JS-initiated call, it might crash v8.
 
-The `InCaCatcher` class template creates an `InvocationCallback` function which calls a client-specified callback function and catches any exceptions of a given type. It has a template option which specifies whether other exceptions should be propagated or converted into "unknown error" for JS, and this property allows us to chain the catchers to handle multiple concrete exception types.
+The `InCaCatcher` class template creates an `InvocationCallback` function which calls a client-specified callback function and catches any exceptions of a given base type. It has a template option which specifies whether other exceptions should be propagated or converted into "unknown error" for JS, and this property allows us to chain the catchers to handle multiple concrete exception types.
 
-It can, in principal, catch and report any exception type which meets the following conditions: it must have a const member method taking no arguments and returning an error message value in a type which is convertible to JS using `CastToJS()`. e.g. `char const * std::exception::what()` qualifies nicely. A hypothetical (`int MyException::GetErrorCode()`) would also qualify, provided it is const. (The const limitation is unfortunate - my template-fu isn't quite good enough, i guess.)
+It can, in principal, catch and report any exception type which meets the following conditions: it must have a const member method taking no arguments and returning an error message value in a type which is convertible to JS using `CastToJS()`. e.g. (`char const * std::exception::what()`) qualifies nicely. A hypothetical (`int MyException::GetErrorCode()`) would also qualify, provided it is const. (The const limitation is unfortunate - my template-fu isn't quite good enough, i guess.)
 
 `InCaCatcher` has a relatively detailed interface, which is documented (in corresponding detail) here:
 
@@ -443,7 +443,7 @@ Example usage:
 
 {{{
 typedef InCaCatcher<
-       std::exception, // type to catch
+       std::exception, // type to catch (by (const &)!)
        char const *(), // signature of message-getter
        &std::exception::what, // message-fetching method
        MyCallbackWhichThrows, // the InvocationCallback to try/catch
@@ -457,7 +457,7 @@ typedef InCaCatcher_std< MyCallbackWhichThrows > Catcher;
 v8::InvocationCallback cb = Catcher::Call;
 }}}
 
-For examples of chaining these to support multiple exception types, see the API documentation.
+For examples of chaining these to support multiple exception types, including handling exception hierarchies, see the API documentation.
 
 ==Forwarding v8-supplied Function Arguments to non-bound Functions==
 
@@ -475,8 +475,8 @@ The code includes the following additional utilities:
 
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/properties.hpp properties.hpp] - templates for binding native global or member variables to JS objects. These basically work like `FunctionToInCa` and friends, but create `v8::AccessorSetter()` and `v8::AccessorGetter()` implementations using templates to bind JS properties directly to native variables or to methods/functions which proxy all get/set access on the JS property.
   * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/arguments.hpp arguments.hpp] - templates for "interrogating" v8-provided arguments, for use in making templates/functors which can dispatch to various native bindings based on near-arbitrary argument state (count, type, etc.).
-  * [V8Convert_ClassCreator] - yet another C++-to-JS class binding mechanism. Based on v8-juice's [ClassWrap], with the same overall design but a slightly different policy set.
-  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp V8Shell.hpp] provides a really simple way to get v8 integrated quickly into an application. Just create one object, optionally extend the JS environment with your functionality, and start running JS code through it. See [http://code.google.com/p/v8-juice/source/browse/convert/addons/shell-skel/shell.cpp shell.cpp] for a sample application. See: [V8Convert_Shell].
+  * [V8Convert_ClassCreator] - yet another C++-to-JS class binding mechanism. Conceptually based on v8-juice's [ClassWrap], with the same overall design but a slightly different policy set.
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp V8Shell.hpp] provides a really simple way to get v8 integrated quickly into an application. Just create one object, optionally extend the JS environment with your functionality, and start running JS code through it. See: [V8Convert_Shell].
 
 ==Easily Binding C++ Classes==
 
