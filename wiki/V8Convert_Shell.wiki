@@ -2,9 +2,9 @@
 #labels Phase-UserDocs,Topic-JS-API
 <wiki:toc/>
 
-One of the minorly problematic things in integrating v8 into an application is the setup needed to get v8 initialized. We've got to create a context, a global object template, and a global object. We have to set up those object object and possibly make sure that we have the proper locking in place (this is app-specific and the documentation on the topic is sparse).
+One of the minorly problematic things in integrating v8 into an application is the setup needed to get v8 initialized. We've got to create a context, a global object template, and a global object. We have to set up those objects (in the right order) and possibly make sure that we have the proper locking in place (this is app-specific and the documentation on the topic is sparse).
 
-If the setup is not done in the exact right order then v8 will produce weird failures, like bound functions not being visible in JS. But since the v8 developers are apparently prohibited from documenting their code, the only way one finds out things like this is through trial and error.
+If the setup is not done in the exact right order then v8 will produce weird failures, like bound functions not being visible in JS, or might even outright crash (when using debug builds of v8, it will tell us why it crashed, but non-debug builds crash without warning). But since the v8 developers are apparently prohibited from documenting their code, the only way one finds out things like this is through trial and error. (@v8 developers: yes, i will continue to mercilessly bitch about the lack of documentation until there is actually some usable documentation. Give me a contract and i'll write it for you!)
 
 The `V8Shell` class tries to fill that gap and simplify the "bootstrapping" process, making it a snap (instead of "Aw, snap!" ;) to get a v8 environment initialized.
 
@@ -24,6 +24,7 @@ int main(int argc, char const * const * argv) {
     // All argv args after "--" are passed on to the script in the global
     // 'arguments' array. e.g. ./shell script.js -- these go to JS
     shell.SetupDefaultBindings()
+        // Bind a gc() function to JS:
         ("gc", cv::FunctionToInCa<bool (),v8::V8::IdleNotification>::Call )
     ;
     // If we want to customize the environment (e.g. add more functions)
@@ -41,7 +42,7 @@ int main(int argc, char const * const * argv) {
         return 3;
     }
     catch(...) {
-        std::cerr << "A non-std::exception native exception was thrown! Srsly.\n";
+        std::cerr << "A non-std::exception was thrown! Srsly.\n";
         return 4;
     }
     return 0;
