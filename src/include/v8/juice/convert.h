@@ -1240,6 +1240,37 @@ namespace convert {
         os << sb.Content();
         return os;
     }
+    /**
+        "Lexically casts" msg to a string and throws a new JS-side
+        Error. ValT may be any type which can be sent to StringBuffer's
+        ostream operator.
+        
+        The return value is the result of calling v8::ThrowException()
+        (what _exactly_ that is, i'm not sure - Undefined or an empty
+        handle?).
+    */
+    template <typename ValT>
+    static inline v8::Handle<v8::Value> Toss( ValT const & msg )
+    {
+        return v8::ThrowException((StringBuffer() << msg).toError());
+    }
+    
+    /**
+        Overload to avoid an ambiguity (and it's more efficient than
+        the default impl).
+    */
+    static inline v8::Handle<v8::Value> Toss( char const * msg )
+    {
+        return v8::ThrowException(v8::Exception::Error(v8::String::New( msg ? msg : "Unspecified error.")));
+    }
+
+    /**
+        Efficiency overload.
+    */
+    static inline v8::Handle<v8::Value> Toss( StringBuffer const & msg )
+    {
+        return v8::ThrowException(msg.toError());
+    }
 
     /**
        ArgCaster is a thin wrapper around CastFromJS(), and primarily
