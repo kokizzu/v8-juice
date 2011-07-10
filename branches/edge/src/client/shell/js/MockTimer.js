@@ -64,9 +64,10 @@ MockTimer.prototype.timers = [];
 MockTimer.prototype.setTimeout = function(callback, ms)
 {
     var id;
-    return id = setInterval(function(){
+    var self = this;
+    return id = this.setInterval(function(){
                                 callback();
-                                this.clearInterval(id);
+                                self.clearInterval(id);
                             }, ms);
 };
 /**
