@@ -467,26 +467,44 @@ namespace v8 { namespace juice {
         };
     };
     /**
-       Internal impl of sleep()/mssleep()/usleep() and
-       wait()/mswait()/uwait(). DelayMult must be:
+        Internal impl of sleep()/mssleep()/usleep() and
+        wait()/mswait()/uwait().
+        
+        DelayMult must be:
 
-       sleep(): 1000*1000
-       mssleep(): 1000
-       usleep(): 1
+        sleep/wait(): 1000*1000
+        mssleep/mswait(): 1000
+        usleep/uwait(): 1
 
-       useLocker: if it is true then v8::Unlocker is used to give
-       thread control back to v8 for the duration of the sleep. If it
-       is false then the current locker is not yielded.
+        useLocker: if it is true then v8::Unlocker is used to give
+        thread control back to v8 for the duration of the sleep. If it
+        is false then the current locker is not yielded.
+
+        The return value will be the return value of ::usleep(),
+        or -1 if argv[0] is less than 0. A value of 0 will also
+        cause a sleep, which will have the side effect of briefly
+        unlocking v8 if useLocker is true. Thus a sleep value of 0
+        can be used to implement a "yield" operation.
+
+        TODO(?): come up with some semantics which allow the caller 
+        to know if the sleep was interrupted by a signal 
+        (potentially non-fatal, like a timeout).
+
+        Pedantic Achtung: POSIX has obsoluted usleep() and 
+        recommends nanonosleep(), with its much more complicated 
+        interface. OTOH, according to APUE, nanosleep() is only 
+        required to be defined on platforms which implement "the 
+        real-time extensions". What to do?
     */
     template <uint32_t DelayMult, bool useLocker>
     static v8::Handle<v8::Value> sleepImpl(const v8::Arguments& argv)
     {
-        int32_t st = argv.Length() ? static_cast<int32_t>( argv[0]->ToInteger()->Value() ) : -1;
+        int32_t st = argv.Length() ? argv[0]->Int32Value() : -1;
         int rc = -1;
         if(0 <= st)
         {
             typedef Detail::SleepUnlocker<useLocker> SU;
-            SU ul;
+            SU const ul;
             rc = ::usleep( static_cast<uint32_t>(st) * DelayMult );
         }
         return v8::Integer::New(rc);
