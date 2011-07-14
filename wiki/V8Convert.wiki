@@ -342,9 +342,9 @@ cb = cv::ToInCaVoid<void, SomeNonConvertibleType (args...), myFunction>::Call;
 cb = cv::FunctionToInCaVoid<SomeNonConvertibleType (args...), myFunction>::Call;
 }}}
 
-We can also use that to bind functions whos return types we _could_ convert but don't want to for some reason (e.g. we don't want native error goes going back to JS).
+We can also use that to bind functions whos return types we _could_ convert but don't want to for some reason (e.g. we don't want native error codes going back to JS).
 
-Be careful not to leak resources this way. If dynamically-allocated resources are returned from a function bound this way, they will be irrevocably leaked on every call to the function!
+*Achtung:* Be careful not to leak resources this way. If dynamically-allocated resources are returned from a function bound this way, they will be irrevocably leaked on every call to the function!
 
 ==Special Case: Unlocking the v8 Engine==
 
