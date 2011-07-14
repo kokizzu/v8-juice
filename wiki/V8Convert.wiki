@@ -37,7 +37,7 @@ The library is rooted in the namespace `v8::convert`, but most of the sample cod
 namespace cv = v8::convert;
 }}}
 
-In hindsight, it was "probably not the best idea" to add a sub-namespace of v8, and i "probably should have" used `v8cv` or something similar (`cvv8` is easier/faster to type on a U.S. keyboard layout). If the v8 team ever decides to use the `convert` namespace for themselves, i'm screwed. In that case, `cvv8` would be my fall-back.
+In hindsight, it was "probably not the best idea" to add a sub-namespace of v8, and i "probably should have" used `v8cv` or something similar (`cvv8` is easier/faster to type on a U.S. keyboard layout). If the v8 team ever decides to use the `convert` namespace for themselves, i'm screwed. In that case, `cvv8` or `cv8` would be my fall-back.
 
 =Converting Types=
 
@@ -321,7 +321,15 @@ Note that only one line of that code is evaluated at runtime - the rest is all d
 
 There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is _at least_ 10 (and the library can be built to support many more than that). (If you're overloading 10+ variants of one function then the design probably needs to be reconsidered!)
 
-In theory the API provides enough type information so that we could (theoretically) build advanced templates which can (theoretically) dispatch based (theoretically) on the types passed in at runtime. It would require some masterful _Template Fu_ and (likely) a boatload of `typedef`s, though. In principal such a construct is similar to templates-based parser generators (e.g. `Boost::Spirit`, and i've written 3 or 5 similar libraries in my time). If we approach it like a parser, with arguments being the tokens, building such dispatchers shouldn't be too conceptually difficult. Something along the lines of "PEG Parser for v8::Arguments." Well, now the challenge has been made. Let's see if it ever gets done.
+The API provides enough type information so that we can build advanced templates which can dispatch based on the types passed in at runtime, and we have some proof-of-concept/demo code of this in the source tree. e.g. we can bind  overloads of function which have different-sized numeric types:
+
+{{{
+void f( int16_t );
+void f( int32_t );
+void f( double );
+}}}
+
+We can then dispatch to one of those based on the numeric value passed in from JS. If the value fits in `int16_t` then we call that overload, else if it fits in `int32_t` we call that overload, else we fall back to the `double` overload. (For the curious, `std::numeric_limits<T>` can be used to find out the minimum/maximum value of a native numeric type, and we can use that to figure out if a given JS numeric value will "fit" in a given native numeric type.)
 
 ==Special Case: Non-Convertible Return Types==
 
@@ -395,7 +403,9 @@ It is illegal for the unlock option to be enabled if ANY of the following applie
 
 There might be other corner cases where unlocking v8 is semantically illegal at this level of the API but are not caught as compile-time errors. The "out of the box" behaviour uses template magic to disable unlocking by default for all known-illegal signatures. See the `IsUnlockable<>` API docs for how to add additional types to "the blacklist" (it requires only a new template specialization with one enum/boolean value).
 
-i have in fact seen binding cases where the default determination of "can we safely unlock v8?" is incorrect, leading to v8 assertions (app crashes) at runtime. In such cases v8's assertion dump showed me where the problem was (which function calls) and i could use that info to disable unlocking for those few functions. They caused this error because they outwardly (in their signatures) use only non-v8 types, but internally they use v8 without also using a `v8::Locker` (they assume it's being called from JS and therefore already locked). So they crashed. In such cases, unlocking should be explicitly disabled for that bind, as shown above. If you are binding a class and want to disable unlocking for _all_ bound member functions of that class, do:
+i have in fact seen binding cases where the default determination of "can we safely unlock v8?" is incorrect, leading to v8 assertions (app crashes) at runtime. In such cases v8's assertion dump showed me where the problem was (which function calls) and i could use that info to disable unlocking for those few functions. They caused this error because they outwardly (in their signatures) use only non-v8 types, but internally they use v8 without also using a `v8::Locker` (they assume it's being called from JS and therefore already locked). So they crashed. In such cases, unlocking should be explicitly disabled for that bind, as shown above, _or_ the functions in question need a `v8::Locker` added to them.
+
+If you are binding a class and want to disable unlocking for _all_ bound member functions of that class, do:
 
 {{{
 template <>
@@ -408,14 +418,14 @@ That effectively adds `MyType` to the "do not unlock" blacklist, and any bound J
 v8::InvocationCallback cb;
 
 cb = cv::FunctionToInCa< int (MyType *, double), some_function >::Call;
-// That's legal b/c unlocking defaults to false.
+// That's legal b/c unlocking is disabled due to IsUnlockable<MyType>.
 // But this will fail to compile:
 cb = cv::FunctionToInCa< int (MyType *, double), some_function, true >::Call;
 // because unlocking _cannot_ be legally enabled for that function (because of
 // the IsUnlockable<MyType> specialization).
 }}}
 
-Note, however, that _non-member functions_ bound as JS-side member functions to such a native do not "know" that they have been "upgraded" to be a member method, and do not consider the bound type for unlocking purpose (but parameter/return types are considered). In such a case, explicitly disabling locking for that function might be required (see above).
+Note, however, that _non-member functions_ bound as JS-side member functions to such a native do not "know" that they have been "upgraded" to be a member method, and do not consider the bound type for unlocking purpose (but parameter/return types are considered). In such a case, explicitly disabling locking for that function might be required (see above) or the functions might need a `v8::Locker` added to them.
 
 ==Special Case: Catching native Exceptions==
 
