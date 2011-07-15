@@ -1,9 +1,9 @@
 #summary V8Convert ClassCreator class-binding mechanism
 #labels Phase-UserDocs,Topic-JS-API
 
-[V8Convert]'s `ClassCreator` API is an easy-to-use template-based mechanism for binding native classes to JS.
+[V8Convert]'s `ClassCreator` API is an easy-to-use template-based mechanism for binding native classes to JS. It was originally derived from [ClassWrap], making it the 3rd generation of class-binding mechanism since this project was started, and it is very similar to that binding mechanism. !ClassCreator's source code can be found [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp here].
 
-Let's just jump straight to the code...
+Let's just jump straight to an example...
 
 =Demo: Binding A Class in just Moments=
 
@@ -58,7 +58,7 @@ namespace v8 { namespace convert {
 
     template <>
     class ClassCreator_Factory<MyType>
-     : public ClassCreator_Factory_CtorForwarder< MyType, MyType::Ctors >
+     : public ClassCreator_Factory_CtorArityDispatcher< MyType, MyType::Ctors >
     {};
     template <>
     struct JSToNative< MyType > : JSToNative_ClassCreator< MyType >
@@ -82,6 +82,8 @@ void bind_MyType( v8::Handle<v8::Object> dest )
 }
 }}}
 
+While there are lots of possibilities to customize the class-binding process, what is shown above is all that's needed for the basic cases. We generally do not have to modify the to-be-bound classes, but we often (due to differences in how C++ and JS see the world) have to write additional bits of shim/glue code to make specific bindings possible or more flexible.
+
 If we simply construct/destruct a few of them from JS code:
 
 {{{
@@ -104,4 +106,6 @@ demo.cpp:196:MyType(): MyType::MyType(5 arg(s)) @ 0x1308ee0
 demo.cpp:200:~MyType(): MyType::~MyType() @ 0x1308ee0
 }}}
 
-Notice that the system's memory allocator re-allocated each new instance at the same address as the previously destroyed one. That is a fluke of the memory allocator, and not a well-defined behaviour.
+Notice that the system's memory allocator re-allocated each new instance at the same address as the previously destroyed one. That is a mere fluke of the memory manager, and not a well-defined behaviour.
+
+Real-world examples: the [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons directory] of the source tree contains several complete, non-trivial examples of custom bindings, e.g. [JSPDO], [V8Convert_Socket], and [V8Convert_ByteArray ByteArray].
