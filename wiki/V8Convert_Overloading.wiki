@@ -66,7 +66,7 @@ Here's a rather detailed example...
 
 We're going to overload _10_ functions into a single callback, such that any calls with 5 or fewer arguments are unambiguously handled by one of these overloads, and all calls with 6 or more arguments will cause a JS-side exception to the thrown.
 
-(Note that no sane application would have 10 overloads for the same function, but the following code comes from library test code where we are trying to stress the API a bit.)
+(Note that no sane application would have 10 overloads for the same function, but the following comes from library test code where we are trying to stress the API a bit.)
 
 The callbacks:
 
@@ -193,4 +193,90 @@ typedef PredicatedInCaOverloader< CVV8_TYPELIST((
 // the dispatcher callback:
 
 v8::InvocationCallback cb = AllOverloads::Call;
+}}}
+
+You might be asking, "and that actually works?" Here's some JS code used with that configuration:
+
+{{{
+function testPredicateOverloads()
+{
+    print("Testing out the experimental predicate-based overloading...");
+    var b = new BoundSubNative();
+    try {
+        var rc;
+        rc = b.bogo();
+        asserteq( 0, rc );
+        b.bogo(1 << 8);
+        b.bogo(1 << 17);
+        b.bogo((1<<31) * (1 << 10));
+        b.bogo([1,2,3]);
+        b.bogo({});
+        b.bogo(1,"hi");
+        b.bogo({},1,"hi");
+        b.bogo(function(){
+            // reminder: if we call b.bogo(arguments.callee)
+            // from here we will crash with endless recursion.
+            print("JS-side callback function.");
+        });
+        var msg;
+        msg = {a:1};
+        rc = b.bogo( function(){print("FVF: argv[0]()");},
+                     msg,
+                     function(){print("FVF: argv[2]()");});
+        asserteq( 'object', typeof rc );
+        asserteq(msg,rc);
+
+        msg = "(char const *)";
+        rc = b.bogo( function(){print("FSF: argv[0]()");},
+                     msg,
+                     function(){print("FSF: argv[2]()");});
+        asserteq( 'string', typeof rc );
+        asserteq(msg, rc );
+
+        assertThrows( function() { b.bogo(1,2,3,4,5,6); } );
+    }
+    finally { b.destroy(); }
+}
+}}}
+
+That generates something like the following on my machine:
+
+{{{
+ConvertDemo.cpp:151:bogo_callback(): Arg count=0. Dispatching based on predicate rules...
+ConvertDemo.cpp:73:bogo_callback_arityN(): Arg count=0
+Assertion OK: 0 == 0
+ConvertDemo.cpp:151:bogo_callback(): Arg count=1. Dispatching based on predicate rules...
+ConvertDemo.cpp:80:bogo_callback_int16(): int_16 overload: 256.
+ConvertDemo.cpp:151:bogo_callback(): Arg count=1. Dispatching based on predicate rules...
+ConvertDemo.cpp:85:bogo_callback_int32(): int_32 overload: 131072.
+ConvertDemo.cpp:151:bogo_callback(): Arg count=1. Dispatching based on predicate rules...
+ConvertDemo.cpp:90:bogo_callback_double(): double overload: -2.19902e+12.
+ConvertDemo.cpp:151:bogo_callback(): Arg count=1. Dispatching based on predicate rules...
+ConvertDemo.cpp:97:bogo_callback_array(): array overload. length=3
+ConvertDemo.cpp:151:bogo_callback(): Arg count=1. Dispatching based on predicate rules...
+ConvertDemo.cpp:102:bogo_callback_object(): object overload.
+ConvertDemo.cpp:151:bogo_callback(): Arg count=2. Dispatching based on predicate rules...
+ConvertDemo.cpp:116:bogo_callback2(): native this=@0x82a56f8, arg count=2
+ConvertDemo.cpp:151:bogo_callback(): Arg count=3. Dispatching based on predicate rules...
+ConvertDemo.cpp:73:bogo_callback_arityN(): Arg count=3
+ConvertDemo.cpp:151:bogo_callback(): Arg count=1. Dispatching based on predicate rules...
+ConvertDemo.cpp:109:bogo_callback_function(): function overload.
+JS-side callback function.
+ConvertDemo.cpp:151:bogo_callback(): Arg count=3. Dispatching based on predicate rules...
+ConvertDemo.cpp:139:bogo_callback_fvf(): (Function, Value, Function) overload.
+FVF: argv[0]()
+ConvertDemo.cpp:144:bogo_callback_fvf(): [object Object]
+FVF: argv[2]()
+Assertion OK: object == object
+Assertion OK: [object Object] == [object Object]
+ConvertDemo.cpp:151:bogo_callback(): Arg count=3. Dispatching based on predicate rules...
+ConvertDemo.cpp:126:bogo_callback_fsf(): (Function, cstring, Function) overload.
+FSF: argv[0]()
+ConvertDemo.cpp:130:bogo_callback_fsf(): (char const *)
+FSF: argv[2]()
+Assertion OK: string == string
+Assertion OK: (char const *) == (char const *)
+ConvertDemo.cpp:151:bogo_callback(): Arg count=6. Dispatching based on predicate rules...
+Assertion OK: Got expected exception: Error: No predicates in the argument dispatcher matched the given arguments (arg count=6).
+
 }}}
