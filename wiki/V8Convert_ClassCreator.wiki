@@ -1,5 +1,3 @@
-#labels Phase-UserDocs,Topic-JS-API
-
 #summary V8Convert ClassCreator class-binding mechanism
 #labels Phase-UserDocs,Topic-JS-API
 
