@@ -279,5 +279,6 @@ Assertion OK: string == string
 Assertion OK: (char const *) == (char const *)
 ConvertDemo.cpp:151:bogo_callback(): Arg count=6. Dispatching based on predicate rules...
 Assertion OK: Got expected exception: Error: No predicates in the argument dispatcher matched the given arguments (arg count=6).
-
+ConvertDemo.hpp:233:~BoundSubNative(): @0x82a56f8 is destructing
+ConvertDemo.hpp:53:~BoundNative(): @0x82a56f8 is destructing.
 }}}
