@@ -3,9 +3,11 @@
 
 <wiki:toc/>
 
+=Introduction=
+
 [V8Convert] has a fairly powerful function overloading mechanism. When binding JS functions to C++ (as described on the [V8Convert] page) we can, using templates, create overloads which dispatch to a particular native function depending on any criteria we care to apply to the passed-in arguments.
 
-When we only care about overloading based on the arity (number of arguments), `InCaOverloader` and friends make it easy to do so. However, using more advanced techniques we can dispatch to a different native callback using logic similar to the following:
+When we only care about overloading based on the arity (number of arguments), `ArityDispatch` and friends make it easy to do so. However, using more advanced techniques we can dispatch to a different native callback using logic similar to the following:
 
   * If the call has 3 arguments then...
     * If the first one is a string, call `f1()`.
@@ -20,15 +22,15 @@ _ad nauseum_. You get the idea.
 =Overloading by Arity=
 
 
-The API has support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). We have two approaches to doing this, but only one is shown here (the one which is far easier to use for most cases). See the `InCaOverloader` class for a simplified form which only works with one or two overloads (a single-function "overload" is an easy way to ensure that the caller provides only the required number of arguments!).
+The API has support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). We have two approaches to doing this, but only one is shown here (the one which is far easier to use for most cases). See the `ArityDispatch` class for a simplified form which only works with one or two overloads (a single-function "overload" is an easy way to ensure that the caller provides only the required number of arguments!).
 
-The `InCaOverloadList` template takes a type-list of function binding templates (or something interface-compatible) and combines them into a single `v8::InvocationCallback` function which can dispatch script-side calls to a different native function depending on the number (not the types) of arguments.
+The `ArityDispatchList` template takes a type-list of function binding templates (or something interface-compatible) and combines them into a single `v8::InvocationCallback` function which can dispatch script-side calls to a different native function depending on the number (not the types) of arguments.
 
 It looks like this:
 
 {{{
 // Overload 4 variants of a member function:
-typedef cv::InCaOverloadList< CVV8_TYPELIST((
+typedef cv::ArityDispatchList< CVV8_TYPELIST((
         cv::MethodToInCa<T, void (), &T::overload0>,
         cv::MethodToInCa<T, void (int), &T::overload1>,
         cv::MethodToInCa<T, void (int,int), &BoundNative::overload2>,
@@ -45,7 +47,7 @@ v8::InvocationCallback cb = MyOverloads::Call;
 
 Note that only one line of that code is evaluated at runtime - the rest is all done at compile-time. The above generates a whole family of `v8::InvocationCallback` functions (at least (overload count + 1) of them, though there are a couple others hidden behind the scenes) and combines them into a single `v8::InvocationCallback` dispatcher function, `MyOverloads::Call()`.
 
-There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is _at least_ 10 (and the library can be built to support many more than that). (If you're overloading 10+ variants of one function then the design probably needs to be reconsidered!)
+There is actually a limit to how many overloads you can provide in a single `ArityDispatchList`, but the lower limit is _at least_ 10 (and the library can be built to support many more than that). (If you're overloading 10+ variants of one function then the design probably needs to be reconsidered!)
 
 
 =Overloading Based on Arbitrary Logic=
