@@ -40,6 +40,7 @@ v8-convert is a mid-2011 spinoff of v8-juice, providing a streamlined, header-on
   * [V8Convert Introduction/overview] of v8-convert's features.
   * [ChangeLog Summary of changes]
   * [Contributing] to v8-juice and v8-convert.
+  * How to [V8Convert_Overloading overload function bindings].
   * Addons/plugins/demos:
     * Yet another [V8Convert_ClassCreator class-binding mechanism]
     * [V8Convert_ByteArray ByteArray class]
