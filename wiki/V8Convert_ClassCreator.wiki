@@ -19,7 +19,7 @@ Let's just jump straight to an example...
 // Required header(s):
 #include "v8/convert/ClassCreator.hpp"
 
-// Convenience typedef:
+// Convenience namespace alias:
 namespace cv = v8::convert;
 
 //-----------------------------------
@@ -52,7 +52,7 @@ struct MyType
         cv::CtorForwarder<MyType *( v8::Arguments const &)>
     )> Ctors;
 
-    // Function we want visible to JS:
+    // A function we want to make visible to JS.
     int func( double ) { return 42; }
 };
 
@@ -79,6 +79,12 @@ namespace v8 { namespace convert {
     template <>
     struct JSToNative< MyType > : JSToNative_ClassCreator< MyType >
     {};
+
+    // Optional: used mostly for error reporting purposes but can
+    // also be used to hold the class' JS-side name (which often differs
+    // from its native name).
+    template <>
+    char const * TypeName< MyType >::Value = "MyType";
 }}
 
 //-------------------------
@@ -88,13 +94,12 @@ namespace v8 { namespace convert {
 // compile. If we're unlucky it will cause a link-time error.
 // If we do this in the right order then it will compile and link
 // just fine.
-void non_member_func( v8::Arguments const & argv )
+v8::Handle<v8::Value> non_member_func( v8::Arguments const & argv )
 {
     MyType * self = cv::CastFromJS<MyType>( argv.This() );
     if( ! self ) {
-        cv::Toss("Could not find native MyType 'this' pointer!");
+        return cv::TossMissingThis<MyType>();
         // ^^^ that throws a JS-side exception.
-        return;
     }
     ....
 }
@@ -106,6 +111,11 @@ void bind_MyType( v8::Handle<v8::Object> dest )
 {
     typedef cv::ClassCreator<MyType> CC;
     CC & cc(CC::Instance());
+    if( cc.IsSealed() ) { // the binding was already initialized.
+        cc.AddClassTo( cv::TypeName<MyType>::Value, dest );
+        return;
+    }
+    // Else initialize the bindings...
     cc
         ("destroy", CC::DestroyObjectCallback)
         ("func", cv::MethodToInCa<MyType, int (double),
@@ -113,11 +123,7 @@ void bind_MyType( v8::Handle<v8::Object> dest )
         ("nonMember", cv::FunctionToInCa<
                           void (v8::Arguments const &),
                           non_member_func >::Call )
-        .AddClassTo( "MyType", dest );
-
-    // Real-life issue: if this function _might_ be called multiple
-    // times in one app, we have to do a small bit more work to avoid
-    // duplicate initialization. But that normally is not the case.
+        .AddClassTo( cv::TypeName<MyType>::Value, dest );
 }
 }}}
 
