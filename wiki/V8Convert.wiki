@@ -530,10 +530,10 @@ An additional property of this particular binding is that we can bind to constru
 
 This API is made up of several distinct components, each one layered on top of the next:
 
-  * Basic template-metaprogramming-related types, like a `TypeList` template and various utilities for querying them. Most of these are not really considered to be part of the public interface, but are necessary implementation details. Occasionally one of them leaks through to client-side code, most notably `TypeList`, which is used by some templates to implement overloading.
+  * Basic template-metaprogramming-related types. Most of these are not really considered to be part of the public interface, but are necessary implementation details.
   * The core type conversions layer, e.g. `CastToJS()`/`CastFromJS()`.
   * Function/Method-signature-related templates. These do not do any JS/C++ conversions, but provide a mechanism with which we can store complete type information for a given function signature. These bits form the basis of the function binding API, but are not specific to that API.
-  * The function-to-`v8::InvocationCallback` conversions. This provides tons of template glue which creates `v8::InvocationCallback` functions by converting near-arbitrary function signatures to `v8::InvocationCallback`. These would not be possible without `CastToJS()` and `CastFromJS()`, which are used to convert all arguments and return types from/to JS.
+  * The function-to-`v8::InvocationCallback` conversions. This provides tons of template glue which creates `v8::InvocationCallback` functions by converting near-arbitrary function signatures to `v8::InvocationCallback`. These rely on `CastToJS()` and `CastFromJS()` to convert all arguments and return types from/to JS (with the exception of `void` returns, which require some special handling due to some syntactic constraints of the `void` type).
 
 One of the most significant properties of this API is that it can report a wide variety of conversion errors at compile-time. Conversion APIs which are based on macros, as opposed to templates, (depressingly common in real-world v8 extension libraries) cannot come _anywhere close_ to achieving the flexibility and type-safety of this library.
 
@@ -567,10 +567,14 @@ But since the advent of `ToInCa` (7 hours ago, as of this writing ;), i've prett
 
 =Code Demos and Sample Bindings=
 
-The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the `v8::convert` source tree includes some sample v8 bindings created using this API. The code includes:
+More sources of information and code demos:
 
   * The `ConvertDemo.?pp` and `test.js` files in this source tree's root directory give a very thorough demonstration, showing off just about every feature the library offers.
+  * [V8Convert_Overloading] goes into detail about how to overload script-side functions to multiple native functions.
   * [V8Convert_Shell] offers a simple way to bootstrap v8 support into an arbitrary client application.
+
+The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the [V8Convert] source tree includes some sample v8 bindings created using this API. They include:
+
   * A [V8Convert_ByteArray ByteArray class] for handling binary data in JS space.
   * The [JSPDO] database access abstraction API.
   * A basic [V8Convert_Socket socket API].
