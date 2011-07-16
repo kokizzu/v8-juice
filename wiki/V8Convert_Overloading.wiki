@@ -20,7 +20,7 @@ _ad nauseum_. You get the idea.
 =Overloading by Arity=
 
 
-The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). We have two approaches to doing this, but only one is shown here (the one which is far easier to use for most cases).
+The API has support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). We have two approaches to doing this, but only one is shown here (the one which is far easier to use for most cases). See the `InCaOverloader` class for a simplified form which only works with one or two overloads (a single-function "overload" is an easy way to ensure that the caller provides only the required number of arguments!).
 
 The `InCaOverloadList` template takes a type-list of function binding templates (or something interface-compatible) and combines them into a single `v8::InvocationCallback` function which can dispatch script-side calls to a different native function depending on the number (not the types) of arguments.
 
@@ -28,15 +28,15 @@ It looks like this:
 
 {{{
 // Overload 4 variants of a member function:
-typedef cv::InCaOverloadList< cv::Signature<void (
+typedef cv::InCaOverloadList< CVV8_TYPELIST((
         cv::MethodToInCa<T, void (), &T::overload0>,
         cv::MethodToInCa<T, void (int), &T::overload1>,
         cv::MethodToInCa<T, void (int,int), &BoundNative::overload2>,
         cv::MethodToInCa<T, void (v8::Arguments const &), &T::overloadN> // fallback for N args
-    )> > MyOverloads;
-// Note that the order of the list entries is irrelevant (for _most_ purposes).
-// The exception being that one taking v8::Arguments will always match any
-// arity, so it should come at the end of the list (since it overrides any
+))> MyOverloads;
+// Note that the order of the list entries is irrelevant for _most_ purposes,
+// the exception being that one taking v8::Arguments will always match any
+// arity, so it must come at the end of the list (since it trumps any
 // coming after it).
 
 // Get the InvocationCallback proxy which does the arity-based dispatching:
