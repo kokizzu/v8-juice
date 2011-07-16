@@ -1,0 +1,195 @@
+#summary Overloading functions in v8::convert.
+
+<wiki:toc/>
+
+[V8Convert] has a fairly powerful function overloading mechanism. When binding JS functions to C++ (as described on the [V8Convert] page) we can, using templates, create overloads which dispatch to a particular native function depending on any criteria we care to apply to the passed-in arguments.
+
+When we only care about overloading based on the arity (number of arguments), `InCaOverloader` and friends make it easy to do so. However, using more advanced techniques we can dispatch to a different native callback using logic similar to the following:
+
+  * If the call has 3 arguments then...
+    * If the first one is a string, call `f1()`.
+    * Else if the first arg is a number call `f2()`.
+    * Else call `f3()`...
+  * Else if the call has 2 arguments and both are functions, call `f4()`.
+  * Else if the call has 4 arguments and the 3rd is an object, call `f5()`.
+  * ...
+
+_ad nauseum_. You get the idea.
+
+=Overloading by Arity=
+
+
+The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). We have two approaches to doing this, but only one is shown here (the one which is far easier to use for most cases).
+
+The `InCaOverloadList` template takes a type-list of function binding templates (or something interface-compatible) and combines them into a single `v8::InvocationCallback` function which can dispatch script-side calls to a different native function depending on the number (not the types) of arguments.
+
+It looks like this:
+
+{{{
+// Overload 4 variants of a member function:
+typedef cv::InCaOverloadList< cv::Signature<void (
+        cv::MethodToInCa<T, void (), &T::overload0>,
+        cv::MethodToInCa<T, void (int), &T::overload1>,
+        cv::MethodToInCa<T, void (int,int), &BoundNative::overload2>,
+        cv::MethodToInCa<T, void (v8::Arguments const &), &T::overloadN> // fallback for N args
+    )> > MyOverloads;
+// Note that the order of the list entries is irrelevant (for _most_ purposes).
+// The exception being that one taking v8::Arguments will always match any
+// arity, so it should come at the end of the list (since it overrides any
+// coming after it).
+
+// Get the InvocationCallback proxy which does the arity-based dispatching:
+v8::InvocationCallback cb = MyOverloads::Call;
+}}}
+
+Note that only one line of that code is evaluated at runtime - the rest is all done at compile-time. The above generates a whole family of `v8::InvocationCallback` functions (at least (overload count + 1) of them, though there are a couple others hidden behind the scenes) and combines them into a single `v8::InvocationCallback` dispatcher function, `MyOverloads::Call()`.
+
+There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is _at least_ 10 (and the library can be built to support many more than that). (If you're overloading 10+ variants of one function then the design probably needs to be reconsidered!)
+
+The API provides enough type information so that we can build advanced templates which can dispatch based on the types passed in at runtime, and we have some proof-of-concept/demo code of this in the source tree. e.g. we can bind  overloads of function which have different-sized numeric types:
+
+{{{
+void f( int16_t );
+void f( int32_t );
+void f( double );
+}}}
+
+We can then dispatch to one of those based on the numeric value passed in from JS. If the value fits in `int16_t` then we call that overload, else if it fits in `int32_t` we call that overload, else we fall back to the `double` overload. (For the curious, `std::numeric_limits<T>` can be used to find out the minimum/maximum value of a native numeric type, and we can use that to figure out if a given JS numeric value will "fit" in a given native numeric type.)
+
+
+=Overloading Based on Arbitrary Logic=
+
+By creating predicate/callback pairs using templates, we can create `v8::InvocationCallback` functions which dispatch to different native functions depending on near-arbitrary logic.
+
+Here's a rather detailed example...
+
+We're going to overload _10_ functions into a single callback, such that any calls with 5 or fewer arguments are unambiguously handled by one of these overloads, and all calls with 6 or more arguments will cause a JS-side exception to the thrown.
+
+(Note that no sane application would have 10 overloads for the same function, but the following code comes from library test code where we are trying to stress the API a bit.)
+
+The callbacks:
+
+{{{
+// Takes any number of arguments:
+v8::Handle<v8::Value> bogo_callback_arityN( v8::Arguments const & argv );
+
+// Take only 1 argument:
+int16_t bogo_callback_int16( int16_t v );
+int32_t bogo_callback_int32( int32_t v );
+double bogo_callback_double( double v );
+int bogo_callback_array( v8::Handle<v8::Array> const & ar );
+bool bogo_callback_object( v8::Handle<v8::Object> const & obj );
+v8::Handle<v8::Value> bogo_callback_function( v8::Handle<v8::Function> const & f );
+
+// This one is only dispatched when argv.Length()==2
+int bogo_callback2( v8::Arguments const & argv );
+
+// 3 arguments:
+char const * bogo_callback_fsf( v8::Handle<v8::Function> const & f1,
+                                char const * str,
+                                v8::Handle<v8::Function> const & f2 );
+
+v8::Handle<v8::Value> bogo_callback_fvf( v8::Handle<v8::Function> const & f1,
+                                         v8::Handle<v8::Value> const &v,
+                                         v8::Handle<v8::Function> const & f2 );
+// Note that the previous 2 differ only by their 2nd argument type.
+}}}
+
+And here's how we do it:
+
+{{{
+using namespace v8::convert;
+
+// Create some rules for the 1-arity overloads:
+
+typedef PredicatedInCa< ArgAt_IsA<0,int16_t>,
+                        FunctionToInCa<int16_t (int16_t), bogo_callback_int16>
+> PredIsaInt16;
+
+typedef PredicatedInCa< ArgAt_IsA<0,int32_t>,
+                       FunctionToInCa<int32_t (int32_t), bogo_callback_int32>
+> PredIsaInt32;
+
+typedef PredicatedInCa< ArgAt_IsA<0,double>,
+                        FunctionToInCa<double (double), bogo_callback_double>
+> PredIsaDouble;
+
+typedef PredicatedInCa< ArgAt_IsArray<0>,
+                        FunctionToInCa<int (v8::Handle<v8::Array> const &), bogo_callback_array>
+> PredIsaArray;
+
+typedef PredicatedInCa< ArgAt_IsObject<0>,
+                        FunctionToInCa<bool (v8::Handle<v8::Object> const &),
+                                       bogo_callback_object>
+> PredIsaObject;
+
+typedef PredicatedInCa< ArgAt_IsFunction<0>,
+                        FunctionToInCa<v8::Handle<v8::Value> (v8::Handle<v8::Function> const &),
+                        bogo_callback_function>
+> PredIsaFunction;
+
+// Group the 1-arity rules into a PredicatedInCaOverloader "container".
+typedef PredicatedInCaOverloader< CVV8_TYPELIST((
+    // The order IS significant for overloads which can evaluate ambiguously,
+    // e.g. Int16/Int32/Double.
+    PredIsaFunction, PredIsaArray, PredIsaObject, PredIsaInt16, PredIsaInt32, PredIsaDouble
+))> ByTypeOverloads;
+
+// Create a parent rule which only checks ByTypeOverloads if called
+// with 1 argument:
+typedef PredicatedInCa< Argv_Length<1>, ByTypeOverloads > Group1;
+
+// Set up some other logic paths...
+
+// For 2 arguments:
+typedef PredicatedInCa< Argv_Length<2>, InCaLikeFunc<int,bogo_callback2> > Group2;
+
+// For 0 or 3-5 args
+typedef PredicatedInCa<
+    Argv_Or< Argv_Length<0>, Argv_Length<3,5> >,
+    InCa<bogo_callback_arityN>
+> GroupN;
+
+// Special case for the weird (Function, cstring, Function) overload...
+typedef Argv_AndN< CVV8_TYPELIST((
+        Argv_Length<3>,
+        ArgAt_IsFunction<0>,
+        ArgAt_IsString<1>,
+        ArgAt_IsFunction<2>
+    ))> MatchesFunc_String_Func;
+typedef PredicatedInCa< MatchesFunc_String_Func,
+        FunctionToInCa< char const * (
+                            v8::Handle<v8::Function> const &,
+                            char const *,
+                            v8::Handle<v8::Function> const &),
+                        bogo_callback_fsf
+                    >
+> PredFSF;
+
+// Special case for the weird (Function, Value, Function) overload...
+typedef Argv_AndN< CVV8_TYPELIST((
+        Argv_Length<3>,
+        ArgAt_IsFunction<0>,
+        ArgAt_IsFunction<2>
+    ))> MatchesFunc_Value_Func;
+typedef PredicatedInCa< MatchesFunc_Value_Func,
+        FunctionToInCa< v8::Handle<v8::Value> (
+                            v8::Handle<v8::Function> const &,
+                            v8::Handle<v8::Value> const &,
+                            v8::Handle<v8::Function> const & ),
+                        bogo_callback_fvf
+                    >
+> PredFVF;
+
+// Now create the "top-most" callback, which performs the above-defined
+// dispatching at runtime:
+typedef PredicatedInCaOverloader< CVV8_TYPELIST((
+        PredFSF, PredFVF, Group1, Group2, GroupN
+))> AllOverloads;
+
+// All of the above work is done at compile-time. Now we can
+// do what we've been working towards all along: getting
+// the dispatcher callback:
+
+v8::InvocationCallback cb = AllOverloads::Call;
+}}}
