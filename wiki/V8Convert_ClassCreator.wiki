@@ -1,3 +1,5 @@
+#labels Phase-UserDocs,Topic-JS-API
+
 #summary V8Convert ClassCreator class-binding mechanism
 #labels Phase-UserDocs,Topic-JS-API
 
@@ -153,6 +155,6 @@ demo.cpp:200:~MyType(): MyType::~MyType() @ 0x1308ee0
 
 Notice that the system's memory allocator re-allocated each new instance at the same address as the previously destroyed one. That is a mere fluke of the memory manager, and not a well-defined behaviour.
 
-  Side note: that re-allocation behaviour is also incidentally a good demonstration of why class-binding mechanisms "should" (philosophically speaking) make an effort to perform _type-safe_ conversions from JS to the native type. Most binding mechanisms, and the approach demonstrated in the v8 docs, are not runtime-type-safe, and are subject to crashes or mis-use of re-allocated memory addresses (possibly now used by a _different_ type) if script-side code goes out of its way to confuse the binding mechanism. `ClassCreator` policies exist which perform "quick-and-easy" or "slower-by-typesafe" conversions. (Though philosophically highly arguable, the quick-and-easy binding (as demonstrated in v8's docs) is perfectly reasonable until someone writes some convoluted JS code which criss-crosses the bindings between two native objects.)
+  Side note: that re-allocation behaviour is also incidentally a good demonstration of why class-binding mechanisms "should" (philosophically speaking) make an effort to perform _type-safe_ conversions from JS to the native type. Most binding mechanisms, and the approach demonstrated in the v8 docs, are not runtime-type-safe, and are subject to crashes or mis-use of re-allocated memory addresses (possibly now used by a _different_ type) if script-side code goes out of its way to confuse the binding mechanism. `ClassCreator` policies exist which perform "quick-and-easy" or "slower-but-typesafe" conversions. (Though philosophically highly arguable, the quick-and-easy binding (as demonstrated in v8's docs) is perfectly reasonable until someone writes some convoluted JS code which criss-crosses the bindings between two native objects.)
 
 Real-world examples: the [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons directory] of the source tree contains several complete, non-trivial examples of custom bindings, e.g. [JSPDO], [V8Convert_Socket], and [V8Convert_ByteArray ByteArray].
