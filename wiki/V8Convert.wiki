@@ -9,7 +9,7 @@ Source code: [http://code.google.com/p/v8-juice/source/browse/#svn/convert] (see
 
 The `v8::convert` API is a spin-off of the core-most components of the [HomePage v8-juice library]. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. While i have personally always rather liked (and been well served by) the underlying architecture v8-juice uses for type conversions, as of June 2011 i will go so far to say that i personally consider v8-convert to be the most comprehensive, most powerful, and easiest to use type-conversion API available for v8.
 
-v8-convert is not a "mutually exclusive solution" to its problem domain, and it can easily be used in conjunction with other v8 client libraries like [https://github.com/tsa/vu8 vu8] and [http://www.nodejs.org/ nodejs].
+v8-convert is not a "mutually exclusive solution" to its problem domain, and it can easily be used in conjunction with other v8 client libraries like [https://github.com/tsa/vu8 vu8] and [http://www.nodejs.org/ node.js].
 
 It's main features/focus are:
 
@@ -292,44 +292,9 @@ int my_callback( v8::Arguments const & argv )
 }}}
 
 
-==Special Case: Overloading based on Arity==
+==Special Case: Overloading==
 
-The API has basic support for overloading multiple `InvocationCallback`s based on their arity (the number of arguments they require). We have two approaches to doing this, but only one is shown here (the one which is far easier to use for most cases).
-
-The `InCaOverloadList` template takes a type-list of function binding templates (or something interface-compatible) and combines them into a single `v8::InvocationCallback` function which can dispatch script-side calls to a different native function depending on the number (not the types) of arguments.
-
-It looks like this:
-
-{{{
-// Overload 4 variants of a member function:
-typedef cv::InCaOverloadList< cv::Signature<void (
-        cv::MethodToInCa<T, void (), &T::overload0>,
-        cv::MethodToInCa<T, void (int), &T::overload1>,
-        cv::MethodToInCa<T, void (int,int), &BoundNative::overload2>,
-        cv::MethodToInCa<T, void (v8::Arguments const &), &T::overloadN> // fallback for N args
-    )> > MyOverloads;
-// Note that the order of the list entries is irrelevant (for _most_ purposes).
-// The exception being that one taking v8::Arguments will always match any
-// arity, so it should come at the end of the list (since it overrides any
-// coming after it).
-
-// Get the InvocationCallback proxy which does the arity-based dispatching:
-v8::InvocationCallback cb = MyOverloads::Call;
-}}}
-
-Note that only one line of that code is evaluated at runtime - the rest is all done at compile-time. The above generates a whole family of `v8::InvocationCallback` functions (at least (overload count + 1) of them, though there are a couple others hidden behind the scenes) and combines them into a single `v8::InvocationCallback` dispatcher function, `MyOverloads::Call()`.
-
-There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is _at least_ 10 (and the library can be built to support many more than that). (If you're overloading 10+ variants of one function then the design probably needs to be reconsidered!)
-
-The API provides enough type information so that we can build advanced templates which can dispatch based on the types passed in at runtime, and we have some proof-of-concept/demo code of this in the source tree. e.g. we can bind  overloads of function which have different-sized numeric types:
-
-{{{
-void f( int16_t );
-void f( int32_t );
-void f( double );
-}}}
-
-We can then dispatch to one of those based on the numeric value passed in from JS. If the value fits in `int16_t` then we call that overload, else if it fits in `int32_t` we call that overload, else we fall back to the `double` overload. (For the curious, `std::numeric_limits<T>` can be used to find out the minimum/maximum value of a native numeric type, and we can use that to figure out if a given JS numeric value will "fit" in a given native numeric type.)
+See [V8Convert_Overloading].
 
 ==Special Case: Non-Convertible Return Types==
 
