@@ -93,7 +93,6 @@ char const * bogo_callback_fsf( v8::Handle<v8::Function> const & f1,
 v8::Handle<v8::Value> bogo_callback_fvf( v8::Handle<v8::Function> const & f1,
                                          v8::Handle<v8::Value> const &v,
                                          v8::Handle<v8::Function> const & f2 );
-// Note that the previous 2 differ only by their 2nd argument type.
 }}}
 
 And here's how we do it:
@@ -188,9 +187,9 @@ typedef PredicatedInCaOverloader< CVV8_TYPELIST((
         PredFSF, PredFVF, Group1, Group2, GroupN
 ))> AllOverloads;
 
-// All of the above work is done at compile-time. Now we can
-// do what we've been working towards all along: getting
-// the dispatcher callback:
+// Everything up to here is done at compile-time, by the way.
+// Now we can do what we've been working towards all along:
+// getting the dispatcher callback:
 
 v8::InvocationCallback cb = AllOverloads::Call;
 }}}
