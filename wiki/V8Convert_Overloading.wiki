@@ -47,7 +47,10 @@ Note that only one line of that code is evaluated at runtime - the rest is all d
 
 There is actually a limit to how many overloads you can provide in a single `InCaOverloadList`, but the lower limit is _at least_ 10 (and the library can be built to support many more than that). (If you're overloading 10+ variants of one function then the design probably needs to be reconsidered!)
 
-The API provides enough type information so that we can build advanced templates which can dispatch based on the types passed in at runtime, and we have some proof-of-concept/demo code of this in the source tree. e.g. we can bind  overloads of function which have different-sized numeric types:
+
+=Overloading Based on Arbitrary Logic=
+
+By creating predicate/callback pairs using templates, we can create `v8::InvocationCallback` functions which dispatch to different native functions depending on near-arbitrary logic. For example, the API provides enough type information so that we can build templates which can dispatch based on the types of the values passed in at runtime. That means, amongst other things, that we can bind overloads of functions which have different-sized numeric types:
 
 {{{
 void f( int16_t );
@@ -57,10 +60,7 @@ void f( double );
 
 We can then dispatch to one of those based on the numeric value passed in from JS. If the value fits in `int16_t` then we call that overload, else if it fits in `int32_t` we call that overload, else we fall back to the `double` overload. (For the curious, `std::numeric_limits<T>` can be used to find out the minimum/maximum value of a native numeric type, and we can use that to figure out if a given JS numeric value will "fit" in a given native numeric type.)
 
-
-=Overloading Based on Arbitrary Logic=
-
-By creating predicate/callback pairs using templates, we can create `v8::InvocationCallback` functions which dispatch to different native functions depending on near-arbitrary logic.
+==The Big, Fat, Hairy Example==
 
 Here's a rather detailed example...
 
