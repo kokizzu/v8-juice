@@ -1,7 +1,11 @@
+#labels Phase-UserDocs,Topic-JS-API
+
 #summary V8Convert ClassCreator class-binding mechanism
 #labels Phase-UserDocs,Topic-JS-API
 
 [V8Convert]'s `ClassCreator` API is an easy-to-use template-based mechanism for binding native classes to JS. It was originally derived from [ClassWrap], making it the 3rd generation of class-binding mechanism since this project was started, and it is very similar to that binding mechanism. !ClassCreator's source code can be found [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp here].
+
+To allow customization of the binding process, `ClassCreator` uses so-called policy classes. These are templates which clients may specialize to customize various aspects of the bindings without having to touch the ClassCreator code. In effect they are "hooks" into various specific points of the class-binding mechanism. e.g. one policy determines how we actually associate the native and JS objects with one another ("quick-and-easy" vs. "slower but typesafe"). Most, but not all, policies have reasonable default implementations. A small number of them require the client to provide his own specialization (this is demonstrated below).
 
 Let's just jump straight to an example...
 
@@ -52,18 +56,49 @@ struct MyType
     int func( double ) { return 42; }
 };
 
+// A non-member function which we want to bind as a member of MyType.
+// See below for how we get the native 'this' object.
+void non_member_func( v8::Arguments const & argv );
+
 //-----------------------------------
-// Policies used by cv::ClassCreator (it also has others)
+// Policies used by cv::ClassCreator (it also has others)...
 namespace v8 { namespace convert {
 
+    // The policy which tells ClassCreator how to instantiate and
+    // destroy native objects.
     template <>
     class ClassCreator_Factory<MyType>
      : public ClassCreator_Factory_CtorArityDispatcher< MyType, MyType::Ctors >
     {};
+
+    // A JSToNative specialization which makes use of the plumbing
+    // installed by ClassCreator. This is required so that
+    // CastFromJS<MyType>() will work, as the JS/native binding process
+    // requires that we be able to convert (via CastFromJS()) a JS-side
+    // MyType object to a C++-side MyType object.
     template <>
     struct JSToNative< MyType > : JSToNative_ClassCreator< MyType >
     {};
 }}
+
+//-------------------------
+// Because non_member_func() uses CastFromJS<MyType>(), it must be defined
+// AFTER JSToNative<MyType> is declared, or the wrong specialization
+// of JSToNative will likely be used! If we're lucky it will fail to
+// compile. If we're unlucky it will cause a link-time error.
+// If we do this in the right order then it will compile and link
+// just fine.
+void non_member_func( v8::Arguments const & argv )
+{
+    MyType * self = cv::CastFromJS<MyType>( argv.This() );
+    if( ! self ) {
+        cv::Toss("Could not find native MyType 'this' pointer!");
+        // ^^^ that throws a JS-side exception.
+        return;
+    }
+    ....
+}
+
 
 //-----------------------------------
 // Ultra-brief ClassCreator demo. See ConvertDemo.?pp for MUCH more.
@@ -73,7 +108,11 @@ void bind_MyType( v8::Handle<v8::Object> dest )
     CC & cc(CC::Instance());
     cc
         ("destroy", CC::DestroyObjectCallback)
-        ("func", cv::ToInCa<MyType, int (double), &MyType::func>::Call)
+        ("func", cv::MethodToInCa<MyType, int (double),
+                                  &MyType::func>::Call)
+        ("nonMember", cv::FunctionToInCa<
+                          void (v8::Arguments const &),
+                          non_member_func >::Call )
         .AddClassTo( "MyType", dest );
 
     // Real-life issue: if this function _might_ be called multiple
