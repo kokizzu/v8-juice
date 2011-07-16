@@ -3,7 +3,7 @@
 
 [V8Convert]'s `ClassCreator` API is an easy-to-use template-based mechanism for binding native classes to JS. It was originally derived from [ClassWrap], making it the 3rd generation of class-binding mechanism since this project was started, and it is very similar to that binding mechanism. !ClassCreator's source code can be found [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp here].
 
-To allow customization of the binding process, `ClassCreator` uses so-called policy classes. These are templates which clients may specialize to customize various aspects of the bindings without having to touch the ClassCreator code. In effect they are "hooks" into various specific points of the class-binding mechanism. e.g. one policy determines how we actually associate the native and JS objects with one another ("quick-and-easy" vs. "slower but typesafe"). Most, but not all, policies have reasonable default implementations. A small number of them require the client to provide his own specialization (this is demonstrated below).
+To allow customization of the binding process, `ClassCreator` uses so-called policy classes. These are templates which clients may specialize to customize various aspects of the bindings without having to touch the `ClassCreator` code. In effect they are "hooks" into various specific points of the class-binding mechanism, and every part of the class-binding machinery which can conceivably be customizable has an associated policy class to which that customization is delegated. e.g. one policy determines how we actually associate the native and JS objects with one another ("quick-and-easy" vs. "slower but typesafe"). Most, but not all, policies have reasonable default implementations, but a small number of them require clients to provide their own specializations (this is demonstrated below).
 
 Let's just jump straight to an example...
 
@@ -43,6 +43,8 @@ struct MyType
     }
     
     // Ctors we want to bind to v8 (there are several other ways to do this):
+    // (This does NOT need to be a member of this class: it can be defined
+    // anywhere which is convenient for the client.)
     typedef cv::Signature<MyType (
         cv::CtorForwarder<MyType *()>,
         cv::CtorForwarder<MyType *(char const *)>,
@@ -55,7 +57,7 @@ struct MyType
 };
 
 // A non-member function which we want to bind as a member of MyType.
-// See below for how we get the native 'this' object.
+// See below for how we get the native 'this' object at runtime.
 void non_member_func( v8::Arguments const & argv );
 
 //-----------------------------------
