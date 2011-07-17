@@ -64,8 +64,15 @@ void non_member_func( v8::Arguments const & argv );
 // Policies used by cv::ClassCreator (it also has others)...
 namespace v8 { namespace convert {
 
+    // Optional: used mostly for error reporting purposes but can
+    // also be used to hold the class' JS-side name (which often differs
+    // from its native name).
+    template <>
+    struct TypeName< MyType > { static char const * Value; };
+
     // The policy which tells ClassCreator how to instantiate and
-    // destroy native objects.
+    // destroy native objects. This one forwards to one of the
+    // ctors specified in MyType::Ctors.
     template <>
     class ClassCreator_Factory<MyType>
      : public ClassCreator_Factory_CtorArityDispatcher< MyType, MyType::Ctors >
@@ -75,19 +82,22 @@ namespace v8 { namespace convert {
     // installed by ClassCreator. This is required so that
     // CastFromJS<MyType>() will work, as the JS/native binding process
     // requires that we be able to convert (via CastFromJS()) a JS-side
-    // MyType object to a C++-side MyType object.
+    // MyType object to a C++-side MyType object (so that we know what
+    // native object to apply a given method/property to).
     template <>
     struct JSToNative< MyType > : JSToNative_ClassCreator< MyType >
     {};
 
-    // Optional: used mostly for error reporting purposes but can
-    // also be used to hold the class' JS-side name (which often differs
-    // from its native name).
-    template <>
+    // Out-of-line definition of TypeName<MyType>::Value. The declaration
+    // should be visible to any client code which will use the bindings,
+    // but the definition may only be done once (put it in the binding's
+    // implementation file).
     char const * TypeName< MyType >::Value = "MyType";
 }}
 
 //-------------------------
+// How to fetch the native 'this' pointer from bound InCa-like functions:
+//
 // Because non_member_func() uses CastFromJS<MyType>(), it must be defined
 // AFTER JSToNative<MyType> is declared, or the wrong specialization
 // of JSToNative will likely be used! If we're lucky it will fail to
