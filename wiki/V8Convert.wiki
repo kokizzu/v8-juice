@@ -75,10 +75,11 @@ cb = cv::ToInCa<MyType, int (char const *) const, &MyType::constMethod>::Call;
 // A free function: int puts(char const *)
 cb = cv::ToInCa<void, int (char const *), ::puts>::Call;
 // Functions (not Methods) require 'void' as the first parameter!
+// Equivalent to:
+cb = cv::FunctionToInCa< int (char const *), ::puts>::Call;
 }}}
 
 Because these templates _create_ `v8::InvocationCallback` functions at compile-time, they require no dynamically-allocated proxy objects or other hidden memory usage like some binding mechanisms require. The only overhead these templates add is the conversion of arguments/return values to/from JS. The library does as much work as possible at compile time to help detect type-conversion errors early and help avoid extra runtime costs.
-
 
 The `ToInCa` template is a thin wrapper around three primary class templates:
 
@@ -101,7 +102,7 @@ When using `FunctionToInCa` and friends (including `ToInCa`) we can use template
 namespace cv = v8::convert;
 typedef ToInCa<void, int (char const *,double), my_function> MyFunc;
 
-assert( MyFunc::Arity == 2 ); // number of args the function takes.
+typedef char AssertArityIs2[(2 == cv::sl::Arity<MyFunc>::Value) ? 1 : -1];
 typedef cv::SignatureParamAt< MyFunc, 0 >::Type A0; // == (char const *)
 typedef cv::SignatureParamAt< MyFunc, 1 >::Type A1; // == double
 //typedef cv::SignatureParamAt< MyFunc, 2 >::Type A2; // compile-time error (arg out of bounds)
@@ -516,7 +517,7 @@ typedef cv::CtorForwarder<MyType * (argType1,argType2)> Ctor2;
 MyType * my = Ctor0::Call( argsObject );
 
 // Or we can group them together and dispatch based on the number of arguments pass in:
-typedef cv::CtorForwarderDispatcher<
+typedef cv::CtorArityDispatcher<
         cv::Signature<MyType * (Ctor0, Ctor1, Ctor2)>
     > Dispatch;
 MyType * my = Dispatch::Call( argsObject );
