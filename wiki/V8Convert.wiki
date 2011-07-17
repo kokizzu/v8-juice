@@ -100,12 +100,12 @@ When using `FunctionToInCa` and friends (including `ToInCa`) we can use template
 
 {{{
 namespace cv = v8::convert;
-typedef ToInCa<void, int (char const *,double), my_function> MyFunc;
+typedef FunctionToInCa<int (char const *,double), my_function> MyFunc;
 
 typedef char AssertArityIs2[(2 == cv::sl::Arity<MyFunc>::Value) ? 1 : -1];
-typedef cv::SignatureParamAt< MyFunc, 0 >::Type A0; // == (char const *)
-typedef cv::SignatureParamAt< MyFunc, 1 >::Type A1; // == double
-//typedef cv::SignatureParamAt< MyFunc, 2 >::Type A2; // compile-time error (arg out of bounds)
+typedef cv::sl::At< 0, MyFunc >::Type A0; // == (char const *)
+typedef cv::sl::At< 1, MyFunc >::Type A1; // == double
+typedef cv::sl::At< 2, MyFunc >::Type A2; // compile-time error (arg out of bounds)
 }}}
 
 We can use further templating techniques to do things like choose different code paths based on that type information, as in this rather contrived example which changes `int64_` to `double` (v8 does not internally support 64-bit integers):
