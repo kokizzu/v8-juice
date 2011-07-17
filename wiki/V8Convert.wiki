@@ -573,6 +573,7 @@ More sources of information and code demos:
   * The `ConvertDemo.?pp` and `test.js` files in this source tree's root directory give a very thorough demonstration, showing off just about every feature the library offers.
   * [V8Convert_Overloading] goes into detail about how to overload script-side functions to multiple native functions.
   * [V8Convert_Shell] offers a simple way to bootstrap v8 support into an arbitrary client application.
+  * [V8Convert_ClassCreator] offers a simple, customizable class-binding mechanism.
 
 The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the [V8Convert] source tree includes some sample v8 bindings created using this API. They include:
 
