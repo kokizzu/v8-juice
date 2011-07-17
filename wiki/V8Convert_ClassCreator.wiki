@@ -1,5 +1,3 @@
-#labels Phase-UserDocs,Topic-JS-API
-
 #summary V8Convert ClassCreator class-binding mechanism
 #labels Phase-UserDocs,Topic-JS-API
 
@@ -44,9 +42,9 @@ struct MyType
         CERR << "MyType::~MyType() @ "<<this<<'\n';
     }
     
-    // Ctors we want to bind to v8 (there are several other ways to do this):
-    // (This does NOT need to be a member of this class: it can be defined
-    // anywhere which is convenient for the client.)
+    // MyType constructors we want to bind to v8 (there are several other ways
+    // to do this): This does NOT need to be a member of this class: it can be
+    // defined anywhere which is convenient for the client.
     typedef cv::Signature<MyType (
         cv::CtorForwarder<MyType *()>,
         cv::CtorForwarder<MyType *(char const *)>,
