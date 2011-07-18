@@ -144,13 +144,19 @@ Note that binding to non-static member methods requires (at runtime), that `Cast
 When using `FunctionToInCa` and friends (including `ToInCa`) we can use template techniques to get type information about the arguments if we want to use that for conversion purposes:
 
 {{{
-namespace cv = cvv8;
+using namespace cvv8;
 typedef FunctionToInCa<int (char const *,double), my_function> MyFunc;
 
 typedef char AssertArityIs2[(2 == cv::sl::Arity<MyFunc>::Value) ? 1 : -1];
-typedef cv::sl::At< 0, MyFunc >::Type A0; // == (char const *)
-typedef cv::sl::At< 1, MyFunc >::Type A1; // == double
-typedef cv::sl::At< 2, MyFunc >::Type A2; // compile-time error (arg out of bounds)
+typedef sl::At< 0, MyFunc >::Type A0; // == (char const *)
+typedef sl::At< 1, MyFunc >::Type A1; // == double
+typedef sl::At< 2, MyFunc >::Type A2; // compile-time error (arg out of bounds)
+
+// Note that "InCa-like" functions have an Arity value of -1:
+typedef char AssertArityIsNegative[
+   (sl::Arity< Signature< void (v8::Arguments const &) > >::Value == -1)
+   ? 1
+   : -1];
 }}}
 
 We can use further templating techniques to do things like choose different code paths based on that type information, as in this rather contrived example which changes `int64_t` to `double` (v8 does not internally support 64-bit integers):
