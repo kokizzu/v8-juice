@@ -13,7 +13,7 @@ Note that [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/co
 To demonstrate, the following simple program accepts a JS script filename on the command line and runs it:
 
 {{{
-#include "v8/convert/V8Shell.hpp"
+#include "cvv8/V8Shell.hpp"
 #include <cassert>
 
 int main(int argc, char const * const * argv) {
