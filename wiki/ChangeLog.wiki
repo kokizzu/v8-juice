@@ -12,7 +12,7 @@ are at the top. Dates written extra large are release dates. This contains only 
 ----
 
 *2011 July 18*
-  * `v8::convert` namespace was renamed to `cvv8`, to preemptively avoid any collisions with future changes in v8.
+  * *Completely incompatible change:* `v8::convert` namespace was renamed to `cvv8`, to preemptively avoid any collisions with future changes in v8. Moved the headers from `v8/convert/` to `cvv8/` for the same reason.
 
 *2011 July 17*
   * Added "non-trivial function overloading" - see [V8Convert_Overloading].
