@@ -20,7 +20,7 @@ Let's just jump straight to an example...
 #include "v8/convert/ClassCreator.hpp"
 
 // Convenience namespace alias:
-namespace cv = v8::convert;
+namespace cv = cvv8;
 
 //-----------------------------------
 // The type we want to bind to v8.
