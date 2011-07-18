@@ -17,7 +17,7 @@ Let's just jump straight to an example...
 
 //-----------------------------------
 // Required header(s):
-#include "v8/convert/ClassCreator.hpp"
+#include "cvv8/ClassCreator.hpp"
 
 // Convenience namespace alias:
 namespace cv = cvv8;
