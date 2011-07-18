@@ -62,7 +62,7 @@ void non_member_func( v8::Arguments const & argv );
 
 //-----------------------------------
 // Policies used by cv::ClassCreator (it also has others)...
-namespace v8 { namespace convert {
+namespace cvv8 {
 
     // Optional: used mostly for error reporting purposes but can
     // also be used to hold the class' JS-side name (which often differs
@@ -93,7 +93,13 @@ namespace v8 { namespace convert {
     // but the definition may only be done once (put it in the binding's
     // implementation file).
     char const * TypeName< MyType >::Value = "MyType";
-}}
+
+    // There are several other policies not shown here.
+    // e.g. ClassCreator_InternalFields defines the v8-side internal
+    // field layout (it is rarely necessary to customized that, but
+    // it has some obscure uses). We can also hook into the post-construction
+    // and pre-destruction phases to perform custom un/binding work if needed.
+}
 
 //-------------------------
 // How to fetch the native 'this' pointer from bound InCa-like functions:
@@ -116,7 +122,7 @@ v8::Handle<v8::Value> non_member_func( v8::Arguments const & argv )
 
 
 //-----------------------------------
-// Ultra-brief ClassCreator demo. See ConvertDemo.?pp for MUCH more.
+// Ultra-brief ClassCreator demo. See ConvertDemo.?pp for MUCH more detail.
 void bind_MyType( v8::Handle<v8::Object> dest )
 {
     typedef cv::ClassCreator<MyType> CC;
