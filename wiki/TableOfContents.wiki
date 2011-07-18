@@ -1,7 +1,9 @@
 #summary Consolidated list/overview of wiki pages.
 #labels Featured,Phase-UserDocs
+The one-stop v8-juice/v8-convert Table of Contents...
 
-=v8-juice/v8-convert Table of Contents=
+<wiki:toc/>
+
 
 ==v8-juice==
 
