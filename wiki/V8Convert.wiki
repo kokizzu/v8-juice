@@ -59,6 +59,19 @@ The header files live in the `cvv8` dir (was `v8/convert` before 20110718). The 
 ... several others ...
 }}}
 
+== Generating API Documentation ==
+
+The API docs are written in [http://www.doxygen.org doxygen]-friendly form and can be processed by doxygen like this:
+
+{{{
+~> cd doc
+~> make doc
+}}}
+
+The name of the output directory will be shown on stdout.
+
+Achtung: for some reason doxygen (at least the versions i've tried) is nesting the `cvv8` namespace and a couple of its sub-namespaces within another layer of `cvv8`. e.g. `cvv8::sl` might become `cvv8::cvv8::sl` in the generated docs. i have no idea why this is happening.
+
 =Converting Types=
 
 The public type conversions API is based on only two functions:
