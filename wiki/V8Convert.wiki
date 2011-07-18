@@ -1,13 +1,13 @@
-#summary The v8::convert sub-project
+#summary The cvv8 sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
 <wiki:toc max_depth=4></wiki:toc>
 
-= v8::convert =
+= v8-convert (a.k.a. cvv8) =
 
 Source code: [http://code.google.com/p/v8-juice/source/browse/#svn/convert] (see [http://code.google.com/p/v8-juice/source/checkout this link] for checkout instructions.)
 
-The `v8::convert` API is a spin-off of the core-most components of the [HomePage v8-juice library]. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. While i have personally always rather liked (and been well served by) the underlying architecture v8-juice uses for type conversions, as of June 2011 i will go so far to say that i personally consider v8-convert to be the most comprehensive, most powerful, and easiest to use type-conversion API available for v8.
+The `cvv8` API is a spin-off of the core-most components of the [HomePage v8-juice library]. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. While i have personally always rather liked (and been well served by) the underlying architecture v8-juice uses for type conversions, as of June 2011 i will go so far to say that i personally consider v8-convert to be the most comprehensive, most powerful, and easiest to use type-conversion API available for v8.
 
 v8-convert is not a "mutually exclusive solution" to its problem domain, and it can easily be used in conjunction with other v8 client libraries like [https://github.com/tsa/vu8 vu8] and [http://www.nodejs.org/ node.js].
 
@@ -31,13 +31,14 @@ A very special thanks goes to James Pike, author of [https://github.com/tsa/vu8 
 
 ==Notes about the Namespace==
 
-The library is rooted in the namespace `v8::convert`, but most of the sample code in the wiki (and lots of the real code, for that matter) uses the following namespace alias:
+Prior to 20110718, this code lived in the `v8::convert` namespace. Having seen the error of my ways in adding a sub-namespace of v8's namespace, it was
+moved into the `cvv8` namespace (`cvv8` is easier to type than `v8cv`, at least when using a U.S. English keyboard layout). Some documentation may still refer to `v8::convert`.
+
+Most of the sample code in the wiki (and lots of the real code, for that matter) uses the following namespace alias:
 
 {{{
-namespace cv = v8::convert;
+namespace cv = cvv8;
 }}}
-
-In hindsight, it was "probably not the best idea" to add a sub-namespace of v8, and i "probably should have" used `v8cv` or something similar (`cvv8` is easier/faster to type on a U.S. keyboard layout). If the v8 team ever decides to use the `convert` namespace for themselves, i'm screwed. In that case, `cvv8` or `cv8` would be my fall-back.
 
 =Converting Types=
 
@@ -99,7 +100,7 @@ Note that binding to non-static member methods requires (at runtime), that `Cast
 When using `FunctionToInCa` and friends (including `ToInCa`) we can use template techniques to get type information about the arguments if we want to use that for conversion purposes:
 
 {{{
-namespace cv = v8::convert;
+namespace cv = cvv8;
 typedef FunctionToInCa<int (char const *,double), my_function> MyFunc;
 
 typedef char AssertArityIs2[(2 == cv::sl::Arity<MyFunc>::Value) ? 1 : -1];
@@ -127,7 +128,7 @@ Some examples of binding functions and methods:
 {{{
 #include <cstdio> // puts()
 ...
-namespace cv = v8::convert;
+namespace cv = cvv8;
 
 v8::InvocationCallback cb; // v8's generic callback function interface
 
@@ -473,7 +474,7 @@ void setSharedString(std::string const & s)
 ...
 
 // Convenience typedef:
-typedef v8::convert::PropertyBinder PB;
+typedef cvv8::PropertyBinder PB;
 
 
 // Assume: 'proto' is our ObjectTemplate prototype.
@@ -527,7 +528,7 @@ Unlike with most other bindings, the argument types do not need to match _exactl
 
 An additional property of this particular binding is that we can bind to constructors which have default values for some arguments. e.g. if a constructor has 2 required arguments and 2 more optional ones, we can bind it as a 2, 3, and/or 4-arg constructor.
 
-=Brief Overview of `v8::convert` Architecture=
+=Brief Overview of `cvv8` Architecture=
 
 This API is made up of several distinct components, each one layered on top of the next:
 
