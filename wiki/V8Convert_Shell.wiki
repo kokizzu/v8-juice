@@ -8,7 +8,7 @@ If the setup is not done in the exact right order then v8 will produce weird fai
 
 The `V8Shell` class tries to fill that gap and simplify the "bootstrapping" process, making it a snap (instead of "Aw, snap!" ;) to get a v8 environment initialized.
 
-Note that [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp the V8Shell source code] has no dependencies of any other [V8Convert] code (it just happens to be part of that source tree). This means it can be copied and used as-is in arbitrary v8-using clients.
+Note that [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp the V8Shell source code] has no dependencies on any other [V8Convert] code (it just happens to be part of that source tree). This means it can be copied and used as-is in arbitrary v8-using clients.
 
 To demonstrate, the following simple program accepts a JS script filename on the command line and runs it:
 
@@ -18,7 +18,7 @@ To demonstrate, the following simple program accepts a JS script filename on the
 
 int main(int argc, char const * const * argv) {
     assert( argc >= 2 ); // obviously, user-friendly programs don't do this!
-    namespace cv = v8::convert;
+    namespace cv = cvv8;
     cv::Shell shell(NULL, argc, argv);
     //  ^^^^^ Shell is a convenience typedef for V8Shell<>, by the way.
     // All argv args after "--" are passed on to the script in the global
