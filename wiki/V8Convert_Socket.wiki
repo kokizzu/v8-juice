@@ -10,6 +10,8 @@ This API was released on 20110619 and is still (as of this writing) quite experi
 
 Minor achtung: this API technically includes TCP, UDP/datagram, raw socket, and Unix filesystem sockets/pipes, but it is untested with anything but "stream" sockets (type=`SOCK_STREAM`) with a family of `AF_INET` or `AF_UNIX`.
 
+Another achtung: i won't claim that this is production-level code. i'm not a sockets guru and there are very likely some undiscovered bugs.
+
 ==Getting the Source==
 
 This code requires [V8Convert] (which is header-only). The sources are here:
@@ -25,7 +27,7 @@ Grab the above source code and add the `cpp` files to your project (optionally c
 {{{
 #include "path/to/socket.hpp"
 ...
-v8::convert::JSSocket::SetupBindings( yourV8Object );
+cvv8::JSSocket::SetupBindings( yourV8Object );
 }}}
 
 The bindings will be added to the given object, which is normally the v8 context's global object.
@@ -36,7 +38,7 @@ The bindings will be added to the given object, which is normally the v8 context
 || `new Socket( [int family=AF_INET [, int type=SOCK_STREAM [, int protocol=0]]] )` || Constructor. TODO: add a ctor taking a configuration Object ||
 || `void close()` || Closes the socket and frees all resources. Further access to native methods or properties on this object will leads to JS-side exceptions. For `AF_UNIX` _server_ sockets (for which `bind()` has succeeded), this also removes the socket's pipe file from the filesystem.  ||
 || `string toString()` || Returns a debugging-style string. ||
-|| `int bind( string hostNameOrAddressOrUnixPipeName, int port )` || "Binds" the socket to a given host-or-pipe/port combinatin. This is required for server sockets, not client sockets (which use `connect()`). Throws on error. ||
+|| `int bind( string hostNameOrAddressOrUnixPipeName, int port )` || "Binds" the socket to a given host-or-pipe/port combination. This is required for server sockets, not client sockets (which use `connect()`). Throws on error. ||
 || `int connect( string hostNameOrAddressOrUnixPipeName, int port )` || Connects to the given host-or-pipe/port combination. Throws on error. Server sockets should use the `bind()`/`listen()`/`accept()` combination instead. ||
 || `mixed read(unsigned int length[, bool binary=false])` || Reads up to `length` bytes of data from the socket. Returns a `string` if `binary` is false, else a `ByteArray` instance. ||
 || `int write(string|ByteArray data [,int length=data.length])` || Writes the given data to the socket. Returns the number of bytes written. ||
