@@ -40,6 +40,25 @@ Most of the sample code in the wiki (and lots of the real code, for that matter)
 namespace cv = cvv8;
 }}}
 
+==Header Files==
+
+The header files live in the `cvv8` dir (was `v8/convert` before 20110718). The `cvv8/detail/` dir contains primarily internal details, but also contains much of the public API. Client code should never include the `cvv8/detail` files directly, as they are subject to change at any time. The headers client code will normally need are:
+
+{{{
+// Everything most clients need:
+#include "cvv8/v8-convert.hpp" 
+
+// Primary APIs:
+#include "cvv8/convert.hpp" // main type conversion API
+#include "cvv8/invocable.hpp" // function conversion API
+#include "cvv8/properties.hpp" // property-binding APIs
+#include "cvv8/arguments.hpp" // mainly function-binding-overloading code
+
+// "Utility" APIs:
+#include "cvv8/ClassCreator.hpp" // class-binding mechanism.
+... several others ...
+}}}
+
 =Converting Types=
 
 The public type conversions API is based on only two functions:
