@@ -297,6 +297,7 @@ Examples of what we consider to be `v8::InvocationCallback`-like:
 int my_callback( v8::Arguments const & );
 void MyType::callback( v8::Arguments const & );
 double MyType::constCallback( v8::Arguments const & ) const;
+v8::Handle<v8::Value> RealInvocationCallback( v8::Arguments const & );
 }}}
 
 And we can create `v8::InvocationCallback` functions from them like:
@@ -330,6 +331,14 @@ cb = ToInCa<MyType,
             double (Arguments const &) const, // note the trailing 'const'!
             &MyType::constCallback>::Call;
 
+// The simplest case is:
+cb = InCaToInCa< RealInvocationCallback >::Call;
+// We can of course simply use:
+cb = RealInvocationCallback;
+// But the former approach is useful when we need to pass an InCa type
+// as a template parameter and that type wraps a true v8::InvocationCallback
+// (as opposed to being InvocationCallback-like or some other function signature
+// altogether).
 }}}
 
 (Pretty simple, huh?)
