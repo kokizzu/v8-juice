@@ -13,9 +13,15 @@ Terms used throughout the docs which might not have an obvious meaning:
   * `cv` is a namespace alias for `cvv8` used by much of the wiki/example/demo code. Most example code does not show the alias declaration.
   * `InCa` is short for `v8::InvocationCallback`. It also refers to _classes_ in the `cvv8` API which implement a static `Call()` function which itself implements the `InvocationCallback` interface.
 
-= Catching Client-defined Exceptions =
+= Function-binding Tips and Tricks =
 
-v8 does not like for client-thrown exceptions to propagate through it, and therefore code like the following can be dangerous to an app's lifetime:
+== Overloading Bound Functions ==
+
+See [V8Convert_Overloading].
+
+== Converting Custom Exceptions to JS ==
+
+v8 does not like for client-thrown exceptions to propagate through it, and therefore bindings like the following can be dangerous to an app's lifetime:
 
 {{{
 v8::InvocationCallback cb = cv::FunctionToInCa< int (),someFuncWhichThrows>::Call;
@@ -23,9 +29,9 @@ v8::InvocationCallback cb = cv::FunctionToInCa< int (),someFuncWhichThrows>::Cal
 
 If that function throws in the context of a JS-initiated call, it might crash v8. And when i say "might", i mean "it almost certainly will."
 
-The `InCaCatcher` class template creates an `InvocationCallback` function which calls a client-specified callback function and catches any exceptions of a given base type. It has a template option which specifies whether other exceptions should be propagated or converted into "unknown error" for JS, and this property allows us to chain the catchers to handle multiple concrete exception types.
+The `InCaCatcher` class template creates an `InvocationCallback` function which calls a client-specified `InCa` and catches any exceptions of a given base type. It has a template option which specifies whether other exceptions should be propagated or converted into "unknown error" for JS, and this property allows us to chain the catchers to handle multiple concrete exception types.
 
-It can, in principal, catch and report any exception type which meets the following conditions: it must have a const member method taking no arguments and returning an error message value in a type which is convertible to JS using `CastToJS()`. e.g. (`char const * std::exception::what()`) qualifies nicely. A hypothetical (`int MyException::GetErrorCode()`) would also qualify, provided it is const. (The const limitation is unfortunate - my template-fu isn't quite good enough, i guess.)
+It can, in principal, catch and report any exception type which meets the following conditions: it must have a const member method taking no arguments and returning an error message value in a type which is convertible to JS using `CastToJS()`. e.g. (`char const * std::exception::what()`) qualifies nicely. A hypothetical (`int MyException::GetErrorCode()`) would also qualify, provided it is const, though the messages it returns to v8 would simply be stringified numbers.
 
 `InCaCatcher` has a relatively detailed interface, which is documented (in corresponding detail) here:
 
@@ -33,7 +39,7 @@ It can, in principal, catch and report any exception type which meets the follow
 
 Search that file for `struct InCaCatcher` and the API docs are just above that.
 
-The `InCaCatcher_std` template is a `InCaCatcher` convenience wrapper which handles `std::exception` errors.
+The `InCaCatcher_std` template is a `InCaCatcher` convenience wrapper which handles `std::exception` errors (and subtypes).
 
 Example usage:
 
@@ -42,7 +48,7 @@ typedef InCaCatcher<
        std::exception, // type to catch (by (const &)!)
        char const *(), // signature of message-getter
        &std::exception::what, // message-fetching method
-       InCa<MyCallbackWhichThrowsStdException>, // the InvocationCallback to try/catch
+       InCa<CallbackWhichThrowsStdException>, // the InvocationCallback to try/catch
        false // whether to propagate other exceptions or not (default=false)
    > Catcher;
 
@@ -55,7 +61,7 @@ typedef InCaCatcher_std< InCa<MyCallbackWhichThrows> > Catcher;
 v8::InvocationCallback cb = Catcher::Call;
 }}}
 
-Here's an example which demonstrates how we can use `std::string` as an exception type (_not_ that i recommend doing so!):
+Here's an example which demonstrates how we can use `std::string` as an exception type (_not_ that i recommend doing so, but this same approach can be used for custom exception types):
 
 {{{
 void throwStdString()
@@ -71,4 +77,102 @@ v8::InvocationCallback cb =
   >::Call;
 }}}
 
+When called from JS, the script will get an exception containing the error string (but converted to a JS `Error` object).
+
 For examples of chaining these to support multiple exception types, including handling exception hierarchies, see the demo code and/or the API documentation.
+
+== Non-convertible (or ignored) Return Types ==
+
+Sometimes we want to bind a function which has a return type which we cannot convert to JS. That means we can't bind it (compile errors if we try). There is, however, a half-workaround. If we don't mind simply losing the return value on the way back to JS, we can use `ToInCaVoid<>` to generate an `v8::InvocationCallback` proxy which explicitly does not call `CastToJS()` to convert the return type. The implication of that is that we can then bind it (despite the non-convertible return value), but JS will get the `undefined` value as the result of each call:
+
+{{{
+v8::InvocationCallback cb;
+cb = cv::ToInCaVoid<void, SomeNonConvertibleType (args...), myFunction>::Call;
+// Equivalent to:
+cb = cv::FunctionToInCaVoid<SomeNonConvertibleType (args...), myFunction>::Call;
+}}}
+
+We can also use that to bind functions whos return types we _could_ convert but don't want to for some reason (e.g. we don't want native error codes going back to JS).
+
+*Achtung:* Be careful not to leak resources this way. If dynamically-allocated resources are returned from a function bound this way, they will be irrevocably leaked on every call to the function!
+
+== Unlocking v8 for the Duration of a Call ==
+
+Consider this function binding:
+
+{{{
+#include <unistd.h> // sleep(), or Sleep(N*1000) on Windows
+v8::InvocationCallback cb =
+    cv::FunctionToInCa<
+       unsigned int (unsigned int), sleep
+     >::Call;
+}}}
+
+When that callback is called, the calling code is locking v8, meaning that other v8-using threads cannot preempt it (that's not actually true anymore, but assume it is for now - we'll clarify this lie a couple paragraphs down). When calling C-level APIs which themselves do not call back into v8, we may instead want to tell v8 that other threads may run. That is done like this:
+
+{{{
+... somewhere inside a v8 callback function ...
+{
+  v8::Unlocker unlock;
+  nativeFunction(...);
+}
+... v8 is locked again here, so we can use v8 again ...
+}}}
+
+If the native function will only run very briefly then unlocking will probably be slower than leaving v8 locked, but if the function may run an arbitrarily long amount of time, unlocking it is wise because v8 can then allow other threads to continue instead of blocking while this call holds the v8 lock.
+
+As of the early morning of 20110625, the library includes generic support for optionally telling function bindings that they should unlock v8 for the duration of the native call.
+
+The default value for this option (for any given instantiation of the templates, not globally) depends on several factors but it will normally be enabled (meaning that v8 will be unlocked for the duration of the native function call). If the function signature involved contains any v8 types then unlocking is disabled and a compile-time assertion is triggered if the client explicitly enables it (see examples below).
+
+To force a given function/method binding to run in "unlocked" mode, simply pass `true` as the final (optional) argument to `ToInCa` (and friends):
+
+{{{
+v8::InvocationCallback cb;
+
+cb = cv::ToInCa<void, int (char const *), ::puts, true >::Call;
+// Is equivalent to:
+cb = cv::FunctionToInCa<int (char const *), ::puts, true >::Call;
+
+// Class methods are handled the same way:
+cb = cv::ToInCa<T, int (double), &T::foo, true>::Call;
+cb = cv::ToInCa<T, int (double) const, &T::fooConst, true>::Call;
+}}}
+
+*Achtung:* this support has a couple notable gotchas, caveats, and Things One Needs to Know. The ones which immediately come to mind are:
+
+  * A compile-time assertion will be triggered if you pass `true` to enable it and the function cannot, due to one of the types in its signature, be run in unlocked mode. See the `IsUnlockable<>` and `SignatureIsUnlockable<>` API docs for all the gory details.
+  * Unlocking tells v8 to perform some threading/mutex-related voodoo about which i know remarkably little. There is a performance hit for this, but it is marginal.
+  * _Reacquiring_ the v8 lock after the native function returns can theoretically take arbitrarily long. This could happen if the code being run in another thread never releases the v8 lock and runs in a loop which v8 cannot interrupt (e.g. the loop never calls back into v8).
+
+It is illegal for the unlock option to be enabled if ANY of the following applies:
+
+  * The callback itself will "use" v8. If it uses a `v8::Locker` to fence its access then it _is_ legal to use v8 in that function even if unlocking is enabled at this API's level.
+  * Any of the return- or argument types, or the containing type itself for bound class methods, are  "blacklisted", meaning that `IsUnlockable<T>::Value` is false (that includes the common v8 types, e.g. `v8::Handle<Anything>` or `v8::Arguments`). These types cause unlocking to be disabled by default and a compile-time assertion is triggered if one explicitly tries to enable unlocking for such a function. By extension, but more concretely...
+  * `InvocationCallback`-like functions will, if unlocking is enabled, trigger a compile-time assertion. We _cannot_ unlock for these because that would make using the `v8::Arguments` object illegal (which would mean that we could not legally convert and pass on the arguments to the native function!).
+
+There might be other corner cases where unlocking v8 is semantically illegal at this level of the API but are not caught as compile-time errors. The "out of the box" behaviour uses template magic to disable unlocking by default for all known-illegal signatures. See the `IsUnlockable<>` API docs for how to add additional types to "the blacklist" (it requires only a new template specialization with one enum/boolean value).
+
+i have in fact seen binding cases where the default determination of "can we safely unlock v8?" is incorrect, leading to v8 assertions (app crashes) at runtime. In such cases v8's assertion dump showed me where the problem was (which function calls) and i could use that info to disable unlocking for those few functions. They caused this error because they outwardly (in their signatures) use only non-v8 types, but internally they use v8 without also using a `v8::Locker` (they assume it's being called from JS and therefore already locked). So they crashed. In such cases, unlocking should be explicitly disabled for that bind, as shown above, _or_ the functions in question need a `v8::Locker` added to them.
+
+If you are binding a class and want to disable unlocking for _all_ bound member functions of that class, do:
+
+{{{
+template <>
+cv::IsUnlockable<MyType> : cv::tmp::BoolVal<false> {};
+}}}
+
+That effectively adds `MyType` to the "do not unlock" blacklist, and any bound JS functions which are members of that type, return that type, or have it in their arguments list will have unlocking support disabled by default (this is a compile-time decision). In such cases, explicitly enabling locking for any such function will cause a compile-time assertion to be triggered, just as it does for functions having v8 data types in their signatures. For example, assuming the above "blacklist specialization" is in place:
+
+{{{
+v8::InvocationCallback cb;
+
+cb = cv::FunctionToInCa< int (MyType *, double), some_function >::Call;
+// That's legal b/c unlocking is disabled due to IsUnlockable<MyType>.
+// But this will fail to compile:
+cb = cv::FunctionToInCa< int (MyType *, double), some_function, true >::Call;
+// because unlocking _cannot_ be legally enabled for that function (because of
+// the IsUnlockable<MyType> specialization).
+}}}
+
+Note, however, that _non-member functions_ bound as JS-side member functions to such a native do not "know" that they have been "upgraded" to be a member method, and do not consider the bound type for unlocking purpose (but parameter/return types are considered). In such a case, explicitly disabling locking for that function might be required (see above) or the functions might need a `v8::Locker` added to them.
