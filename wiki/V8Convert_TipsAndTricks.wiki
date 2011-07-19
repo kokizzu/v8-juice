@@ -13,6 +13,27 @@ Terms used throughout the docs which might not have an obvious meaning:
   * `cv` is a namespace alias for `cvv8` used by much of the wiki/example/demo code. Most example code does not show the alias declaration.
   * `InCa` is short for `v8::InvocationCallback`. It also refers to _classes_ in the `cvv8` API which implement a static `Call()` function which itself implements the `InvocationCallback` interface.
 
+= Type Conversion Tips and Tricks =
+
+== Converting enum Values to JS ==
+
+When binding functions taking enum value parameters, we normally need to add a custom conversion:
+
+{{{
+template <>
+cvv8::JSToNative<MyEnumType> : cvv8::JSToNative<int32_t> {};
+}}}
+
+For bound functions which _return_ enum values we would need its converse:
+
+{{{
+template <>
+cvv8::NativeToJS<MyEnumType> : cvv8::NativeToJS<int32_t> {};
+}}}
+
+But to honest i've never tried that one.
+
+
 = Function-binding Tips and Tricks =
 
 == Overloading Bound Functions ==
