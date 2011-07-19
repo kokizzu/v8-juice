@@ -203,12 +203,14 @@ Note, however, that _non-member functions_ bound as JS-side member functions to 
 
 We occasionally (or more often, or less often) want to call JS functions, in the form of `v8::Handle<v8::Function>` objects, from native code and pass them native-level parameters.
 
-One simple way to do this is via the `CallForwarder`, which is parameterized on the number of native arguments it accepts. Its only function looks like:
+One simple way to do this is via the `CallForwarder`, which is parameterized on the number of native arguments it accepts. Its interface looks like:
 
 {{{
 static v8::Handle<v8::Value> Call( v8::Handle<v8::Object> const & self,
                                    v8::Handle<v8::Function> const & func,
                                    ... N arguments ... );
+
+// Equivalent to Call( func, func, ... N args ... ).
 static v8::Handle<v8::Value> Call( v8::Handle<v8::Function> const & func,
                                    ... N arguments ... );
 }}}
@@ -225,7 +227,7 @@ rc = cv::CallForwarder<1>::Call( jsFunction, "argument 1" );
 rc = cv::CallForwarder<2>::Call( jsFunction, "argument 1", arg2 );
 ...
 
-// We can fetch results from output parameters this way:
+// We can fetch results from output parameters like this:
 v8::Handle<v8::Object> jobj( v8::Object::New() );
 rc =
    cv::CallForwarder<1>::Call( jsFunction, jobj );
@@ -243,4 +245,4 @@ The `cvv8` property binding API provides the following features:
 
 This conversion API is not nearly as fleshed-out as the function-binding API, but it has most of what one needs to bind properties.
 
-TODO: document this a bit.
+TODO: document this a bit. Until then, please see the demo code in the source tree for examples. (Search for `PropertyBinder`.)
