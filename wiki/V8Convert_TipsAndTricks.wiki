@@ -17,22 +17,23 @@ Terms used throughout the docs which might not have an obvious meaning:
 
 == Converting enum Values to JS ==
 
-When binding functions taking enum value parameters, we normally need to add a custom conversion:
+When converting JS values to C/C++ enum values, e.g. when binding functions which take enum parameters, we normally need to add the following custom conversion:
 
 {{{
 template <>
 cvv8::JSToNative<MyEnumType> : cvv8::JSToNative<int32_t> {};
 }}}
 
-For bound functions which _return_ enum values we would need its converse:
+When converting enum values to JS, e.g. when binding functions which _return_ enum values, we need the converse:
 
 {{{
 template <>
 cvv8::NativeToJS<MyEnumType> : cvv8::NativeToJS<int32_t> {};
 }}}
 
-But to honest i've never tried that one.
+But to be honest i've never tried that one. "It should work."
 
+In theory we could use `int64_t` as the base for enums with 64-bit values, but v8 does not directly support 64-bit integers, so we would likely have problems with that at some point.
 
 = Function-binding Tips and Tricks =
 
@@ -69,11 +70,11 @@ typedef InCaCatcher<
        std::exception, // type to catch (by (const &)!)
        char const *(), // signature of message-getter
        &std::exception::what, // message-fetching method
-       InCa<CallbackWhichThrowsStdException>, // the InvocationCallback to try/catch
+       InCaToInCa<CallbackWhichThrowsStdException>, // the callback to try/catch
        false // whether to propagate other exceptions or not (default=false)
    > Catcher;
 
-// Note: InCa<> turns an InvocationCallback into a "type-rich" InCa.
+// Note: InCaToInCa<> turns an InvocationCallback into a "type-rich" InCa.
 
 // Or, more simply (for std::exception):
 typedef InCaCatcher_std< InCa<MyCallbackWhichThrows> > Catcher;
