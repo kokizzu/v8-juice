@@ -198,3 +198,49 @@ cb = cv::FunctionToInCa< int (MyType *, double), some_function, true >::Call;
 }}}
 
 Note, however, that _non-member functions_ bound as JS-side member functions to such a native do not "know" that they have been "upgraded" to be a member method, and do not consider the bound type for unlocking purpose (but parameter/return types are considered). In such a case, explicitly disabling locking for that function might be required (see above) or the functions might need a `v8::Locker` added to them.
+
+== Passing Native Arguments to JS Functions ==
+
+We occasionally (or more often, or less often) want to call JS functions, in the form of `v8::Handle<v8::Function>` objects, from native code and pass them native-level parameters.
+
+One simple way to do this is via the `CallForwarder`, which is parameterized on the number of native arguments it accepts. Its only function looks like:
+
+{{{
+static v8::Handle<v8::Value> Call( v8::Handle<v8::Object> const & self,
+                                   v8::Handle<v8::Function> const & func,
+                                   ... N arguments ... );
+static v8::Handle<v8::Value> Call( v8::Handle<v8::Function> const & func,
+                                   ... N arguments ... );
+}}}
+
+The `self` object is the `func` object's logical `this` pointer. If you don't need a specific `this` object then use the second form of `Call()` (which is equivalent to passing `func` as the first _and_ second parameters to the first overload).
+
+{{{
+v8::Handle<v8::Value> rc;
+
+rc = cv::CallForwarder<0>::Call( someJsObject, jsFunction );
+// That's equivalent to jsFunction->Call( someJsObject, 0, NULL )
+
+rc = cv::CallForwarder<1>::Call( jsFunction, "argument 1" );
+rc = cv::CallForwarder<2>::Call( jsFunction, "argument 1", arg2 );
+...
+
+// We can fetch results from output parameters this way:
+v8::Handle<v8::Object> jobj( v8::Object::New() );
+rc =
+   cv::CallForwarder<3>::Call( someJsObject, jsFunction, jobj );
+   // If jsFunction modifies jobj, we can now see those changes.
+}}}
+
+= Binding Native Variables/Properties to JS =
+
+The `cvv8` property binding API provides the following features:
+
+  * Conversion of getter-style functions and methods to `v8::AccessorGetter` functions.
+  * Conversion of setter-style functions and methods to `v8::AccessorSetter` functions.
+  * Template-generated `v8::AccessorGetter` and `v8::AccessorSetter` functions which bind directly to native variables or member properties, such that JS-side get/set operations are performed directly on the native variable/property (using `CastFromJS()` to convert the setter conversion and `CastToJS()` to perform the getter conversion).
+  * An `AccessorSetter` implementation which, which activated, throws a JS exception. Useful for implementing "pedantically-read-only" properties which throw an exception if the client tries to set them.
+
+This conversion API is not nearly as fleshed-out as the function-binding API, but it has most of what one needs to bind properties.
+
+TODO: document this a bit.
