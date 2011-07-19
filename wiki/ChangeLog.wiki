@@ -11,8 +11,13 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 July 19*
+  * Reached r1900, up 400 commits from exactly one calendar month ago. All of that was in the [V8Convert] tree.
+  * New wiki page: [V8Convert_TipsAndTricks]
+  * [V8Convert]: renamed the `InCa` template to `InCaToInCa` and renamed `Callable` to `InCa`.
+
 *2011 July 18*
-  * *Completely incompatible change:* `v8::convert` namespace was renamed to `cvv8`, to preemptively avoid any collisions with future changes in v8. Moved the headers from `v8/convert/` to `cvv8/` for the same reason.
+  * *Completely incompatible change:* `v8::convert` namespace was renamed to `cvv8`, to preemptively avoid any collisions with future changes in v8. Moved the headers from `v8/convert/` to `cvv8/` for the same reason. (And i learned a bit about symbol lookup resolution in embedded namespaces in the process.)
 
 *2011 July 17*
   * Added "non-trivial function overloading" - see [V8Convert_Overloading].
