@@ -451,45 +451,7 @@ Note, however, that _non-member functions_ bound as JS-side member functions to 
 
 ==Special Case: Catching native Exceptions==
 
-v8 does not like for client-thrown exceptions to propagate through it, and therefore code like the following can be dangerous to an app's lifetime:
-
-{{{
-v8::InvocationCallback cb = cv::FunctionToInCa< int (),someFuncWhichThrows>::Call;
-}}}
-
-If that function throws in the context of a JS-initiated call, it might crash v8.
-
-The `InCaCatcher` class template creates an `InvocationCallback` function which calls a client-specified callback function and catches any exceptions of a given base type. It has a template option which specifies whether other exceptions should be propagated or converted into "unknown error" for JS, and this property allows us to chain the catchers to handle multiple concrete exception types.
-
-It can, in principal, catch and report any exception type which meets the following conditions: it must have a const member method taking no arguments and returning an error message value in a type which is convertible to JS using `CastToJS()`. e.g. (`char const * std::exception::what()`) qualifies nicely. A hypothetical (`int MyException::GetErrorCode()`) would also qualify, provided it is const. (The const limitation is unfortunate - my template-fu isn't quite good enough, i guess.)
-
-`InCaCatcher` has a relatively detailed interface, which is documented (in corresponding detail) here:
-
-  [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/detail/invocable_core.hpp invocable_core.hpp]
-
-Search that file for `struct InCaCatcher` and the API docs are just above that.
-
-The `InCaCatcher_std` template is a `InCaCatcher` convenience wrapper which handles `std::exception` errors.
-
-Example usage:
-
-{{{
-typedef InCaCatcher<
-       std::exception, // type to catch (by (const &)!)
-       char const *(), // signature of message-getter
-       &std::exception::what, // message-fetching method
-       MyCallbackWhichThrows, // the InvocationCallback to try/catch
-       false // whether to propagate other exceptions or not (default=false)
-   > Catcher;
-
-// Or, more simply (for std::exception):
-typedef InCaCatcher_std< MyCallbackWhichThrows > Catcher;
-
-// Get the callback function with:
-v8::InvocationCallback cb = Catcher::Call;
-}}}
-
-For examples of chaining these to support multiple exception types, including handling exception hierarchies, see the API documentation.
+See the examples in [V8Convert_TipsAndTricks].
 
 ==Forwarding v8-supplied Function Arguments to non-bound Functions==
 
