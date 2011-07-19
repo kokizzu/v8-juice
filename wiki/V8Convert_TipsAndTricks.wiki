@@ -228,7 +228,7 @@ rc = cv::CallForwarder<2>::Call( jsFunction, "argument 1", arg2 );
 // We can fetch results from output parameters this way:
 v8::Handle<v8::Object> jobj( v8::Object::New() );
 rc =
-   cv::CallForwarder<3>::Call( someJsObject, jsFunction, jobj );
+   cv::CallForwarder<1>::Call( jsFunction, jobj );
    // If jsFunction modifies jobj, we can now see those changes.
 }}}
 
