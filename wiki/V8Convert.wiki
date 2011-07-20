@@ -122,7 +122,6 @@ cb = cv::MethodToInCa<MyType, int (char const *), &MyType::nonConstMethod>::Call
 
 // A const method: int MyType::constMethod(char const *) const
 cb = cv::ConstMethodToInCa<MyType, int (char const *), &MyType::constMethod>::Call;
-// Note the trailing 'const' qualifier on the function signature!
 
 // A free function: int puts(char const *)
 cb = cv::FunctionToInCa< int (char const *), ::puts >::Call;
