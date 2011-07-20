@@ -108,10 +108,7 @@ For examples of chaining these to support multiple exception types, including ha
 Sometimes we want to bind a function which has a return type which we cannot convert to JS. That means we can't bind it (compile errors if we try). There is, however, a half-workaround. If we don't mind simply losing the return value on the way back to JS, we can use `ToInCaVoid<>` to generate an `v8::InvocationCallback` proxy which explicitly does not call `CastToJS()` to convert the return type. The implication of that is that we can then bind it (despite the non-convertible return value), but JS will get the `undefined` value as the result of each call:
 
 {{{
-v8::InvocationCallback cb;
-cb = cv::ToInCaVoid<void, SomeNonConvertibleType (args...), myFunction>::Call;
-// Equivalent to:
-cb = cv::FunctionToInCaVoid<SomeNonConvertibleType (args...), myFunction>::Call;
+v8::InvocationCallback cb = cv::FunctionToInCaVoid<SomeNonConvertibleType (args...), myFunction>::Call;
 }}}
 
 We can also use that to bind functions whos return types we _could_ convert but don't want to for some reason (e.g. we don't want native error codes going back to JS).
@@ -147,18 +144,16 @@ As of the early morning of 20110625, the library includes generic support for op
 
 The default value for this option (for any given instantiation of the templates, not globally) depends on several factors but it will normally be enabled (meaning that v8 will be unlocked for the duration of the native function call). If the function signature involved contains any v8 types then unlocking is disabled and a compile-time assertion is triggered if the client explicitly enables it (see examples below).
 
-To force a given function/method binding to run in "unlocked" mode, simply pass `true` as the final (optional) argument to `ToInCa` (and friends):
+To force a given function/method binding to run in "unlocked" mode, simply pass `true` as the final (optional) argument to `XXXToInCa`:
 
 {{{
 v8::InvocationCallback cb;
 
-cb = cv::ToInCa<void, int (char const *), ::puts, true >::Call;
-// Is equivalent to:
 cb = cv::FunctionToInCa<int (char const *), ::puts, true >::Call;
 
 // Class methods are handled the same way:
-cb = cv::ToInCa<T, int (double), &T::foo, true>::Call;
-cb = cv::ToInCa<T, int (double) const, &T::fooConst, true>::Call;
+cb = cv::MethodToInCa<T, int (double), &T::foo, true>::Call;
+cb = cv::ConstMethodToInCa<T, int (double), &T::fooConst, true>::Call;
 }}}
 
 *Achtung:* this support has a couple notable gotchas, caveats, and Things One Needs to Know. The ones which immediately come to mind are:
