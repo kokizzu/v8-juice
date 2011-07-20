@@ -1,9 +1,9 @@
 #summary The cvv8 sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
-<wiki:toc max_depth=4></wiki:toc>
+*Newsflash:* as of r1920 we have v8-convert building on MSVC 2010. It still needs to be cleaned up a bit, but the main problems have been solved.
 
-*Newsflash:* as on r1920 we have v8-convert building on MSVC 2010. It still needs to be cleaned up a bit, but the main problems have been solved.
+<wiki:toc max_depth=4></wiki:toc>
 
 = v8-convert (a.k.a. cvv8) =
 
@@ -32,7 +32,7 @@ All of the API's type/function conversions are compile-time typesafe where possi
 == Credits ==
 
   * James Pike, author of [https://github.com/tsa/vu8 vu8], helped me through the learning curve of getting function-pointer-style template arguments working. These allow for more readable templates when compared to the v8-juice API.
-  * Coen Campman provided the support needed to get cvv8 working on MSVC 2010.
+  * Coen "The Pipe" Campman provided the support needed to get cvv8 working on MSVC 2010.
 
 ==Downloading (Getting the Source Code)==
 
