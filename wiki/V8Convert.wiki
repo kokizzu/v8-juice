@@ -309,28 +309,15 @@ InvocationCallback cb;
 // Non-member function:
 cb = FunctionToInCa< int (Arguments const &),
                      my_callback >::Call;
-// Is equivalent to:
-cb = ToInCa<void,
-            int (Arguments const &),
-            my_callback>::Call;
-
 // Non-const member method:
 cb = MethodToInCa< MyType,
                    void (Arguments const &),
                    &MyType::callback >::Call;
-// Is equivalent to:
-cb = ToInCa<MyType,
-            void (Arguments const &),
-            &MyType::callback>::Call;
 
 // Const member method:
 cb = ConstMethodToInCa< MyType,
                         double (Arguments const &),
                         &MyType::constCallback >::Call;
-// Is equivalent to:
-cb = ToInCa<MyType,
-            double (Arguments const &) const, // note the trailing 'const'!
-            &MyType::constCallback>::Call;
 
 // The simplest case is:
 cb = InCaToInCa< RealInvocationCallback >::Call;
