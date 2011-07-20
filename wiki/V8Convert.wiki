@@ -112,43 +112,39 @@ These work identically to the v8-juice APIs with the same names (see [Converting
 
 =Converting Functions to `v8::InvocationCallback`=
 
-Quite possibly the simplest way in the world to convert free functions and member functions to `v8::InvocationCallback` functions is using the `ToInCa<>` template ("!InCa" is short for "!InvocationCallback"):
+Quite possibly the simplest way in the world to convert free functions and member functions to `v8::InvocationCallback` functions is using the `XXXToInCa<>` templates ("!InCa" is short for "!InvocationCallback"):
 
 {{{
 v8::InvocationCallback cb;
 
 // A non-const method: int MyType::nonConstMethod(char const *)
-cb = cv::ToInCa<MyType, int (char const *), &MyType::nonConstMethod>::Call;
+cb = cv::MethodToInCa<MyType, int (char const *), &MyType::nonConstMethod>::Call;
 
 // A const method: int MyType::constMethod(char const *) const
-cb = cv::ToInCa<MyType, int (char const *) const, &MyType::constMethod>::Call;
+cb = cv::ConstMethodToInCa<MyType, int (char const *), &MyType::constMethod>::Call;
 // Note the trailing 'const' qualifier on the function signature!
 
 // A free function: int puts(char const *)
-cb = cv::ToInCa<void, int (char const *), ::puts>::Call;
-// Functions (not Methods) require 'void' as the first parameter!
-// Equivalent to:
-cb = cv::FunctionToInCa< int (char const *), ::puts>::Call;
+cb = cv::FunctionToInCa< int (char const *), ::puts >::Call;
 }}}
 
 Because these templates _create_ `v8::InvocationCallback` functions at compile-time, they require no dynamically-allocated proxy objects or other hidden memory usage like some binding mechanisms require. The only overhead these templates add is the conversion of arguments/return values to/from JS. The library does as much work as possible at compile time to help detect type-conversion errors early and help avoid extra runtime costs.
 
-The `ToInCa` template is a thin wrapper around three primary class templates:
+The core function-binding features are encapsulated in three templates:
 
   * `FunctionToInCa<>`
   * `MethodToInCa<>`
   * `ConstMethodToInCa<>`
 
-By using only those 3 templates (all with identical interfaces) clients can bind
-a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
+By using only those templates clients can bind a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
 
-Support for const- and non-const methods are split into two implementations because some compilers reportedly cannot properly choose differing specializations when the difference is only in constness. (i have only heard of this being a problem on MSVC.) In hindsight, this self-imposed limitation has at times been a hindrance and has caused much unneeded code duplication, and i will probably quit coddling inadequate compilers at some point.
+Support for const- and non-const methods are split into two implementations to help support MSVC compilers (but as of 20110720 we may have a way to consolidate them into once class even for MSVC).
 
 Note that binding to non-static member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See [V8Convert_ClassCreator] for an example of one way to set this up (there are many ways).
 
 ==Argument Type Information==
 
-When using `FunctionToInCa` and friends (including `ToInCa`) we can use template techniques to get type information about the arguments if we want to use that for conversion purposes:
+When using `FunctionToInCa` and friends we can use template techniques to get type information about the arguments if we want to use that for conversion purposes:
 
 {{{
 using namespace cvv8;
@@ -507,8 +503,6 @@ As a side-note: that's not to say macros are absolutely evil - combining macros 
 #define F2I cv::FunctionToInCa
 #define CATCHER cv::InCaCatcher_std
 }}}
-
-But since the advent of `ToInCa` (7 hours ago, as of this writing ;), i've pretty much stopped doing even that.
 
 =Code Demos and Sample Bindings=
 
