@@ -11,6 +11,82 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 July 20*
+  * *WOO HOO!* As proof that the internet works: as of r1920 (Central European Time) Coen Campman and i got [V8Convert] (or a branch of it, anyway) building on MSVC. This will require a few minor incompatible changes, but nothing too painful. Here's a snippet from our chat session:
+
+{{{
+...
+Coen:             V8Unlocker<UnlockV8> const unlocker();
+again in invocable_core.hpp
+ me:  replace like we did before
+V8Unlocker<UnlockV8> unlocker;
+ Coen:  just did 
+seems to do the trick
+...
+ Coen:  now for some more testing ;P
+hehe 
+ me:  that means that 99% of the code will work. now i just have to weed out the extra stuff which probably won't work yet.
+did you run demo2?
+ Coen:  no didn't run it yet
+ me:  i'm about to piss my pants with excitement - do it!
+ Coen:  haha yeah still have to properly call some of the stuff ^_^
+ me:  and when we're done i'll post this part of the chat session in the wiki 
+ Coen:  haha 
+
+...
+
+let's see if this stuff works 
+it doesn't crash xD
+ me:  lol!
+ Coen:  but i don't have a console to view output in xD
+ me:  that's a great start
+
+... after much fiddling with msvc ...
+
+Sent at 8:37 PM on Wednesday
+ Coen:  
+var test = new MyType();
+print(test);
+that works 
+
+...
+
+ Coen:  
+var test = new MyType();
+print(test);
+test.constMethod();
+test.nonConstMethod();
+print(test.nonMember(42));
+ me:  btw: you can create a new print() function with: FunctionToInCa<int (char const *), ::puts>::Call
+ Coen:  d:\path\to\cvv8\demo2.cpp:20:MyType::MyType(): MyType::MyType() @ 00A
+18358
+[object Object]
+d:\path\to\cvv8\demo2.cpp:35:MyType::aConstMethod():
+d:\path\to\cvv8\demo2.cpp:34:MyType::aNonConstMethod():
+d:\path\to\cvv8\demo2.cpp:40:a_non_member():  arg=(42)
+42
+^_^
+ me:  but puts() probably doesn't like NULL pts.
+GREAT 
+Coen:  yeahh 
+ me:  thanks a LOT for helping getting this working
+ Coen:  np
+ me:  i'll add you to the contributor list immediately. should i hyperlink to a specific site?
+ Coen:  didn't require that much changes actually which is awesome ;D
+nah, don't have a personal website ^^
+ me:  i still need to clean up some of the code, and some of the docs are no longer valid, but the hard part is behind us.
+and it was actually pretty easy 
+ Coen:  not sure it works on 2008 for example though  but i think the compiler didn't change that much
+
+...
+me:  doh... and i need to go fix all the plugins...
+ Coen:  :(
+ me:  no big deal - this is a big improvement and i don't mind making changes for those
+but i'll probably go blind from all the compiler errors ;)
+}}}
+
+(it's a shame that the emoticons don't copy/paste. (some were added back in for clarity.)
+
 *2011 July 19*
   * Reached r1900, up 400 commits from exactly one calendar month ago. All of that was in the [V8Convert] tree.
   * New wiki page: [V8Convert_TipsAndTricks]
