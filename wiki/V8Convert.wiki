@@ -1,7 +1,7 @@
 #summary The cvv8 sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
-*Newsflash:* as of r1920 we have v8-convert building on MSVC 2010. It still needs to be cleaned up a bit, but the main problems have been solved.
+*Newsflash:* as of r1920 we have v8-convert building on MSVC 2010. We lost the `ToInCa` class in the port but we may be able to factor it back in at some point.
 
 <wiki:toc max_depth=4></wiki:toc>
 
