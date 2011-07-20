@@ -1,79 +1,527 @@
-#summary A PDO-like db access abstraction binding for v8.
+#summary The cvv8 sub-project
 #labels Phase-UserDocs,Topic-JS-API
 
-<wiki:toc max_depth='4'></wiki:toc>
+<wiki:toc max_depth=4></wiki:toc>
 
-*Achtung:* JSPDO is very new (born on 2011-06-11), thus it is beta. i may still randomly change how it behaves and it is possibly missing some significant features. That said, it seems to work as advertised here in the wiki pages (they are updated as changes are committed, and represent the current checked-in state of the code).
+*Newsflash:* as on r1920 we have v8-convert building on MSVC 2010. It still needs to be cleaned up a bit, but the main problems have been solved.
 
-See also: [JSPDO_API], [JSPDO_HowTo]
+= v8-convert (a.k.a. cvv8) =
 
-=About JSPDO=
+Source code: [http://code.google.com/p/v8-juice/source/browse/#svn/convert] (see [http://code.google.com/p/v8-juice/source/checkout this link] for checkout instructions.)
 
-JSPDO is a database access abstraction API, modelled heavily off of the [http://php.net/manual/en/book.pdo.php PHP PDO] API. The underlying database abstraction library is called [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo] and is implemented in C. (cpdo was originally written in the hopes of supporting this very library.) JSPDO basically provides a v8 wrapper around cpdo, and some of the JSPDO documentation may refer the reader to the related [http://whiki.wanderinghorse.net/wikis/cpdo/ cpdo documentation]. JSPDO is not a "thin wrapper", though - it extends the native C/C++ APIs with several useful features and hides some details which can become rather tedious in the native API. It's really, _really_ easy to use.
+The v8-convert API (a.k.a. `cvv8`, because it's easier to type than `v8cv`) is a spin-off of the core-most components of the [HomePage v8-juice library]. It has a templates-heavy, header-only implementation and has no 3rd-party dependencies beyond the STL and whatever v8 needs. While i have always been well served by [ConvertingTypes v8-juice's type conversion framework], v8-convert has improved upon its father's features considerably, allowing client applications and libraries to export their APIs to the v8 !JavaScript engine with unprecedented ease, flexibility, and type-safety. `<hype>`As of June 2011 i will go so far to say that i personally consider v8-convert to be the most comprehensive, most powerful, and easiest to use type-conversion API available for v8.`</hype>`
 
-Requirements:
+v8-convert is not a "mutually exclusive solution" to its problem domain, and it can easily be used in conjunction with other v8 client libraries like [https://github.com/tsa/vu8 vu8] and [http://www.nodejs.org/ node.js].
 
-  * libv8, of course
-  * [V8Convert] (it's a header-only library, so there are no major installation hassles).
-  * The [V8Convert_ByteArray] code (only two files).
-  * At least one of sqlite3 and/or MySQLv5.
-  * Some patience - the build tree is currently only designed to build directly from [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons/jspdo the original source tree] packaged together with [V8Convert]. i hope to modularize it someday to make it easy to drop in to arbitrary `v8::convert`-using clients.
+It's main features/focus are:
 
-See [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/README.txt the README file] for much more detail about the requirements and building the sources outside of their native source tree. 
+  * Converting between v8 Value handles and "native types" using a generic interface. This allows us to write generic algorithms which convert between JS/C++ without having to know the exact types they're dealing with.  The basic POD types and some STL types are supported out of the box and plugging in one's own types is normally quite simple.
+  * Converting free- and member functions into `v8::InvocationCallback` functions. These generated functions convert the !JavaScript-originated function arguments into native counterparts, forward the data to the original native function, and convert the return values back to something JS can use. (The `void` return type is translated to the `undefined` JS value.) It supports [V8Convert_Overloading overloading bound functions].
+  * Binding JS object properties to native shared or member properties or accessor/mutator functions/methods.
 
-Supported Drivers:
-  * sqlite3
-  * MySQLv5
+The first two core features give us all we need in order to be able to bind near-arbitrary C/C++ functions with !JavaScript, insofar as cross-language calling conventions and type conversions allow us to do so. The last feature is really just "sugar" (but also quite convenient at times). When combined, they give us everything we need to implement generic C++/JS class-binding mechanisms like [V8Convert_ClassCreator]. 
 
-See the [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo home page] for more info than you could possibly want to know about it. JSPDO's source tree includes a complete copy of the cpdo library - it does not need to be installed separately.
+While these features are easily summed up in a short list, their broader implications are quite large. The ability to convert functions from one signature to another (at compile time, by the way) has proven to be deceptively powerful, allowing users to bind new functions to v8 with unprecedented ease. We can combine this with template meta-programming techniques to do weird things like combine multiple native functions into a single `InvocationCallback` function (i.e. overload it) which dispatches to a different native function [V8Convert_Overloading based on arbitrary logic] (using a mixture of compile- and run-time dispatching).
 
-==Notable TODOs==
+For cases where the "automatic" function-to-!InvocationCallback conversions are not possible or not suitable, the type-conversion API can still simplify the implementation of custom `v8::InvocationCallback` functions.
 
-The more significant ones:
+The most important functions and types, from a user's perspective, are described throughout this page. Most of the code in this library is internal template specializations which take care of the dirty work. Typical clients won't normally need more than what's demonstrated in the various wiki pages.
 
-  * The underlying C lib is missing a couple of features which might be needed for advanced use, but it's functional enough for everything i've needed to do so far.
-  * Refactor the build process to make it easily droppable into arbitrary client trees.
+All of the API's type/function conversions are compile-time typesafe where possible and fail gracefully (e.g. using a JS-side exception as opposed to an immediate crash) when such a determination can only be made at run-time. Some exceptionally severe problems can only be reported via native exceptions. e.g. if a type conversion to `(T&)` would require dereferencing a `NULL` `(T*)` to create the reference, a native exception will be thrown. Note that _native_ exceptions which pass through v8 normally (always?) crash the application, so clients must generally be careful when using exception-throwing code with v8. cvv8 clients can use the `InCaCatcher` class to encapsulate the catching and conversion of native exceptions to JS exceptions, and in principal it supports catching/converting any conventional client-side exception type. It also supports chaining multiple "catchers" to handle any number of exception types, whether they are derived from some common base or completely unrelated.
 
-==Plugging JSPDO into your Application==
+== Credits ==
 
-See [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/README.txt the README file] for details.
+A very special thanks goes to James Pike, author of [https://github.com/tsa/vu8 vu8], for his helpful tips on getting function-pointer-style template arguments working. These allow for more readable templates when compared to the v8-juice API.
+
+==Downloading (Getting the Source Code)==
+
+[http://code.google.com/p/v8-juice/source/browse/#svn/convert/ The source code] is maintained in the v8-juice project's subversion repository:
+
+{{{
+svn checkout http://v8-juice.googlecode.com/svn/convert cvv8
+}}}
+
+The library is header-only, and the only files clients need is under the `include` directory. The source tree contains several demos and complete examples, as well, but building them requires a Unix-like platform with a GNU toolset (contributions of new build/project files for your favourite build tool will be gladly accepted).
+
+Some of the header files are generated by scripts as part of the build process, but pre-generated copies are kept in subversion so that clients to not have to build them.
+
+==Notes about the Namespace==
+
+Prior to 20110718, this code lived in the `v8::convert` namespace. Having seen the error of my ways in adding a sub-namespace of v8's namespace, it was
+moved into the `cvv8` namespace (`cvv8` is easier to type than `v8cv`, at least when using a U.S. English keyboard layout). Some documentation may still refer to `v8::convert`.
+
+Most of the sample code in the wiki (and lots of the real code, for that matter) uses the following namespace alias:
+
+{{{
+namespace cv = cvv8;
+}}}
+
+==Header Files==
+
+[http://code.google.com/p/v8-juice/source/browse/#svn/convert/include/cvv8 The header files] live in the `cvv8` dir (was `v8/convert` before 20110718). The `cvv8/detail/` dir contains primarily internal details, but also contains much of the public API. Client code should never include the `cvv8/detail` files directly, as they are subject to change at any time. The headers client code will normally need are:
+
+{{{
+// Everything most clients need:
+#include "cvv8/v8-convert.hpp" 
+
+// Primary APIs:
+#include "cvv8/convert.hpp" // main type conversion API
+#include "cvv8/invocable.hpp" // function conversion API
+#include "cvv8/properties.hpp" // property-binding APIs
+#include "cvv8/arguments.hpp" // mainly function-binding-overloading code
+
+// "Utility" APIs:
+#include "cvv8/ClassCreator.hpp" // class-binding mechanism.
+... several others ...
+}}}
+
+== Generating API Documentation ==
+
+The (abundant) API docs are written in [http://www.doxygen.org doxygen]-friendly form and can be processed by doxygen like this:
+
+{{{
+~> cd doc
+~> make doc
+}}}
+
+The name of the output directory will be shown on stdout.
+
+The public API is thoroughly documented, and as a rule undocumented functions and classes are not for public use. That said, many of the classes are template specializations which exist only for templates-related reasons, and they are not necessarily documented - see the primary template declaration in such cases.
+
+Achtung: for some reason doxygen (the two versions i've tried) is nesting the `cvv8` namespace and a couple of its sub-namespaces within another layer of `cvv8`. e.g. `cvv8::sl` might become `cvv8::cvv8::sl` in the generated docs. i have no idea why this is happening.
+
+=Converting Types=
+
+The public type conversions API is based on only two functions:
+
+  * `CastToJS<T>()`: converts the given object to a `v8::Handle<v8::Value>`.
+  * `CastFromJS<T>()`: converts a v8 value to a `T` (actually `T*` for most non-POD types).
+
+These are very thin wrappers around `NativeToJS<>` and `JSToNative<>`, and work identically to the v8-juice APIs with the same names (see [ConvertingTypes]). A few special-case overloads also exist to avoid call ambiguities in some cases or to cover special cases (most notably those taking (`char *`) and `v8::InvocationCallback` arguments).
+
+Using these operations allows us to convert a wide variety of types between JS and C++, and the `NativeToJS<>` and `JSToNative<>` classes give us a way to extend the conversion operations to support custom conversions. This level of abstraction allows us, in turn, to implement all sorts of algorithms which are ignorant of the _types_ they are working on. The function-binding APIs, for example, rely on this for converting function argument and return values to/from JS/C++.
+
+=Implementing Custom Conversions=
+
+  * `JSToNative<T>`: template to convert JS values to `T` (_almost_ always `T*` for non-POD types).
+  * `NativeToJS<T>`: template to convert `T` objects to JS counterparts. Adding this support for client-side types requires adding tooling which maps the native object to a JS instance (or that the bound type hold this information itself).
+
+These work identically to the v8-juice APIs with the same names (see [ConvertingTypes]), the only client-visible difference being that the classes (and thus client-defined specializations) are defined in a different namespace than in v8-juice. Future (post-2010) development in the type conversions API will happen in this copy instead of the `v8::juice` copy.
 
 
-=Important Details to Keep in Mind=
+=Converting Functions to `v8::InvocationCallback`=
 
-==#1: Lifetime Issues==
+Quite possibly the simplest way in the world to convert free functions and member functions to `v8::InvocationCallback` functions is using the `ToInCa<>` template ("!InCa" is short for "!InvocationCallback"):
 
-Database connections and the objects they create have very strict rules about when they must be cleaned up. The JSPDO class has a method called `close()` to release all resources owned by the database connection. The `Statement` handle class (returned by `JSPDO.prepare()`) has a `finalize()` method which _must_ be called _before_ the parent `JSPDO` instance is `close()`ed, or Undefined Behaviour will ensue. _Do not_ rely on garbage collection to free up database-related handles. Doing so will lead the Grief in the form of Undefined Behaviour.
+{{{
+v8::InvocationCallback cb;
 
-==#2: Error Reporting/Handling==
+// A non-const method: int MyType::nonConstMethod(char const *)
+cb = cv::ToInCa<MyType, int (char const *), &MyType::nonConstMethod>::Call;
 
-The vast majority of the functions in this API report errors via exceptions. Exceptions, for all their merits, make it easy to write code which does not properly finalize query/result set data. Get in the habit of using a `try/finally` block, as shown in [JSPDO_HowTo the examples], to ensure that statement handles are properly cleaned up. If a single statement handle is closed _after_ its database connection is closed, the v8 engine may very well crash as the statement handle steps on an invalidated database handle. (We have since added some plumbing to avoid these crashes, but do not get lazy about this - clean up or Undefined Behaviour will eventually smack you in the face.)
+// A const method: int MyType::constMethod(char const *) const
+cb = cv::ToInCa<MyType, int (char const *) const, &MyType::constMethod>::Call;
+// Note the trailing 'const' qualifier on the function signature!
 
-==#3: Beware of Binary Data!==
+// A free function: int puts(char const *)
+cb = cv::ToInCa<void, int (char const *), ::puts>::Call;
+// Functions (not Methods) require 'void' as the first parameter!
+// Equivalent to:
+cb = cv::FunctionToInCa< int (char const *), ::puts>::Call;
+}}}
 
-!JavaScript has no APIs for working with binary data, and storing binary data in JS strings results in undefined behaviour. To try to avoid such undefined behaviour, this API treats `BLOB` fields not as strings, but as [V8Convert_ByteArray ByteArray] objects. When fetching `BLOB` fields the client get have a !ByteArray object and not a string, and the two are not 100% API-compatible (i.e. client code must behave slightly differently for them, even if they contain valid string data). There are examples of using binary data on the [JSPDO_HowTo JSPDO HowTo page] (search for "!ByteArray").
+Because these templates _create_ `v8::InvocationCallback` functions at compile-time, they require no dynamically-allocated proxy objects or other hidden memory usage like some binding mechanisms require. The only overhead these templates add is the conversion of arguments/return values to/from JS. The library does as much work as possible at compile time to help detect type-conversion errors early and help avoid extra runtime costs.
 
-==#4: Data Types ==
+The `ToInCa` template is a thin wrapper around three primary class templates:
 
-This code only explicitly accounts for numeric, string, and "blob" (generic binary) data, and there are some notable limitations regarding numbers. v8's `Integer` type only supports 32 bits. Thus this library tries to use `double` for integers of greater than 32 bits. It is conceivable that some floating-point numeric precision will be lost, depending on the underlying db driver and the exact field definitions.
+  * `FunctionToInCa<>`
+  * `MethodToInCa<>`
+  * `ConstMethodToInCa<>`
 
-When binding JS values to database fields for purposes of inserting data, this code tries its best to do the right thing, but it is possible that a specific db driver, or slightly different database table definition, will behave differently than another when it comes to numeric precision, maximum field length, and similar details. It is recommended that databases used with this code avoid constructs like 1-byte integer fields and similar things which may cause unexpected failures at runtime (depending on the driver). e.g. if the underlying native driver returns an error because we inserted the value 500 to a 1-byte integer field, then that will show up as a JS-side exception via this interface.
+By using only those 3 templates (all with identical interfaces) clients can bind
+a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
+
+Support for const- and non-const methods are split into two implementations because some compilers reportedly cannot properly choose differing specializations when the difference is only in constness. (i have only heard of this being a problem on MSVC.) In hindsight, this self-imposed limitation has at times been a hindrance and has caused much unneeded code duplication, and i will probably quit coddling inadequate compilers at some point.
+
+Note that binding to non-static member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See [V8Convert_ClassCreator] for an example of one way to set this up (there are many ways).
+
+==Argument Type Information==
+
+When using `FunctionToInCa` and friends (including `ToInCa`) we can use template techniques to get type information about the arguments if we want to use that for conversion purposes:
+
+{{{
+using namespace cvv8;
+typedef FunctionToInCa<int (char const *,double), my_function> MyFunc;
+
+typedef char AssertArityIs2[(2 == cv::sl::Arity<MyFunc>::Value) ? 1 : -1];
+typedef sl::At< 0, MyFunc >::Type A0; // == (char const *)
+typedef sl::At< 1, MyFunc >::Type A1; // == double
+typedef sl::At< 2, MyFunc >::Type A2; // compile-time error (arg out of bounds)
+
+// Note that "InCa-like" functions have an Arity value of -1:
+typedef char AssertArityIsNegative[
+   (sl::Arity< Signature< void (v8::Arguments const &) > >::Value == -1)
+   ? 1
+   : -1];
+}}}
+
+We can use further templating techniques to do things like choose different code paths based on that type information, as in this rather contrived example which changes `int64_t` to `double` (v8 does not internally support 64-bit integers):
+
+{{{
+namespace tmp = cv::tmp;
+typedef tmp::IfElse< tmp::SameType<int64_t,SomeNumericType>::Value,
+                     double,
+                     SomeNumericType
+                   >::Type NumericType;
+}}}
+
+Template gurus will certainly come up with new and original ways to use and abuse this feature.
+
+== Examples ==
+
+Some examples of binding functions and methods:
+
+{{{
+#include <cstdio> // puts()
+...
+namespace cv = cvv8;
+
+v8::InvocationCallback cb; // v8's generic callback function interface
+
+// Here's how we can "convert" various native functions to
+// v8::InvocationCallback functions:
+
+// Function: int puts(char const *)
+cb = cv::FunctionToInCa<
+       int (char const *), ::puts
+     >::Call;
+
+// Class method: double MyType::multiply(double, double)
+cb = cv::MethodToInCa<
+       MyType,
+       double (double,double),
+       &MyType::multiply
+     >::Call;
+
+// Const class method:
+//    char const * MyType::errorCodeToString(int) const
+cb = cv::ConstMethodToInCa<
+       MyType,
+       char const * (int),
+       &MyType::errorCodeToString
+     >::Call;
+
+// Here's how we can bind a JS-side garbage-collection-triggering
+// function:
+cb = cv::FunctionToInCa<bool (),v8::V8::IdleNotification>::Call;
+}}}
+
+Those examples demonstrate all of the public API one needs for converting functions to `v8::InvocationCallback` equivalents! There are some additional templates which add features on top of those, such as dispatching overloaded functions, but those are all one really needs for most basic function bindings.
+
+It might be interesting to note that the above functions are _created_, but _not actually called_, by the above code (note that we pass no non-template parameters to them). All of the real work is done at compile-time.
+
+== Caveats and Unsupported Functions ==
+
+Some examples of function signatures which _cannot_ (or must not) be converted using this framework:
+
+  * `int func( someType ** )`: pointer-to-pointer cannot be translated generically to JS
+  * `int func( void * )`: Giving access to `void *` in JS makes it really easy to crash your apps from script code.
+  * `int func(...)`: elipsis lists, `va_list`, and C++0x var-args are not directly supported.
+  * !JavaScript has no inherent support for binary data, and v8's string class does not support it. Thus this API must not be used with functions returning binary data (e.g. via `char [const]*`).
+
+Supported, but _possibly_ ill-advised:
+
+  * `T * func(...anything...)`: Because...
+
+If the function returns dynamically-allocated memory, or transfers ownership of the returned memory to the caller, it _will_ cause a leak unless that memory has been somehow given over to v8 from within that function. That said... types for which `NativeToJS<T>` is feasible (this depends on several factors), we can in fact make this conversion legal for many client-defined types. The demo code in the source tree shows an example of how to do this.
+
+== The (`char [const] *`) Problem ==
+
+Because of issues regarding the ownership and lifetimes of raw C-style string, functions taking `(char const *)` have a few relatively minor limitations:
+
+  * The C-strings _must_ be `NULL` or nul-terminated. It cannot be used with binary data because they are converted to JS strings.
+  * Non-const (`char *`) is not supported. We could partially implement it using a proxy, but the changes would get lost on their way back to JS space because the JS calling conventions do not allow us to pass changes to strings back this way.
+  * The bound function _must not_ hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself.
+  * The internal conversion process uses `v8::String::Utf8Value`, and "should" be safe for use with functions accepting ASCII or UTF8 input. Behaviour with any other encodings is undefined.
+  * If passed a JS `null` or `undefined`, it converts to a literal `NULL`, otherwise it will convert to a string (though possibly empty). This is significant for functions which treat `NULL` different than an empty string (like `strlen()`, which may crash your app if passed `NULL`).
+
+When native functions return (`char const *`), they are converted to v8 Strings, and therefore have the same encoding limitations as for C-string function arguments. A return value of `NULL` is converted to a JS `null`, as opposed to an empty string.
+
+This support allows us to convert functions like the following to `v8::InvocableCallback`s:
+
+{{{
+char const * cstring_test( char const * c )
+{
+    std::cerr << "cstring_test( @"<<(void const *)c
+              <<") ["<<(c ? c : "<NULL>")<<"]\n";
+    return c;
+}
+
+v8::InvocationCallback cb =
+   cv::FunctionToInCa<
+     char const * (char const *),
+     cstring_test
+    >::Call;
+}}}
+
+If we bind that to JS with the name `cstr`:
+
+{{{
+var jstr = "Hi, world!";
+jstr = cstr(jstr); print(jstr);
+jstr = cstr(undefined); print(jstr);
+jstr = cstr(null); print(jstr);
+jstr = cstr("Bye, world!"); print(jstr);
+}}}
+
+The output looks something like:
+
+{{{
+cstring_test( @0x984acbc) [Hi, world!]
+Hi, world!
+cstring_test( @0) [<NULL>]
+null
+cstring_test( @0) [<NULL>]
+null
+cstring_test( @0x984acbc) [Bye, world!]
+Bye, world!
+}}}
+
+(The fact that the pointer addresses are the same in the first and last calls is a mere fluke of memory re-allocation, and must not be understood to mean that the address is somehow stable across calls.)
+
+==Special Case: `v8::InvocationCallback`-like Functions==
+
+The library provides special support for binding functions which "look like" a `v8::InvocationCallback`. The definition of "looks like" is: the function takes only a single `(v8::Arguments const &)` argument and returns any type.
+
+Such functions are treated like `v8::InvocationCallback` instances, in that they can accept any number of arguments of any type. The return value is converted to a `v8::Handle<v8::Value>` (or to JS `undefined` for `void` returns).
+
+Examples of what we consider to be `v8::InvocationCallback`-like:
+
+{{{
+int my_callback( v8::Arguments const & );
+void MyType::callback( v8::Arguments const & );
+double MyType::constCallback( v8::Arguments const & ) const;
+v8::Handle<v8::Value> RealInvocationCallback( v8::Arguments const & );
+}}}
+
+And we can create `v8::InvocationCallback` functions from them like:
+
+{{{
+InvocationCallback cb;
+
+// Non-member function:
+cb = FunctionToInCa< int (Arguments const &),
+                     my_callback >::Call;
+// Is equivalent to:
+cb = ToInCa<void,
+            int (Arguments const &),
+            my_callback>::Call;
+
+// Non-const member method:
+cb = MethodToInCa< MyType,
+                   void (Arguments const &),
+                   &MyType::callback >::Call;
+// Is equivalent to:
+cb = ToInCa<MyType,
+            void (Arguments const &),
+            &MyType::callback>::Call;
+
+// Const member method:
+cb = ConstMethodToInCa< MyType,
+                        double (Arguments const &),
+                        &MyType::constCallback >::Call;
+// Is equivalent to:
+cb = ToInCa<MyType,
+            double (Arguments const &) const, // note the trailing 'const'!
+            &MyType::constCallback>::Call;
+
+// The simplest case is:
+cb = InCaToInCa< RealInvocationCallback >::Call;
+// We can of course simply use:
+cb = RealInvocationCallback;
+// But the former approach is useful when we need to pass an InCa type
+// as a template parameter and that type wraps a true v8::InvocationCallback
+// (as opposed to being InvocationCallback-like or some other function signature
+// altogether).
+}}}
+
+(Pretty simple, huh?)
+
+Free functions bound this way have a particularly interesting property: if such a function is bound as a member of a `T` native object, we can access the native `this` pointer from inside that function like this:
+
+{{{
+int my_callback( v8::Arguments const & argv )
+{
+   T * self = cv::CastFromJS<T>(argv.This());
+   if( !self ) {
+       // no native T found. This might or might not
+       // be an error, depending on app-specific conditions.
+   }
+   ...
+}
+}}}
 
 
-=How To ...=
+==Special Case: Overloading==
 
-See [JSPDO_HowTo] and [JSPDO_API].
+See [V8Convert_Overloading].
 
-=Caveats and Gotchas=
+==Special Case: Non-Convertible Return Types==
 
-==Column Names might be Unpredictable! (Use "AS")==
+See [V8Convert_TipsAndTricks].
 
-Database drivers do not always guaranty what the name of a given column will be. e.g. when using sqlite the names are not guaranteed to match how they are named in the query unless the client uses an `AS` clause, e.g. `SELECT a as a, b as b from t...`.
+==Special Case: Unlocking the v8 Engine==
 
-==Opening Multiple Statement Concurrently (Don't do it!)==
+See [V8Convert_TipsAndTricks].
 
-Drivers are not required to allow more than one open result set for a given db connection (MySQL, for example, does not allow it). Thus query code should be structured so that it does not need to open multiple queries at one time.
+==Special Case: Catching native Exceptions==
 
-==Multi-Threading (Don't do it!)==
+See the examples in [V8Convert_TipsAndTricks].
 
-It is, in general, not legal (or not portable) for more than one thread to use the same connection (`JSPDO` instance) or statement/result handle (`JSPDO.Statement` instance), whether concurrently or not. If you use v8 in multiple threads, be sure that each thread has its own connection instance and does not share statements handles with another instance or thread.
+==Forwarding v8-supplied Function Arguments to non-bound Functions==
+
+  * `forwardFunction()`
+  * `forwardMethod()`
+  * `forwardConstMethod()`
+
+Those functions allow the client to pass on `v8::Arguments` to non-bound functions "manually".
+
+*Achtung:* Because these functions use `FunctionToInCa` (and friends), they inherit the "v8 unlocking" behaviour from that class. That is described in much more detail in another section of this page, but in short: if the arguments list or return value of the function does not have any v8 types (`v8::Handle`, `v8::Arguments`, etc.) then then the v8 engine is _unlocked_ for the duration of the native call. _If_ the function, despite having no v8-specific arguments/return type, internally uses v8 (or calls another function which does), then it _must_ also use a `v8::Locker` _or_ clients must use `FunctionToInCa` (or compatible) instead of these functions and explicitly disable locking (see the documentation and examples elsewhere on this page). If one of these two conditions are _not_ met, v8 will trigger an assertion at runtime (when the function is called from JS), killing the application (and frustrating the user). Debug builds of libv8 will dump an explanation of the error to `stderr`, but non-debug builds will silently crash.
+
+=But wait, there's more!=
+
+The code includes the following additional utilities:
+
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/properties.hpp properties.hpp] - templates for binding native global or member variables to JS objects. These basically work like `FunctionToInCa` and friends, but create `v8::AccessorSetter()` and `v8::AccessorGetter()` implementations using templates to bind JS properties directly to native variables or to methods/functions which proxy all get/set access on the JS property.
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/arguments.hpp arguments.hpp] - templates for "interrogating" v8-provided arguments, for use in making templates/functors which can dispatch to various native bindings based on near-arbitrary argument state (count, type, etc.).
+  * [V8Convert_ClassCreator] - yet another C++-to-JS class binding mechanism. Conceptually based on v8-juice's [ClassWrap], with the same overall design but a slightly different policy set.
+  * [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/V8Shell.hpp V8Shell.hpp] provides a really simple way to get v8 integrated quickly into an application. Just create one object, optionally extend the JS environment with your functionality, and start running JS code through it. See: [V8Convert_Shell].
+
+==Easily Binding C++ Classes==
+
+See [V8Convert_ClassCreator].
+
+== Binding Native Variables/Properties to JS ==
+
+Some examples of binding native properties to JS:
+
+{{{
+// namespace- or global scope:
+std::string sharedString;
+std::string getSharedString()
+    { return sharedString; }
+void setSharedString(std::string const & s) 
+    { sharedString = s; }
+
+...
+
+// Convenience typedef:
+typedef cvv8::PropertyBinder PB;
+
+
+// Assume: 'proto' is our ObjectTemplate prototype.
+
+// Bind non-member variable directly to a JS property:
+PB::BindSharedVar<std::string, &sharedString>
+                 ("sharedString", proto );
+
+// BindSharedVarRO() binds it read-only.
+
+// Or bind it read-only via a getter function:
+PB::BindGetterFunction<std::string (),
+                      getSharedString>
+                      ("sharedString", proto);
+
+// Or bind it via getter/setter functions:
+PB::BindGetterSetterFunctions<std::string (),
+                              getSharedString,
+                              void (std::string const &),
+                              setSharedString>
+                              ("sharedString", proto);
+}}}
+
+(Pedantic note: v8 apparently does not allow us to bind a setter without also binding a getter. My attempts to do so caused crashes.)
+
+JS properties can be bound to native _member_ properties similarly using the `MemberPropertyBinder` subclass of `PropertyBinder`. Note that for member binding to work, the JS class being bound must "wrap" that native class. i.e. that only works with "fully wrapped" classes (e.g. see [V8Convert_ClassCreator]).
+
+The property-binding API has a much richer feature set than is demonstrated here, by the way.
+
+==Passing v8 Arguments directly to Constructors==
+
+The `CtorForwarder` class assists in forwarding `v8::Arguments` objects to constructors. Usage examples:
+
+{{{
+// Typedefs for 3 different ctors:
+typedef cv::CtorForwarder<MyType * ()> Ctor0;
+typedef cv::CtorForwarder<MyType * (int)> Ctor1;
+typedef cv::CtorForwarder<MyType * (argType1,argType2)> Ctor2;
+
+// We can call these individually:
+MyType * my = Ctor0::Call( argsObject );
+
+// Or we can group them together and dispatch based on the number of arguments pass in:
+typedef cv::CtorArityDispatcher<
+        cv::Signature<MyType * (Ctor0, Ctor1, Ctor2)>
+    > Dispatch;
+MyType * my = Dispatch::Call( argsObject );
+}}}
+
+Unlike with most other bindings, the argument types do not need to match _exactly_. The types declared in the `CtorForwarder` instantiation will be used for purposes of converting the arguments from JS to native values. As long as those types can be implicitly converted to the types accepted by the constructor(s) then it should work okay. e.g. you can declare the forwarder as having an `int` argument even though the ctor really takes a `double`. (However, that would cause any doubles passed in from JS space to first be converted to an integer, which would lose precision.)
+
+An additional property of this particular binding is that we can bind to constructors which have default values for some arguments. e.g. if a constructor has 2 required arguments and 2 more optional ones, we can bind it as a 2, 3, and/or 4-arg constructor.
+
+=Brief Overview of `cvv8` Architecture=
+
+This API is made up of several distinct components, each one layered on top of the next:
+
+  * Basic template-metaprogramming-related types. Most of these are not really considered to be part of the public interface, but are necessary implementation details.
+  * The core type conversions layer, e.g. `CastToJS()`/`CastFromJS()`.
+  * Function/Method-signature-related templates. These do not do any JS/C++ conversions, but provide a mechanism with which we can store complete type information for a given function signature. These bits form the basis of the function binding API, but are not specific to that API.
+  * The function-to-`v8::InvocationCallback` conversions. This provides tons of template glue which creates `v8::InvocationCallback` functions by converting near-arbitrary function signatures to `v8::InvocationCallback`. These rely on `CastToJS()` and `CastFromJS()` to convert all arguments and return types from/to JS (with the exception of `void` returns, which require some special handling due to some syntactic constraints of the `void` type).
+
+One of the most significant properties of this API is that it can report a wide variety of conversion errors at compile-time. Conversion APIs which are based on macros, as opposed to templates, (depressingly common in real-world v8 extension libraries) cannot come _anywhere close_ to achieving the flexibility and type-safety of this library.
+
+For example, the following errors will show up at compile time, not runtime:
+
+{{{
+int my_function( int, double );
+
+v8::InvocationCallback cb;
+
+// This is OK:
+cb = cv::FunctionToInCa< int (int,double), my_function>::Call; 
+
+// Compile error: type mismatch:
+cb = cv::FunctionToInCa< int (int,int), my_function>::Call;
+
+// Compile error: parameter count mismatch:
+cb = cv::FunctionToInCa< int (double), my_function>::Call;
+}}}
+
+As a side-note: that's not to say macros are absolutely evil - combining macros with this API can often greatly reduce the amount of typing needed to create bindings. For example, i often do the following in client-side code:
+
+{{{
+#define M2I cv::MethodToInCa
+#define C2I cv::ConstMethodToInCa
+#define F2I cv::FunctionToInCa
+#define CATCHER cv::InCaCatcher_std
+}}}
+
+But since the advent of `ToInCa` (7 hours ago, as of this writing ;), i've pretty much stopped doing even that.
+
+=Code Demos and Sample Bindings=
+
+More sources of information and code demos:
+
+  * The `ConvertDemo.?pp` and `test.js` files in this source tree's root directory give a very thorough demonstration, showing off just about every feature the library offers.
+  * [V8Convert_Overloading] goes into detail about how to overload script-side functions to multiple native functions.
+  * [V8Convert_Shell] offers a simple way to bootstrap v8 support into an arbitrary client application.
+  * [V8Convert_ClassCreator] offers a simple, customizable class-binding mechanism.
+
+The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the [V8Convert] source tree includes some sample v8 bindings created using this API. They include:
+
+  * A [V8Convert_ByteArray ByteArray class] for handling binary data in JS space.
+  * The [JSPDO] database access abstraction API.
+  * A basic [V8Convert_Socket socket API].
+
+Each of the "addons" includes a basic v8 shell app which includes the JS bindings provided by that addon, making it simple to try out the code before including it into one's own project (on many Unix-like platforms, at least).
