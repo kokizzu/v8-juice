@@ -48,6 +48,8 @@ Anton Yemelyanov works on [http://code.google.com/p/v8-juice/source/browse/#svn/
 
 v8-juice user Rob Tsuk contributed insightful suggestions which lead to new features and improvements in older features. e.g. the [ClassWrap] API was developed in response to his input.
 
+Coen Campman provided the support needed to get [V8Convert] working on MSVC 2010.
+
 ==Project Stats==
 Provided by [http://www.ohloh.net Ohloh.net]:
 
