@@ -62,7 +62,14 @@ void f( double );
 
 We can then dispatch to one of those based on the numeric value passed in from JS. If the value fits in `int16_t` then we call that overload, else if it fits in `int32_t` we call that overload, else we fall back to the `double` overload. (For the curious, `std::numeric_limits<T>` can be used to find out the minimum/maximum value of a native numeric type, and we can use that to figure out if a given JS numeric value will "fit" in a given native numeric type.)
 
-This approach to overloading appears to be superior to `v8::Signature` in every way, in particular that it is type-safe, can be extended to include client-provided types, extends to essentially any number of combinations, _and_ has no runtime memory costs (the dispatcher is built at compile-time). Though it does have an average of O(N/2) runtime overhead (N=number of overloads), because it walks through one "intermediary" `InvocationCallback` for each rule until it finds a match, i don't believe this cost is any higher (or not significantly so) than the v8-internal cost of using `v8::Signature` (plus `Signature` adds a runtime memory cost). If the overloading rules are packed into groups/hierarchies (as in the demonstration below), the average O(N/2) cost can be reduced, theoretically (when structured like a binary tree) to as low as O(log N).
+This approach to overloading appears to be superior to `v8::Signature` in every way, in particular that it is type-safe, can be extended to include client-provided types, extends to essentially any number of combinations, _and_ has no runtime memory costs (the dispatcher is built at compile-time). Though it does have an average of O(N/2) runtime overhead (N=number of rule functors compounded across all overloads), because it walks through the rules (in their defined order) until it finds a match or reaches the end of the list (in which case it throws a JS-side exception), i don't believe this cost is any higher (or not significantly so) than the v8-internal cost of using `v8::Signature` (plus `v8::Signature` adds a runtime memory cost). If the overloading rules are packed into groups/hierarchies (as in the demonstration below), the average O(N/2) cost can be reduced, theoretically (when structured like a binary tree) to as low as O(log N).
+
+This approach does have a couple limitations. Notably:
+
+  * It is not a full-fledged parser. e.g. it cannot backtrack and try different branches in the rules set if it reaches the end of an inner branch without finding a match. It walks them linearly, branching into a subtree if a rule is actually a list of sub-rules.
+  * Some potentially interesting rule-ordering optimizations are impossible because of the lack of back-tracking.
+
+We could probably add back-tracking support by using an internally-handled native exception type to tell the higher-level scope that a rule subset failed to match. But using try/catch blocks for that sounds like a good deal of unneeded overhead. That might, incidentally, simplify the current end-of-list handling.
 
 ==The Big, Fat, Hairy Example==
 
