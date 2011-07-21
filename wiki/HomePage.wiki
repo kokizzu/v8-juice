@@ -50,6 +50,10 @@ v8-juice user Rob Tsuk contributed insightful suggestions which lead to new feat
 
 Coen Campman provided the support needed to get [V8Convert] working on MSVC 2010.
 
+==Mailing List==
+
+[http://groups.google.com/group/v8-juice-js-dev]
+
 ==Project Stats==
 Provided by [http://www.ohloh.net Ohloh.net]:
 
