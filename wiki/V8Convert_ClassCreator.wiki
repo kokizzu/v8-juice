@@ -67,8 +67,12 @@ namespace cvv8 {
     // Optional: used mostly for error reporting purposes but can
     // also be used to hold the class' JS-side name (which often differs
     // from its native name).
-    template <>
-    struct TypeName< MyType > { static char const * Value; };
+    CVV8_TypeName_DECL((MyType));
+    // Out-of-line definition of TypeName<MyType>::Value. The declaration
+    // should be visible to any client code which will use the bindings,
+    // but the definition may only be done once (put it in the binding's
+    // implementation file).
+    CVV8_TypeName_IMPL((MyType),"MyType");
 
     // The policy which tells ClassCreator how to instantiate and
     // destroy native objects. This one forwards to one of the
@@ -87,12 +91,6 @@ namespace cvv8 {
     template <>
     struct JSToNative< MyType > : JSToNative_ClassCreator< MyType >
     {};
-
-    // Out-of-line definition of TypeName<MyType>::Value. The declaration
-    // should be visible to any client code which will use the bindings,
-    // but the definition may only be done once (put it in the binding's
-    // implementation file).
-    char const * TypeName< MyType >::Value = "MyType";
 
     // There are several other policies not shown here.
     // e.g. ClassCreator_InternalFields defines the v8-side internal
