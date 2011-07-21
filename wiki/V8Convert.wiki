@@ -1,3 +1,5 @@
+#labels Phase-UserDocs,Topic-CPlusPlus,Featured
+
 #summary The cvv8 sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
@@ -308,29 +310,39 @@ InvocationCallback cb;
 // Non-member function:
 cb = FunctionToInCa< int (Arguments const &),
                      my_callback >::Call;
+// Equivalent to:
+cb = InCaLikeFunction<int, my_callback>::Call;
+
+
 // Non-const member method:
 cb = MethodToInCa< MyType,
                    void (Arguments const &),
                    &MyType::callback >::Call;
+// Equivalent to:
+cb = InCaLikeMethod<MyType, void, &MyType::callback>::Call;
+
 
 // Const member method:
 cb = ConstMethodToInCa< MyType,
                         double (Arguments const &),
                         &MyType::constCallback >::Call;
+// Equivalent to:
+cb = InCaLikeConstMethod<MyType, double, &MyType::constCallback>::Call;
+
 
 // The simplest case is:
 cb = InCaToInCa< RealInvocationCallback >::Call;
 // We can of course simply use:
 cb = RealInvocationCallback;
 // But the former approach is useful when we need to pass an InCa type
-// as a template parameter and that type wraps a true v8::InvocationCallback
-// (as opposed to being InvocationCallback-like or some other function signature
-// altogether).
+// as a template parameter and we only have an InvocationCallback.
+// We can also use FunctionToInCa and friends to bind InCa-like functions,
+// but InCaToInCa is a simpler way to do it for this special case.
 }}}
 
 (Pretty simple, huh?)
 
-Free functions bound this way have a particularly interesting property: if such a function is bound as a member of a `T` native object, we can access the native `this` pointer from inside that function like this:
+!InCa-like non-member functions bound have a particularly interesting property: if such a function is bound as a member of a `T` native object, we can access the native `this` pointer from inside that function like this:
 
 {{{
 int my_callback( v8::Arguments const & argv )
@@ -343,7 +355,6 @@ int my_callback( v8::Arguments const & argv )
    ...
 }
 }}}
-
 
 ==Special Case: Overloading==
 
@@ -369,7 +380,7 @@ See the examples in [V8Convert_TipsAndTricks].
 
 Those functions allow the client to pass on `v8::Arguments` to non-bound functions "manually".
 
-*Achtung:* Because these functions use `FunctionToInCa` (and friends), they inherit the "v8 unlocking" behaviour from that class. That is described in much more detail in another section of this page, but in short: if the arguments list or return value of the function does not have any v8 types (`v8::Handle`, `v8::Arguments`, etc.) then then the v8 engine is _unlocked_ for the duration of the native call. _If_ the function, despite having no v8-specific arguments/return type, internally uses v8 (or calls another function which does), then it _must_ also use a `v8::Locker` _or_ clients must use `FunctionToInCa` (or compatible) instead of these functions and explicitly disable locking (see the documentation and examples elsewhere on this page). If one of these two conditions are _not_ met, v8 will trigger an assertion at runtime (when the function is called from JS), killing the application (and frustrating the user). Debug builds of libv8 will dump an explanation of the error to `stderr`, but non-debug builds will silently crash.
+*Achtung:* Because these functions use `FunctionToInCa` (and friends), they inherit the "v8 unlocking" behaviour from that class. That is described in much more detail in another section of this page, but in short: if the arguments list or return value of the function does not have any v8 types (`v8::Handle`, `v8::Arguments`, etc.) then then the v8 engine is _unlocked_ for the duration of the native call. _If_ the function, despite having no v8-specific arguments/return type, internally uses v8 (or calls another function which does), then it _must_ also use a `v8::Locker` _or_ clients must use `FunctionToInCa` (or compatible) instead of these functions and explicitly disable locking (see the documentation and examples on the [V8Convert_TipsAndTricks] page). If one of these two conditions are _not_ met, v8 will trigger an assertion at runtime (when the function is called from JS), killing the application (and frustrating the user). Debug builds of libv8 will dump an explanation of the error to `stderr`, but non-debug builds will silently crash.
 
 =But wait, there's more!=
 
