@@ -1,5 +1,3 @@
-#labels Phase-UserDocs,Topic-CPlusPlus,Featured
-
 #summary The cvv8 sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
