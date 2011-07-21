@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 July 21*
+  * Started a new mailing list: [http://groups.google.com/group/v8-juice-js-dev]
+
 *2011 July 20*
   * *WOO HOO!* As proof that the internet works: as of r1920 (Central European Time) Coen Campman and i got [V8Convert] (or a branch of it, anyway) building on MSVC (over Google Chat, i might add). This requires a few minor incompatible changes, but nothing too painful. Here's a snippet from our chat session (ever so slightly edited for readability):
 
