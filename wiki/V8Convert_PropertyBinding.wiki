@@ -1,12 +1,11 @@
+#labels Phase-UserDocs,Topic-CPlusPlus
+
 #summary V8Convert's native property-binding API
 #labels Phase-UserDocs,Topic-CPlusPlus
 
 <wiki:toc/>
 
 = Introduction =
-
-
-The `cvv8` property binding API provides the following features:
 
 [V8Convert] has a flexible approach to binding native non-function properties to JS. It uses templates to create `v8::AccessorGetter` and `v8::AccessorSetter` functions, which are the property-side counterparts of `v8::InvocationCallback`. It is superficially similar to [V8Convert_FunctionBinding the function-binding API], and accessors can be created a number of ways. For example, we can bind JS-side properties to:
 
@@ -20,19 +19,32 @@ Property binding is done at the level of the `v8::ObjectTemplate` class, which i
 v8::ObjectTemplate proto = ... wherever you get your Prototype object from ...;
 }}}
 
+If you're using [V8Convert_ClassCreator] that might look like:
+
+{{{
+typedef cv::ClassCreator<T> CC;
+CC & cc( CC::Instance() );
+...
+v8::Handle<v8::ObjectTemplate> const & proto( cc.Prototype() );
+}}}
+
+(The weird `const &` bit is something i learned from reading something by Alexandrescu.)
+
+Note that even though the Handle is const, its referenced value is not, so we can modify it.
+
 The examples also assume the following, for brevity/readability:
 
 {{{
 #define JSTR v8::String::New
 }}}
 
-= Achtung: Binding Methods/Member Variables =
+= Achtung: Methods/Member Variables Need a "This" =
 
-Binding member variables or functions _requires_ that `CastFromJS<MyType>()` can convert the JS-side 'this' object to C++. Making that work is normally the function of a class-binding mechanism like [V8Convert_ClassCreator ClassCreator], but there are a number of ways to set it up without using that specific binding mechanism. Strictly speaking, `CastFromJS<MyType>()` must return a `(MyType*)` and the bindings throw JS exceptions if that conversion returns `NULL`.
+Binding _member_ variables or methods _requires_ that `CastFromJS<MyType>()` can convert the JS-side 'this' object to C++. Making that work is normally the function of a class-binding mechanism like [V8Convert_ClassCreator ClassCreator], but there are a number of ways to set it up without using that specific binding mechanism. Strictly speaking, `CastFromJS<MyType>()` must return a `(MyType*)` and the bindings throw JS exceptions if that conversion returns `NULL`.
 
-Whether or not `CastFromJS()` can work is often not determinable at compile-time. i.e. it is possible (quite likely) that the code will compile fine even if the class is not "fully bound" as a JS class, but the inability to perform the conversion will only be detected when it is performed.
+Whether or not `CastFromJS()` _can_ work is often not determinable at compile-time. i.e. it is possible (quite likely) that the code will compile fine even if the class is not "fully bound" as a JS class, but the inability to perform the conversion will only be detected when the conversion is attempted at runtime.
 
-See [V8Convert_ClassCreator] for one approach (there are many possible approaches) to binding C++ classes to JS in a manner compatible with this API.
+See [V8Convert_ClassCreator] for one approach to binding C++ classes to JS in a manner compatible with this API. There are many possible approaches. If you already have a favourite class-binding mechanism, simply create custom `JSToNative` and/or `NativeToJS` specializations which can use your binding mechanism.
 
 = Binding Non-member Variables =
 
@@ -41,6 +53,7 @@ Here's how to create create accessors for non-member variables or _static_ class
 {{{
 struct MyType { static int anInt; };
 int MyType::anInt = 42;
+int myGlobalInt = 7;
 
 ...
 
@@ -48,16 +61,21 @@ proto->SetAccessor(JSTR("anInt"),
    VarToGetter<int,&MyType::anInt>::Accessor,
    VarToSetter<int,&MyType::anInt>::Accessor
 );
+
+proto->SetAccessor(JSTR("globalInt"),
+   VarToGetter<int,&myGlobalInt>::Accessor,
+   VarToSetter<int,&myGlobalInt>::Accessor
+);
 }}}
 
-Often we want to disable setting of a variable. To do that, do one of the following:
+
+Often we want to disable setting of a JS property. To do that, do one of the following:
 
   * Use `ThrowingSetter::Accessor` as the setter, which will cause a JS exception to be thrown if the client assigns the variable.
   * Do not pass a setter to `SetAccessor()`. That might have undesired side-effects, though. IIRC, that leads to JS-set values "overriding" the variable, such that future `get` access reads the JS-assigned variable. (Again, IIRC.)
-  * `SetAccessor()` has other default parameters which can be set to make a variable read-only (in which case setting it is simply ignored.
+  * `SetAccessor()` has other default parameters which can be set to make a variable read-only (in which case setting it is simply ignored).
 
-
-The same can be used for global/namespace-scope variables (which are fairly rare in practice).
+Note that there is no equivalent for throwing if a _function_ is overwritten. Since v8 doesn't allow us to assign a setter without _also_ assigning a getter (it crashed when i tried), we cannot programmatically do it.
 
 = Binding Native Member Variables =
 
