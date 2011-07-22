@@ -97,9 +97,9 @@ v8::Handle<v8::Value> bogo_callback_function( v8::Handle<v8::Function> const & f
 int bogo_callback2( v8::Arguments const & argv );
 
 // 3 arguments:
-char const * bogo_callback_fsf( v8::Handle<v8::Function> const & f1,
+std::string bogo_callback_fsf( v8::Handle<v8::Function> const & f1,
                                 char const * str,
-                                v8::Handle<v8::Function> const & f2 );
+                                v8::Handle<v8::Function> const & f2 )
 
 v8::Handle<v8::Value> bogo_callback_fvf( v8::Handle<v8::Function> const & f1,
                                          v8::Handle<v8::Value> const &v,
@@ -167,15 +167,16 @@ typedef Argv_AndN< CVV8_TYPELIST((
         ArgAt_IsFunction<0>,
         ArgAt_IsString<1>,
         ArgAt_IsFunction<2>
-    ))> MatchesFunc_String_Func;
-typedef PredicatedInCa< MatchesFunc_String_Func,
-        FunctionToInCa< char const * (
+    ))> Is_Func_String_Func;
+typedef PredicatedInCa< Is_Func_String_Func,
+        FunctionToInCa< std::string (
                             v8::Handle<v8::Function> const &,
                             char const *,
                             v8::Handle<v8::Function> const &),
                         bogo_callback_fsf
                     >
 > PredFSF;
+
 
 // Special case for the weird (Function, Value, Function) overload...
 typedef Argv_AndN< CVV8_TYPELIST((
