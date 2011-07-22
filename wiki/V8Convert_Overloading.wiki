@@ -291,3 +291,31 @@ Assertion OK: Got expected exception: Error: No predicates in the argument dispa
 ConvertDemo.hpp:233:~BoundSubNative(): @0x82a56f8 is destructing
 ConvertDemo.hpp:53:~BoundNative(): @0x82a56f8 is destructing.
 }}}
+
+= Forwarding and Overloading Constructors =
+
+The `CtorForwarder` class assists in forwarding `v8::Arguments` objects to constructors. Usage examples:
+
+{{{
+// Typedefs for 3 different ctors:
+typedef cv::CtorForwarder<MyType * ()> Ctor0;
+typedef cv::CtorForwarder<MyType * (int)> Ctor1;
+typedef cv::CtorForwarder<MyType * (argType1,argType2)> Ctor2;
+
+// We can call these individually:
+MyType * my = Ctor0::Call( argsObject );
+
+// Or we can group them together and dispatch based on the number of arguments pass in:
+typedef cv::CtorArityDispatcher<
+        cv::Signature<MyType * (Ctor0, Ctor1, Ctor2)>
+    > Dispatch;
+MyType * my = Dispatch::Call( argsObject );
+}}}
+
+We can use `PredicatedCtorForwarder` (subject to eventual renaming!) to structure constructor overloads in the same way as we can when using `PredicatedInCa` for function overloads (as demonstrated in a previous section of this page).
+
+Unlike most other bindings, the argument types do not need to match _exactly_. The types declared in the `CtorForwarder` instantiation will be used for purposes of converting the arguments from JS to native values. As long as those types can be implicitly converted to the types accepted by the constructor(s) then it should work okay. e.g. you can declare the forwarder as having an `int` argument even though the ctor really takes a `double`. (However, that would cause any doubles passed in from JS space to first be converted to an integer, which would lose precision.)
+
+An additional property of this particular binding is that we can bind to constructors which have default values for some arguments. e.g. if a constructor has 2 required arguments and 2 more optional ones, we can bind it as a 2, 3, and/or 4-arg constructor.
+
+Another unique property of these bindings is that it is possible for specific ctor overloads/delegates to return a subtype of the declared type. This can be used to wrap factory functions in the guise of constructor call.
