@@ -1,5 +1,3 @@
-#labels Phase-UserDocs,Topic-CPlusPlus
-
 #summary V8Convert's native property-binding API
 #labels Phase-UserDocs,Topic-CPlusPlus
 
