@@ -1,6 +1,11 @@
 #summary V8Convert ClassCreator class-binding mechanism
 #labels Phase-UserDocs,Topic-JS-API
 
+<wiki:toc/>
+
+
+=Introduction=
+
 [V8Convert]'s `ClassCreator` API is an easy-to-use template-based mechanism for binding native classes to JS. It was originally derived from [ClassWrap], making it the 3rd generation of class-binding mechanism since this project was started, and it is very similar to that binding mechanism. !ClassCreator's source code can be found [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp here].
 
 To allow customization of the binding process, `ClassCreator` uses so-called policy classes. These are templates which clients may specialize to customize various aspects of the bindings without having to touch the `ClassCreator` code. In effect they are "hooks" into various specific points of the class-binding mechanism, and every part of the class-binding machinery which can conceivably be customizable has an associated policy class to which that customization is delegated. e.g. one policy determines how we actually associate the native and JS objects with one another ("quick-and-easy" vs. "slower but typesafe"). Most, but not all, policies have reasonable default implementations, but a small number of them require clients to provide their own specializations (this is demonstrated below).
@@ -79,7 +84,8 @@ namespace cvv8 {
     // ctors specified in MyType::Ctors.
     template <>
     class ClassCreator_Factory<MyType>
-     : public ClassCreator_Factory_CtorArityDispatcher< MyType, MyType::Ctors >
+     : public ClassCreator_Factory_Dispatcher< MyType,
+                           CtorArityDispatcher<MyType::Ctors> >
     {};
 
     // A JSToNative specialization which makes use of the plumbing
@@ -170,3 +176,177 @@ Notice that the system's memory allocator re-allocated each new instance at the 
   Side note: that re-allocation behaviour is also incidentally a good demonstration of why class-binding mechanisms "should" (philosophically speaking) make an effort to perform _type-safe_ conversions from JS to the native type. Most binding mechanisms, and the approach demonstrated in the v8 docs, are not runtime-type-safe, and are subject to crashes or mis-use of re-allocated memory addresses (possibly now used by a _different_ type) if script-side code goes out of its way to confuse the binding mechanism. `ClassCreator` policies exist which perform "quick-and-easy" or "slower-but-typesafe" conversions. (Though philosophically highly arguable, the quick-and-easy binding (as demonstrated in v8's docs) is perfectly reasonable until someone writes some convoluted JS code which criss-crosses the bindings between two native objects.)
 
 Real-world examples: the [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons directory] of the source tree contains several complete, non-trivial examples of custom bindings, e.g. [JSPDO], [V8Convert_Socket], and [V8Convert_ByteArray ByteArray].
+
+=Policies=
+
+As mentioned above `ClassCreator` (CC) is policy-based. To customize certain behaviours we specialize specific policies (often by simply subclassing a convenience base class). This section gives an overview of the policies and their roles.
+
+The ordering of declarations for CC policies is not always intuitive or immediately obvious. As a general rule:
+
+  * `TypeName`, if used, should go first.
+  * `ClassCreator_TypeID`, if used, should go next.
+  * `ClassCreator_Factory` is normally required (the default implementation only supports a single default ctor taking no arguments).
+
+The remaining orderings depend largely on how each policy is implemented and what other conversion operations they use. If they are declared separately from their implementations then there is rarely any ordering problems except in some cases where a subclassed policy invokes e.g. a not-yet-legal `JSToNative` conversion. However, separating the declarations and implementations can be tedious. It is, however, the safest best in terms of getting the ordering correct so that none of the specialized policies are actually instantiated until after they are invoked. Instantiating them too early will pick up an invalid (either type-wise or semantically) default specialization.
+
+== `TypeName` ==
+
+`TypeName` is not strictly a CC policy, but it is often useful in conjunction with CC.
+
+It is used mainly by some error reporting code but can also be used as a convenient place to store the type's JS name (which often differs from its C++ name).
+
+It is used like this:
+
+{{{
+// In the header/declaration area:
+namespace cvv8 {
+   CVV8_TypeName_DECL((MyType));
+}
+
+// In the impl file:
+namespace cvv8 {
+    CVV8_TypeName_IMPL((MyType),"MyType");
+}
+}}}
+
+After that `cvv8::TypeName<MyType>::Value` will hold the string `MyType`. While not required, having this specialization in place can help some error-reporting routines to return a useful type name.
+
+The default specialization is fine for all other cases (including the base type of subclasses).
+
+
+== `JSToNative` ==
+
+This is not a CC policy, but CC uses it and provides a way to create `JSToNative` specializations for CC-bound types:
+
+{{{
+template <>
+struct JSToNative< MyType > : JSToNative_ClassCreator< MyType > {};
+}}}
+
+With that in place, `CastFromJS<MyType>()` will work (until the handle is somehow invalidated, at least).
+
+`JSToNative_ClassCreator` instantiates the `ClassCreator_InternalFields` and `ClassCreator_SearchPrototypeForThis` policies, so any customizations of those policies must come _before_ `JSToNative_ClassCreator` is subclassed.
+
+== `NativeToJS` ==
+
+This is not a CC policy, but CC clients can plug in their natives so that a `NativeToJS` conversion is legal for their type.
+
+Note that a `NativeToJS` conversion is generally only required when binding any of:
+
+  * Functions which return the bound type, e.g. `T * T::self()`
+  * Member properties of the bound, e.g. `T * T::*selfPtr`
+
+For most binding cases such conversions are not necessary, and thus no specialization of `NativeToJS` is required.
+
+Implementing this conversion requires significantly more type-specific/type-dependent plumbing than `JSToNative` does, and there is no 99% (or even 50%) generic solution.
+
+TODO: show an example. Until then, see the demo sources in the source tree.
+
+
+== `ClassCreator_TypeID` ==
+
+This policy is basically a shim for `TypeName` and `JSToNative_ObjectWithInternalFieldsTypeSafe`, to allow us to treat a `(char const *)` as `(void const *)` for templating purposes. The only time clients need to be aware of it is when subclassing one bound native from another _and_  (`ClassCreator_InternalFields<T>::TypeIDIndex >= 0`)). In such cases the derived types require a specialization which subclasses the parent specialization (they require the same type ID as the parent class, but this is arguably a bug):
+
+{{{
+template <>
+    struct cvv8::ClassCreator_TypeID<BoundSubNative> : cvv8::ClassCreator_TypeID<BoundNative>
+{};
+}}}
+
+If (`ClassCreator_InternalFields<T>::TypeIDIndex < 0`) then the CC-internal JS-to-native type-safety-check is disabled, in which case clients do _not_ need to (but may, if they like) specialize this policy.
+
+
+== `ClassCreator_InternalFields` ==
+
+`ClassCreator_InternalFields` tells CC how the `v8::Object` "internal fields" are laid out, so that we know where to implant/extract native objects into/from their JS counterparts. For the vast majority of cases the default implementation is fine, but clients needing extra internal fields can add them (and optionally relocate the one CC uses) here.
+
+{{{
+    template <>
+    struct cvv8::ClassCreator_InternalFields<BoundNative>
+        // Use default settings for additional type-safety at runtime:
+        //: ClassCreator_InternalFields_Base<BoundNative>
+        // Add a number of interal fields for your own use, optionally
+        // moving the TypeID and native object fields:
+        : ClassCreator_InternalFields_Base<BoundNative,
+                                           8/*# of fields*/,
+                                           4/*TypeID field*/,
+                                           7/*native object field*/>
+        // Use a negative TypeID value to disable the extra type-safety checking:
+        //: ClassCreator_InternalFields_Base<BoundNative,1,-1,0>
+    {
+    };
+}}}
+
+If the `TypeIDIndex` (the 4th template parameter to the base type) is not negative then `ClassCreator_TypeID<BoundNative>::Value` will be stored in the `TypeIDIndex`th internal field of each bound object.
+
+When subclassing one bound type from another, the subclasses _must all_ have the same internal field layout as the base type or the bindings won't be able to treat a subclass object as an instance of its base type. To do this, simply subclass the parent type's specialization. If there is a mismatch between parent/subclass internal fields, `JSToNative` conversions (`CastFrom()`) will fail in strange ways (depending on the exact context of the conversion) or fail completely.
+
+== `ClassCreator_Factory` ==
+
+`ClassCreator_Factory` tells CC how to instantiate and destroy native objects. It can often be specialized by subclassing a convenience base class, but sometimes it is useful to implement it by hand for particular use cases.
+
+Here's an example which forwards JS calls to one of several different constructors, depending on the argument count (see [V8Convert_Overloading] for more options):
+
+{{{
+template <> class ClassCreator_Factory<MyType>
+ : public ClassCreator_Factory_CtorArityDispatcher< MyType,
+       Signature<MyType (
+        CtorForwarder<MyType *()>,
+        CtorForwarder<MyType *(char const *)>,
+        CtorForwarder<MyType *( int, double )>,
+        CtorForwarder<MyType *( v8::Arguments const &)>
+    )>;
+   >
+{};
+}}}
+
+
+== `ClassCreator_WeakWrap` ==
+
+`ClassCreator_WeakWrap` is closely related to `ClassCreator_Factory` and gives us a place to hook in to the pre-construction, post-construction, and pre-destruction phases. The majority of cases do not need to specialize this policy. It is normally used only to add plumbing needed by `NativeToJS` conversions.
+
+== `ClassCreator_SearchPrototypeForThis` ==
+
+This policy tells CC (and the `JSToNative_ClassCreator` convenience class) whether or not a `CastFromJS()` conversions should recursively check the prototype chain if the JS `this` object does not contain the native. Such a lookup is only required when JS-side classes extend the bound native type. By default prototype lookups are enabled because the library-level code cannot predict whether JS classes will need to subclass the type or not.
+
+If clients know that JS-side subclassing will never be used, or they want to intentionally break such uses (causing certain runtime conversions on the objects to fail), they can disable it like this:
+
+{{{
+template <>
+struct ClassCreator_SearchPrototypeForThis<MyType> : Opt_Bool<false>
+{};
+}}}
+
+
+
+== `ClassCreator_AllowCtorWithoutNew` ==
+
+This policy tells CC whether or not (`new MyType()`) and (`MyType()`) are equivalent. By default `MyType()` without the `new` operator will cause a JS exception, but clients can cause both call styles to be equivalent with:
+
+{{{
+template <>
+struct ClassCreator_AllowCtorWithoutNew<MyType> : Opt_Bool<true>
+{};
+}}}
+
+There is no support for providing different behaviours depending on whether or not `new` was specified, e.g. calling different constructor functions for each case.
+
+== `ClassCreator_SetupBindings` ==
+
+`ClassCreator_SetupBindings` is _intended_ to be the generic interface for initializing a given CC binding. It is not used by any of the public API, and is intended to genericize CC-based initialization in downstream code.
+
+Intended usage:
+
+{{{
+ClassCreator<T>::SetupBindings( myGlobalObject );
+}}}
+
+That will (if this policy has been specialized) initialize the bindings for the given native type. If it has not been specialized, that will throw a native exception! It is up to the implementor to ensure that the bindings are not actually processed multiple times in the life of the application. The various demo/example programs (like the one at the top of this page) demonstrate one way to do that.
+
+See `ClassCreator_SetupBindings_ClientFunc` for a convenience base type which proxies a client-provided function with this signature:
+
+{{{
+typedef void (*SetupBindings)( v8::Handle<v8::Object> const &);
+}}}
+
+The reason for that particular signature is largely historical, but that class can be used as a model for implementing similar classes which set up client-defined functions/functors to initialize the CC bindings. It is sometimes slightly less work, or less problematic vis-a-vis visability of specific templates, to implement such a function and subclass `ClassCreator_SetupBindings<T>` from `ClassCreator_SetupBindings_ClientFunc` to wrap it.
