@@ -130,7 +130,7 @@ Because of issues regarding the ownership and lifetimes of raw C-style string, f
 
   * The C-strings _must_ be `NULL` or nul-terminated. It cannot be used with binary data because they are converted to JS strings.
   * Non-const (`char *`) is not supported. We could partially implement it using a proxy, but the changes would get lost on their way back to JS space because the JS calling conventions do not allow us to pass changes to strings back this way.
-  * The bound function _must not_ hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself. It is also illegal (it was determined only after a debugging session) to _return_ the pointer passed to the function, as that indirectly extends its lifetime passed its legal point. That particular case actually works on some platforms but that only exemplifies the evil nature of Undefined Behaviour.
+  * The bound function _must not_ hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself. It is also illegal (it was determined only after a debugging session) to _return_ the pointer passed to the function, as that indirectly extends its lifetime past its legal point. That particular case actually works on some platforms but that only exemplifies the evil nature of Undefined Behaviour.
   * The internal conversion process uses `v8::String::Utf8Value`, and "should" be safe for use with functions accepting ASCII or UTF8 input. Behaviour with any other encodings is undefined.
   * If passed a JS `null` or `undefined`, it converts to a literal `NULL`, otherwise it will convert to a string (though possibly empty). This is significant for functions which treat `NULL` different than an empty string (like `strlen()`, which may crash your app if passed `NULL`).
 
@@ -144,6 +144,12 @@ std::string cstring_test( char const * c )
     std::cerr << "cstring_test( @"<<(void const *)c
               <<") ["<<(c ? c : "<NULL>")<<"]\n";
     return std::string(c ? c : "");
+    /*
+       We don't return (char const *) because it is
+       illegal to return the c argument because the
+       lifetime of its pointer cannot be guaranteed
+       to extend beyond the return of this call.
+    */
 }
 
 v8::InvocationCallback cb =
@@ -195,7 +201,7 @@ v8::InvocationCallback cb =
     >::Call;
 }}}
 
-The problem is that it will work sometimes and not others - it's undefined. The function bindings specifically disallow a passed-in (`char const *`) from being "kept", and returning it is a form of "keeping" it and that violates the lifetime constratins. The function bindings cannot handle this particular corner case (returning the (`char const *`) passed in to it) because the lifetime of the bytes cannot be properly managed at the binding level.
+The problem is that it will work sometimes and not others - it's undefined. The function bindings specifically disallow a passed-in (`char const *`) from being "kept", and returning it is a form of "keeping" it and that violates the lifetime constraints. The function bindings cannot handle this particular corner case (returning the (`char const *`) passed in to it) because the lifetime of the  raw bytes cannot be properly managed at the binding level. (Allowing (`char const *`) parameters, as opposed to return values, requires an extra level of indirection to keep the bytes alive for any useful length of time.)
 
 = Special Cases =
 
