@@ -209,10 +209,9 @@ namespace cvv8 {
 }
 }}}
 
-After that `cvv8::TypeName<MyType>::Value` will hold the string `MyType`. While not required, having this specialization in place can help some error-reporting routines to return a useful type name.
+After that `cvv8::TypeName<MyType>::Value` will hold the string `MyType`. While not required, having this specialization in place enables some error-reporting routines to return a useful type name (as opposed to "T" or some other generic value).
 
-The default specialization is fine for all other cases (including the base type of subclasses).
-
+The default specialization is functionally fine but produces an unspecified name - the same value for all unspecialized instantiations of this type.
 
 == `JSToNative` ==
 
@@ -254,6 +253,8 @@ template <>
 }}}
 
 If (`ClassCreator_InternalFields<T>::TypeIDIndex < 0`) then the CC-internal JS-to-native type-safety-check is disabled, in which case clients do _not_ need to (but may, if they like) specialize this policy.
+
+The default implementation uses `TypeName` (see above), so if that type will be customized by the client then it must be done before this template is instantiated.
 
 
 == `ClassCreator_InternalFields` ==
