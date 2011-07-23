@@ -9,7 +9,12 @@
 
   * Global/namespace-scope variables.
   * Member variables (static and non-static).
-  * Member methods which get/set proxy access.
+  * Member methods which proxy get/set access.
+
+For any given native type we want to bind as a property, the following limitations apply:
+
+  * For 'get' access, `CastToJS<TheType>()` must be legal.
+  * For 'set' access, `CastFromJS<TheType>()` must be legal.
 
 Property binding is done at the level of the `v8::ObjectTemplate` class, which is roughly equivalent to the class level in C++ and represents the JS-side `prototype` object for a JS class. The examples on this page often refer to a `proto` object, which is an instance of `v8::ObjectTemplate`:
 
@@ -26,9 +31,7 @@ CC & cc( CC::Instance() );
 v8::Handle<v8::ObjectTemplate> const & proto( cc.Prototype() );
 }}}
 
-(The weird `const &` bit is something i learned from reading something by Alexandrescu.)
-
-Note that even though the Handle is const, its referenced value is not, so we can modify it.
+(The weird `const &` bit is something i learned from reading something by Alexandrescu. Note that even though the Handle is const, its referenced value is not, so we can modify it.)
 
 The examples also assume the following, for brevity/readability:
 
@@ -56,13 +59,13 @@ int myGlobalInt = 7;
 ...
 
 proto->SetAccessor(JSTR("anInt"),
-   VarToGetter<int,&MyType::anInt>::Accessor,
-   VarToSetter<int,&MyType::anInt>::Accessor
+   VarToGetter<int,&MyType::anInt>::Get,
+   VarToSetter<int,&MyType::anInt>::Set
 );
 
 proto->SetAccessor(JSTR("globalInt"),
-   VarToGetter<int,&myGlobalInt>::Accessor,
-   VarToSetter<int,&myGlobalInt>::Accessor
+   VarToGetter<int,&myGlobalInt>::Get,
+   VarToSetter<int,&myGlobalInt>::Set
 );
 }}}
 
@@ -83,8 +86,8 @@ struct MyType { int anInt; };
 ...
 
 proto->SetAccessor(JSTR("anInt"),
-    MemberToGetter<MyType,int,&MyType::anInt>::Accessor,
-    MemberToSetter<MyType,int,&MyType::anInt>::Accessor
+    MemberToGetter<MyType,int,&MyType::anInt>::Get,
+    MemberToSetter<MyType,int,&MyType::anInt>::Set
 );
 }}}
 
@@ -105,8 +108,8 @@ struct MyType {
 ...
 
 proto->SetAccessor(JSTR("anInt"),
-    ConstMethodToGetter<MyType,int (),&MyType::getInt>::Accessor,
-    MethodToSetter<MyType,void (int),&MyType::setInt>::Accessor
+    ConstMethodToGetter<MyType,int (),&MyType::getInt>::Get,
+    MethodToSetter<MyType,void (int),&MyType::setInt>::Set
 );
 }}}
 
@@ -125,8 +128,8 @@ struct MyType {
 ...
 
 proto->SetAccessor(JSTR("anInt"),
-    MemberToGetter<MyType,int,&MyType::anInt>::Accessor,
-    MethodToSetter<MyType,void (int),&MyType::setInt>::Accessor
+    MemberToGetter<MyType,int,&MyType::anInt>::Get,
+    MethodToSetter<MyType,void (int),&MyType::setInt>::Set
 );
 }}}
 
@@ -140,6 +143,6 @@ To throw a JS exception if script code assigns a value to a property we can use 
 {{{
 proto->SetAccessor(JSTR("..."),
     ... some getter ...,
-    ThowingSetter::Accessor
+    ThowingSetter::Set
 );
 }}}
