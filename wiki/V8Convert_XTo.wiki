@@ -1,0 +1,56 @@
+#summary V8Convert's "XTo" API
+#labels Phase-UserDocs,Topic-CPlusPlus
+
+<wiki:toc/>
+
+If the [V8Convert_ClassCreator overwhelming] [V8Convert_Overloading number] of [V8Convert_TipsAndTricks options] for [V8Convert_FunctionBinding binding functions], [V8Convert_FunctionBinding methods], and [V8Convert_PropertyBinding properties] in cvv8 has got you down, here's something which might lighten your day: you only need to learn 3 simple templates.
+
+On the rainy day of 20110724, during a testing/debugging chat session, Coen Champman suggested a "kinda weird" syntax for doing "x-to-v8" conversions, particularly in the context of function and variable binding. His suggestion was to wrap all function-to-X in a single template named `Function`, all property-getter-to-X to another template, and so on. He proposed that we pass a tag type as the first argument to the template to specify exactly which conversion we wanted to perform.
+
+Kinda strange, i know, but his pasted-in hypothetical usage example intrigued me, and 50 lines of code later we had a working version.
+
+In client code it looks something like this:
+
+{{{
+int aBoundInt = 3;
+void test_weird_bindings()
+{
+    v8::InvocationCallback cb;
+    v8::AccessorGetter g;
+    v8::AccessorSetter s;
+
+    using namespace cvv8;
+
+    typedef FunctionTo< InCa, int(char const *), ::puts> FPuts;
+    typedef FunctionTo< InCaVoid, int(char const *), ::puts> FPutsVoid;
+    typedef FunctionTo< Getter, int(void), ::getchar> GetChar;
+    typedef FunctionTo< Setter, int(int), ::putchar> SetChar;
+    cb = FPuts::Call;
+    cb = FPutsVoid::Call;
+    g = GetChar::Get;
+    s = SetChar::Set;
+
+    typedef VarTo< Getter, int, &aBoundInt > VarGet;
+    typedef VarTo< Setter, int, &aBoundInt > VarSet;
+    g = VarGet::Get;
+    s = VarSet::Set;
+    typedef VarTo< Accessors, int, &aBoundInt > VarGetSet;
+    g = VarGetSet::Get;
+    s = VarGetSet::Set;
+
+    typedef BoundNative T;
+    
+    typedef MethodTo< InCa, T, void (), &T::doFoo > MemInCa;
+    typedef MethodTo< InCa, const T, int (), &T::getInt > MemInCaConst;
+    typedef MethodTo< InCaVoid, const T, int (), &T::getInt > MemInCaConstVoid;
+    typedef MethodTo< Getter, const T, int (), &T::getInt > MemGet;
+    typedef MethodTo< Setter, T, void (int), &T::setInt > MemSet;
+    cb = MemInCa::Call;
+    cb = MemInCaConst::Call;
+    cb = MemInCaConstVoid::Call;
+    g = MemGet::Get;
+    s = MemSet::Set;
+}
+}}}
+
+While the syntax is a bit unconventional, i find it to be quite readable, writable, and easy to remember how to use. And we can extend it as new conversions come up, e.g. `MethodTo<Monkey,... >`.
