@@ -189,14 +189,17 @@ This support allows us to convert functions to `v8::InvocableCallback` functions
 
 {{{
 
-char const * cstring_test( char const * c )
+std::string cstring_test( char const * c )
 {
     std::cerr << "cstring_test( @"<<(void const *)c<<") ["<<(c ? c : "<NULL>")<<"]\n";
-    return c;
+    return c ? c : "";
+    /* we don't return (char const *), and c, because c's lifetime
+       is undefined as soon as this function returns!
+    */
 }
 
 v8::InvocationCallback cb =
-   convert::FunctionForwarder<1>::Invocable<char const *,char const *,cstring_test>;
+   convert::FunctionForwarder<1>::Invocable<std::string,char const *,cstring_test>;
 }}}
 
 If we bind that to JS with the name `cstr`:
