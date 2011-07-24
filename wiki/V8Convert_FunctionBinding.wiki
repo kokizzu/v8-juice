@@ -12,15 +12,29 @@ v8::InvocationCallback cb;
 
 // A non-const method: int MyType::nonConstMethod(char const *)
 cb = cv::MethodToInCa<MyType, int (char const *), &MyType::nonConstMethod>::Call;
+// Equivalent to:
+cb = cv::ToInCa<MyType, int (char const *), &MyType::nonConstMethod>::Call;
 
 // A const method: int MyType::constMethod(char const *) const
 cb = cv::ConstMethodToInCa<MyType, int (char const *), &MyType::constMethod>::Call;
+// Or the equivalent as of r2019:
+cb = cv::MethodToInCa<MyType const, int (char const *), &MyType::constMethod>::Call;
+// Equivalent to:
+cb = cv::ToInCa<MyType const, int (char const *), &MyType::constMethod>::Call;
 
 // A free function: int puts(char const *)
 cb = cv::FunctionToInCa< int (char const *), ::puts >::Call;
+// Equivalent to:
+cb = cv::ToInCa< void, int (char const *), ::puts >::Call;
+// The leading void arg is a bit of a hack to accommodate non-member functions.
+
+// Binding Functor, e.g. MyFunctorType::operator():
+cb = cv::FunctorToInCa< MyFunctorType, bool (double) >::Call
 }}}
 
-Because these templates _create_ `v8::InvocationCallback` functions at compile-time, they require no dynamically-allocated proxy objects or other hidden memory usage like some binding mechanisms require. The only overhead these templates add is the conversion of arguments/return values to/from JS. The library does as much work as possible at compile time to help detect type-conversion errors early and help avoid extra runtime costs.
+Because these templates _create_ `v8::InvocationCallback` functions at compile-time, they require no dynamically-allocated proxy objects or other hidden memory usage like some binding mechanisms do. They do add some runtime overhead, but not notably more than hand-written/optimized solutions do. Their overhead comes in the form of the intermediary/generated `InvocationCallback`s and the time/space it takes to convert arguments and return values to/from JS.
+
+The library does as much work as possible at compile time to help detect type-conversion errors early and help avoid extra runtime costs.
 
 The core function-binding features are encapsulated in three templates:
 
@@ -28,9 +42,9 @@ The core function-binding features are encapsulated in three templates:
   * `MethodToInCa<>`
   * `ConstMethodToInCa<>`
 
-By using only those templates clients can bind a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow).
+By using only those templates clients can bind a wide variety of native functions to arbitrary JS objects (where language calling conventions and cross-language type conversions allow). `FunctorToInCa` is actually a thin proxy over `ConstMethodToInCa` which proxies `FunctorType::operator()`.
 
-Support for const- and non-const methods are split into two implementations to help support MSVC compilers (but as of 20110720 we _might_ have a way to consolidate them into once class even for MSVC).
+Support for const- and non-const methods are split into two implementations to help support MSVC compilers (but as of 20110720 we _might_ have a way to consolidate them into once class even for MSVC). As of r2019 `MethodToInCa<const T,...>` and `ConstMethodToInCa<T,...>` are equivalent, so clients may choose to ignore `ConstMethodToInCa` altogether (just remember to const-qualify the `T` parameter to `MethodToInCa` and friends).
 
 Note that binding to non-static member methods requires (at runtime), that `CastFromJS<T>()` can convert the current JS 'this' object to its native counterpart. See [V8Convert_ClassCreator] for an example of one way to set this up (there are many ways).
 
@@ -99,6 +113,9 @@ cb = cv::ConstMethodToInCa<
        char const * (int),
        &MyType::errorCodeToString
      >::Call;
+
+// A functor type (it must have a const operator()):
+cb = cv::FunctorToInCa< MyFunctorType, bool (double) >::Call
 
 // Here's how we can bind a JS-side garbage-collection-triggering
 // function:
