@@ -10,7 +10,7 @@ On the rainy day of 20110724, during a testing/debugging chat session, Coen Cham
 
 Kinda strange, i know, but his pasted-in hypothetical usage example intrigued me, and 50 lines of code later we had a working version. (All of the code is compile-time only - no additional runtime overhead is added.)
 
-In client code it looks something like this:
+In client code it abstractly looks something like this:
 
 {{{
 int aBoundInt = 3;
@@ -28,7 +28,7 @@ void test_xto_bindings()
     g = FunctionTo< Getter, int(void), ::getchar>::Get;
     s = FunctionTo< Setter, int(int), ::putchar>::Set;
 
-    // Var-to-X conversions:
+    // Var-to-X conversions: (non-member variables and static non-function members)
     g = VarTo< Getter, int, &aBoundInt >::Get;
     s = VarTo< Setter, int, &aBoundInt >::Set;
     typedef VarTo< Accessors, int, &aBoundInt > VarGetSet;
@@ -53,3 +53,13 @@ void test_xto_bindings()
 }}}
 
 While the syntax is a bit unconventional, i find it to be quite readable, writable, and easy to remember how to use. And we can extend it as new conversions come up, e.g. `MethodTo<Monkey,... >`.
+
+Side note:
+
+The above example incidentally shows, however indirectly, essentially every feature [V8Convert] offers except for [V8Convert_ClassCreator class binding]:
+
+  * Converting functions, methods, and functors to `v8::InvocationCallback`, `v8::AccessorGetter`, and `v8::AccessorSetter`. (That's 9 different conversion combinations.)
+  * Proxying JS property access directly to a native non-member variable or static non-function member.
+  * Type conversions happen implicitly all throughout the function/property-binding process, so those are also (indirectly) demonstrated here.
+
+Though it might not look like much, the templates shown above are built on top of virtual _mountains_ (well, _hills_) of lower-level functionality which clients can also use.
