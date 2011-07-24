@@ -11,7 +11,11 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
-*2011 July 22*
+*2011 July 24:*
+  * Added `FunctorToInCa` to bind functors to JS.
+  * Introducing the [V8Convert_XTo X-to API], alternate interfaces for binding functions, methods, and variables (arguably _even simpler_ than the ones we have so far).
+
+*2011 July 23*
   * Completely refactored the cvv8 [V8Convert_PropertyBinding property binding API] to mimic the [V8Convert_FunctionBinding function binding API].
   * Moved the MSVC support into the [V8Convert] trunk. Coen added project files for VS 2010. He suspects (but we haven't tested) that the code will work on VS 2008 as well.
 
