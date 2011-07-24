@@ -19,6 +19,10 @@ When we only care about overloading based on the arity (number of arguments), `A
 
 _ad nauseum_. You get the idea.
 
+As it turns out, overloading is just a specific case of the more general problem of argument validation. The overloading-related templates can also be used to validate argument types for non-overloaded functions, such that they will fail with an error if JS code passes in the wrong type(s). e.g. If we bind the function `void myfunc(v8::Handle<v8::Object>)`, we can tell cvv8 (when we create the binding) to perform the validation, such that calling `myfunc()` from JS will never cause a non-Object handle to be passed to the native function.
+
+There is still some work to be done in simplifying the generation of certain rules, especially for the simpler cases (which require more code than they should).
+
 =Overloading by Arity=
 
 
