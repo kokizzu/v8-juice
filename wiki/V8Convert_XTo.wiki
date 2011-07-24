@@ -4,9 +4,9 @@
 See also: [V8Convert_Overloading], [V8Convert_PropertyBinding], [V8Convert_FunctionBinding]
 
 
-If the [V8Convert_ClassCreator overwhelming] [V8Convert_Overloading number] of [V8Convert_TipsAndTricks options] for [V8Convert_FunctionBinding binding functions], [V8Convert_FunctionBinding methods], and [V8Convert_PropertyBinding properties] in cvv8 has got you down, here's something which might lighten your day: you only need to learn 3 simple templates.
+If the [V8Convert_ClassCreator overwhelming] [V8Convert_Overloading number] of [V8Convert_TipsAndTricks options] for [V8Convert_FunctionBinding binding functions], [V8Convert_FunctionBinding methods], and [V8Convert_PropertyBinding properties] in cvv8 has got you down, here's something which might brighten your day: you only need to learn 3 simple templates.
 
-On the rainy day of 20110724, during a testing/debugging chat session, Coen Champman suggested a "kinda weird" syntax for doing "x-to-v8" conversions, particularly in the context of function and variable binding. His suggestion was to wrap all function-to-X in a single template named `Function`, all property-getter-to-X to another template, and so on. He proposed that we pass a tag type as the first argument to the template to specify exactly which conversion we wanted to perform.
+On the rainy day of 20110724, during a testing/debugging chat session, Coen Champman suggested a "kinda weird" syntax for doing "x-to-v8" conversions, particularly in the context of function and variable binding. His suggestion was to wrap all function-to-X conversions in a single template named `Function`, saying that we could pass a tag type as the first argument to the template to specify exactly which conversion we wanted to perform.
 
 Kinda strange, i know, but his pasted-in hypothetical usage example intrigued me, and 50 lines of code later we had a working version. (All of the code is compile-time only - no additional runtime overhead is added.)
 
@@ -16,15 +16,15 @@ In client code it looks something like this:
 int aBoundInt = 3;
 void test_xto_bindings()
 {
-    v8::InvocationCallback cb;
+    v8::InvocationCallback c;
     v8::AccessorGetter g;
     v8::AccessorSetter s;
 
     using namespace cvv8;
 
     // Function-to-X conversions:
-    cb = FunctionTo< InCa, int(char const *), ::puts>::Call;
-    cb = FunctionTo< InCaVoid, int(char const *), ::puts>::Call;
+    c = FunctionTo< InCa, int(char const *), ::puts>::Call;
+    c = FunctionTo< InCaVoid, int(char const *), ::puts>::Call;
     g = FunctionTo< Getter, int(void), ::getchar>::Get;
     s = FunctionTo< Setter, int(int), ::putchar>::Set;
 
@@ -37,16 +37,16 @@ void test_xto_bindings()
 
     // Method-to-X conversions:
     typedef BoundNative T;
-    cb = MethodTo< InCa, T, void (), &T::doFoo >::Call;
-    cb = MethodTo< InCa, const T, int (), &T::getInt >::Call;
-    cb = MethodTo< InCaVoid, const T, int (), &T::getInt >::Call;
+    c = MethodTo< InCa, T, void (), &T::doFoo >::Call;
+    c = MethodTo< InCa, const T, int (), &T::getInt >::Call;
+    c = MethodTo< InCaVoid, const T, int (), &T::getInt >::Call;
     g = MethodTo< Getter, const T, int (), &T::getInt >::Get;
     s = MethodTo< Setter, T, void (int), &T::setInt >::Set;
 
     // Functor-to-X conversions:
     typedef MyFunctor F;
-    cb = FunctorTo< InCaVoid, F, bool () >::Call;
-    cb = FunctorTo< InCa, F, bool (int) >::Call;
+    c = FunctorTo< InCaVoid, F, bool () >::Call;
+    c = FunctorTo< InCa, F, bool (int) >::Call;
     g = FunctorTo< Getter, F, bool () >::Get;
     s = FunctorTo< Setter, F, void (bool) >::Set;
 }
