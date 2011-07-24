@@ -97,22 +97,51 @@ After that, all JS-side access to `anInt` will directly proxy the native `MyType
 
 (TODO?: consider writing a type-strict variation which throws if the type is not strictly convertible.)
 
-= Binding Native Methods as Property Accessors =
+= Binding Native Methods, Functions, and Functors as Property Accessors =
 
-This isn't any different from binding non-function properties:
+Binding methods isn't any different from binding non-function properties:
 
 {{{
 struct MyType {
     int getInt() const;
     void setInt(int);
 };
-
 ...
 
-proto->SetAccessor(JSTR("anInt"),
-    ConstMethodToGetter<MyType,int (),&MyType::getInt>::Get,
-    MethodToSetter<MyType,void (int),&MyType::setInt>::Set
-);
+v8::AccessorGetter g;
+v8::AccessorSetter s;
+
+g = ConstMethodToGetter<MyType,int (),&MyType::getInt>::Get,
+s = MethodToSetter<MyType,void (int),&MyType::setInt>::Set;
+
+}}}
+
+Functions aren't normally quite as useful, but can also be bound.
+
+{{{
+void set_time(int32_t);
+int32_t get_time();
+
+g = FunctionToGetter< int32_t (), get_time >::Get;
+s = FunctionToSetter< void (int32_t), set_time >::Set;
+}}}
+
+Functors can also be bound as accessors, but note that there are a few notable limitations:
+
+  * We assume the functor is stateless and has a _const_ `operator()` (possibly multiple implementations). We do not keep a single copy for the lifetime of the bindings, but that might be an improvement to consider.
+  * Since functors typically don't have access to state of a bound native, they are not expected to be useful as accessors all that often, except for getters which return some shared state like the current system time or a random number.
+
+{{{
+struct TimeFunctor {
+  // set time
+  void operator()( int32_t ) const;
+  // get time
+  int32_t operator()() const;
+};
+
+g = FunctorToGetter< TimeFunctor, int32_t () >::Get;
+s = FunctorToSetter< TimeFunctor, void (int32_t) >::Set;
+
 }}}
 
 After that, all JS-side access to `anInt` will go through `getInt()` and `setInt()`.
