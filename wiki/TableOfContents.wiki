@@ -5,6 +5,27 @@ The one-stop v8-juice/v8-convert Table of Contents...
 <wiki:toc/>
 
 
+==v8-convert==
+
+v8-convert is a mid-2011 spinoff of v8-juice, providing a streamlined, header-only library which focuses solely on type conversions.
+
+  * [V8Convert Introduction/overview] of v8-convert's features.
+  * [ChangeLog Summary of changes]
+  * [Contributing] to v8-juice and v8-convert.
+  * How to [V8Convert_FunctionBinding bind native function/methods] to JS.
+    * How to [V8Convert_Overloading overload function and constructor bindings].
+  * How to [V8Convert_PropertyBinding bind native non-function variables] to JS.
+  * An [V8Convert_XTo alternative interface] for function and property bindings.
+  * Various [V8Convert_TipsAndTricks Tips, tricks, and how-tos].
+  * Addons/plugins/demos:
+    * Yet another [V8Convert_ClassCreator class-binding mechanism]
+    * [V8Convert_ByteArray ByteArray class]
+    * [V8Convert_Shell V8Shell] simplifies bootstrapping of v8 in an application.
+    * [V8Convert_Socket Posix-like socket API]
+    * [JSPDO JSPDO database access] abstraction layer
+      * [JSPDO_API]
+      * [JSPDO_HowTo]
+
 ==v8-juice==
 
 v8-juice is the "main project". It has been online since early 2009 and has accumulated quite a bit of code and wiki pages...
@@ -34,23 +55,3 @@ v8-juice is the "main project". It has been online since early 2009 and has accu
     * [PluginWhefs whefs] (embedded filesystem)
     * [PluginWhio whio] (i/o library)
   * [WhereToFindMoreDocs]
-
-==v8-convert==
-
-v8-convert is a mid-2011 spinoff of v8-juice, providing a streamlined, header-only library which focuses solely on type conversions.
-
-  * [V8Convert Introduction/overview] of v8-convert's features.
-  * [ChangeLog Summary of changes]
-  * [Contributing] to v8-juice and v8-convert.
-  * How to [V8Convert_FunctionBinding bind native function/methods] to JS.
-    * How to [V8Convert_Overloading overload function and constructor bindings].
-  * How to [V8Convert_PropertyBinding bind native non-function variables] to JS.
-  * Various [V8Convert_TipsAndTricks Tips, tricks, and how-tos].
-  * Addons/plugins/demos:
-    * Yet another [V8Convert_ClassCreator class-binding mechanism]
-    * [V8Convert_ByteArray ByteArray class]
-    * [V8Convert_Shell V8Shell] simplifies bootstrapping of v8 in an application.
-    * [V8Convert_Socket Posix-like socket API]
-    * [JSPDO JSPDO database access] abstraction layer
-      * [JSPDO_API]
-      * [JSPDO_HowTo]
