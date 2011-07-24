@@ -47,7 +47,7 @@ Whether or not `CastFromJS()` _can_ work is often not determinable at compile-ti
 
 See [V8Convert_ClassCreator] for one approach to binding C++ classes to JS in a manner compatible with this API. There are many possible approaches. If you already have a favourite class-binding mechanism, simply create custom `JSToNative` and/or `NativeToJS` specializations which can use your binding mechanism.
 
-= Binding Non-member Variables =
+= Binding Non-member or static Member Variables =
 
 Here's how to create create accessors for non-member variables or _static_ class members:
 
@@ -136,7 +136,20 @@ proto->SetAccessor(JSTR("anInt"),
 
 = Tips and Ticks =
 
-== Throwing Exceptions on Set Operations ==
+== Converting Native Exceptions thrown by Accessors ==
+
+If a proxied getter or setter throws a native exception then it is likely to kill v8. Any accessors which throws should be wrapped in a `SetterCatcher` or `GetterCatcher` wrapper. These are analogous to the `InCaCatcher` used by the [V8Convert_FunctionBinding function binding API], and they have the same interface.
+
+A brief example demonstrating how to handle `std::exception` types:
+
+{{{
+v8::AccessorGetter = GetterCatcher_std< FunctionToGetter<int (),get_some_val> >::Get;
+v8::AccessorSetter = SetterCatcher_std< FunctionToSetter<void (int),set_some_val> >::Set;
+}}}
+
+See the API docs for how to use custom exception types and chain exception handlers.
+
+== Throwing JS Exceptions on Set Operations ==
 
 To throw a JS exception if script code assigns a value to a property we can use `ThrowingSetter`:
 
