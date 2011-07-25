@@ -1,13 +1,14 @@
 #summary V8Convert's "XTo" API
 #labels Phase-UserDocs,Topic-CPlusPlus
 
+
 See also: [V8Convert_Overloading], [V8Convert_PropertyBinding], [V8Convert_FunctionBinding]
 
 <wiki:toc/>
 
 =Introduction=
 
-If the [V8Convert_ClassCreator overwhelming] [V8Convert_Overloading number] of [V8Convert_TipsAndTricks options] for [V8Convert_FunctionBinding binding functions], [V8Convert_FunctionBinding methods], and [V8Convert_PropertyBinding properties] in cvv8 has got you down, here's something which might brighten your day: you only need to learn 3 simple templates.
+If the [V8Convert_ClassCreator overwhelming] [V8Convert_Overloading number] of [V8Convert_TipsAndTricks options] for [V8Convert_FunctionBinding binding functions, methods], [V8Convert_PropertyBinding variables, and member properties] in cvv8 has got you down, here's something which might brighten your day: you only need to learn a few simple templates.
 
 On the rainy day of 20110724, during a testing/debugging chat session, Coen Champman suggested a "kinda weird" syntax for doing "x-to-v8" conversions, particularly in the context of function and variable binding. His suggestion was to wrap all function-to-X conversions in a single template named `Function`, saying that we could pass a tag type as the first argument to the template to specify exactly which conversion we wanted to perform.
 
@@ -16,6 +17,9 @@ Kinda strange, i know, but his pasted-in hypothetical usage example intrigued me
 In client code it abstractly looks something like this:
 
 {{{
+#include "cvv8/XTo.hpp"
+
+...
 int aBoundInt = 3;
 void test_xto_bindings()
 {
@@ -74,12 +78,13 @@ The above example incidentally shows, however indirectly, essentially every feat
   * Proxying JS property access directly to a native non-member variable or static non-function member (`VarTo<>`), or to non-static non-function members (`MemberTo<>`).
   * Type conversions happen implicitly all throughout the function/property-binding process, so those are also (indirectly) demonstrated here.
 
-Though it might not look like much, the templates shown above are built on top of virtual _mountains_ (well, _hills_) of lower-level functionality which clients can also use.
+Though that might not look like much, the templates shown above provide the majority of the JS/C++ binding features we need for typical applications. If these templates are "too generic" to handle a specific use case, virtual _mountains_ (well, _hills_) of lower-level cvv8 features can assist clients in writing their own conversions and bindings. There _are_ many binding cases which the library cannot handle directly, but (A) it handles a great deal out of the box and (B) it provides many tools which can simplify the creation of hand-written bindings.
 
 =Conventions=
 
 The demonstration in the first section shows everything one really needs to know about using this API. Here we'll go into a bit more detail...
 
+Header file: "[http://code.google.com/p/v8-juice/source/browse/convert/include/cvv8/XTo.hpp cvv8/XTo.hpp]"
 
 The common conventions used by this API are:
 
@@ -91,15 +96,17 @@ The common conventions used by this API are:
     * `Setter`: converts to a `v8::AccessorSetter`
     * `Accessors`: is a combination of `Getter` and `Setter`.
 
-The arguments after the first depend on the main "target" of the conversion (e.g. a function, method, or functor), and for a given "target", the template arguments after the tag type are the same regardless of the tag's value. They can be summarized like:
+The arguments after the first depend on the main "target" of the conversion (e.g. a function, method, or functor), and for a given "target", the template arguments after the tag type are the same regardless of the tag's value.
 
-  * `FunctionTo< TagType, signature, function_ptr_matching_signature [, UnlockV8=a_bool_value]>`
-  * `MethodTo< TagType, T, signature, method_ptr_matching_signature [, UnlockV8=a_bool_value]>` (use const-qualified `T` for const methods!)
-  * `FunctorTo< TagType, signature_of_operator() [, UnlockV8=a_bool_value]>`
-  * `VarTo< TagType, PropertyType, ptr_to_property>`
-  * `MemberTo< TagType, T, PropertyType, ptr_to_member_property>`
+The set of conversions can be summarized in the following set of template signatures:
 
-You can read more about the meaning of the `UnlockV8` option on the [V8Convert_FunctionBinding] page. (It has a sane default for _most_ cases, and can normally ignored.)
+  * *Functions*: <br>`FunctionTo< Tag, signature, function_ptr_matching_signature [, UnlockV8=a_bool_value]>`
+  * *Class methods*: (use const-qualified `T` for const methods!)<br>`MethodTo< Tag, T, signature, method_ptr_matching_signature [, UnlockV8=a_bool_value]>`
+  * *Functors*: <br>`FunctorTo< Tag, signature_of_const_operator() [, UnlockV8=a_bool_value]>`
+  * *Non-member variables* or *static member variables*:<br>`VarTo< Tag, PropertyType, ptr_to_property>`
+  * *Non-static member variables*:<br>`MemberTo< Tag, T, PropertyType, ptr_to_member_property>`
+
+You can read more about the meaning of the `UnlockV8` option on the [V8Convert_FunctionBinding] page. (It has a sane default for _most_ cases, and can _usually_ be ignored.)
 
 The expanded templates evaluate to types which contain a specific function, depending on the conversion tag type:
 
@@ -108,4 +115,4 @@ The expanded templates evaluate to types which contain a specific function, depe
   * `Setter`: `Set()`, implementing the `v8::AccessorSetter` interface.
   * `Accessors`: as for `Getter` and `Setter` combined.
 
-Note that not all targets support all tags. e.g. there no `FunctionTo<Accessors,...>` because a function signature can only ever match either a getter _or_ a setter. Trying to use invalid conversions will lead to compile-time errors.
+Note that not all targets support all tags. e.g. there no `FunctionTo<Accessors,...>` because a function signature can only ever match either a getter _or_ a setter. Likewise, `VarTo` can only bind property accessors (Tags=`Getter`, `Setter`), not `v8::InvocationCallbacks` (Tag=`InCa`). Trying to use invalid conversions will lead to compile-time errors.
