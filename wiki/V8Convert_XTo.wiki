@@ -88,7 +88,7 @@ Header file: "[http://code.google.com/p/v8-juice/source/browse/convert/include/c
 
 The common conventions used by this API are:
 
-  * The conversion templates are all named like `XyzTo`.
+  * The conversion templates are all named like `XyzTo`. This documentation often refers to the `Xyz` part of the name as the "target" or "type" of the conversion, e.g. the "target" for a conversion is a `Function` (`FunctionTo<>`), `Method` (`MethodTo<>`), etc.
   * The first argument to the template is a "tag" type. The tag types each correspond to a distinctly different type of conversion. The tags are:
     * `InCa`: converts to a `v8::InvocationCallback`
     * `InCaVoid`: converts to a `v8::InvocationCallback` which does not evaluate the return type (see [V8Convert_FunctionBinding] for why/when this is useful).
@@ -96,9 +96,9 @@ The common conventions used by this API are:
     * `Setter`: converts to a `v8::AccessorSetter`
     * `Accessors`: is a combination of `Getter` and `Setter`.
 
-The arguments after the first depend on the main "target" of the conversion (e.g. a function, method, or functor), and for a given "target", the template arguments after the tag type are the same regardless of the tag's value.
+The template arguments after the first (the tag type) depend on the main target of the conversion (e.g. a function, method, or functor), and for a given target, the template arguments after the tag type are the same regardless of the tag's value. i.e. the interface is identical for `FunctionTo<InCa...>` and `FunctionTo<Getter,...>`, though specific conversions might place limitations on the range of values/types for a given conversion. e.g. a "getter" function (`FunctionTo<Getter,..>`) must take no arguments and return a convertible-to-JS, non-void type.
 
-Note that not all targets support all tags. e.g. there no `FunctionTo<Accessors,...>` because a function signature can only ever match either a getter _or_ a setter. Likewise, `VarTo` can only bind property accessors (Tags=`Getter`, `Setter`, or `Accessors`), not `v8::InvocationCallback`s (Tag=`InCa`). Trying to use invalid conversions will lead to compile-time errors.
+Note that not all targets support all tags. e.g. there no `FunctionTo<Accessors,...>` because a function signature can only ever match either a getter _or_ a setter. Likewise, `VarTo` can only bind property accessors (Tags=`Getter`, `Setter`, or `Accessors`), not `v8::InvocationCallback`s (Tags=`InCa`, `InCaVoid`). Trying to use invalid conversions will lead to compile-time errors.
 
 The set of conversions can be summarized in the following set of template signatures:
 
@@ -110,9 +110,12 @@ The set of conversions can be summarized in the following set of template signat
 
 You can read more about the meaning of the `UnlockV8` option on the [V8Convert_FunctionBinding] page. (It has a sane default for _most_ cases, and can _usually_ be ignored.)
 
-The expanded templates evaluate to types which contain a specific function, depending on the conversion tag type:
+The expanded `XyzTo` templates evaluate to types which contain a specific function, depending on the conversion tag type:
 
   * `InCa` and `InCaVoid`: `Call()`, implementing the `v8::InvocationCallback` interface.
+  * `InCaVoid` is like `InCa` but explicitly does _not_ invoke a conversion of the native return type. This it can be used to bind functions/methods with void or non-convertible types, or to ignore return values which we don't _want_ to convert for some reason.
   * `Getter`: `Get()`, implementing the `v8::AccessorGetter` interface.
   * `Setter`: `Set()`, implementing the `v8::AccessorSetter` interface.
   * `Accessors`: as for `Getter` and `Setter` combined.
+
+The complete array of legal target/tag combinations is demonstrated in the example at the top of this page.
