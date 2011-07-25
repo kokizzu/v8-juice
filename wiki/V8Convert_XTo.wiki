@@ -70,17 +70,17 @@ void test_xto_bindings()
 
 While the syntax is a bit unconventional, i find it to be quite readable, writable, and easy to remember how to use. And we can extend it as new conversions come up, e.g. `MethodTo<Monkey,... >`.
 
-Side note:
+One of the nicest aspects of this API (as with the other conversion-related APIs) is that if it compiles than it will work (barring any bugs or undiscovered corner-cases in cvv8's code). The majority of the hand-written code in cvv8 are simple dispatching proxies around generated code which blindly converts and passes on (or back) values. Since those features are known to work well, simply being able to compile is a sign that everything is okay from the library's point of view.
 
 The above example incidentally shows, however indirectly, essentially every feature [V8Convert] offers except for [V8Convert_ClassCreator class binding]:
 
-  * Converting functions, methods, and functors to `v8::InvocationCallback`, `v8::AccessorGetter`, and `v8::AccessorSetter`. (That's 9 different conversion combinations, or 12 if we consider that `const` methods are internally handled separately.)
+  * Converting functions, methods, and functors to `v8::InvocationCallback`, `v8::AccessorGetter`, and `v8::AccessorSetter`. (That's 9 different conversion combinations, or 11 if we consider that `const` methods are internally handled separately and setters are "essentially never" const.)
   * Proxying JS property access directly to a native non-member variable or static non-function member (`VarTo<>`), or to non-static non-function members (`MemberTo<>`).
   * Type conversions happen implicitly all throughout the function/property-binding process, so those are also (indirectly) demonstrated here.
 
-Though that might not look like much, the templates shown above provide the majority of the JS/C++ binding features we need for typical applications. If these templates are "too generic" to handle a specific use case, virtual _mountains_ (well, _hills_) of lower-level cvv8 features can assist clients in writing their own conversions and bindings. There _are_ many binding cases which the library cannot handle directly, but (A) it handles a great deal out of the box and (B) it provides many tools which can simplify the creation of hand-written bindings.
+Though that might not look like much, the templates shown above provide the majority of the JS/C++ binding features we need for typical applications. If these templates are "too generic" to handle a specific use case, virtual _mountains_ (well, _hills_) of lower-level cvv8 features can assist clients in writing their own conversions and bindings. There _are_ many binding cases which the library cannot handle directly, but (A) it handles many millions, if not billions, of combinations out of the box and (B) it provides many tools which can simplify the creation of hand-written bindings.
 
-=Conventions=
+=Conventions and Options=
 
 The demonstration in the first section shows everything one really needs to know about using this API. Here we'll go into a bit more detail...
 
@@ -98,6 +98,8 @@ The common conventions used by this API are:
 
 The arguments after the first depend on the main "target" of the conversion (e.g. a function, method, or functor), and for a given "target", the template arguments after the tag type are the same regardless of the tag's value.
 
+Note that not all targets support all tags. e.g. there no `FunctionTo<Accessors,...>` because a function signature can only ever match either a getter _or_ a setter. Likewise, `VarTo` can only bind property accessors (Tags=`Getter`, `Setter`, or `Accessors`), not `v8::InvocationCallback`s (Tag=`InCa`). Trying to use invalid conversions will lead to compile-time errors.
+
 The set of conversions can be summarized in the following set of template signatures:
 
   * *Functions*: <br>`FunctionTo< Tag, signature, function_ptr_matching_signature [, UnlockV8=a_bool_value]>`
@@ -114,5 +116,3 @@ The expanded templates evaluate to types which contain a specific function, depe
   * `Getter`: `Get()`, implementing the `v8::AccessorGetter` interface.
   * `Setter`: `Set()`, implementing the `v8::AccessorSetter` interface.
   * `Accessors`: as for `Getter` and `Setter` combined.
-
-Note that not all targets support all tags. e.g. there no `FunctionTo<Accessors,...>` because a function signature can only ever match either a getter _or_ a setter. Likewise, `VarTo` can only bind property accessors (Tags=`Getter`, `Setter`), not `v8::InvocationCallbacks` (Tag=`InCa`). Trying to use invalid conversions will lead to compile-time errors.
