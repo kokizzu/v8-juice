@@ -3,6 +3,9 @@
 
 See also: [V8Convert_Overloading], [V8Convert_PropertyBinding], [V8Convert_FunctionBinding]
 
+<wiki:toc/>
+
+=Introduction=
 
 If the [V8Convert_ClassCreator overwhelming] [V8Convert_Overloading number] of [V8Convert_TipsAndTricks options] for [V8Convert_FunctionBinding binding functions], [V8Convert_FunctionBinding methods], and [V8Convert_PropertyBinding properties] in cvv8 has got you down, here's something which might brighten your day: you only need to learn 3 simple templates.
 
@@ -28,15 +31,24 @@ void test_xto_bindings()
     g = FunctionTo< Getter, int(void), ::getchar>::Get;
     s = FunctionTo< Setter, int(int), ::putchar>::Set;
 
-    // Var-to-X conversions: (non-member variables and static non-function members)
+    // Var-to-X conversions:
     g = VarTo< Getter, int, &aBoundInt >::Get;
     s = VarTo< Setter, int, &aBoundInt >::Set;
     typedef VarTo< Accessors, int, &aBoundInt > VarGetSet;
     g = VarGetSet::Get;
     s = VarGetSet::Set;
 
-    // Method-to-X conversions:
     typedef BoundNative T;
+
+    // Member Var-to-X conversions:
+    g = MemberTo< Getter, T, int, &T::publicInt >::Get;
+    s = MemberTo< Setter, T, int, &T::publicInt >::Set;
+    typedef MemberTo< Accessors, T, int, &T::publicInt > MemAcc;
+    g = MemAcc::Get;
+    s = MemAcc::Set;
+    
+
+    // Method-to-X conversions:
     c = MethodTo< InCa, T, void (), &T::doFoo >::Call;
     c = MethodTo< InCa, const T, int (), &T::getInt >::Call;
     c = MethodTo< InCaVoid, const T, int (), &T::getInt >::Call;
@@ -58,8 +70,39 @@ Side note:
 
 The above example incidentally shows, however indirectly, essentially every feature [V8Convert] offers except for [V8Convert_ClassCreator class binding]:
 
-  * Converting functions, methods, and functors to `v8::InvocationCallback`, `v8::AccessorGetter`, and `v8::AccessorSetter`. (That's 9 different conversion combinations.)
-  * Proxying JS property access directly to a native non-member variable or static non-function member.
+  * Converting functions, methods, and functors to `v8::InvocationCallback`, `v8::AccessorGetter`, and `v8::AccessorSetter`. (That's 9 different conversion combinations, or 12 if we consider that `const` methods are internally handled separately.)
+  * Proxying JS property access directly to a native non-member variable or static non-function member (`VarTo<>`), or to non-static non-function members (`MemberTo<>`).
   * Type conversions happen implicitly all throughout the function/property-binding process, so those are also (indirectly) demonstrated here.
 
 Though it might not look like much, the templates shown above are built on top of virtual _mountains_ (well, _hills_) of lower-level functionality which clients can also use.
+
+=Conventions=
+
+The demonstration in the first section shows everything one really needs to know about using this API. Here we'll go into a bit more detail...
+
+
+The common conventions used by this API are:
+
+  * The conversion templates are all named like `XyzTo`.
+  * The first argument to the template is a "tag" type. The tag types each correspond to a distinctly different type of conversion. The tags are:
+    * `InCa`: converts to a `v8::InvocationCallback`
+    * `InCaVoid`: converts to a `v8::InvocationCallback` which does not evaluate the return type (see [V8Convert_FunctionBinding] for why/when this is useful).
+    * `Getter`: converts to a `v8::AccessorGetter`
+    * `Setter`: converts to a `v8::AccessorSetter`
+    * `Accessors`: is a combination of `Getter` and `Setter`.
+
+The arguments after the first depend on the main "target" of the conversion (e.g. a function, method, or functor), and for a given "target", the template arguments after the tag type are the same regardless of the tag's value. They can be summarized like:
+
+  * `FunctionTo< TagType, signature, function_ptr_matching_signature [, UnlockV8=a_bool_value]>`
+  * `MethodTo< TagType, T, signature, method_ptr_matching_signature [, UnlockV8=a_bool_value]>` (use const-qualified `T` for const methods!)
+  * `FunctorTo< TagType, signature, method_ptr_matching_signature [, UnlockV8=a_bool_value]>`
+  * `VarTo< TagType, PropertyType, ptr_to_property>`
+
+The expanded templates evaluate to types which contain a specific function, depending on the conversion tag type:
+
+  * `InCa` and `InCaVoid`: `Call()`, implementing `v8::InvocationCallback`.
+  * `Getter`: `Get()`, implementing `v8::AccessorGetter`.
+  * `Setter`: `Set()`, implementing `v8::AccessorSetter`.
+  * `Accessors`: as for `Getter` and `Setter` combined.
+
+Note that not all targets support all tags. e.g. there no `FunctionTo<Accessors,...>` because a function signature can only ever match either a getter _or_ a setter. Trying to use invalid conversions will lead to compile-time errors.
