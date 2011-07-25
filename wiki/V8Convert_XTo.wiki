@@ -95,14 +95,17 @@ The arguments after the first depend on the main "target" of the conversion (e.g
 
   * `FunctionTo< TagType, signature, function_ptr_matching_signature [, UnlockV8=a_bool_value]>`
   * `MethodTo< TagType, T, signature, method_ptr_matching_signature [, UnlockV8=a_bool_value]>` (use const-qualified `T` for const methods!)
-  * `FunctorTo< TagType, signature, method_ptr_matching_signature [, UnlockV8=a_bool_value]>`
+  * `FunctorTo< TagType, signature_of_operator() [, UnlockV8=a_bool_value]>`
   * `VarTo< TagType, PropertyType, ptr_to_property>`
+  * `MemberTo< TagType, T, PropertyType, ptr_to_member_property>`
+
+You can read more about the meaning of the `UnlockV8` option on the [V8Convert_FunctionBinding] page. (It has a sane default for _most_ cases, and can normally ignored.)
 
 The expanded templates evaluate to types which contain a specific function, depending on the conversion tag type:
 
-  * `InCa` and `InCaVoid`: `Call()`, implementing `v8::InvocationCallback`.
-  * `Getter`: `Get()`, implementing `v8::AccessorGetter`.
-  * `Setter`: `Set()`, implementing `v8::AccessorSetter`.
+  * `InCa` and `InCaVoid`: `Call()`, implementing the `v8::InvocationCallback` interface.
+  * `Getter`: `Get()`, implementing the `v8::AccessorGetter` interface.
+  * `Setter`: `Set()`, implementing the `v8::AccessorSetter` interface.
   * `Accessors`: as for `Getter` and `Setter` combined.
 
 Note that not all targets support all tags. e.g. there no `FunctionTo<Accessors,...>` because a function signature can only ever match either a getter _or_ a setter. Trying to use invalid conversions will lead to compile-time errors.
