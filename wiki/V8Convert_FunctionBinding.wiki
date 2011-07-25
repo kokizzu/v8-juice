@@ -503,3 +503,34 @@ rc =
    cv::CallForwarder<1>::Call( jsFunction, jobj );
    // If jsFunction modifies jobj, we can now see those changes.
 }}}
+
+= Converting Functors to Callbacks =
+
+We can also bind functors to v8, with the following limitations:
+
+  * They are assumed to be stateless. The library makes no guarantees about the lifetime of any given functor instance.
+  * The must have one or more _const_ `operator()`s.
+
+The can be converted to `v8::InvocationCallback`s like:
+
+{{{
+struct MyFunctor {
+    bool operator()() const;
+    int operator()(int) const;
+    void operator()(int, double) const;
+};
+
+...
+
+v8::InvocationCallback cb;
+
+cb = FunctorToInCa< MyFunctor, bool() >::Call;
+cb = FunctorToInCa< MyFunctor, int(int) >::Call;
+cb = FunctorToInCa< MyFunctor, void(int,double) >::Call;
+// Equivalent:
+cb = FunctorTo< InCa, MyFunctor, bool() >::Call;
+cb = FunctorTo< InCa, MyFunctor, int(int) >::Call;
+cb = FunctorTo< InCa, MyFunctor, void(int,double) >::Call;
+}}}
+
+See [V8Convert_XTo] for more information regarding the `FunctorTo` approach.
