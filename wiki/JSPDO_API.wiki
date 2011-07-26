@@ -131,19 +131,19 @@ Each record in the `columns` array corresponds to a result set column name. Thei
 
 Each record in the `rows` array will be either an Object or Array, depending on the `mode` option.
 
-*Minor Achtung:*: in 'object' mode, the keys (property names) are _not_  guaranteed to be in the same order as in the original query (the ordering depends on internal details of v8's Object class implementation). In practice, they appear to be the same as their insertion order, but it's not _guaranteed_. When converting such Object-based row data to JSON for use by downstream client code, it is very possible that the key/value pairs of any given result object get re-ordered by down-stream JSON libraries. It is common to use string-keyed maps to store JSON object, and those often use alphabetically sorted keys. That is the real reason why the `columns` property is provided in the return results - because their ordering is guaranteed. This is useful when clients _need_ to know the query-side order of the fields (e.g. for printing them in tab format, so that the field data match up with the field headers).
+*Minor Achtung:*: in 'object' mode, the keys (property names) are _not_  guaranteed to be in the same order as in the original query (the ordering depends on internal details of v8's Object class implementation). In practice, they appear to be the same as their insertion order, but it's not _guaranteed_. When converting such Object-based row data to JSON for use by downstream client code, it is very possible that the key/value pairs of any given result object get re-ordered by down-stream JSON libraries. It is common to use string-keyed maps to store JSON object, and those often use lexically sorted keys. That is the real reason why the `columns` property is provided in the return results - because their ordering is always guaranteed. This is useful when clients _need_ to know the query-side order of the fields (e.g. for printing them in tab format, so that the field data match up with the field headers).
 
 Example:
 
 {{{
 var res = db.fetchAll({
     sql:"SELECT a AS a,b AS b,c AS c FROM mytbl",
-    mode:"object", // default == "array"
+    mode:"object" // default == "array"
 });
 print(JSON.stringify(res));
 }}}
 
-==`selectValue()`==
+==`JSPDO.selectValue()`==
 
 `selectValue()` can be used to fetch a single value from a database. It is a thin wrapper around `exec()` and supports the same arguments `exec()` supports, with the following differences:
 
@@ -158,7 +158,7 @@ Examples:
 var count = db.selectValue("SELECT COUNT(*) FROM T");
 var otherCount = db.selectValue({sql:"SELECT A, B, COUNT(*) FROM T", column:2});
 
-db.selectValue({
+hasObject42 = db.selectValue({
     sql: db.prepare("SELECT COUNT(*) FROM T WHERE ID=?"),
     bind:[42]
 });
@@ -271,7 +271,7 @@ The [V8Convert_ByteArray ByteArray class] is available to this API via the name 
 
 This sections provides a brief overview of how to do certain things with the API. Please see the [JSPDO_HowTo] page for more details.
 
-==Step through result sets...===
+==Step through result sets...==
 
 The `Statement.step()` function is used to iterate through result sets. It returns true if the statement object now contains the data for the next row, false at the end of the result set, and thrown on error.
 
