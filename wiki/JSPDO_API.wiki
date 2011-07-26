@@ -39,6 +39,7 @@ Class-level properties (read-only!) (properties of the constructor function):
 
 || `Array driverList` || A list of the names of all available database drivers. ||
 || `Object columnTypes` || Mapping of symbolic names to integer values for use with the `columnType()` member of the statement class. ||
+|| `String readFileContents(name[,bool binary=false])` || Tries to read the entire contents of the given file into memory and return it. If the the 2nd argument is false then it treats the data as a string, else it treats it as a `JSPDO.ByteArray`. Intended for SQL, JSON, and the like. Results are undefined if the 2nd parameter is false and the file contains non-UTF8 data. ||
 
 == `JSPDO.exec()` ==
 
