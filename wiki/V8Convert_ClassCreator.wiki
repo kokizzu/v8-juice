@@ -356,6 +356,8 @@ The reason for that particular signature is largely historical, but that class c
 
 == Creating new Instances of Bound Classes ==
 
+We can of course create new "v8-aware" instances of bound classes. However, they are _owned by v8_ and will be destroyed (or not) whenever v8 wants to (or not) destroy them. Clients can use `ClassCreator::DestroyObject()` to force (via v8) destruction of the native object.
+
 {{{
 typedef ClassCreator<MyType> CC;
 MyType * m = NULL;
