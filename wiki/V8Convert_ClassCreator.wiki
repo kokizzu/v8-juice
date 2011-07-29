@@ -211,7 +211,7 @@ namespace cvv8 {
 
 After that `cvv8::TypeName<MyType>::Value` will hold the string `MyType`. While not required, having this specialization in place enables some error-reporting routines to return a useful type name (as opposed to "T" or some other generic value).
 
-The default specialization is functionally fine but produces an unspecified name - the same value for all unspecialized instantiations of this type.
+This policy "should" have a default value but we cannot give it one unless we sacrifice cross-DLL compatibility on Windows. (Long story!) We are seeking a solution to that problem.
 
 == `JSToNative` ==
 
@@ -304,7 +304,7 @@ template <> class ClassCreator_Factory<MyType>
 
 == `ClassCreator_WeakWrap` ==
 
-`ClassCreator_WeakWrap` is closely related to `ClassCreator_Factory` and gives us a place to hook in to the pre-construction, post-construction, and pre-destruction phases. The majority of cases do not need to specialize this policy. It is normally used only to add plumbing needed by `NativeToJS` conversions.
+`ClassCreator_WeakWrap` is closely related to `ClassCreator_Factory` and gives us a place to hook in to the pre-construction, post-construction, and pre-destruction phases. The majority of cases do not need to specialize this policy. It is normally used only to add plumbing needed by `NativeToJS` conversions, but could also be used for logging purposes or similar things.
 
 == `ClassCreator_SearchPrototypeForThis` ==
 
@@ -351,3 +351,25 @@ typedef void (*SetupBindings)( v8::Handle<v8::Object> const &);
 }}}
 
 The reason for that particular signature is largely historical, but that class can be used as a model for implementing similar classes which set up client-defined functions/functors to initialize the CC bindings. It is sometimes slightly less work, or less problematic vis-a-vis visability of specific templates, to implement such a function and subclass `ClassCreator_SetupBindings<T>` from `ClassCreator_SetupBindings_ClientFunc` to wrap it.
+
+= Tips and Tricks =
+
+== Creating new Instances of Bound Classes ==
+
+{{{
+typedef ClassCreator<MyType> CC;
+MyType * m = NULL;
+v8::Handle<v8::Object> obj = CC::Instance().NewInstance( 0, NULL, m );
+if( ! m ) {
+  ... something went wrong. A JS exception _might_ be propagating...
+}
+
+// Or with arguments:
+
+v8::Handle<v8::Value> args[] = {
+  CastToJS(7), CastToJS(24.42), ...
+};
+
+v8::Handle<v8::Object> obj =
+  CC::Instance().NewInstance( sizeof(args)/sizeof(args[0]), args, m );
+}}}
