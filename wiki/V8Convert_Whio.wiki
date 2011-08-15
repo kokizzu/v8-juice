@@ -97,19 +97,24 @@ decompresses it to stdout.
 
 {{{
 function testGZip() {
-    var buf = new whio.IODev(1024*8) /* in-memory device */;
+    // Compress a file to an in-memory buffer:
+    var buf = new whio.MemoryIODev(1024*4) /* in-memory device */;
     var src = new whio.InStream("/etc/hosts");
     src.gzipTo( buf );
     src.close();
+    print("Compressed size = "+buf.size());
 
-    buf.seek(0,whio.SEEK_SET);
-    src = new whio.InStream(buf, true /*==take ownership of buf's handle*/);
+    // Decompress the buffer to an OutStream:
+    buf.seek(0, whio.SEEK_SET); // move to the start of the data
+    src = new whio.InStream(buf, true /*==take ownership of buf's underlying handle*/);
     dest = new whio.OutStream("/dev/stdout",false);
     src.gunzipTo(dest);
     src.close() /* also frees the memory buffer */;
     dest.close();
 }
 }}}
+
+The API does not support incremental de/compression, only whole-stream de/compression. The input stream is de/compressed in chunks, not fully buffered unless we explicitly output it to a buffer as in the example above.
 
 == !OutStream ==
 
@@ -131,8 +136,6 @@ It provides the following base functionality:
 || *Constructor* || *Description* ||
 || `IODev(string name,string mode)` || Opens a file using an `fopen()`-style mode string. ||
 || `IODev(string name,int imode[,int unixPermisions])` || Opens a file using a `whio.iomode`-style mode flags and optional explicit unix-style permissions. ||
-|| `IODev(uint size[, float expFactor=possibly 1.5])` || Creates an in-memory device with the given initial capacity and the given expand-on-grow factor. If `expFactor` is (`<1.0`) then the buffer will not be able to dynamically grow beyond its initial size, otherwise it will grow by (times `expFactor`) each time it expands. If `expFactor` is 1.0 then expansion always tries allocate only as much as needed (==more allocs but a tighter fit). ||
-|| `IODev(IODev parent, uint low, uint high)` || Creates a "subdevice" which only has access to the given byte range in the parent device. The parent _must_ outlive this object. ||
 || *Member* || *Description* ||
 || `void clearError()` || Clears any error state. ||
 || `void close()` || Closes the stream and frees all native resources. ||
@@ -148,13 +151,47 @@ It provides the following base functionality:
 || `int truncate()` || Truncates the device. Subdevices do not support truncation. ||
 || `int write(String|ByteArray [, int len=arg1.length])` || Writes out a string or `ByteArray`. Returns the number of bytes written (which may differ from the _character_ length of a String parameter). ||
 
+Note that while many of those functions technically return integer status codes, they throw on error, meaning that the result codes are basically irrelevant. This applies to `flush()`, `truncate()`, and several others.
+
+Reminder to self: if we want to be able to wrap the subclass-specific extension functions properly (e.g. `whio::MemoryIODev::bufferSize()` or `whio::Subdevice::rebound()`) we need to "fully wrap" those classes as new `IODev` subclasses, as opposed to hiding them behind the `IODev` constructor. It's not hard, it just hasn't been implemented yet.
+
 == General Notes ==
 
   * Because `In/OutStream` can proxy `IODev`, you can use the stream APIs to read/write from/to `IODev` instances. Just be careful with the cursor positioning when reading/writing from _both_ the device and stream APIs on the same storage.
 
+== In-memory Devices ==
+
+`whio.MemoryIODev` is a `IODev` subclass with the following additional members:
+
+|| *Constructor* || *Description* ||
+|| `MemoryIODev(uint size[, float expFactor=possibly 1.5])` || Creates an in-memory device with the given initial capacity and the given expand-on-grow factor. See below. ||
+|| *Member* || *Description* ||
+|| `int bufferSize()` || Returns the allocated size of the internal memory buffer. ||
+
+Expansion: If the `expFactor` argument to the constructor is (`<1.0`) then the buffer will not be able to dynamically grow beyond its initial size, otherwise it will grow by (times `expFactor`) each time it expands. If `expFactor` is exactly 1.0 then expansion always tries allocate only as much as needed (==more (re)allocs, and probably overall slower, but a tighter fit).
+
+Note that while a non-expanding buffer will fail if it is asked to write past its boundaries, the `truncate()` operation can be used to resize even a non-(dynamically-)expanding memory buffer. When shrinking, the internal buffer is not resized unless it is reduced by some value related to the expansion factor. For expandable buffers, truncating to a size of 0 explicitly frees the internal buffer, but it can be reallocated via future `write()` or `truncate()` operations. _Non-expandable_ buffers do not free their memory when shrinking because their rules would later prohibit them from expanding back to (up to) their original size.
+
+== Subdevices ==
+
+`whio.Subdevice` is a `IODev` subclass with the following additional members:
+
+|| *Constructor* || *Description* ||
+|| `Subdevice(IODev parent, uint low, uint high)` || Creates a "subdevice" which only has access to the given byte range in the parent device. The parent _must_ outlive this object. ||
+|| *Member* || *Description* ||
+|| `int rebound(uint low,uint high)` || Re-sets the boundaries of the subdevice to a new range within its current device. ||
+|| `int rebound(IODev dev, uint low,uint high)` || Re-parents the subdevice to a new parent and re-sets the boundaries to the given range. ||
+
+Subdevices are used for partitioning off an area of a parent device (which _must_ outlive the subdevice). A subdevice can only read/write from/to the given byte range. It has its own coordinate space, however. e.g. a subdevice wrapping the range 100-200 treats byte 0 as the 100th byte of the parent, byte 1 and the 101st, etc.
+
+Minor achtung: Subdevices do not support the `truncate()` operation (it always fails).
+
+
 = EPFS: Embedded Pseudo-!FileSystem =
 
-This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_epfs whio_epfs API]. Please see that page for _lots_ of information about it.
+This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_epfs whio_epfs API]. Please see that page for _lots_ of information about it. This API represents, to the best of my knowledge, the world's _second_ embedded filesystem API for !JavaScript. The [PluginWhio first-ever implementation] is an immediate genetic forefather of this code.
+
+`whio.EPFS` has the following public API:
 
 || *Constructor* || *Description* ||
 || `EPFS(string fileName, bool writeMode)` || Opens an existing EFS file. ||
@@ -169,13 +206,22 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 || `bool isClosed()` || Returns true if `close()` has been called. ||
 || `bool isRW()` || Returns true if the EFS is operating in read/write mode. ||
 || `int inodeId(string fname)` || Returns the inode ID for the given name _if_ a namer is installed. ||
-|| `label(string)` || Sets the EPFS label. The property `label.maxLength` Specifies the maximum legal length (in bytes) of a label string. ||
+|| `label(string)` || Sets the EPFS label. The property `label.maxLength` Specifies the maximum legal length (in bytes) of a label string (this is a compile-time constant and cannot be changed without invaliding EFS files created using other values). ||
 || `string label()` || Gets the EPFS label. ||
 || `void name(int inodeID, string name)` || Sets the given inode ID's name. Use a `null` name to un-set it. A given namer implementation may impose certain restrictions on name patterns and/or lengths. ||
 || `string name(int inodeID)` || Returns the name for the given inode. ||
 || `int size()` || Returns the on-storage size of the EFS container. ||
 || `void unlink(int|string)` || "Unlinks" (removes) the given inode. Only works if the inode is _not_ currently opened. ||
-|| `EPFS.PseudoFile open(int|string, int iomode)` || Opens the given inode. The second parameter must be `whio.iomode` flags. ||
+|| `EPFS.PseudoFile open(int|string, int iomode)` || Opens the given inode. The second parameter must be `whio.iomode` flags. To create a new file, pass 0 (or an unused name) as the first argument and `whio.iomode.RWC` as the second. ||
+
+Opening an EFS can fail for several reasons:
+
+  * The storage being read was not formatted as an EFS, or was formatted with an incompatible version.
+  * Read/write access was required by the storage is read-only.
+  * Out of drive space or memory.
+  * The given combination of fs options is invalid (see `whio_epfs_mkfs()` and friends for the legal ranges). e.g. trying to create an EFS with an inode count of 0 or a block size of 10 bytes will fail. Likewise, really large values (a block size of `2^30`) might fail in various ways.
+  * Ad nauseum.
+
 
 == Achtung ==
 
@@ -190,6 +236,7 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 Creating a new EFS container is generically known as `mkfs`ing (or "formatting") it. Two ctors are provided which format storage for use with EFS:
 
 {{{
+// Core properties of the EFS:
 var fsOpt = {
   inodeCount: 512, // max number of entries in the EFS
   blockSize:1024 * 16, // size (bytes) of each p-file data block
@@ -210,19 +257,25 @@ var fs = new whio.EPFS(dev,true, fsOpt);
 // MUST NOT be close()d until after fs is close()d.
 }}}
 
+If whio is built with file locking support, the formatting will fail without storage-side side-effects if the EFS is locked by another process. It is semantically illegal to open the same EPFS multiple times from the same process, and doing so will lead to corruption (if multiple writers are involved) or confusing/mis-synced inode state (if there is one writer and N readers).
+
 == Adding Inode Name Support ==
 
-If you want to be able to assign names to the files in your EFS you must install a "namer" _immediately_ after formatting it (or soon thereafter). ("Namer" is an abstract interface which EPFS uses to delegate the naming of inodes to 3rd-party code).
+By default an EPFS does not have support for naming inodes (they are referenced only by their IDs). If you want to be able to assign names to the files in your EFS you must install a "namer" (ideally immediately after formatting it). "Namer" is an abstract interface which EPFS uses to delegate the naming of inodes to 3rd-party code. The namer implementation is separated from the core library because different inode-to-name mapping mechanisms have wildly varying performance and memory tradeoffs, and this allows us to experiment with different models without touching the core library.
 
 {{{
 fs.installNamer("ht"); // "ht" is the only namer implementation so far.
 }}}
 
+When opening the EPFS later on, its namer (if any) will be automatically loaded - it only needs to be installed one time, ideally right after formatting the storage.
+
 There is currently no way to remove or replace a namer once it is installed. Note that a given namer implementation might not support all optional operations provided by that interface. Namers _may_ provide both inode-id-to-name and name-to-inode-id mappings, but are not required to perform both (the "ht" namer does).
+
+Each namer may impose limitations on the length and name patterns of inode names. The "ht" namer imposes no length limits but reserves names matching `<([NUMBER])>` for its internal use.
 
 == Opening an Existing EFS ==
 
-This is identical to creating an EFS, but has one fewer parameter for the ctor:
+This looks a lot like _creating_ an EFS, but has one fewer parameter for the constructor.
 
 {{{
 var fs = new whio.EPFS("/my/file.epfs",true);
@@ -233,6 +286,8 @@ var fs = new whio.EPFS("/my/file.epfs",true);
 var fs = new whio.EPFS(myDevice,true);
 // See the 3-arg ctor for the meaning of the 2nd parameter.
 }}}
+
+Opening will fail (with an exception) if the given storage was not previously formatted with a compatible version of `whio_epfs`.
 
 == `EPFS.foreachInode()` ==
 
@@ -277,24 +332,26 @@ Please see the native `whio_epfs_foreach_inode()` for more information.
 
 *ACHTUNG:* is it critical that all p-files opened from a given EFS be `close()`d _BEFORE_ their containing EFS is `close()`d, or Undefined Behaviour ensues.
 
-They are created only via `EPFS.open()`. Pseudofiles subclass `IODev` and add the following methods.
+They are created only via `EPFS.open()`. `Pseudofile` is a full-fledged `IODev` subclass and adds the following methods:
 
 || *Member* || *Description* ||
-|| `int touch([Date|uint32=currentTime])` || Sets the device's timestamp to the given Unix Epoch time. Returns the new (touched) time. ||
-|| `uint32 mtime` || Get or set the modification time as a Unix Epoch timestamp. Note that the JS `Date` class uses (Epoch + milliseconds) time. ||
+|| `int touch([Date|uint32=currentTime])` || Sets the device's modification timestamp to the given Unix Epoch time. Returns the new (touched) time. ||
+|| `uint32 mtime` || Get or set the modification time as a `uint32` Unix Epoch timestamp. Note that the JS `Date` class uses (Epoch + milliseconds) time. ||
 || `uint32 clientFlags` || Gets or sets the "client flags" (32-bit integer) associated with the p-file. ||
 || `uint inodeId` || Gets the EPFS inode ID of the p-file. ||
 || `string name` || Gets or sets the p-file's name. Setting only works if a namer has been installed on the EFS. ||
 
 === Important Notes ===
 
+  * Is it _critical_ that all p-files opened from a given EFS be `close()`d _BEFORE_ their containing EFS is `close()`d, or Undefined Behaviour ensues.
   * `EPFS.unlink()` will fail for any inode which is currently opened.
   * It is legal to have a given inode (p-file) opened multiple times, but the client app must carefully synchronize such use if we wants to avoid mixed writes and such.
   * _NEVER_ use a p-file handle from any thread except the one which created it. Violating this _will_ eventually lead to EFS corruption.
+  * Do not use p-files from `setTimeout()` (or similar), as this could potentially cause "interweaving" of certain non-atomic write operations (the same problem as with multi-threading).
 
 === Creating and Opening Pseudofiles ===
 
-To "create" a new p-file we ask the EFS to open inode #0 (which is the "not an inode" inode ID):
+To "create" a new p-file from the next available (unused) inode, we ask the EFS to open inode #0 (which is the "not an inode" inode ID):
 
 {{{
 var p = fs.open( 0, whio.iomode.RWC );
@@ -302,12 +359,23 @@ var p = fs.open( 0, whio.iomode.RWC );
 
 That allocates the next-available inode.
 
-To open an "existing" (used) inode:
+To open a specific inode ID we replace the number 0 with the inode ID we want to use:
 
 {{{
 var inodeId = 7;
-var p = fs.open( 7, whio.iomode.READ );
+var p = fs.open( 7, whio.iomode.RWC );
 }}}
+
+Achtung: if the EPFS has a namer installed, it is likely (we'll call it 100%) that the namer has used one of the inodes for itself. There is no generic way to know which inode (if any) a namer reserves for its own use. Be careful not to delete/modify the namer's inode.
+
+To open an "existing" (used) inode, but only if it is already in use:
+
+{{{
+var inodeId = 7;
+var p = fs.open( 7, whio.iomode.RW );
+}}}
+
+That will fail if inode 7 is not already "used" because the 2nd argument to `open()` is missing the `whio.iomode.FLAG_CREATE` flag.
 
 To open by name (only works if a namer is installed in the EFS):
 
@@ -318,3 +386,32 @@ var p = fs.open("the_name", ... );
 You can use various combinations of the `whio.iomode` flags to allow/disallow the creation of new p-files, to control read-only vs. read-write, or to truncate them upon opening.
 
 Note that only p-files can only be opened in read-write mode if the EFS itself is opened in read-write mode.
+
+=== Generic P-file Tips ===
+
+  * ALWAYS close ALL p-files _BEFORE_ the underlying EPFS is closed. If you do not, you risk Undefined Behaviour.
+  * P-files are full-fledged i/o devices, and can be used with, e.g. the `InStream` and `OutStream` wrappers.
+  * A given inode can be opened multiple times (up to 255 times). Each opened copy has its own cursor and read/write mode, but shares the same underlying inode metadata.
+  * When writing large amounts of data to a p-file, if you know the size in advance, use `truncate()` to re-size the p-file. Errors during writing are most often caused by running out of space in the EPFS, so truncating in advance will get the majority of the error conditions out of the way up front, instead of hitting them in the middle of writing. There is no API for determining how much space the EPFS itself can still hold (and calculating that would be computationally very expensive).
+  * To clear a p-file's name, set it to `null`.
+
+== General EPFS Tips ==
+
+  * ALWAYS close ALL p-files _BEFORE_ the underlying EPFS is closed. If you do not, you risk Undefined Behaviour.
+  * EPFS has no concept of directories, but instead supports a single flat namespace. Depending on the namer implementation, names may or may not have restrictions on how they can be named. The "ht" namer allows essentially any names, including those which contain what appear to be path parts, e.g. `/foo/bar.txt`.
+  * The inode count of an EFS is fixed when the EFS container storage is formatted, and cannot be changed later.
+  * If an EPFS is opened in read-only mode, p-files can only be opened in read-only mode.
+  * EPFS does not require that inodes have names. An application is free to pick its own inode IDs and use those for opening inodes (provided they are within range of the EFS' inode count).
+  * Opening p-files by their inode ID is significantly faster than opening them by name.
+  * If using a namer, try to avoid using very small data block sizes (e.g. 4kb), to avoid fragmenting the namer's storage (which hurts performance on name-get/set operations).
+  * If you know what your data looks like in advance, you can size the inode count and data block size for a optimum fit (or nearly so). As a rule, having larger data blocks means using less memory at run-time, as we have to manager fewer blocks per inode. However, having larger data blocks means more wasted storage for small p-files.
+
+== Sizes and Ranges ==
+
+EPFS is compiled, by default, with 16-bit inode IDs (`whio_epfs_id_t`) and 32-bit storage ranges (`whio_size_t`). Since v8 does not directly support 64-bit values, it is not recommended to compile whio for 64-bit i/o (with `WHIO_SIZE_T_BITS=64`) in the context of this binding API. 16-bit inode IDs "limit" the EFS to `2^16` inodes, but data blocks have 32-bit ranges, so this limit is not expected to ever be a problem.
+
+While the algorithms used by EPFS should all scale relatively well to high inode/block counts (in the thousands), the library is not really intended to be used for holding more than a couple hundred files. i.e. complaints that it slows down or fails in weird ways when adding 30k files to it won't be taken seriously (but i would nonetheless like to hear about them).
+
+Library versions compiled with different "bitness" values cannot read each others' EFS containers, and thus it is not recommended that the default values be changed except for specialized embedding cases (as opposed to generic use). While libwhio itself can be compiled for 8 or even 16-bit modes, EPFS cannot work in 8-bit mode and would be severely constrained in 16-bit mode (with a maximum storage size of 64kb).
+
+Memory usage: the underlying C bits, not counting the few bytes for the C++ wrapper, generally need _less than 1kb_ of dynamically-allocated memory for typical use cases. i.e. an EPFS container only needs about 2-3 times the memory of an `fopen()`ed `FILE` handle (which allocates over 400 bytes on my machine). Each _opened_ inode needs additional memory to manage its mutable state and its block chain. When an inode is opened multiple times, most of that memory is shared amongst all copies. Only opened inodes with _really long_ block chains use any significant amount of memory (something like 8 bytes per data block).
