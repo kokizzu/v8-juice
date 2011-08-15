@@ -425,12 +425,22 @@ Note that only p-files can only be opened in read-write mode if the EFS itself i
   * If using a namer, try to avoid using very small data block sizes (e.g. 4kb), to avoid fragmenting the namer's storage (which hurts performance on name-get/set operations).
   * If you know what your data looks like in advance, you can size the inode count and data block size for a optimum fit (or nearly so). As a rule, having larger data blocks means using less memory at run-time, as we have to manager fewer blocks per inode. However, having larger data blocks means more wasted storage for small p-files.
 
-== Sizes and Ranges ==
+= Sizes and Ranges =
 
-EPFS is compiled, by default, with 16-bit inode IDs (`whio_epfs_id_t`) and 32-bit storage ranges (`whio_size_t`). Since v8 does not directly support 64-bit values, it is not recommended to compile whio for 64-bit i/o (with `WHIO_SIZE_T_BITS=64`) in the context of this binding API. 16-bit inode IDs "limit" the EFS to `2^16` inodes, but data blocks have 32-bit ranges, so this limit is not expected to ever be a problem.
+== Core library ==
 
-While the algorithms used by EPFS should all scale relatively well to high inode/block counts (in the thousands), the library is not really intended to be used for holding more than a couple hundred files. i.e. complaints that it slows down or fails in weird ways when adding 30k files to it won't be taken seriously (but i would nonetheless like to hear about them).
+The core library is compiled with 32-bit i/o ranges by default (C type=`whio_size_t`). Since v8 does not directly support 64-bit values, it is not recommended to compile whio for 64-bit i/o (with `WHIO_SIZE_T_BITS=64`) in the context of this binding API.
 
-Library versions compiled with different "bitness" values cannot read each others' EFS containers, and thus it is not recommended that the default values be changed except for specialized embedding cases (as opposed to generic use). While libwhio itself can be compiled for 8 or even 16-bit modes, EPFS cannot work in 8-bit mode and would be severely constrained in 16-bit mode (with a maximum storage size of 64kb).
+Memory usage: minimal. All of the stream/device implementations are thin wrappers around lower-level functionality (e.g. `FILE` handles or raw memory operations). The only one which needs (potentially) significant memory is the `MemoryIODev` class (in-memory devices, which can theoretically grow as large as your system's allocator will allow, to within the size limit of `whio_size_t`).
 
-Memory usage: the underlying C bits, not counting the few bytes for the C++ wrapper, generally need _less than 1kb_ of dynamically-allocated memory for typical use cases. i.e. an EPFS container only needs about 2-3 times the memory of an `fopen()`ed `FILE` handle (which allocates over 400 bytes on my machine). Each _opened_ inode needs additional memory to manage its mutable state and its block chain. When an inode is opened multiple times, most of that memory is shared amongst all copies. Only opened inodes with _really long_ block chains use any significant amount of memory (something like 8 bytes per data block).
+== EPFS ==
+
+EPFS is compiled, by default, with 16-bit inode and data block IDs (C type=`whio_epfs_id_t`). 16-bit inode/block IDs "limit" the EFS to `2^16` (64k) inodes/blocks, but data blocks have 32-bit size ranges, so this limit is not expected to ever be a problem.
+
+While the algorithms used by EPFS should all scale relatively well to high inode/block counts (into the thousands), the library is not really intended to be used for holding more than a couple hundred files. i.e. complaints that it slows down or fails in weird ways when adding 30k files to it won't be taken seriously (but i would nonetheless like to hear about them).
+
+Library versions compiled with different "bitness" values cannot read each others' EFS containers, and thus it is not recommended that the default values be changed except for specialized embedding cases (as opposed to generic use). While libwhio itself can be compiled for 8 or even 16-bit modes, EPFS cannot work in 8-bit mode and would be severely constrained in 16-bit mode (with a maximum storage size of 64kb!).
+
+Memory usage:
+
+The underlying C bits, not counting the few bytes for the C++ wrapper, generally need _less than 1kb_ of dynamically-allocated memory for typical use cases (only a couple of p-files opened at a time). i.e. an EPFS container only needs about 2-3 times the memory of an `fopen()`ed `FILE` handle (which allocates over 400 bytes on my machine). Each _opened_ inode needs additional memory to manage its mutable state and its block chain. When an inode is opened multiple times, most of that memory is shared amongst all copies. Only opened inodes with _really long_ block chains use any significant amount of memory (something like an additional 8 bytes per data block).
