@@ -1,3 +1,5 @@
+#labels Phase-UserDocs,Topic-JS-API
+
 #summary V8Convert libwhio bindings
 #labels Phase-UserDocs,Topic-JS-API
 
@@ -74,7 +76,7 @@ It provides the following base functionality:
 || *Member* || *Description* ||
 || `void close()` || Closes the stream and frees all native resources. ||
 || `bool isClosed()` || Returns true if `close()` has been called. ||
-|| `int iomode()` || Returns a mask of `whio.iomodes` values. ||
+|| `int iomode()` || Returns a mask of `whio.iomode` values. ||
 || `bool isGood()` || Returns true if the stream is "good" (has no error state). Note that most routines throw on error, so this need not be called right after opening. ||
 
 == !InStream ==
@@ -86,7 +88,30 @@ This general-purpose sequential-input class subclasses `StreamBase` and provides
 || `InStream(IODev dev, bool takeOwnership)` || Wraps the given `IODev`, which must be input-capable. If `takeOwnership` is true then `dev`'s handle is given to the new object and `dev` is destroyed immediately (it is just a thin wrapper around the handle). If it is false then `dev` _must_ outlive the new stream. ||
 || *Member* || *Description* ||
 || `mixed read(int len, bool binary)` || Reads `len` bytes and returns the results as a `ByteArray` if `binary` is true, else as a String. Results are undefined if `binary` is false and the read-in data is _not_ UTF8. ||
+|| `void gzipTo(OutStream|IODev dest [, int level=3])` || If the library is built with zlib support then this compresses all contents of this stream to the `dest` stream. Throws on error. ||
+|| `void gunzipTo(OutStream|IODev dest)` || If the library is built with zlib support then this decompresses all contents of this stream to the `dest` stream. Throws on error. ||
+|| `void copyTo(OutStream|IODev dest)` || Copies the entire contents of this stream to the given destination. ||
 
+=== Example: De/Compressing ===
+
+Here's a simple example which compresses a file into a memory buffer and then
+decompresses it to stdout.
+
+{{{
+function testGZip() {
+    var buf = new whio.IODev(1024*8) /* in-memory device */;
+    var src = new whio.InStream("/etc/hosts");
+    src.gzipTo( buf );
+    src.close();
+
+    buf.seek(0,whio.SEEK_SET);
+    src = new whio.InStream(buf, true /*==take ownership of buf's handle*/);
+    dest = new whio.OutStream("/dev/stdout",false);
+    src.gunzipTo(dest);
+    src.close() /* also frees the memory buffer */;
+    dest.close();
+}
+}}}
 
 == !OutStream ==
 
@@ -107,8 +132,8 @@ It provides the following base functionality:
 
 || *Constructor* || *Description* ||
 || `IODev(string name,string mode)` || Opens a file using an `fopen()`-style mode string. ||
-|| `IODev(string name,int imode[,int unixPermisions])` || Opens a file using a `whio.iomodes`-style mode flags and optional explicit unix-style permissions. ||
-|| `IODev(uint size[, float expFactor])` || Creates an in-memory device with the given initial size and the given expand-on-grow factor (must be (`>1.0`)). ||
+|| `IODev(string name,int imode[,int unixPermisions])` || Opens a file using a `whio.iomode`-style mode flags and optional explicit unix-style permissions. ||
+|| `IODev(uint size[, float expFactor=possibly 1.5])` || Creates an in-memory device with the given initial capacity and the given expand-on-grow factor. If `expFactor` is (`<1.0`) then the buffer will not be able to dynamically grow beyond its initial size, otherwise it will grow by (times `expFactor`) each time it expands. If `expFactor` is 1.0 then expansion always tries allocate only as much as needed (==more allocs but a tighter fit). ||
 || `IODev(IODev parent, uint low, uint high)` || Creates a "subdevice" which only has access to the given byte range in the parent device. The parent _must_ outlive this object. ||
 || *Member* || *Description* ||
 || `void clearError()` || Clears any error state. ||
@@ -116,7 +141,7 @@ It provides the following base functionality:
 || `bool eof()` || Returns true if the device is at EOF. ||
 || `int error()` || Returns device-specific error code, or 0 if everything is okay. ||
 || `int flush()` || Flushes the device. Only useful when writing. ||
-|| `int iomode()` || Returns a mask of `whio.iomodes` values. ||
+|| `int iomode()` || Returns a mask of `whio.iomode` values. ||
 || `bool isClosed()` || Returns true if `close()` has been called. ||
 || `int read(int len, bool binary)` || Reads `len` bytes and returns it as a `ByteArray` (if `binary`==`true`) or a String. ||
 || `int seek(int pos, int whence)` || Analog to `fseek(3)`. The last argument must be one of `whio.SEEK_SET`, `whio.SEEK_CUR`, or `whio.SEEK_END`. Returns the new position. ||
@@ -152,7 +177,7 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 || `string name(int inodeID)` || Returns the name for the given inode. ||
 || `int size()` || Returns the on-storage size of the EFS container. ||
 || `void unlink(int|string)` || "Unlinks" (removes) the given inode. Only works if the inode is _not_ currently opened. ||
-|| `EPFS.PseudoFile open(int|string, int iomode)` || Opens the given inode. The second parameter must be `whio.iomodes` flags. ||
+|| `EPFS.PseudoFile open(int|string, int iomode)` || Opens the given inode. The second parameter must be `whio.iomode` flags. ||
 
 == Achtung ==
 
@@ -178,7 +203,7 @@ var fs = new whio.EPFS("/my/file.epfs",true, fsOpt);
 // is allowed. It will fail if the value is false and the file already exists.
 
 // Format an arbitrary IODev:
-var dev = new IODev("/my/file.epfs", whio.iomodes.RWC | whio.iomodes.TRUNCATE);
+var dev = new IODev("/my/file.epfs", whio.iomode.RWC | whio.iomode.TRUNCATE);
 var fs = new whio.EPFS(dev,true, fsOpt);
 // If the second parameter is true then the new EPFS takes over the underlying
 // whio_dev handle and destroys the dev object (which is just a thin wrapper
@@ -281,7 +306,7 @@ They are created only via `EPFS.open()`. Pseudofiles subclass `IODev` and add th
 To "create" a new p-file we ask the EFS to open inode #0 (which is the "not an inode" inode ID):
 
 {{{
-var p = fs.open( 0, whio.iomodes.RWC );
+var p = fs.open( 0, whio.iomode.RWC );
 }}}
 
 That allocates the next-available inode.
@@ -290,7 +315,7 @@ To open an "existing" (used) inode:
 
 {{{
 var inodeId = 7;
-var p = fs.open( 7, whio.iomodes.READ );
+var p = fs.open( 7, whio.iomode.READ );
 }}}
 
 To open by name (only works if a namer is installed in the EFS):
@@ -299,6 +324,6 @@ To open by name (only works if a namer is installed in the EFS):
 var p = fs.open("the_name", ... );
 }}}
 
-You can use various combinations of the `whio.iomodes` flags to allow/disallow the creation of new p-files, to control read-only vs. read-write, or to truncate them upon opening.
+You can use various combinations of the `whio.iomode` flags to allow/disallow the creation of new p-files, to control read-only vs. read-write, or to truncate them upon opening.
 
 Note that only p-files can only be opened in read-write mode if the EFS itself is opened in read-write mode.
