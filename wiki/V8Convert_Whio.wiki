@@ -75,7 +75,7 @@ It provides the following base functionality:
 || `void close()` || Closes the stream and frees all native resources. ||
 || `bool isClosed()` || Returns true if `close()` has been called. ||
 || `int iomode()` || Returns a mask of `whio.iomode` values. ||
-|| `bool isGood()` || Returns true if the stream is "good" (has no error state). Note that most routines throw on error, so this need not be called right after opening. ||
+|| `bool isGood()` || Returns true if the stream is "good" (has no error state). Note that most routines throw on error, so this is rarely useful. ||
 
 == !InStream ==
 
@@ -85,7 +85,7 @@ This general-purpose sequential-input class subclasses `StreamBase` and provides
 || `InStream(string fileName)` || Opens the given file for read-only access. ||
 || `InStream(IODev dev, bool takeOwnership)` || Wraps the given `IODev`, which must be input-capable. If `takeOwnership` is true then `dev`'s handle is given to the new object and `dev` is destroyed immediately (it is just a thin wrapper around the handle). If it is false then `dev` _must_ outlive the new stream. ||
 || *Member* || *Description* ||
-|| `mixed read(int len, bool binary)` || Reads `len` bytes and returns the results as a `ByteArray` if `binary` is true, else as a String. Results are undefined if `binary` is false and the read-in data is _not_ UTF8. ||
+|| `mixed read(int len, bool binary)` || Reads `len` bytes and returns the results as a `ByteArray` if `binary` is true, else as a String. Results are undefined if `binary` is false and the read-in data is _not_ UTF8. As a special case, it returns `null` for 0-byte reads. ||
 || `void gzipTo(OutStream|IODev dest [, int level=3])` || If the library is built with zlib support then this compresses all contents of this stream to the `dest` stream. Throws on error. ||
 || `void gunzipTo(OutStream|IODev dest)` || If the library is built with zlib support then this decompresses all contents of this stream to the `dest` stream. Throws on error. ||
 || `void copyTo(OutStream|IODev dest)` || Copies the entire contents of this stream to the given destination. ||
@@ -141,7 +141,7 @@ It provides the following base functionality:
 || `int flush()` || Flushes the device. Only useful when writing. ||
 || `int iomode()` || Returns a mask of `whio.iomode` values. ||
 || `bool isClosed()` || Returns true if `close()` has been called. ||
-|| `int read(int len, bool binary)` || Reads `len` bytes and returns it as a `ByteArray` (if `binary`==`true`) or a String. ||
+|| `int read(int len, bool binary)` || Reads `len` bytes and returns it as a `ByteArray` (if `binary`==`true`) or a String.  As a special case, it returns `null` for 0-byte reads. ||
 || `int seek(int pos, int whence)` || Analog to `fseek(3)`. The last argument must be one of `whio.SEEK_SET`, `whio.SEEK_CUR`, or `whio.SEEK_END`. Returns the new position. ||
 || `int size()` || Returns the current on-storage size of the device. May be smaller than the internal buffer allocated for in-memory devices. ||
 || `int tell()` || Reports the current position of the cursor within the device. ||
@@ -169,7 +169,7 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 || `bool isClosed()` || Returns true if `close()` has been called. ||
 || `bool isRW()` || Returns true if the EFS is operating in read/write mode. ||
 || `int inodeId(string fname)` || Returns the inode ID for the given name _if_ a namer is installed. ||
-|| `label(string)` || Sets the EPFS label. ||
+|| `label(string)` || Sets the EPFS label. The property `label.maxLength` Specifies the maximum legal length (in bytes) of a label string. ||
 || `string label()` || Gets the EPFS label. ||
 || `void name(int inodeID, string name)` || Sets the given inode ID's name. Use a `null` name to un-set it. A given namer implementation may impose certain restrictions on name patterns and/or lengths. ||
 || `string name(int inodeID)` || Returns the name for the given inode. ||
