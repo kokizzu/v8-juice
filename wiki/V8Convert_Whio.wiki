@@ -73,7 +73,6 @@ It provides the following base functionality:
 
 || *Member* || *Description* ||
 || `void close()` || Closes the stream and frees all native resources. ||
-|| `bool isClosed()` || Returns true if `close()` has been called. ||
 || `int iomode()` || Returns a mask of `whio.iomode` values. ||
 || `bool isGood()` || Returns true if the stream is "good" (has no error state). Note that most routines throw on error, so this is rarely useful. ||
 
@@ -125,7 +124,29 @@ This general-purpose sequential-output class subclasses `StreamBase` and provide
 || `OutStream(IODev dev, bool takeOwnership)` || Wraps the given `IODev`, which must be output-capable. If `takeOwnership` is true then `dev`'s handle is given to the new object and `dev` is destroyed immediately (it is just a thin wrapper around the handle). If it is false then `dev` _must_ outlive the new stream. ||
 || *Member* || *Description* ||
 || `int write(string|ByteArray [,int len=arg1.length])` || Writes the given string or `ByteArray`. Returns the number of bytes written (which may differ from the length, in characters, of an input string). ||
-|| `int flush()` || Flushes any pending output. ||
+|| `void flush()` || Flushes any pending output. ||
+
+== Notes on Ownership and Handle Sharing ==
+
+Each high-level i/o object is a thin wrapper around a C-level object which does (or proxies) the real work. Many of the stream/device constructors have a boolean parameter which specifies whether or not they "take ownership" of the passed-in stream/device. In such cases, "taking ownership" means the following:
+
+  * On success (and _only_ on success), the C-level handle is removed from the source stream/device. On error ownership is never transferred unless explicitly documented otherwise (such cases are rare, and i can't think of an example in this code).
+  * The stream/device being transferred is then freed _immediately_ using the JS engine, which will end up calling its native destructor. By the time that happens, the destructing wrapper has been disassociated from the C-level handle, so the only resources being freed are the few bytes of the wrapper object.
+
+This might be clearer with a demonstration:
+
+{{{
+var dev = new whio.IODev("/dev/null",whio.iomode.WRITE);
+var str = new whio.OutStream(dev,true/* <--- HERE*/);
+// At THIS point dev is NO LONGER VALID. Its underlying
+// C-level handle has been transferred to the str object
+// and [the equivalent of] dev.close() has been called.
+}}}
+
+The reason for this slightly non-intuitive behaviour (the immediate destruction of the "source" device) is because it is the only safe option we have. If we allowed, e.g., the above `dev` object to keep ahold of its handle then the lifetime of the underlying handle would be impossible to handle properly (`dev` might be closed before `str` is finished using it, and `str` has no way of knowing that and will step on an invalid (or re-allocated!) pointer). If, on the other hand, we simply transferred the C-level handle and _did not_ do (the equivalent of) `dev.close()` then the client would be forced to call `dev.close()` after transferring ownership (failing to do so would introduce a leak until GC kicked in), which would be even more non-intuitive than the current approach.
+
+So, the important thing to remember here is that when a constructor (or function) "takes ownership" of a stream or `IODev` object, the object being transferred is actually destroyed "immediately" (as part of the operation which takes ownership). Yes, this is slightly non-intuitive, but it keeps ownership of the pointers in the right place.
+
 
 = Random-Access Devices =
 
@@ -141,14 +162,13 @@ It provides the following base functionality:
 || `void close()` || Closes the stream and frees all native resources. ||
 || `bool eof()` || Returns true if the device is at EOF. ||
 || `int error()` || Returns device-specific error code, or 0 if everything is okay. ||
-|| `int flush()` || Flushes the device. Only useful when writing. ||
+|| `void flush()` || Flushes the device. Only useful when writing. ||
 || `int iomode()` || Returns a mask of `whio.iomode` values. ||
-|| `bool isClosed()` || Returns true if `close()` has been called. ||
-|| `int read(int len, bool binary)` || Reads `len` bytes and returns it as a `ByteArray` (if `binary`==`true`) or a String.  As a special case, it returns `null` for 0-byte reads. ||
+|| `mixed read(int len, bool binary)` || Reads `len` bytes and returns it as a `ByteArray` (if `binary`==`true`) or a String.  As a special case, it returns `null` for 0-byte reads. ||
 || `int seek(int pos, int whence)` || Analog to `fseek(3)`. The last argument must be one of `whio.SEEK_SET`, `whio.SEEK_CUR`, or `whio.SEEK_END`. Returns the new position. ||
 || `int size()` || Returns the current on-storage size of the device. May be smaller than the internal buffer allocated for in-memory devices. ||
 || `int tell()` || Reports the current position of the cursor within the device. ||
-|| `int truncate()` || Truncates the device. Subdevices do not support truncation. ||
+|| `void truncate(int newSize)` || Truncates the device. Subdevices do not support truncation. ||
 || `int write(String|ByteArray [, int len=arg1.length])` || Writes out a string or `ByteArray`. Returns the number of bytes written (which may differ from the _character_ length of a String parameter). ||
 
 Note that while many of those functions technically return integer status codes, they throw on error, meaning that the result codes are basically irrelevant. This applies to `flush()`, `truncate()`, and several others.
@@ -203,7 +223,6 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 || `void foreachInode(function callback [, any clientData=undefined])` || For each _used_ inode in the EFS, `callback(inodeData,clientData)` is called. See below. ||
 || `bool hasNamer()` || Returns true if this EFS has a namer installed. ||
 || `void installNamer(string)` || Installs a "namer" implementation in the EFS. See below. ||
-|| `bool isClosed()` || Returns true if `close()` has been called. ||
 || `bool isRW()` || Returns true if the EFS is operating in read/write mode. ||
 || `int inodeId(string fname)` || Returns the inode ID for the given name _if_ a namer is installed. ||
 || `label(string)` || Sets the EPFS label. The property `label.maxLength` Specifies the maximum legal length (in bytes) of a label string (this is a compile-time constant and cannot be changed without invaliding EFS files created using other values). ||
