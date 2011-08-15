@@ -1,5 +1,3 @@
-#labels Phase-UserDocs,Topic-JS-API
-
 #summary V8Convert libwhio bindings
 #labels Phase-UserDocs,Topic-JS-API
 
@@ -164,7 +162,7 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 || `EPFS(string fileName, bool allowOverwrite, Object opt)` || Formats a file as EFS storage space. See below for more info. ||
 || `EPFS(IODev storage, bool takeOwnership, Object opt)` || Formats an opened device as EFS storage. If `takeOwnership` is true then the new object takes over ownership of the underlying storage and destroys the `storage` object (which is just a thin wrapper). ||
 || *Member* || *Description* ||
-|| `void close()` || Closes the EFS and frees all native resources. ALL pseudofiles `open()`d by this device _MUST_ be `close()` _BEFORE_ this object is `close()`d. ||
+|| `void close()` || Closes the EFS and frees all native resources. ALL pseudofiles `open()`d by this device _MUST_ be `close()`d _BEFORE_ this object is `close()`d. ||
 || `void foreachInode(function callback [, any clientData=undefined])` || For each _used_ inode in the EFS, `callback(inodeData,clientData)` is called. See below. ||
 || `bool hasNamer()` || Returns true if this EFS has a namer installed. ||
 || `void installNamer(string)` || Installs a "namer" implementation in the EFS. See below. ||
@@ -182,13 +180,14 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 == Achtung ==
 
   * _NEVER EVER EVER_ allow multi-threaded access to an EPFS. Doing so _will_ eventually corrupt the EFS state.
+  * Likewise, never "interweave" EPFS instance usage across `setTimeout()` or similar.
   * Only access the EFS from the thread it was opened in and never open the same EFS container multiple times inside one process. The instances can't see each other and will eventually step on one another's toes.
   * If enabled at compile-time (is on by default on non-Windows platforms), the EPFS [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_epfs_locking locks EFS container files] when it is opened, and keeps the lock for the life of the EFS instance.
   * Use at your own risk. A crash caused by another thread, a `SIGINT` in the current thread, or similar, while an EFS is writing could lead to EFS container corruption.
 
 == Creating a new EFS ==
 
-Creating a new EFS container is generically known as `mkfs`ing it. Two ctors are provided which format storage for use with EFS:
+Creating a new EFS container is generically known as `mkfs`ing (or "formatting") it. Two ctors are provided which format storage for use with EFS:
 
 {{{
 var fsOpt = {
@@ -213,17 +212,17 @@ var fs = new whio.EPFS(dev,true, fsOpt);
 
 == Adding Inode Name Support ==
 
-If you want to be able to assign names to the files in your EFS you must install a "namer" _immediately_ after formatting it. ("Namer" is an abstract interface which EPFS uses to delegate the naming of inodes to 3rd-party code).
+If you want to be able to assign names to the files in your EFS you must install a "namer" _immediately_ after formatting it (or soon thereafter). ("Namer" is an abstract interface which EPFS uses to delegate the naming of inodes to 3rd-party code).
 
 {{{
 fs.installNamer("ht"); // "ht" is the only namer implementation so far.
 }}}
 
-There is currently no way to remove or replace a namer once it is installed.
+There is currently no way to remove or replace a namer once it is installed. Note that a given namer implementation might not support all optional operations provided by that interface. Namers _may_ provide both inode-id-to-name and name-to-inode-id mappings, but are not required to perform both (the "ht" namer does).
 
 == Opening an Existing EFS ==
 
-This is identical to creating an EFS, but has one fewer parameter to the ctor:
+This is identical to creating an EFS, but has one fewer parameter for the ctor:
 
 {{{
 var fs = new whio.EPFS("/my/file.epfs",true);
@@ -235,17 +234,12 @@ var fs = new whio.EPFS(myDevice,true);
 // See the 3-arg ctor for the meaning of the 2nd parameter.
 }}}
 
-
 == `EPFS.foreachInode()` ==
 
 For each _used_ inode in the EFS, this function calls a callback:
 
 {{{
-function myCallback(inode, list) {
-  list.push(inode);
-  print( JSON.stringify(inode) );
-}
-
+function myCallback(inode, list) { list.push(inode); }
 var results = [];
 fs.foreachInode( myCallback, results );
 }}}
@@ -254,14 +248,11 @@ which is equivalent to:
 
 {{{
 var results = [];
-function myCallback(inode) {
-  results.push(inode);
-  print( JSON.stringify(inode) );
-}
+function myCallback(inode) { results.push(inode); }
 fs.foreachInode( myCallback );
 }}}
 
-In the context of the callback, `this` is the EPFS object. If `callback()` returns a non-0 value then that value is returned to the EFS API, which will cause looping to stop and the error code to be returned to the `foreachInode()` caller. (FIXME: allow the callback to throw to report an error. i don't currently know how to properly catch this.)
+In the context of the callback, `this` is the EPFS object. If `callback()` returns a non-0 value then that value is returned to the EFS API, which will cause looping to stop and the error code to be returned to the `foreachInode()` caller. (FIXME: allow the callback to throw to report an error. i don't currently know how to properly catch this from the level (C) where it would happen.)
 
 The inode object passed to the callback is a simple collection of key/value pairs:
 
