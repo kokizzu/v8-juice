@@ -5,7 +5,7 @@
 
 =Introduction=
 
-This [V8Convert] add-on implements a variety of i/o facilities by wrapping [http://fossil.wanderinghorse.net/repos/whio/ libwhio]. It provides streaming- and random access to a variety of storage types.
+This [V8Convert] add-on implements a variety of i/o facilities by wrapping [http://fossil.wanderinghorse.net/repos/whio/ libwhio] (specifically, it wraps most of [http://whiki.wanderinghorse.net/wikis/whio/?page=WhioCPlusPlus the whio C++ wrapper]). It provides streaming- and random access to a variety of storage types.
 
 == Downloading ==
 
@@ -23,7 +23,7 @@ Include the file `cvv8-whio.hpp`, build/link in the various CPP files, and call 
 
 All APIs in this add-on are added to the `whio` object which, in turn, gets added to the client's global object (whichever object he passes to `SetupBindings()`).
 
-== whio.ByteArray ==
+== whio.!ByteArray ==
 
 The `whio.ByteArray` class is identical to the class described on the [V8Convert_ByteArray] page.
 
@@ -111,7 +111,7 @@ It provides the following base functionality:
 || `int size()` || Returns the current on-storage size of the device. May be smaller than the internal buffer allocated for in-memory devices. ||
 || `int tell()` || Reports the current position of the cursor within the device. ||
 || `int truncate()` || Truncates the device. Subdevices do not support truncation. ||
-|| `int write(String|ByteArray [, int len=arg1.length])` || Writes out a string or `ByteArray`. ||
+|| `int write(String|ByteArray [, int len=arg1.length])` || Writes out a string or `ByteArray`. Returns the number of bytes written (which may differ from the _character_ length of a String parameter). ||
 
 = EPFS: Embedded Pseudo-!FileSystem =
 
@@ -141,6 +141,13 @@ TODOs:
 
   * A for-each-inode operation.
 
+== Achtung ==
+
+  * _NEVER EVER EVER_ allow multi-threaded access to an EPFS. Doing so _will_ eventually corrupt the EFS state.
+  * Only access the EFS from the thread it was opened in and never open the same EFS container multiple times inside one process. The instances can't see each other and will eventually step on one another's toes.
+  * If enabled at compile-time (is on by default on non-Windows platforms), the EPFS [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_epfs_locking locks EFS container files] when it is opened, and keeps the lock for the life of the EFS instance.
+  * Use at your own risk. A crash caused by another thread, a `SIGINT` in the current thread, or similar, while an EFS is writing could lead to EFS container corruption.
+
 == Creating a new EFS ==
 
 Creating a new EFS container is generically known as `mkfs`ing it. Two ctors are provided which format storage for use with EFS:
@@ -168,7 +175,7 @@ var fs = new whio.EPFS(dev,true, fsOpt);
 
 == Adding Inode Name Support ==
 
-If you want to be able to assign names to the files in your EFS you must install a "namer" _immediately_ after formatting it. (The "namer" is abstract interface which EPFS uses to delegate the naming of inodes to 3rd-party code).
+If you want to be able to assign names to the files in your EFS you must install a "namer" _immediately_ after formatting it. ("Namer" is an abstract interface which EPFS uses to delegate the naming of inodes to 3rd-party code).
 
 {{{
 fs.installNamer("ht"); // "ht" is the only namer implementation so far.
@@ -192,16 +199,24 @@ var fs = new whio.EPFS(myDevice,true);
 
 == Pseudofiles ==
 
-"Pseudofiles" (a.k.a. p-files) are the "files" which live within an EFS container. They are created only via `EPFS.open()`. Pseudofiles subclass `IODev` and add the following methods.
+"Pseudofiles" (a.k.a. p-files) are the "files" which live within an EFS container.
 
 *ACHTUNG:* is it critical that all p-files opened from a given EFS be `close()`d _BEFORE_ their containing EFS is `close()`d, or Undefined Behaviour ensues.
 
+They are created only via `EPFS.open()`. Pseudofiles subclass `IODev` and add the following methods.
+
 || *Member* || *Description* ||
-|| `int touch([uint32=currentTime])` || Sets the device's timestamp to the given Unix Epoch time. Returns the new (touched) time. ||
-|| `uint32 mtime` || Get or set the modification time. ||
+|| `int touch([Date|uint32=currentTime])` || Sets the device's timestamp to the given Unix Epoch time. Returns the new (touched) time. ||
+|| `uint32 mtime` || Get or set the modification time as a Unix Epoch timestamp. Note that the JS `Date` class uses (Epoch + milliseconds) time. ||
 || `uint32 clientFlags` || Gets or sets the "client flags" (32-bit integer) associated with the p-file. ||
 || `uint inodeId` || Gets the EPFS inode ID of the p-file. ||
 || `string name` || Gets or sets the p-file's name. Setting only works if a namer has been installed on the EFS. ||
+
+== Important Notes ==
+
+  * `EPFS.unlink()` will fail for any inode which is currently opened.
+  * It is legal to have a given inode (p-file) opened multiple times, but the client app must carefully synchronize such use if we wants to avoid mixed writes and such.
+  * _NEVER_ use a p-file handle from any thread except the one which created it. Violating this _will_ eventually lead to EFS corruption.
 
 === Creating and Opening Pseudofiles ===
 
