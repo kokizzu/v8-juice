@@ -67,6 +67,8 @@ These flags are typically only honored by routines which open file-based devices
 
 `StreamBase` is the base (abstract) class of the `InStream` and `OutStream` classes. Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_stream whio_stream] object (the base C-level stream abstraction class).
 
+This class is abstract and cannot be instantiated by client code - use the `InStream` and `OutStream` classes to create new instances. This type _can_ be used with the `instanceof` operator.
+
 It provides the following base functionality:
 
 || *Member* || *Description* ||
@@ -99,7 +101,7 @@ This general-purpose sequential-output class subclasses `StreamBase` and provide
 
 = Random-Access Devices =
 
-`IODev` is the base class/interface for random-access devices. The base implementation wraps  various types devices, e.g. files, memory buffers, and "subdevices". Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_dev whio_dev] object (the base C-level i/o device abstraction class).
+`IODev` is the base class/interface for random-access devices. The base implementation wraps  various types of devices, e.g. files, memory buffers, and "subdevices". Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_dev whio_dev] object (the base C-level i/o device abstraction class).
 
 It provides the following base functionality:
 
@@ -114,7 +116,7 @@ It provides the following base functionality:
 || `bool eof()` || Returns true if the device is at EOF. ||
 || `int error()` || Returns device-specific error code, or 0 if everything is okay. ||
 || `int flush()` || Flushes the device. Only useful when writing. ||
-|| `int iomode()` || Returns a whio-specific mask of i/o mode information. See below. ||
+|| `int iomode()` || Returns a mask of `whio.iomodes` values. ||
 || `bool isClosed()` || Returns true if `close()` has been called. ||
 || `int read(int len, bool binary)` || Reads `len` bytes and returns it as a `ByteArray` (if `binary`==`true`) or a String. ||
 || `int seek(int pos, int whence)` || Analog to `fseek(3)`. The last argument must be one of `whio.SEEK_SET`, `whio.SEEK_CUR`, or `whio.SEEK_END`. Returns the new position. ||
@@ -122,6 +124,10 @@ It provides the following base functionality:
 || `int tell()` || Reports the current position of the cursor within the device. ||
 || `int truncate()` || Truncates the device. Subdevices do not support truncation. ||
 || `int write(String|ByteArray [, int len=arg1.length])` || Writes out a string or `ByteArray`. Returns the number of bytes written (which may differ from the _character_ length of a String parameter). ||
+
+== General Notes ==
+
+  * Because `In/OutStream` can proxy `IODev`, you can use the stream APIs to read/write from/to `IODev` instances. Just be careful with the cursor positioning when reading/writing from _both_ the device and stream APIs on the same storage.
 
 = EPFS: Embedded Pseudo-!FileSystem =
 
@@ -134,22 +140,19 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 || `EPFS(IODev storage, bool takeOwnership, Object opt)` || Formats an opened device as EFS storage. If `takeOwnership` is true then the new object takes over ownership of the underlying storage and destroys the `storage` object (which is just a thin wrapper). ||
 || *Member* || *Description* ||
 || `void close()` || Closes the EFS and frees all native resources. ALL pseudofiles `open()`d by this device _MUST_ be `close()` _BEFORE_ this object is `close()`d. ||
+|| `void foreachInode(function callback [, any clientData=undefined])` || For each _used_ inode in the EFS, `callback(inodeData,clientData)` is called. See below. ||
 || `bool hasNamer()` || Returns true if this EFS has a namer installed. ||
-|| `void installNamer(string)` || Installs a namer implementation in the EFS. See below. ||
+|| `void installNamer(string)` || Installs a "namer" implementation in the EFS. See below. ||
 || `bool isClosed()` || Returns true if `close()` has been called. ||
 || `bool isRW()` || Returns true if the EFS is operating in read/write mode. ||
 || `int inodeId(string fname)` || Returns the inode ID for the given name _if_ a namer is installed. ||
 || `label(string)` || Sets the EPFS label. ||
 || `string label()` || Gets the EPFS label. ||
-|| `void name(int inodeID,string name)` || Sets the given inode ID's name. Use a `null` name to un-set it. ||
+|| `void name(int inodeID, string name)` || Sets the given inode ID's name. Use a `null` name to un-set it. A given namer implementation may impose certain restrictions on name patterns and/or lengths. ||
 || `string name(int inodeID)` || Returns the name for the given inode. ||
 || `int size()` || Returns the on-storage size of the EFS container. ||
 || `void unlink(int|string)` || "Unlinks" (removes) the given inode. Only works if the inode is _not_ currently opened. ||
-|| `EPFS.PseudoFile open(int|string, int iomode)` || Opens the given inode. The second parameter should be `whio.iomodes` flags. ||
-
-TODOs:
-
-  * A for-each-inode operation.
+|| `EPFS.PseudoFile open(int|string, int iomode)` || Opens the given inode. The second parameter must be `whio.iomodes` flags. ||
 
 == Achtung ==
 
@@ -207,6 +210,51 @@ var fs = new whio.EPFS(myDevice,true);
 // See the 3-arg ctor for the meaning of the 2nd parameter.
 }}}
 
+
+== `EPFS.foreachInode()` ==
+
+For each _used_ inode in the EFS, this function calls a callback:
+
+{{{
+function myCallback(inode, list) {
+  list.push(inode);
+  print( JSON.stringify(inode) );
+}
+
+var results = [];
+fs.foreachInode( myCallback, results );
+}}}
+
+which is equivalent to:
+
+{{{
+var results = [];
+function myCallback(inode) {
+  results.push(inode);
+  print( JSON.stringify(inode) );
+}
+fs.foreachInode( myCallback );
+}}}
+
+In the context of the callback, `this` is the EPFS object. If `callback()` returns a non-0 value then that value is returned to the EFS API, which will cause looping to stop and the error code to be returned to the `foreachInode()` caller. (FIXME: allow the callback to throw to report an error. i don't currently know how to properly catch this.)
+
+The inode object passed to the callback is a simple collection of key/value pairs:
+
+|| `id` || Inode ID. ||
+|| `mtime` || Modification time, in Unix Epoch format. ||
+|| `size` || Size, in bytes. ||
+|| `clientFlags` || Client-defined flags (uint32). ||
+|| `name` || Only if the EFS has a namer installed. ||
+
+Notes:
+
+  * This is a _subset_ of the actual inode data (plus the optional name), eliding parts which are not expected to be useful in JS code (mainly low-level info which does not make much sense without other data only accessible via the native API).
+  * Changes made to the EFS from within the foreach loop, may or may not be visible to further iterations within that same loop. e.g. when adding a new file within the loop the new file might or might not appear in a future iteration of the loop. Ideally clients _should not_ modify the EFS while for-each looping.
+  * This loop does not take into account any unflushed info held by opened p-files.
+  * If a namer is installed, one of the inodes is almost certainly the p-file used to store the inode/name mappings. If you see a p-file named something like `<([whio_epfs_namer_ht.whio_ht])>`, that's what you're seeing.
+
+Please see the native `whio_epfs_foreach_inode()` for more information.
+
 == Pseudofiles ==
 
 "Pseudofiles" (a.k.a. p-files) are the "files" which live within an EFS container.
@@ -222,7 +270,7 @@ They are created only via `EPFS.open()`. Pseudofiles subclass `IODev` and add th
 || `uint inodeId` || Gets the EPFS inode ID of the p-file. ||
 || `string name` || Gets or sets the p-file's name. Setting only works if a namer has been installed on the EFS. ||
 
-== Important Notes ==
+=== Important Notes ===
 
   * `EPFS.unlink()` will fail for any inode which is currently opened.
   * It is legal to have a given inode (p-file) opened multiple times, but the client app must carefully synchronize such use if we wants to avoid mixed writes and such.
