@@ -19,6 +19,20 @@ The included build files are for platforms hosting GNU Make and gcc. It requires
 
 Include the file `cvv8-whio.hpp`, build/link in the various CPP files, and call `cvv8::io::SetupBindings()`.
 
+
+== The Golden Rule: Closing Handles ==
+
+All streams and i/o-devices are wrappers around underlying native resources. When client code is done with a given device it must call `close()` on it to close the underlying handle(s) and free any native resources. For some specific uses, lifetimes _must_ be managed properly by the client _or Undefined Behaviour ensues_. Examples include "subdevices", which are not allowed to live longer than their parent device, and EPFS Pseudofiles, which must be closed before their containing EPFS is closed.
+
+== Error Reporting ==
+
+The vast majority of errors are reported via exceptions. Because of this:
+
+  # Clients may need to take extra care to `try`/`catch` and `close()` streams/devices.
+  # Error checking is reduced dramatically compared to using the underlying C API.
+
+Only a small handful of stream/device functions do _not_ throw on error.
+
 = whio Object =
 
 All APIs in this add-on are added to the `whio` object which, in turn, gets added to the client's global object (whichever object he passes to `SetupBindings()`).
@@ -29,7 +43,7 @@ The `whio.ByteArray` class is identical to the class described on the [V8Convert
 
 == I/O Mode Flags ==
 
-The `whio.iomode` object contains a mapping of names to integers corresponding to the C-level `whio_iomodes` enum entries. The keys are the enum item names mines the `WHIO_MODE_` prefix. The entire list is:
+The `whio.iomode` object contains a mapping of names to integers corresponding to the C-level `whio_iomodes` enum entries. The keys are the enum item names minus the `WHIO_MODE_` prefix. The entire list is:
 
 || *Entry* || Description. ||
 || `INVALID` || Invalid value (numeric 0). ||
@@ -49,10 +63,6 @@ The `whio.iomode` object contains a mapping of names to integers corresponding t
 
 These flags are typically only honored by routines which open file-based devices, and not all options may be supported by a given device-opening routine.
 
-== The Golden Rule: Closing Handles ==
-
-All streams and i/o-devices are wrappers around underlying native resources. When client code is done with a given device it must call `close()` on it to close the underlying handle(s) and free any native resources. For some specific uses, lifetimes _must_ be managed properly by the client _or _Undefined Behaviour ensues_. Examples include "subdevices", which are not allowed to live longer than their parent device, and EPFS Pseudofiles, which must be closed before their containing EPFS is closed.
-
 = Stream Classes =
 
 `StreamBase` is the base (abstract) class of the `InStream` and `OutStream` classes. Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_stream whio_stream] object (the base C-level stream abstraction class).
@@ -62,8 +72,8 @@ It provides the following base functionality:
 || *Member* || *Description* ||
 || `void close()` || Closes the stream and frees all native resources. ||
 || `bool isClosed()` || Returns true if `close()` has been called. ||
-|| `int iomode()` || Returns a whio-specific mask of i/o mode information. See below. ||
-|| `bool isGood()` || Returns true if the stream is "good" (has no error state). ||
+|| `int iomode()` || Returns a mask of `whio.iomodes` values. ||
+|| `bool isGood()` || Returns true if the stream is "good" (has no error state). Note that most routines throw on error, so this need not be called right after opening. ||
 
 == !InStream ==
 
@@ -81,7 +91,7 @@ This general-purpose sequential-input class subclasses `StreamBase` and provides
 This general-purpose sequential-output class subclasses `StreamBase` and provides the following additional functionality:
 
 || *Constructor* || *Description* ||
-|| `OutStream(string fileName, bool truncate)` || Opens the given file for write-only access, optionally truncating it. (FIXME: use append mode if truncate==false.) ||
+|| `OutStream(string fileName, bool truncate)` || Opens the given file for write-only access, either truncating it or appending to it. ||
 || `OutStream(IODev dev, bool takeOwnership)` || Wraps the given `IODev`, which must be output-capable. If `takeOwnership` is true then `dev`'s handle is given to the new object and `dev` is destroyed immediately (it is just a thin wrapper around the handle). If it is false then `dev` _must_ outlive the new stream. ||
 || *Member* || *Description* ||
 || `int write(string|ByteArray [,int len=arg1.length])` || Writes the given string or `ByteArray`. Returns the number of bytes written (which may differ from the length, in characters, of an input string). ||
@@ -107,7 +117,7 @@ It provides the following base functionality:
 || `int iomode()` || Returns a whio-specific mask of i/o mode information. See below. ||
 || `bool isClosed()` || Returns true if `close()` has been called. ||
 || `int read(int len, bool binary)` || Reads `len` bytes and returns it as a `ByteArray` (if `binary`==`true`) or a String. ||
-|| `int size(int pos, int whence)` || Analog to `fseek(3)`. The last argument must be one of `whio.SEEK_SET`, `whio.SEEK_CUR`, or `whio.SEEK_END`. ||
+|| `int seek(int pos, int whence)` || Analog to `fseek(3)`. The last argument must be one of `whio.SEEK_SET`, `whio.SEEK_CUR`, or `whio.SEEK_END`. Returns the new position. ||
 || `int size()` || Returns the current on-storage size of the device. May be smaller than the internal buffer allocated for in-memory devices. ||
 || `int tell()` || Reports the current position of the cursor within the device. ||
 || `int truncate()` || Truncates the device. Subdevices do not support truncation. ||
@@ -155,7 +165,7 @@ Creating a new EFS container is generically known as `mkfs`ing it. Two ctors are
 {{{
 var fsOpt = {
   inodeCount: 512, // max number of entries in the EFS
-  blockSize:1024 * 8, // size of each p-file data block
+  blockSize:1024 * 16, // size (bytes) of each p-file data block
   maxBlocks:0 // max number of p-file data block (0=unbounded)
 };
 
@@ -165,7 +175,7 @@ var fs = new whio.EPFS("/my/file.epfs",true, fsOpt);
 // is allowed. It will fail if the value is false and the file already exists.
 
 // Format an arbitrary IODev:
-var dev = new IODev("/my/file", whio.iomodes.RWC | whio.iomodes.TRUNCATE);
+var dev = new IODev("/my/file.epfs", whio.iomodes.RWC | whio.iomodes.TRUNCATE);
 var fs = new whio.EPFS(dev,true, fsOpt);
 // If the second parameter is true then the new EPFS takes over the underlying
 // whio_dev handle and destroys the dev object (which is just a thin wrapper
