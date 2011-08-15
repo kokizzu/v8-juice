@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2011 Aug 15:*
+  * Added [V8Convert_Whio].
+
 *2011 July 24:*
   * Added `FunctorToInCa` to bind functors to JS.
   * Introducing the [V8Convert_XTo X-to API], alternate interfaces for binding functions, methods, and variables (arguably _even simpler_ than the ones we have so far).
