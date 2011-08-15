@@ -1,0 +1,231 @@
+#summary V8Convert libwhio bindings
+#labels Phase-UserDocs,Topic-JS-API
+
+<wiki:toc/>
+
+=Introduction=
+
+This [V8Convert] add-on implements a variety of i/o facilities by wrapping [http://fossil.wanderinghorse.net/repos/whio/ libwhio]. It provides streaming- and random access to a variety of storage types.
+
+== Downloading ==
+
+The sources are available here:
+
+  * [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons/whio]
+
+The included build files are for platforms hosting GNU Make and gcc. It requires [V8Convert]. It is unknown whether the underlying libwhio code will compile out of the box on non-Unix platforms.
+
+== Plugging In the Bindings ==
+
+Include the file `cvv8-whio.hpp`, build/link in the various CPP files, and call `cvv8::io::SetupBindings()`.
+
+= whio Object =
+
+All APIs in this add-on are added to the `whio` object which, in turn, gets added to the client's global object (whichever object he passes to `SetupBindings()`).
+
+== whio.ByteArray ==
+
+The `whio.ByteArray` class is identical to the class described on the [V8Convert_ByteArray] page.
+
+== I/O Mode Flags ==
+
+The `whio.iomode` object contains a mapping of names to integers corresponding to the C-level `whio_iomodes` enum entries. The keys are the enum item names mines the `WHIO_MODE_` prefix. The entire list is:
+
+|| *Entry* || Description. ||
+|| `INVALID` || Invalid value (numeric 0). ||
+|| `UNKNOWN` || Indicates the device does not (yet) know its i/o mode. Happens sometimes when proxying. ||
+|| `READ` || Indicates read mode. ||
+|| `WRITE` || Indicates write mode. ||
+|| `RO` || Alias for (`READ|FLAG_ONLY`) ||
+|| `RW` || Alias for (`READ|WRITE`) ||
+|| `WO` || Alias for (`WRITE|FLAG_ONLY`) ||
+|| `RWC` || Alias for (`READ|WRITE|FLAG_CREATE`) ||
+|| `FLAG_ONLY` || Marks "only" modes, like read-only and write-only. ||
+|| `FLAG_CREATE` || Means to create the file if it does not yet exist. ||
+|| `FLAG_EXCL` || Means to fail to open if the file already exists. ||
+|| `FLAG_FAIL_IF_EXISTS` || Alias for `FLAG_EXCL` ||
+|| `FLAG_TRUNCATE` || Means to truncate the file on opening. ||
+|| `FLAG_APPEND` || Means to append new output to the end of the file. ||
+
+These flags are typically only honored by routines which open file-based devices, and not all options may be supported by a given device-opening routine.
+
+== The Golden Rule: Closing Handles ==
+
+All streams and i/o-devices are wrappers around underlying native resources. When client code is done with a given device it must call `close()` on it to close the underlying handle(s) and free any native resources. For some specific uses, lifetimes _must_ be managed properly by the client _or _Undefined Behaviour ensues_. Examples include "subdevices", which are not allowed to live longer than their parent device, and EPFS Pseudofiles, which must be closed before their containing EPFS is closed.
+
+= Stream Classes =
+
+`StreamBase` is the base (abstract) class of the `InStream` and `OutStream` classes. Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_stream whio_stream] object (the base C-level stream abstraction class).
+
+It provides the following base functionality:
+
+|| *Member* || *Description* ||
+|| `void close()` || Closes the stream and frees all native resources. ||
+|| `bool isClosed()` || Returns true if `close()` has been called. ||
+|| `int iomode()` || Returns a whio-specific mask of i/o mode information. See below. ||
+|| `bool isGood()` || Returns true if the stream is "good" (has no error state). ||
+
+== !InStream ==
+
+This general-purpose sequential-input class subclasses `StreamBase` and provides the following additional functionality:
+
+|| *Constructor* || *Description* ||
+|| `InStream(string fileName)` || Opens the given file for read-only access. ||
+|| `InStream(IODev dev, bool takeOwnership)` || Wraps the given `IODev`, which must be input-capable. If `takeOwnership` is true then `dev`'s handle is given to the new object and `dev` is destroyed immediately (it is just a thin wrapper around the handle). If it is false then `dev` _must_ outlive the new stream. ||
+|| *Member* || *Description* ||
+|| `mixed read(int len, bool binary)` || Reads `len` bytes and returns the results as a `ByteArray` if `binary` is true, else as a String. Results are undefined if `binary` is false and the read-in data is _not_ UTF8. ||
+
+
+== !OutStream ==
+
+This general-purpose sequential-output class subclasses `StreamBase` and provides the following additional functionality:
+
+|| *Constructor* || *Description* ||
+|| `OutStream(string fileName, bool truncate)` || Opens the given file for write-only access, optionally truncating it. (FIXME: use append mode if truncate==false.) ||
+|| `OutStream(IODev dev, bool takeOwnership)` || Wraps the given `IODev`, which must be output-capable. If `takeOwnership` is true then `dev`'s handle is given to the new object and `dev` is destroyed immediately (it is just a thin wrapper around the handle). If it is false then `dev` _must_ outlive the new stream. ||
+|| *Member* || *Description* ||
+|| `int write(string|ByteArray [,int len=arg1.length])` || Writes the given string or `ByteArray`. Returns the number of bytes written (which may differ from the length, in characters, of an input string). ||
+|| `int flush()` || Flushes any pending output. ||
+
+= Random-Access Devices =
+
+`IODev` is the base class/interface for random-access devices. The base implementation wraps  various types devices, e.g. files, memory buffers, and "subdevices". Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_dev whio_dev] object (the base C-level i/o device abstraction class).
+
+It provides the following base functionality:
+
+|| *Constructor* || *Description* ||
+|| `IODev(string name,string mode)` || Opens a file using an `fopen()`-style mode string. ||
+|| `IODev(string name,int imode[,int unixPermisions])` || Opens a file using a `whio.iomodes`-style mode flags and optional explicit unix-style permissions. ||
+|| `IODev(uint size[, float expFactor])` || Creates an in-memory device with the given initial size and the given expand-on-grow factor (must be (`>1.0`)). ||
+|| `IODev(IODev parent, uint low, uint high)` || Creates a "subdevice" which only has access to the given byte range in the parent device. The parent _must_ outlive this object. ||
+|| *Member* || *Description* ||
+|| `void clearError()` || Clears any error state. ||
+|| `void close()` || Closes the stream and frees all native resources. ||
+|| `bool eof()` || Returns true if the device is at EOF. ||
+|| `int error()` || Returns device-specific error code, or 0 if everything is okay. ||
+|| `int flush()` || Flushes the device. Only useful when writing. ||
+|| `int iomode()` || Returns a whio-specific mask of i/o mode information. See below. ||
+|| `bool isClosed()` || Returns true if `close()` has been called. ||
+|| `int read(int len, bool binary)` || Reads `len` bytes and returns it as a `ByteArray` (if `binary`==`true`) or a String. ||
+|| `int size(int pos, int whence)` || Analog to `fseek(3)`. The last argument must be one of `whio.SEEK_SET`, `whio.SEEK_CUR`, or `whio.SEEK_END`. ||
+|| `int size()` || Returns the current on-storage size of the device. May be smaller than the internal buffer allocated for in-memory devices. ||
+|| `int tell()` || Reports the current position of the cursor within the device. ||
+|| `int truncate()` || Truncates the device. Subdevices do not support truncation. ||
+|| `int write(String|ByteArray [, int len=arg1.length])` || Writes out a string or `ByteArray`. ||
+
+= EPFS: Embedded Pseudo-!FileSystem =
+
+This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_epfs whio_epfs API]. Please see that page for _lots_ of information about it.
+
+|| *Constructor* || *Description* ||
+|| `EPFS(string fileName, bool writeMode)` || Opens an existing EFS file. ||
+|| `EPFS(IODev storage, bool takeOwnership)` || Opens pre-existing EFS storage. If `takeOwnership` is true then the new object takes over ownership of the underlying storage and destroys the `storage` object (which is just a thin wrapper). ||
+|| `EPFS(string fileName, bool allowOverwrite, Object opt)` || Formats a file as EFS storage space. See below for more info. ||
+|| `EPFS(IODev storage, bool takeOwnership, Object opt)` || Formats an opened device as EFS storage. If `takeOwnership` is true then the new object takes over ownership of the underlying storage and destroys the `storage` object (which is just a thin wrapper). ||
+|| *Member* || *Description* ||
+|| `void close()` || Closes the EFS and frees all native resources. ALL pseudofiles `open()`d by this device _MUST_ be `close()` _BEFORE_ this object is `close()`d. ||
+|| `bool hasNamer()` || Returns true if this EFS has a namer installed. ||
+|| `void installNamer(string)` || Installs a namer implementation in the EFS. See below. ||
+|| `bool isClosed()` || Returns true if `close()` has been called. ||
+|| `bool isRW()` || Returns true if the EFS is operating in read/write mode. ||
+|| `int inodeId(string fname)` || Returns the inode ID for the given name _if_ a namer is installed. ||
+|| `label(string)` || Sets the EPFS label. ||
+|| `string label()` || Gets the EPFS label. ||
+|| `void name(int inodeID,string name)` || Sets the given inode ID's name. Use a `null` name to un-set it. ||
+|| `string name(int inodeID)` || Returns the name for the given inode. ||
+|| `int size()` || Returns the on-storage size of the EFS container. ||
+|| `void unlink(int|string)` || "Unlinks" (removes) the given inode. Only works if the inode is _not_ currently opened. ||
+|| `EPFS.PseudoFile open(int|string, int iomode)` || Opens the given inode. The second parameter should be `whio.iomodes` flags. ||
+
+TODOs:
+
+  * A for-each-inode operation.
+
+== Creating a new EFS ==
+
+Creating a new EFS container is generically known as `mkfs`ing it. Two ctors are provided which format storage for use with EFS:
+
+{{{
+var fsOpt = {
+  inodeCount: 512, // max number of entries in the EFS
+  blockSize:1024 * 8, // size of each p-file data block
+  maxBlocks:0 // max number of p-file data block (0=unbounded)
+};
+
+// Format a file:
+var fs = new whio.EPFS("/my/file.epfs",true, fsOpt);
+// The second argument specifies whether or not overwriting an existing file
+// is allowed. It will fail if the value is false and the file already exists.
+
+// Format an arbitrary IODev:
+var dev = new IODev("/my/file", whio.iomodes.RWC | whio.iomodes.TRUNCATE);
+var fs = new whio.EPFS(dev,true, fsOpt);
+// If the second parameter is true then the new EPFS takes over the underlying
+// whio_dev handle and destroys the dev object (which is just a thin wrapper
+// around the native handle). If it is false then dev MUST outlive fs and
+// MUST NOT be close()d until after fs is close()d.
+}}}
+
+== Adding Inode Name Support ==
+
+If you want to be able to assign names to the files in your EFS you must install a "namer" _immediately_ after formatting it. (The "namer" is abstract interface which EPFS uses to delegate the naming of inodes to 3rd-party code).
+
+{{{
+fs.installNamer("ht"); // "ht" is the only namer implementation so far.
+}}}
+
+There is currently no way to remove or replace a namer once it is installed.
+
+== Opening an Existing EFS ==
+
+This is identical to creating an EFS, but has one fewer parameter to the ctor:
+
+{{{
+var fs = new whio.EPFS("/my/file.epfs",true);
+// The 2nd parameter means whether or not to open in Write mode (false=read-only)
+
+// Or fs-open a pre-opened device:
+
+var fs = new whio.EPFS(myDevice,true);
+// See the 3-arg ctor for the meaning of the 2nd parameter.
+}}}
+
+== Pseudofiles ==
+
+"Pseudofiles" (a.k.a. p-files) are the "files" which live within an EFS container. They are created only via `EPFS.open()`. Pseudofiles subclass `IODev` and add the following methods.
+
+*ACHTUNG:* is it critical that all p-files opened from a given EFS be `close()`d _BEFORE_ their containing EFS is `close()`d, or Undefined Behaviour ensues.
+
+|| *Member* || *Description* ||
+|| `int touch([uint32=currentTime])` || Sets the device's timestamp to the given Unix Epoch time. Returns the new (touched) time. ||
+|| `uint32 mtime` || Get or set the modification time. ||
+|| `uint32 clientFlags` || Gets or sets the "client flags" (32-bit integer) associated with the p-file. ||
+|| `uint inodeId` || Gets the EPFS inode ID of the p-file. ||
+|| `string name` || Gets or sets the p-file's name. Setting only works if a namer has been installed on the EFS. ||
+
+=== Creating and Opening Pseudofiles ===
+
+To "create" a new p-file we ask the EFS to open inode #0 (which is the "not an inode" inode ID):
+
+{{{
+var p = fs.open( 0, whio.iomodes.RWC );
+}}}
+
+That allocates the next-available inode.
+
+To open an "existing" (used) inode:
+
+{{{
+var inodeId = 7;
+var p = fs.open( 7, whio.iomodes.READ );
+}}}
+
+To open by name (only works if a namer is installed in the EFS):
+
+{{{
+var p = fs.open("the_name", ... );
+}}}
+
+You can use various combinations of the `whio.iomodes` flags to allow/disallow the creation of new p-files, to control read-only vs. read-write, or to truncate them upon opening.
+
+Note that only p-files can only be opened in read-write mode if the EFS itself is opened in read-write mode.
