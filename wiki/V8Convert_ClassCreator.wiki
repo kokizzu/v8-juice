@@ -278,7 +278,7 @@ The default implementation uses `TypeName` (see above), so if that type will be 
     };
 }}}
 
-If the `TypeIDIndex` (the 4th template parameter to the base type) is not negative then `ClassCreator_TypeID<BoundNative>::Value` will be stored in the `TypeIDIndex`th internal field of each bound object.
+If the `TypeIDIndex` (the 3rd template parameter to the base type) is not negative then `ClassCreator_TypeID<BoundNative>::Value` will be stored in the `TypeIDIndex`th internal field of each bound object.
 
 When subclassing one bound type from another, the subclasses _must all_ have the same internal field layout as the base type or the bindings won't be able to treat a subclass object as an instance of its base type. To do this, simply subclass the parent type's specialization. If there is a mismatch between parent/subclass internal fields, `JSToNative` conversions (`CastFrom()`) will fail in strange ways (depending on the exact context of the conversion) or fail completely.
 
@@ -290,17 +290,18 @@ Here's an example which forwards JS calls to one of several different constructo
 
 {{{
 template <> class ClassCreator_Factory<MyType>
- : public ClassCreator_Factory_CtorArityDispatcher< MyType,
-       Signature<MyType (
-        CtorForwarder<MyType *()>,
-        CtorForwarder<MyType *(char const *)>,
-        CtorForwarder<MyType *( int, double )>,
-        CtorForwarder<MyType *( v8::Arguments const &)>
-    )>;
+ : public ClassCreator_Factory_Dispatcher< MyType,
+       CtorArityDispatcher< Signature< MyType (
+           CtorForwarder<MyType *()>,
+           CtorForwarder<MyType *(char const *)>,
+           CtorForwarder<MyType *( int, double )>,
+           CtorForwarder<MyType *( v8::Arguments const &)>
+       )> >;
    >
 {};
 }}}
 
+It might be interesting to note that individual `CtorForwarder` constructs in type-lists like the one shown above can in fact return derived types. However, the bindings will treat them as the base type for all purposes (including lookup of the native pointer). This has some interesting uses when binding C structs (which cannot subclass in the conventional sense but can emulate subclassing to a large degree by swapping out implementations of the interface functions defined in the struct).
 
 == `ClassCreator_WeakWrap` ==
 
@@ -354,6 +355,20 @@ The reason for that particular signature is largely historical, but that class c
 
 = Tips and Tricks =
 
+== Binding a Destructor Function ==
+
+It is trivial to bind a JS function which will force a call to the native destructor:
+
+{{{
+typedef ClassCreator<MyT> CC;
+CC & cc( CC::Instance() );
+cc( "destroy", CC::DestroyObjectCallback );
+}}}
+
+As long as the native type cleans everything up in its dtor, as opposed to requiring that a specific method be called before destruction, this is arguably the simplest way to _ensure_ clean-up of native resources from script code.
+
+In my experience, native C++ types like i/o streams and database drivers will, when destructed, call their `close/finalize/whatever()` method, and the above binding indirectly ties in to such resource-freeing functions.
+
 == Creating new Instances of Bound Classes ==
 
 We can of course create new "v8-aware" instances of bound classes. However, they are _owned by v8_ and will be destroyed (or not) whenever v8 wants to (or not) destroy them. Clients can use `ClassCreator::DestroyObject()` to force (via v8) destruction of the native object.
@@ -369,9 +384,32 @@ if( ! m ) {
 // Or with arguments:
 
 v8::Handle<v8::Value> args[] = {
-  CastToJS(7), CastToJS(24.42), ...
+  CastToJS(7),
+  CastToJS(24.42),
+   ...
 };
 
 v8::Handle<v8::Object> obj =
   CC::Instance().NewInstance( sizeof(args)/sizeof(args[0]), args, m );
 }}}
+
+== _Properly_ Destroying v8-created Bound Natives ==
+
+Given a v8 Handle to a !ClassCreator-created object, we can destroy the associated native object and disconnect v8 from the native:
+
+{{{
+CC::DestroyObject( theJSObject );
+}}}
+
+Remember that we can bind the destruction function to JS:
+
+{{{
+cc("destroy", CC::DestroyObjectCallback);
+}}}
+
+
+Both approachs will, if the JS object is bound to a native, end up calling the native destructor and disconnecting the JS object from that native. A side-effect of that disconnection is that future calls (from script code) to native methods will end up throwing a JS exception because the underlying native is no longer there. This is correct behaviour - the alternative would be to step on the now-deallocated pointer (i.e. Undefined Behaviour).
+
+If we simply destroy the native object ourselves (i.e. `delete myNative`) then v8 will _still_ have a handle to the native pointer, which is now invalid and might be re-allocated to a different object later on. That is of course Bad News.
+
+*The moral of the story is:* the JS and native halves of the object (A) are owned by v8, so any destruction must happen via v8 (e.g. via `CC::DestroyObject()`), and (B) have an intimate relationship, so don't go deleting the native pointer.
