@@ -453,3 +453,28 @@ The implementation files can be found here:
 
   * [http://code.google.com/p/v8-juice/source/browse/convert/addons/whio/cvv8-whio.hpp cvv8-whio.hpp]
   * [http://code.google.com/p/v8-juice/source/browse/convert/addons/whio/cvv8-whio.cpp cvv8-whio.cpp]
+
+As a brief example, here's the main initialization code for the `MemoryIODev` class bindings:
+
+{{{
+void ClassCreator_SetupBindings<whio::MemoryIODev>::Initialize(
+     v8::Handle<v8::Object> const & dest )
+{
+    typedef whio::MemoryIODev IOD;
+    typedef ClassCreator<IOD> CC;
+    CC & cc(CC::Instance());
+    if( cc.IsSealed() )
+    {
+        cc.AddClassTo(TypeName<IOD>::Value, dest);
+        return;
+    }
+    cc.Inherit<whio::IODev>();
+    cc
+        ("bufferSize",
+         InCaCatcher_std< MethodTo<InCa, IOD, whio_size_t (), &IOD::bufferSize> >::Call )
+        ("toString",
+         io::toString_generic<IOD> )
+        ;
+    cc.AddClassTo(TypeName<IOD>::Value, dest);
+}
+}}}
