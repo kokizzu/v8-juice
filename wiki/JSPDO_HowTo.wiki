@@ -53,7 +53,7 @@ db.close();
 
 After calling `close()`, any further calls to member functions will cause a JS-side exception to be triggered.
 
-It is extremely important that _all_ objects returned from `db.prepare()` be destroyed (by calling their `finalize()` method) _before_ the db instance is destroyed. Violating this can lead to a crash when a dead object is stepped on (or another object re-allocated at the same address is mis-used! Thus clients _must not_ leave their destruction to the whims of the garbage collector. See below for how to easily ensure that such objects are cleaned up at the right time.
+It is extremely important that _all_ objects returned from `db.prepare()` be destroyed (by calling their `finalize()` method) _before_ the db instance is destroyed). Violating this can lead to a crash when a dead object is stepped on (or another object re-allocated at the same address is mis-used!). Thus clients _must not_ leave their destruction to the whims of the garbage collector. See below for how to easily ensure that such objects are cleaned up at the right time.
 
 =Queries=
 
@@ -69,7 +69,7 @@ The JS API does not have routines for escaping SQL data. To avoid escaping probl
 
 ==Preparing SQL Statements==
 
-"Non-simple" SQL, e.g. those require values acquired at runtime, requires the use of so-called "prepared statements", which are created like this:
+"Non-simple" SQL, e.g. statements requiring values acquired at runtime or returning results to the user, requires the use of so-called "prepared statements", which are created like this:
 
 {{{
 var st = db.prepare("SQL GOES HERE");
@@ -120,7 +120,7 @@ st = db.prepare("SELECT ... WHERE a=? AND b=?");
 // Bind as array:
 st.bind(["v8-juice","JSPDO"]);
 
-// Two binds by index: (remember: binding uses 1-based parameter indexes!
+// Two binds by index: (remember: binding uses 1-based parameter indexes!)
 st.bind(1,"v8-juice");
 st.bind(2,"JSPDO");
 }}}
@@ -216,7 +216,7 @@ while( row = st.stepArray() ) print(row.join('\t'));
 while( row = st.stepObject() ) print(JSON.stringify(row));
 }}}
 
-Using `stepArray()` _might_ not be notably less efficient than a manually loop (this is not entirely clear), but `stepObject()` is almost certainly less efficient, in large part because it has to re-calculate and copy the column names for each iteration.
+Using `stepArray()` _might_ not be notably less efficient than a manually loop (this is not entirely clear), but `stepObject()` is almost certainly less efficient, in large part because it has to copy the column names for each iteration.
 
 If memory usage is of no concern and your data sets are not too large, you can use `fetchAll()` to load all results for a query in a single call:
 
@@ -277,7 +277,7 @@ var id = db.lastInsertId();
 
 The second form is not used by the current drivers, but the API supports it in case future drivers do.
 
-*Achtung:* when using server-side on-insert triggers in a db table and those triggers perform an insert as a side-effect of the client-performed insert, the id returned by `lastInsertId()` might not be id of the record the client inserted! It might instead by the id of the record inserted by the trigger (which is probably in a different table!).
+*Achtung:* when using server-side on-insert triggers in a db table and those triggers perform an insert as a side-effect of the client-performed insert, the ID returned by `lastInsertId()` might not be the ID of the record the client inserted! It might instead by the ID of the record inserted by the trigger (which is probably in a different table!).
 
 ==Example: SELECT==
 
