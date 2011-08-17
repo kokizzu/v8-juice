@@ -451,5 +451,5 @@ This API is a mixture of 3rd-party code (libwhio, with a core implemented in C a
 
 The implementation files can be found here:
 
-  * [http://code.google.com/p/v8-juice/source/browse/convert/addons/whio/cvv8- whio.hpp cvv8-whio.hpp]
-  * [http://code.google.com/p/v8-juice/source/browse/convert/addons/whio/cvv8- whio.cpp cvv8-whio.cpp]
+  * [http://code.google.com/p/v8-juice/source/browse/convert/addons/whio/cvv8-whio.hpp cvv8-whio.hpp]
+  * [http://code.google.com/p/v8-juice/source/browse/convert/addons/whio/cvv8-whio.cpp cvv8-whio.cpp]
