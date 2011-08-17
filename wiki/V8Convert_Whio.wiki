@@ -31,7 +31,29 @@ The vast majority of errors are reported via exceptions. Because of this:
   # Clients may need to take extra care to `try`/`catch` and `close()` streams/devices.
   # Error checking is reduced dramatically compared to using the underlying C API.
 
-Only a small handful of stream/device functions do _not_ throw on error.
+Relatively few stream/device functions do _not_ throw on error.
+
+== Notes on Ownership and Handle Sharing ==
+
+Each high-level i/o object is a thin wrapper around a C-level object which does (or proxies) the real work. Many of the stream/device constructors have a boolean parameter which specifies whether or not they "take ownership" of the passed-in stream/device. In such cases, "taking ownership" means the following:
+
+  * On success (and _only_ on success), the C-level handle is removed from the source stream/device. On error ownership is never transferred unless explicitly documented otherwise (such cases are rare, and i can't think of an example in this code).
+  * The stream/device being transferred is then freed _immediately_ using the JS engine, which will end up calling its native destructor. By the time that happens, the destructing wrapper has been disassociated from the C-level handle, so the only resources being freed are the few bytes of the wrapper object.
+
+This might be clearer after a demonstration:
+
+{{{
+var dev = new whio.IODev("/dev/null",whio.iomode.WRITE);
+var str = new whio.OutStream(dev,true/* <--- HERE*/);
+// At THIS point dev is NO LONGER VALID. Its underlying
+// C-level handle has been transferred to the str object
+// and [the equivalent of] dev.close() has been called.
+}}}
+
+The reason for this slightly non-intuitive behaviour (the immediate destruction of the "source" device) is because it is the only safe option we have. If we allowed, e.g., the above `dev` object to keep ahold of its handle then the lifetime of the underlying handle would be impossible to track/manage properly (`dev` might be closed before `str` is finished using it, and `str` has no way of knowing that and will step on an invalid (or re-allocated!) pointer). If, on the other hand, we simply transferred the C-level handle and _did not_ do (the equivalent of) `dev.close()` then the client would be forced to call `dev.close()` after transferring ownership (failing to do so would introduce a leak until GC kicked in), which would be even more non-intuitive than the current approach.
+
+So, the important thing to remember here is that when a constructor (or function) "takes ownership" of a stream or `IODev` object, the object being transferred is actually destroyed "immediately" (as part of the operation which takes ownership). Yes, this is slightly non-intuitive, but it keeps ownership of the pointers manageable.
+
 
 = whio Object =
 
@@ -63,9 +85,10 @@ The `whio.iomode` object contains a mapping of names to integers corresponding t
 
 These flags are typically only honored by routines which open file-based devices, and not all options may be supported by a given device-opening routine.
 
+
 = Stream Classes =
 
-`StreamBase` is the base (abstract) class of the `InStream` and `OutStream` classes. Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_stream whio_stream] object (the base C-level stream abstraction class).
+`whio.StreamBase` is the base (abstract) class of the `InStream` and `OutStream` classes. Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_stream whio_stream] object (the base C-level stream abstraction class).
 
 This class is abstract and cannot be instantiated by client code - use the `InStream` and `OutStream` classes to create new instances. This type _can_ be used with the `instanceof` operator.
 
@@ -78,7 +101,7 @@ It provides the following base functionality:
 
 == !InStream ==
 
-This general-purpose sequential-input class subclasses `StreamBase` and provides the following additional functionality:
+This general-purpose sequential-input class subclasses `whio.StreamBase` and provides the following additional functionality:
 
 || *Constructor* || *Description* ||
 || `InStream(string fileName)` || Opens the given file for read-only access. ||
@@ -117,7 +140,7 @@ The API does not support incremental de/compression, only whole-stream de/compre
 
 == !OutStream ==
 
-This general-purpose sequential-output class subclasses `StreamBase` and provides the following additional functionality:
+This general-purpose sequential-output class subclasses `whio.StreamBase` and provides the following additional functionality:
 
 || *Constructor* || *Description* ||
 || `OutStream(string fileName, bool truncate)` || Opens the given file for write-only access, either truncating it or appending to it. ||
@@ -126,31 +149,9 @@ This general-purpose sequential-output class subclasses `StreamBase` and provide
 || `int write(string|ByteArray [,int len=arg1.length])` || Writes the given string or `ByteArray`. Returns the number of bytes written (which may differ from the length, in characters, of an input string). ||
 || `void flush()` || Flushes any pending output. ||
 
-== Notes on Ownership and Handle Sharing ==
-
-Each high-level i/o object is a thin wrapper around a C-level object which does (or proxies) the real work. Many of the stream/device constructors have a boolean parameter which specifies whether or not they "take ownership" of the passed-in stream/device. In such cases, "taking ownership" means the following:
-
-  * On success (and _only_ on success), the C-level handle is removed from the source stream/device. On error ownership is never transferred unless explicitly documented otherwise (such cases are rare, and i can't think of an example in this code).
-  * The stream/device being transferred is then freed _immediately_ using the JS engine, which will end up calling its native destructor. By the time that happens, the destructing wrapper has been disassociated from the C-level handle, so the only resources being freed are the few bytes of the wrapper object.
-
-This might be clearer with a demonstration:
-
-{{{
-var dev = new whio.IODev("/dev/null",whio.iomode.WRITE);
-var str = new whio.OutStream(dev,true/* <--- HERE*/);
-// At THIS point dev is NO LONGER VALID. Its underlying
-// C-level handle has been transferred to the str object
-// and [the equivalent of] dev.close() has been called.
-}}}
-
-The reason for this slightly non-intuitive behaviour (the immediate destruction of the "source" device) is because it is the only safe option we have. If we allowed, e.g., the above `dev` object to keep ahold of its handle then the lifetime of the underlying handle would be impossible to handle properly (`dev` might be closed before `str` is finished using it, and `str` has no way of knowing that and will step on an invalid (or re-allocated!) pointer). If, on the other hand, we simply transferred the C-level handle and _did not_ do (the equivalent of) `dev.close()` then the client would be forced to call `dev.close()` after transferring ownership (failing to do so would introduce a leak until GC kicked in), which would be even more non-intuitive than the current approach.
-
-So, the important thing to remember here is that when a constructor (or function) "takes ownership" of a stream or `IODev` object, the object being transferred is actually destroyed "immediately" (as part of the operation which takes ownership). Yes, this is slightly non-intuitive, but it keeps ownership of the pointers in the right place.
-
-
 = Random-Access Devices =
 
-`IODev` is the base class/interface for random-access devices. The base implementation wraps  various types of devices, e.g. files, memory buffers, and "subdevices". Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_dev whio_dev] object (the base C-level i/o device abstraction class).
+`whio.IODev` is the base class/interface for random-access devices. The base implementation wraps  various types of devices, e.g. files, memory buffers, and "subdevices". Each instance is a thin wrapper around a [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_dev whio_dev] object (the base C-level i/o device abstraction class).
 
 It provides the following base functionality:
 
@@ -170,10 +171,6 @@ It provides the following base functionality:
 || `int tell()` || Reports the current position of the cursor within the device. ||
 || `void truncate(int newSize)` || Truncates the device. Subdevices do not support truncation. ||
 || `int write(String|ByteArray [, int len=arg1.length])` || Writes out a string or `ByteArray`. Returns the number of bytes written (which may differ from the _character_ length of a String parameter). ||
-
-Note that while many of those functions technically return integer status codes, they throw on error, meaning that the result codes are basically irrelevant. This applies to `flush()`, `truncate()`, and several others.
-
-Reminder to self: if we want to be able to wrap the subclass-specific extension functions properly (e.g. `whio::MemoryIODev::bufferSize()` or `whio::Subdevice::rebound()`) we need to "fully wrap" those classes as new `IODev` subclasses, as opposed to hiding them behind the `IODev` constructor. It's not hard, it just hasn't been implemented yet.
 
 == General Notes ==
 
@@ -215,9 +212,9 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 
 || *Constructor* || *Description* ||
 || `EPFS(string fileName, bool writeMode)` || Opens an existing EFS file. ||
-|| `EPFS(IODev storage, bool takeOwnership)` || Opens pre-existing EFS storage. If `takeOwnership` is true then the new object takes over ownership of the underlying storage and destroys the `storage` object (which is just a thin wrapper). ||
-|| `EPFS(string fileName, bool allowOverwrite, Object opt)` || Formats a file as EFS storage space. See below for more info. ||
-|| `EPFS(IODev storage, bool takeOwnership, Object opt)` || Formats an opened device as EFS storage. If `takeOwnership` is true then the new object takes over ownership of the underlying storage and destroys the `storage` object (which is just a thin wrapper). ||
+|| `EPFS(IODev storage, bool takeOwnership)` || Opens pre-existing EFS storage. If `takeOwnership` is true then the new object takes over ownership of the underlying storage handle and destroys the `storage` object (which is just a thin wrapper). ||
+|| `EPFS(string fileName, bool allowOverwrite, Object opt)` || Formats a file as EFS storage space. See below for more info. Use the file name `:memory:` for an in-memory EFS (but all contents will be lost when this object is destroyed). ||
+|| `EPFS(IODev storage, bool takeOwnership, Object opt)` || Formats an opened device as EFS storage. If `takeOwnership` is true then the new object takes over ownership of the underlying storage handle and destroys the `storage` object (which is just a thin wrapper). ||
 || *Member* || *Description* ||
 || `void close()` || Closes the EFS and frees all native resources. ALL pseudofiles `open()`d by this device _MUST_ be `close()`d _BEFORE_ this object is `close()`d. ||
 || `void foreachInode(function callback [, any clientData=undefined])` || For each _used_ inode in the EFS, `callback(inodeData,clientData)` is called. See below. ||
@@ -437,10 +434,12 @@ Memory usage: minimal. All of the stream/device implementations are thin wrapper
 
 EPFS is compiled, by default, with 16-bit inode and data block IDs (C type=`whio_epfs_id_t`). 16-bit inode/block IDs "limit" the EFS to `2^16` (64k) inodes/blocks, but data blocks have 32-bit size ranges, so this limit is not expected to ever be a problem.
 
-While the algorithms used by EPFS should all scale relatively well to high inode/block counts (into the thousands), the library is not really intended to be used for holding more than a couple hundred files. i.e. complaints that it slows down or fails in weird ways when adding 30k files to it won't be taken seriously (but i would nonetheless like to hear about them).
-
 Library versions compiled with different "bitness" values cannot read each others' EFS containers, and thus it is not recommended that the default values be changed except for specialized embedding cases (as opposed to generic use). While libwhio itself can be compiled for 8 or even 16-bit modes, EPFS cannot work in 8-bit mode and would be severely constrained in 16-bit mode (with a maximum storage size of 64kb!).
+
+While the algorithms used by EPFS should all scale relatively well to high inode/block counts, the library is not really intended to be used for holding more than a couple hundred files. i.e. complaints that it slows down or fails in weird ways when adding 30k files to it won't be taken seriously (but i would nonetheless like to hear about them). That said, it _theoretically_ can scale to any inode/block count ranges within its numeric limits without noticeable slow-downs. The most significant i/o operations, e.g. de/allocating blocks and inodes and translating p-file cursor positions to storage-side positions, are amortized O(1), with O(N) components when allocating _new_ blocks (N=block size). The "namer" interface does not make specific performance guarantees (e.g. for search-by-name), but the only current implementation is [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_ht a hash-table] with O(1) average-case search/insert/remove performance.
 
 Memory usage:
 
-The underlying C bits, not counting the few bytes for the C++ wrapper, generally need _less than 1kb_ of dynamically-allocated memory for typical use cases (only a couple of p-files opened at a time). i.e. an EPFS container only needs about 2-3 times the memory of an `fopen()`ed `FILE` handle (which allocates over 400 bytes on my machine). Each _opened_ inode needs additional memory to manage its mutable state and its block chain. When an inode is opened multiple times, most of that memory is shared amongst all copies. Only opened inodes with _really long_ block chains use any significant amount of memory (something like an additional 8 bytes per data block).
+The underlying C bits, not counting the few bytes for the C++ wrapper, generally need _less than 1kb_ of dynamically-allocated memory for typical use cases (only a couple of p-files opened at a time). i.e. an EPFS container only needs about 2-3 times the memory of an `fopen()`ed `FILE` handle (which allocates over 400 bytes on my machine). Each _opened_ inode needs additional memory to manage its mutable state and its block chain (_somewhere around_ 48 bytes + 8 bytes per data block owned by the inode). When an inode is opened multiple times, most of that memory is shared amongst all opened copies. Only _opened_ inodes with _really long_ block chains use any significant amount of memory (potentially even growing larger than a massive _100 bytes_! ;).
+
+The point of all that is - whio, _especially_ EPFS, is heavily optimized for a _very small_ memory footprint (smaller than many JSON strings and other client-side constructs). The JS side of the bindings _certainly_ takes up more memory than the lower-level bits do (but how much the v8 side requires is essentially unknowable, depending on implementation details of v8).
