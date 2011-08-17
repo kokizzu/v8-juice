@@ -1,6 +1,8 @@
 #summary I/O classes for JS
 #labels Phase-UserDocs,Topic-Plugins,Topic-JS-API
 
+*[V8Convert] users:* please see [V8Convert_Whio] instead. That's a newer/improved incarnation of this API.
+
 *Achtung #1:* these docs are for the current version in the subversion
 source tree (i document here as changes are made). If you are using an "older" version,
 i recommend [http://code.google.com/p/v8-juice/source/browse/wiki/PluginWhio.wiki searching through the subversion repo] for a version of this page which is
@@ -8,6 +10,7 @@ closer to the version you're working with (follow that link, and there are optio
 
 *Achtung #2:* It has [http://groups.google.com/group/v8-users/browse_thread/thread/1621beb71d65e6fa/2883be6ddd10cddd come to my attention] that using this API to read and write non-ASCII data may (and eventually will) produce undefined results (due to how v8 internally stores and translates strings).
 *Do not try to read/write binary data via the JS interface! You Have Been Warned.*
+
 
 =The whio I/O plugin=
 
