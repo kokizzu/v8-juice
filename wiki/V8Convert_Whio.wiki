@@ -422,19 +422,19 @@ Note that only p-files can only be opened in read-write mode if the EFS itself i
   * If using a namer, try to avoid using very small data block sizes (e.g. 4kb), to avoid fragmenting the namer's storage (which hurts performance on name-get/set operations).
   * If you know what your data looks like in advance, you can size the inode count and data block size for a optimum fit (or nearly so). As a rule, having larger data blocks means using less memory at run-time, as we have to manager fewer blocks per inode. However, having larger data blocks means more wasted storage for small p-files.
 
-= Sizes and Ranges =
+= Sizes, Ranges, and Memory Requirements =
 
 == Core library ==
 
 The core library is compiled with 32-bit i/o ranges by default (C type=`whio_size_t`). Since v8 does not directly support 64-bit values, it is not recommended to compile whio for 64-bit i/o (with `WHIO_SIZE_T_BITS=64`) in the context of this binding API.
 
-Memory usage: minimal. All of the stream/device implementations are thin wrappers around lower-level functionality (e.g. `FILE` handles or raw memory operations). The only one which needs (potentially) significant memory is the `MemoryIODev` class (in-memory devices, which can theoretically grow as large as your system's allocator will allow, to within the size limit of `whio_size_t`).
+Memory usage is minimal. All of the stream/device implementations are thin wrappers around lower-level functionality (e.g. `FILE` handles or raw memory operations). The only one which needs (potentially) significant memory is the `MemoryIODev` class (in-memory devices, which can theoretically grow as large as your system's allocator will allow, to within the size limit of `whio_size_t`). All of the stream/device handle types have a smaller (by far!) `sizeof()` than `sizeof(FILE)` (=216 on my 32-bit box).
 
 == EPFS ==
 
-EPFS is compiled, by default, with 16-bit inode and data block IDs (C type=`whio_epfs_id_t`). 16-bit inode/block IDs "limit" the EFS to `2^16` (64k) inodes/blocks, but data blocks have 32-bit size ranges, so this limit is not expected to ever be a problem.
+EPFS is compiled, by default, with 16-bit inode and data block IDs (C type=`whio_epfs_id_t`). 16-bit inode/block IDs "limit" the EFS to `2^16-1` (64k) inodes/blocks (theoretically, though the real limit is likely a few ticks less than that), but data blocks have 32-bit size ranges, so this 16-bit limit is not expected to ever be a problem.
 
-Library versions compiled with different "bitness" values cannot read each others' EFS containers, and thus it is not recommended that the default values be changed except for specialized embedding cases (as opposed to generic use). While libwhio itself can be compiled for 8 or even 16-bit modes, EPFS cannot work in 8-bit mode and would be severely constrained in 16-bit mode (with a maximum storage size of 64kb!).
+Library versions compiled with different "bitness" values cannot read each others' EFS containers, and thus it is not recommended that the default values be changed except for specialized embedding cases (as opposed to generic use). While libwhio itself can be compiled for 16-bit or even 8-bit modes, EPFS cannot work in 8-bit mode and would be severely constrained in 16-bit mode (with a maximum storage size of 64kb!).
 
 While the algorithms used by EPFS should all scale relatively well to high inode/block counts, the library is not really intended to be used for holding more than a couple hundred files. i.e. complaints that it slows down or fails in weird ways when adding 30k files to it won't be taken seriously (but i would nonetheless like to hear about them). That said, it _theoretically_ can scale to any inode/block count ranges within its numeric limits without noticeable slow-downs. The most significant i/o operations, e.g. de/allocating blocks and inodes and translating p-file cursor positions to storage-side positions, are amortized O(1), with O(N) components when allocating _new_ blocks (N=block size). The "namer" interface does not make specific performance guarantees (e.g. for search-by-name), but the only current implementation is [http://whiki.wanderinghorse.net/wikis/whio/?page=whio_ht a hash-table] with O(1) average-case search/insert/remove performance.
 
