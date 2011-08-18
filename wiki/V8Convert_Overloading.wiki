@@ -37,7 +37,7 @@ It looks like this:
 typedef cv::ArityDispatchList< CVV8_TYPELIST((
         cv::MethodToInCa<T, void (), &T::overload0>,
         cv::MethodToInCa<T, void (int), &T::overload1>,
-        cv::MethodToInCa<T, void (int,int), &BoundNative::overload2>,
+        cv::MethodToInCa<T, void (int,int), &T::overload2>,
         cv::MethodToInCa<T, void (v8::Arguments const &), &T::overloadN> // fallback for N args
 ))> MyOverloads;
 // Note that the order of the list entries is irrelevant for _most_ purposes,
