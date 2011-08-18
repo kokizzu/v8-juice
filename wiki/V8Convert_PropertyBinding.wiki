@@ -3,7 +3,7 @@
 
 <wiki:toc/>
 
-See also: [V8Convert_Overloading], [V8Convert_FunctionBinding], [V8Convert_XTo]
+See also: [V8Convert], [V8Convert_Overloading], [V8Convert_FunctionBinding], [V8Convert_XTo]
 
 = Introduction =
 
@@ -74,16 +74,16 @@ proto->SetAccessor(JSTR("globalInt"),
 
 Often we want to disable setting of a JS property. To do that, do one of the following:
 
-  * Use `ThrowingSetter::Accessor` as the setter, which will cause a JS exception to be thrown if the client assigns the variable.
+  * Use `ThrowingSetter::Set` as the setter, which will cause a JS exception to be thrown if the client assigns the variable.
   * Do not pass a setter to `SetAccessor()`. That might have undesired side-effects, though. IIRC, that leads to JS-set values "overriding" the variable, such that future `get` access reads the JS-assigned variable. (Again, IIRC.)
   * `SetAccessor()` has other default parameters which can be set to make a variable read-only (in which case setting it is simply ignored).
 
-Note that there is no equivalent for throwing if a _function_ is overwritten. Since v8 doesn't allow us to assign a setter without _also_ assigning a getter (it crashed when i tried), we cannot programmatically do it.
+Note that there is no equivalent for throwing if a JS member _function_ value is assigned to from client code. Since v8 doesn't allow us to assign a setter without _also_ assigning a getter (it crashed when i tried), we cannot programmatically do it unless we also implement a custom getter which returns the JS function handle.
 
 = Binding Native Member Variables =
 
 {{{
-struct MyType { int anInt; };
+struct MyType { int anInt; ... };
 
 ...
 
@@ -95,7 +95,7 @@ proto->SetAccessor(JSTR("anInt"),
 
 After that, all JS-side access to `anInt` will directly proxy the native `MyType::anInt`. Assigning, e.g., an `Object` to it would perform a numeric conversion, leading to a value of `0`.
 
-(TODO?: consider writing a type-strict variation which throws if the type is not strictly convertible.)
+(TODO?: consider writing a type-strict variation which throws if the type is not strictly convertible. We have this support for `InCa`s, so the proof-of-concept is there.)
 
 = Binding Native Methods, Functions, and Functors as Property Accessors =
 
@@ -105,6 +105,7 @@ Binding methods isn't any different from binding non-function properties:
 struct MyType {
     int getInt() const;
     void setInt(int);
+    ....
 };
 ...
 
@@ -113,10 +114,12 @@ v8::AccessorSetter s;
 
 g = ConstMethodToGetter<MyType,int (),&MyType::getInt>::Get,
 s = MethodToSetter<MyType,void (int),&MyType::setInt>::Set;
-
+// Or its equivalent: (requires XTo.hpp)
+g = MethodTo< Getter, const MyType, int (), &MyType::getInt>::Get,
+s = MethodTo< Setter, MyType, void (int), &MyType::setInt>::Set;
 }}}
 
-Functions aren't normally quite as useful, but can also be bound.
+Non-member functions aren't normally quite as useful in the context of accessors (because they don't have instance-private state), but can also be bound.
 
 {{{
 void set_time(int32_t);
@@ -129,7 +132,11 @@ s = FunctionToSetter< void (int32_t), set_time >::Set;
 Functors can also be bound as accessors, but note that there are a few notable limitations:
 
   * We assume the functor is stateless and has a _const_ `operator()` (possibly multiple implementations). We do not keep a single copy for the lifetime of the bindings, but that might be an improvement to consider.
-  * Since functors typically don't have access to state of a bound native, they are not expected to be useful as accessors all that often, except for getters which return some shared state like the current system time or a random number.
+  * Since functors typically don't have access to the state of a bound native, they are not expected to be useful as accessors all that often, except for getters which return some shared state like the current system time or a random number.
+
+In essence, functors and functions have the same limitations for accessor-binding purposes.
+
+An example:
 
 {{{
 struct TimeFunctor {
@@ -144,7 +151,7 @@ s = FunctorToSetter< TimeFunctor, void (int32_t) >::Set;
 
 }}}
 
-After that, all JS-side access to `anInt` will go through `getInt()` and `setInt()`.
+After that, all JS-side access to the bound property will go through the `TimeFunctor` operators..
 
 = Mixing Various Approaches =
 
@@ -158,9 +165,10 @@ struct MyType {
 
 ...
 
+// Bind the getter to anInt directly and the setter to setInt():
 proto->SetAccessor(JSTR("anInt"),
-    MemberToGetter<MyType,int,&MyType::anInt>::Get,
-    MethodToSetter<MyType,void (int),&MyType::setInt>::Set
+    MemberTo< Getter, MyType, int, &MyType::anInt>::Get,
+    MethodTo< Setter, MyType, void (int), &MyType::setInt>::Set
 );
 }}}
 
@@ -174,8 +182,12 @@ If a proxied getter or setter throws a native exception then it is likely to kil
 A brief example demonstrating how to handle `std::exception` types:
 
 {{{
-v8::AccessorGetter = GetterCatcher_std< FunctionToGetter<int (),get_some_val> >::Get;
-v8::AccessorSetter = SetterCatcher_std< FunctionToSetter<void (int),set_some_val> >::Set;
+v8::AccessorGetter g = GetterCatcher_std<
+  FunctionTo< Getter, int (),get_some_val>
+>::Get;
+v8::AccessorSetter s = SetterCatcher_std<
+  FunctionTo< Setter, void (int),set_some_val>
+>::Set;
 }}}
 
 See the API docs for how to use custom exception types and chain exception handlers.
