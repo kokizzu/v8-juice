@@ -310,15 +310,14 @@ int my_callback( v8::Arguments const & argv )
 
 See [V8Convert_Overloading].
 
-==Non-Convertible Return Types==
-
-
 == Non-convertible (or ignored) Return Types ==
 
 Sometimes we want to bind a function which has a return type which we cannot convert to JS. That means we can't bind it (compile errors if we try). There is, however, a half-workaround. If we don't mind simply losing the return value on the way back to JS, we can use `ToInCaVoid<>` to generate an `v8::InvocationCallback` proxy which explicitly does not call `CastToJS()` to convert the return type. The implication of that is that we can then bind it (despite the non-convertible return value), but JS will get the `undefined` value as the result of each call:
 
 {{{
-v8::InvocationCallback cb = cv::FunctionToInCaVoid<SomeNonConvertibleType (args...), myFunction>::Call;
+v8::InvocationCallback cb = cv::FunctionToInCaVoid<SomeNonConvertibleType (args...), myFunction >::Call;
+// Equivalent to:
+cb = cv::FunctionTo< InCaVoid, SomeNonConvertibleType (args...), myFunction >::Call;
 }}}
 
 We can also use that to bind functions whos return types we _could_ convert but don't want to for some reason (e.g. we don't want native error codes going back to JS).
@@ -338,7 +337,7 @@ v8::InvocationCallback cb =
      >::Call;
 }}}
 
-When that callback is called, the calling code is locking v8, meaning that other v8-using threads cannot preempt it (that's not actually true anymore, but assume it is for now - we'll clarify this lie a couple paragraphs down). When calling C-level APIs which themselves do not call back into v8, we may instead want to tell v8 that other threads may run. That is done like this:
+When that callback is called, the calling code is locking v8, meaning that other v8-using threads cannot preempt it (that's not actually true anymore, but assume it is for now - we'll clarify this lie a couple paragraphs down). When calling C-level APIs which themselves do not call back into v8, we may instead want to tell v8 that other threads may run. That is, in the generic case, done like this:
 
 {{{
 ... somewhere inside a v8 callback function ...
