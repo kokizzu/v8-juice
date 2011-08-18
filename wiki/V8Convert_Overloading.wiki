@@ -297,7 +297,7 @@ ConvertDemo.hpp:53:~BoundNative(): @0x82a56f8 is destructing.
 }}}
 
 
-==Argument Type Validation via Overloading==
+==Argument Type Validation==
 
 One (admittedly unforeseen) use of the overloading API is the ability to use it for performing argument validation for non-overloaded functions. When used this way, cvv8 makes sure the argument predicate(s) match before calling the bound function. Thus the function's body can be assured that the precondition logic passed before the function was called.
 
