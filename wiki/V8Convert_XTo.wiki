@@ -91,13 +91,9 @@ Header file: "[http://code.google.com/p/v8-juice/source/browse/convert/include/c
 
 The common conventions used by this API are:
 
-  * The conversion templates are all named like `XyzTo`. This documentation often refers to the `Xyz` part of the name as the "target" or "type" of the conversion, e.g. the "target" for a conversion is a `Function` (`FunctionTo<>`), `Method` (`MethodTo<>`), etc.
-  * The first argument to the template is a "tag" type. The tag types each correspond to a distinctly different type of conversion. The tags are:
-    * `InCa`: converts to a `v8::InvocationCallback`
-    * `InCaVoid`: converts to a `v8::InvocationCallback` which does not evaluate the return type (see [V8Convert_FunctionBinding] for why/when this is useful).
-    * `Getter`: converts to a `v8::AccessorGetter`
-    * `Setter`: converts to a `v8::AccessorSetter`
-    * `Accessors`: is a combination of `Getter` and `Setter`.
+The conversion templates are all named like `XyzTo`. This documentation often refers to the `Xyz` part of the name as the "target" or "type" of the conversion, e.g. the "target" for a conversion is a `Function` (`FunctionTo<>`), `Method` (`MethodTo<>`), etc.
+
+The first argument to the template is a "tag" type. The tag types each correspond to a distinctly different type of conversion (see below for the whole list).
 
 The template arguments after the first (the tag type) depend on the main target of the conversion (e.g. a function, method, or functor), and for a given target, the template arguments after the tag type are the same regardless of the tag's value. i.e. the interface is identical for `FunctionTo<InCa...>` and `FunctionTo<Getter,...>`, though specific conversions might place limitations on the range of values/types for a given conversion. e.g. a "getter" function (`FunctionTo<Getter,..>`) must take no arguments and return a convertible-to-JS, non-void type.
 
