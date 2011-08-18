@@ -341,21 +341,29 @@ struct ArgAt_IsWhence : ArgumentsPredicate
 And now we can bind our `seek()` function using strong type/range checking, such that the native function will never be called unless the JS calls pass values which are both type- and range-legal:
 
 {{{
+
+// Create the argument validation dispacher:
 typedef PredicatedInCaDispatcher< CVV8_TYPELIST((
-  PredicatedInCa< 
+  PredicatedInCa<
+      // The validation rules:
+      // Call-time types/values must match:
+      // (whio_off_t, one of: SEEK_(SET,END,CUR))
       Argv_AndN< CVV8_TYPELIST((
           Argv_Length<2>, ArgAt_IsA<0,whio_off_t>, ArgAt_IsWhence<1>
       )) >,
+      // The function/method to bind to:
       MethodTo<InCa, IODev, whio_size_t (whio_off_t,int), &IODev::seek>
   >
 )) > Seek;
 
-v8::InvocationCallback cb = Seek::Call;
+// Get the generated v8::InvocationCallback:
+v8::InvocationCallback cb = InCaCatcher_std< Seek >::Call;
+// PS: we use InCaCatcher_std b/c IODev::seek() can throw a std::exception.
 }}}
 
 _Yes_, it's ugly, and i _am_ looking for a new naming scheme for the `PredicatedXyz` family of templates. But when this approach is used, we can apply near-arbitrary logic to the callback dispatching process which can prevent (or allow) the JS-initiated calls to pass on (or not) into their bound native equivalents.
 
-What does that mean? It means that with the above binding in place, all of the following JS-side calls will fail with an argument validation exception:
+What does all that really mean? It means that with the above binding in place, all of the following JS-side calls will fail with an argument validation exception:
 
 {{{
 dev.seek("1",whio.SEEK_SET); // 1st type is wrong
