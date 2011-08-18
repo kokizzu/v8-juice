@@ -1,9 +1,9 @@
-#summary The cvv8 sub-project
+#summary The V8Convert (cvv8) sub-project
 #labels Phase-UserDocs,Topic-CPlusPlus,Featured
 
-*Newsflash:* as of r1920 we have v8-convert building on MSVC 2010. We lost the `ToInCa` class in the port but we may be able to factor it back in at some point.
+*Newsflash:* as of r1920 we have v8-convert building on MSVC 2010. i occasionally break the MSVC bits by accident (i don't have Windows/MSVC to test on), so if you find that it doesn't compile please post the error logs [http://groups.google.com/group/v8-juice-js-dev our mailing list] and i'll be happy to take a look. (It is completely untested on MSVC versions earlier than 2010, by the way.)
 
-<wiki:toc max_depth=4></wiki:toc>
+<wiki:toc/>
 
 = v8-convert (a.k.a. cvv8) =
 
@@ -70,6 +70,7 @@ namespace cv = cvv8;
 #include "cvv8/invocable.hpp" // function conversion API
 #include "cvv8/properties.hpp" // property-binding APIs
 #include "cvv8/arguments.hpp" // mainly function-binding-overloading code
+#include "cvv8/XTo.hpp" // the "X-to-..." alternative conversion API
 
 // "Utility" APIs:
 #include "cvv8/ClassCreator.hpp" // class-binding mechanism.
@@ -82,10 +83,10 @@ The (abundant) API docs are written in [http://www.doxygen.org doxygen]-friendly
 
 {{{
 ~> cd doc
-~> make doc
+~> make doc # or simply: doxyen
 }}}
 
-The name of the output directory will be shown on stdout.
+When using `make doc`, the name of the output directory will be shown on stdout.
 
 The public API is thoroughly documented, and as a rule undocumented functions and classes are not for public use. That said, many of the classes are template specializations which exist only for templates-related reasons, and they are not necessarily documented - see the primary template declaration in such cases.
 
@@ -177,8 +178,9 @@ As a side-note: that's not to say macros are absolutely evil - combining macros 
 More sources of information and code demos:
 
   * The `ConvertDemo.?pp` and `test.js` files in this source tree's root directory give a very thorough demonstration, showing off just about every feature the library offers.
+  * The [V8Convert_XTo XTo API] provides a _really easy_ interface into all of the function/property bindings.
   * [V8Convert_Overloading] goes into detail about how to overload script-side functions to multiple native functions.
-  * [V8Convert_Shell] offers a simple way to bootstrap v8 support into an arbitrary client application.
+  * [V8Convert_Shell] offers a simple way to bootstrap v8 support into a client application, providing all the v8 features basic apps needs.
   * [V8Convert_ClassCreator] offers a simple, customizable class-binding mechanism.
 
 The [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons addons  directory] of the [V8Convert] source tree includes some sample v8 bindings created using this API. They include:
