@@ -297,11 +297,11 @@ ConvertDemo.hpp:53:~BoundNative(): @0x82a56f8 is destructing.
 }}}
 
 
-==Argument Type Validation==
+==Argument Type/Range Validation==
 
 One (admittedly unforeseen) use of the overloading API is the ability to use it for performing argument validation for non-overloaded functions. When used this way, cvv8 makes sure the argument predicate(s) match before calling the bound function. Thus the function's body can be assured that the precondition logic passed before the function was called.
 
-=== Example of Argument Type/Range Validation ===
+=== Examples of Type/Range Validation ===
 
 Here's an example taken from [V8Convert_Whio], where we have an `IODev.seek()` function which natively looks like:
 
@@ -371,8 +371,23 @@ dev.seek(0,"hi"); // 2nd type is incorrect
 dev.seek(1,17); // 2nd type is correct but it is not a SEEK_xxx value
 }}}
 
-We can use this sort of validation to check for `NULL` pointers in some cases as well, by applying a hypothetical `ArgAt_Is[Not]NULL<int,T>` predicate template (which does not exist but would be easy to do).
+We can use this sort of validation to check for `NULL` pointers in some cases as well, by applying a hypothetical `ArgAt_Is[Not]NULL<int,T>` predicate template (which does not exist but would be easy to do). In fact, the default `ArgAt_IsA<int,T>` specialization will behave that way for client-bound `T` types which cannot be converted from JS to C++, but the behaviour for (`char [const] *`) is different (`char *` is habitually problematic when it comes to conversions). Nonetheless, we could write a `NULL`-safe C-style string check like this:
 
+{{{
+template <int I>
+struct ArgAt_IsNonNullCString : ArgumentsPredicate
+{
+    inline bool operator()( v8::Arguments const & args ) const {
+        if( args.Length() <= I ) return false;
+        else {
+           v8::Handle<v8::Value> const & v(argv[I]);
+           return !v->IsNull() && !v->IsUndefined();
+        }
+    }
+};
+}}}
+
+The binding framework's support for conversions from JS-to-(`char const *`) has some notable limitations due to the lifetime/ownership of the C-string bytes (see [V8Convert_FunctionBinding] for details), but the conversion specifies that JS `null` and `undefined` convert to `NULL` C-strings and that all other JS values will be converted using `v8::Value::ToString()`. Since the `Value::ToString()` operation presumably cannot return a `NULL` string (there is no such thing in JS!), we can safely assume that non-`null`/`undefined` JS values can be converted to non-`NULL` C strings.
 
 = Forwarding and Overloading Constructors =
 
