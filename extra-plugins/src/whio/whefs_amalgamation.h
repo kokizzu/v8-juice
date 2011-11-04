@@ -1,4 +1,4 @@
-/* auto-generated on Wed Jul  1 16:21:03 CEST 2009. Do not edit! */
+/* auto-generated on Fri Nov  4 11:46:09 CET 2011. Do not edit! */
 #define WHEFS_AMALGAMATION_BUILD 1
 #if ! defined __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS 1
@@ -87,7 +87,6 @@
 
 #include <stdint.h> /* uintXX_t */
 #include <inttypes.h> /* PRIuXX macros */
-//#include <unistd.h> /* ONLY for off_t. We need a better way to do this. */
 #include <sys/types.h> /* off_t on Linux */
 
 #ifndef __cplusplus
@@ -112,6 +111,9 @@
 
 
 #ifdef __cplusplus
+#if !defined(restrict)
+#  define restrict
+#endif
 extern "C" {
 #endif
 
@@ -126,7 +128,7 @@ extern "C" {
   all debuggering output is disabled.
 */
 #if WHIO_DEBUG_ENABLED
-#  include <stdio.h> // printf()
+#  include <stdio.h>
 #  define WHIO_DEBUG if(WHIO_DEBUG_ENABLED) printf("WHIO_DEBUG: %s:%d:%s():\n",__FILE__,__LINE__,__func__); if(WHIO_DEBUG_ENABLED) printf
 #else
     extern void whio_noop_printf(char const * fmt, ...);
@@ -220,18 +222,22 @@ porting to machines with different size_t sizes.
 #  define WHIO_SIZE_T_PFMT PRIu8
 #  define WHIO_SIZE_T_SFMT SCNu8
     typedef uint8_t whio_size_t;
+    typedef int16_t whio_off_t;
 #elif WHIO_SIZE_T_BITS == 16
 #  define WHIO_SIZE_T_PFMT PRIu16
 #  define WHIO_SIZE_T_SFMT SCNu16
     typedef uint16_t whio_size_t;
+    typedef int32_t whio_off_t;
 #elif WHIO_SIZE_T_BITS == 32
 #  define WHIO_SIZE_T_PFMT PRIu32
 #  define WHIO_SIZE_T_SFMT SCNu32
     typedef uint32_t whio_size_t;
+    typedef int64_t whio_off_t;
 #elif WHIO_SIZE_T_BITS == 64
 #  define WHIO_SIZE_T_PFMT PRIu64
 #  define WHIO_SIZE_T_SFMT SCNu64
     typedef uint64_t whio_size_t;
+    typedef uint64_t whio_off_t;
 #else
 #  error "WHIO_SIZE_T_BITS must be one of: 8, 16, 32, 64"
 #endif
@@ -265,10 +271,6 @@ porting to machines with different size_t sizes.
 
   License: Public Domain
 */
-
-//#include <stdio.h>
-//#include <unistd.h> /* off_t on Linux? */
-//#include <sys/types.h> /* off_t on Linux? */
 
 #include <stdint.h> /* uint32_t */
 #include <stdarg.h> /* va_list */
@@ -364,15 +366,16 @@ extern const whio_rc_t whio_rc;
 /** @struct whio_client_data
 
 whio_client_data is an abstraction for tying client-specific data to a
-whio_dev object. The data is not used by the public whio_dev API with
-one exception: when whio_dev_api::close() or whio_stream_api::close()
-is called, the implementation must clean up this data IFF the dtor
-member is not 0. For example:
+whio_dev or whio_stream object. The data is not used by the public
+whio_dev/whio_stream API with one exception: when
+whio_dev_api::close() or whio_stream_api::close() is called, the
+implementation must clean up this data IFF the dtor member is not
+0. For example:
 
   @code
   if( my->client.dtor ) {
     my->client.dtor( my->client.data );
-    my->client = whio_client_data_init; // zero it out
+    my->client = whio_client_data_empty; // zero it out
   }
   @endcode
    
@@ -382,10 +385,10 @@ struct whio_client_data
     /**
        Arbitrary data associated with an i/o device or stream.
 
-       This data is for sole use by whio_dev clients, with one
-       important exception: if dtor is not 0 then device implementations
-       take that as a hint to destroy this object using that
-       function.
+       This data is for sole use by whio_dev and whio_stream clients,
+       with one important exception: if dtor is not 0 then device
+       implementations take that as a hint to destroy this object
+       using that function.
 
        The object pointed to by client.data should not do any i/o on
        this stream or any stream/device during its destructor. Since
@@ -412,13 +415,13 @@ typedef struct whio_client_data whio_client_data;
 /**
    Static initializer for whio_client_data objects.
 */
-#define whio_client_data_init_m {0/*data*/,0/*dtor*/}
+#define whio_client_data_empty_m {0/*data*/,0/*dtor*/}
 
 /**
    An empty whio_client_data object for use in initialization
    of whio_client_data objects.
 */
-extern const whio_client_data whio_client_data_init;
+extern const whio_client_data whio_client_data_empty;
 
 /**
    Holds private implementation details for whio_dev instances. Each
@@ -431,44 +434,44 @@ struct whio_impl_data
 {
     /**
        data is SOLELY for use by concrete implementations of
-       whio_stream.
+       whio_stream and whio_dev, and not by clients of those types.
        
-       data can be used to store private data required by the
+       This field can be used to store private data required by the
        implementation functions. Each instance may have its own
-       information (which should be cleaned up via the finalize()
-       member function, assuming the stream owns the data).
+       information (which should be cleaned up via the close() member
+       function, assuming the object owns the data).
 
-       This data should be freed in the owning object's finalize() or
-       close() routine.
+       This data should be freed in the owning object's close()
+       routine.
     */
     void * data;
 
     /**
-       A type identifier for use solely by whio_dev implementations,
-       not client code. If the implementation uses this (it is an
-       optional component), it must be set by the whio_dev
-       initialization routine (typically a factory function).
+       A type identifier for use solely by whio_dev and whio_stream
+       implementations, not client code. If the implementation uses
+       this (it is an optional component), it must be set by the
+       whio_dev/whio_stream initialization routine (typically a
+       factory function).
 
        This mechanism works by assigning some arbitrary opaque value
        to all instances of a specific whio_dev implementation. The
        implementation funcs can then use that to ensure that they are
        passed the correct type. The typeID need not be public, but may
-       be so. e.g. the author of the impl may provide a non-member
-       whio_dev-related function which requires a specific type (or
-       types), and in that case the types would possibly need to be
-       known by the caller.
+       be so if it should be used by third parties to confirm that
+       whio_dev/whio_stream objects passed to them are of the proper
+       type.
     */
     void const * typeID;
 };
 /**
    Static initializer for whio_impl_data objects.
 */
-#define whio_impl_data_init_m {0/*data*/,0/*dtor*/}
+#define whio_impl_data_empty_m {0/*data*/,0/*dtor*/}
 typedef struct whio_impl_data whio_impl_data;
 /**
    Empty initializer object for whio_impl_data.
 */
-extern const whio_impl_data whio_impl_data_init;
+extern const whio_impl_data whio_impl_data_empty;
 
 /**
    Tries to convert an fopen()-compatible mode string to a number
@@ -691,7 +694,7 @@ struct whio_dev_api
      */
     int (*eof)( struct whio_dev * dev );
 
-    /**
+    /** @deprecated
        Returns the current position of the device, or
        whio_rc.SizeTError on error. An an example of an error, calling
        truncate() to truncate a device may leave its cursor out of
@@ -700,6 +703,10 @@ struct whio_dev_api
        fail to be able to read/write from/to the given position).
 
        On a non-i/o error (e.g. !dev), whio_rc.SizeTError is returned.
+
+       This function can be removed from the API, as the equivalent
+       can be done with seek(dev,0,SEEK_CUR). It may disappear
+       someday.
     */
     whio_size_t (*tell)( struct whio_dev * dev );
 
@@ -729,7 +736,7 @@ struct whio_dev_api
        not document what happens on SEEK_SET with a negative value, but
        we can hope that it fails in that case.
     */
-    whio_size_t (*seek)( struct whio_dev * dev, off_t pos, int whence );
+    whio_size_t (*seek)( struct whio_dev * dev, whio_off_t pos, int whence );
 
     /**
        Flushes the underying stream (not all streams support/need
@@ -752,7 +759,7 @@ struct whio_dev_api
        The underlying cursor position must not be changed by calling
        this function.
     */
-    int (*truncate)( struct whio_dev * dev, off_t size );
+    int (*truncate)( struct whio_dev * dev, whio_off_t size );
 
     /**
        ioctl() is a "back door" to give access to certain
@@ -951,6 +958,8 @@ whio_size_t whio_dev_write( whio_dev * dev, void const * data, whio_size_t n );
 */
 whio_size_t whio_dev_writeat( whio_dev * dev, whio_size_t pos, void const * data, whio_size_t n );
 
+whio_size_t whio_dev_readat( whio_dev * dev, whio_size_t pos, void * data, whio_size_t n );
+
 /**
    Copies all of src, from the beginning to EOF, to dest, starting
    at dest's current position. Returns whio_rc.OK on success.
@@ -1045,7 +1054,7 @@ whio_size_t whio_dev_tell( whio_dev * dev );
 /**
    Equivalent to dev->api->seek(...). If !dev, whio_rc.SizeTError is returned.
  */
-whio_size_t whio_dev_seek( whio_dev * dev, off_t pos, int whence );
+whio_size_t whio_dev_seek( whio_dev * dev, whio_off_t pos, int whence );
 
 /**
    Equivalent to dev->api->flush(...). If !dev, whio_rc.ArgError  is returned.
@@ -1055,7 +1064,7 @@ int whio_dev_flush( whio_dev * dev );
 /**
    Equivalent to dev->api->truncate(...). If !dev, whio_rc.ArgError is returned.
  */
-int whio_dev_truncate( whio_dev * dev, off_t size );
+int whio_dev_truncate( whio_dev * dev, whio_off_t size );
 
 /**
    Equivalent to dev->api->finalize(...). If !dev, this function does nothing.
@@ -1557,7 +1566,7 @@ typedef struct whio_stream whio_stream;
 /**
    Empty initialization object for whio_streams.
 */
-extern const whio_stream whio_stream_init;
+extern const whio_stream whio_stream_empty;
 
 /**
    An initializer macro for use in whio_stream subclass struct
@@ -1567,7 +1576,7 @@ extern const whio_stream whio_stream_init;
    followed by the type ID (which may be set to 0 if factory
    code will later set it to a valid value).
 */
-#define whio_stream_init_m(Read,Write,Destroy,Flush,IsGood,TypeID)	\
+#define whio_stream_empty_m(Read,Write,Destroy,Flush,IsGood,TypeID)	\
     { { Read, Write, Destroy, Flush, IsGood, { 0, TypeID } }
 
 /**
@@ -1605,38 +1614,20 @@ bool whio_stream_getchar( whio_stream * stream, char * tgt );
 
    The data is copied in chunks of some unspecified static size (hint: a few kb).
 */
-int whio_stream_copy( whio_stream * restrict istr, whio_stream * restrict ostr );
-
-
-/**
-   Consumes stream to the first \\n character.  It appends that data, minus the newline,
-   to dest. Returns the number of characters appended to dest, or 0 at EOF or on a read
-   error.
-
-   Note that the stream is consumed and the trailing newline character
-   (if any) is effectively lost.
-*/
-//whio_size_t whio_stream_readln_membuf(whio_stream * stream, struct memblob * dest );
-
-/**
-   Functionally identical to whio_stream_readln_membuf() except that the
-   line is returned as a null-termined string which the caller must
-   clean up using free(). On error or EOF 0 is returned.
-*/
-//char * whio_stream_readln(whio_stream * stream);
+int whio_stream_copy( whio_stream * istr, whio_stream * ostr );
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
-#endif // WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED
+#endif /* WANDERINGHORSE_NET_WHIO_STREAM_H_INCLUDED*/
 /* end file include/wh/whio/whio_stream.h */
 /* begin file include/wh/whio/whio_encode.h */
 #line 8 "include/wh/whio/whio_encode.h"
 #if !defined(WANDERINGHORSE_NET_WHIO_ENCODE_H_INCLUDED)
 #define WANDERINGHORSE_NET_WHIO_ENCODE_H_INCLUDED 1
 /*
-  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/
+  Author: Stephan Beal (http://wanderinghorse.net/home/stephan/)
 
   License: Public Domain
 */
@@ -1663,39 +1654,43 @@ enum whio_sizeof_encoded {
    whio_sizeof_encoded_uint64 is the length (in bytes) of an encoded uint64 value.
    It is 9: 1 tag byte + 8 data bytes.
 
-   @see whio_uint64_decode()
-   @see whio_uint64_encode()
+   @see whio_decode_uint64()
+   @see whio_encode_uint64()
 */
 whio_sizeof_encoded_uint64 = 9,
+whio_sizeof_encoded_int64 = 9,
 /** @var whio_sizeof_encoded_uint32
 
    whio_sizeof_encoded_uint32 is the length (in bytes) of an encoded uint32 value.
    It is 5: 1 tag byte + 4 data bytes.
 
-   @see whio_uint32_decode()
-   @see whio_uint32_encode()
+   @see whio_decode_uint32()
+   @see whio_encode_uint32()
 */
 whio_sizeof_encoded_uint32 = 5,
+whio_sizeof_encoded_int32 = 5,
 
 /** @var whio_sizeof_encoded_uint16
 
    whio_sizeof_encoded_uint16 is the length (in bytes) of an encoded uint16 value.
    It is 3: 1 tag byte + 2 data bytes.
 
-   @see whio_uint16_decode()
-   @see whio_uint16_encode()
+   @see whio_decode_uint16()
+   @see whio_encode_uint16()
 */
 whio_sizeof_encoded_uint16 = 3,
+whio_sizeof_encoded_int16 = 3,
 
 /** @var whio_sizeof_encoded_uint8
 
    whio_sizeof_encoded_uint8 is the length (in bytes) of an encoded uint8 value.
    It is 2: 1 tag byte + 1 data byte.
 
-   @see whio_uint8_decode()
-   @see whio_uint8_encode()
+   @see whio_decode_uint8()
+   @see whio_encode_uint8()
 */
 whio_sizeof_encoded_uint8 = 2,
+whio_sizeof_encoded_int8 = 2,
 
 /** @var whio_size_cstring
 
@@ -1703,8 +1698,8 @@ whio_sizeof_encoded_uint8 = 2,
    NOT INCLUDING the actual string bytes. i.e. this is the header
    size.
 
-   @see whio_cstring_decode()
-   @see whio_cstring_encode()
+   @see whio_decode_cstring()
+   @see whio_encode_cstring()
 */
 whio_sizeof_encoded_cstring = 1 + whio_sizeof_encoded_uint32,
 
@@ -1722,12 +1717,12 @@ whio_sizeof_encoded_size_t =
 #elif WHIO_SIZE_T_BITS == 8
     whio_sizeof_encoded_uint8
 #else
-#error "whio_size_t is not a supported type!"
+#error "WHIO_SIZE_T_BITS is not a supported value. Try one of (8,16,32,64)!"
 #endif
 
 };
 
-
+   
 /**
    Encodes a 32-bit integer value into 5 bytes - a leading tag/check
    byte, then the 4 bytes of the number, in big-endian format. Returns
@@ -1736,12 +1731,16 @@ whio_sizeof_encoded_size_t =
 
    dest must be valid memory at least whio_sizeof_encoded_uint32 bytes long.
 
-   @see whio_uint32_decode()
+   @see whio_decode_uint32()
 */
-size_t whio_uint32_encode( unsigned char * dest, uint32_t i );
+size_t whio_encode_uint32( unsigned char * dest, uint32_t i );
+/**
+   The unsigned counterpart of whio_encode_uint32().
+*/
+size_t whio_encode_int32( unsigned char * dest, int32_t i );
 
 /**
-   The converse of whio_uint32_encode(), this tries to read an
+   The converse of whio_encode_uint32(), this tries to read an
    encoded 32-bit value from the given memory. On success it returns
    whio_rc.OK and sets tgt (if not null) to that value. On error it
    returns some other value from whio_rc and does not modify tgt.
@@ -1754,27 +1753,35 @@ size_t whio_uint32_encode( unsigned char * dest, uint32_t i );
    - whio_rc.ArgError = !src
 
    - whio_rc.ConsistencyError = the bytes at the current location
-   were not encoded with whio_uint32_encode().
+   were not encoded with whio_encode_uint32().
 
-   @see whio_uint32_encode()
+   @see whio_encode_uint32()
 
 */
-int whio_uint32_decode( unsigned char const * src, uint32_t * tgt );
+int whio_decode_uint32( unsigned char const * src, uint32_t * tgt );
+/**
+   The unsigned counterpart of whio_decode_uint32().
+*/
+int whio_decode_int32( unsigned char const * src, int32_t * tgt );
 
 /**
-   Similar to whio_uint32_encode(), with the same conventions, but
+   Similar to whio_encode_uint32(), with the same conventions, but
    works on 16-bit numbers. Returns the number of bytes written, which
    will be equal to whio_sizeof_encoded_uint16 on success.
 
    dest must be valid memory at least whio_sizeof_encoded_uint16
    bytes long.
 
-   @see whio_uint16_decode()
+   @see whio_decode_uint16()
 */
-size_t whio_uint16_encode( unsigned char * dest, uint16_t i );
+size_t whio_encode_uint16( unsigned char * dest, uint16_t i );
+/**
+   The unsigned counterpart of whio_encode_uint16().
+*/
+size_t whio_encode_int16( unsigned char * dest, int16_t i );
 
 /**
-   Similar to whio_uint32_decode(), with the same conventions and
+   Similar to whio_decode_uint32(), with the same conventions and
    error codes, but works on 16-bit numbers.  On success it returns
    whio_rc.OK and sets target to that value. On error it returns some
    other value from whio_rc and does not modify tgt.
@@ -1783,90 +1790,111 @@ size_t whio_uint16_encode( unsigned char * dest, uint16_t i );
    long.
 
 
-   @see whio_uint16_encode()
+   @see whio_encode_uint16()
 */
 
-int whio_uint16_decode( unsigned char const * src, uint16_t * tgt );
+int whio_decode_uint16( unsigned char const * src, uint16_t * tgt );
+/**
+   The unsigned counterpart of whio_decode_uint16().
+*/
+int whio_decode_int16( unsigned char const * src, int16_t * tgt );
 
 /**
-   The uint8 counterpart of whio_uint16_encode(). Returns
+   The uint8 counterpart of whio_encode_uint16(). Returns
    whio_sizeof_encoded_uint8 on success and 0 on error. The only
    error condition is that dest is null.
 */
-size_t whio_uint8_encode( unsigned char * dest, uint8_t i );
+size_t whio_encode_uint8( unsigned char * dest, uint8_t i );
+/**
+   The unsigned counterpart of whio_encode_uint8().
+*/
+size_t whio_encode_int8( unsigned char * dest, int8_t i );
 
 /**
-   The uint8 counterpart of whio_uint16_decode(). Returns whio_rc.OK
+   The uint8 counterpart of whio_decode_uint16(). Returns whio_rc.OK
    on success. If !src then whio_rc.ArgError is returned. If src
    does not appear to be an encoded value then whio_rc.ConsistencyError
    is returned.
 */
-int whio_uint8_decode( unsigned char const * src, uint8_t * tgt );
+int whio_decode_uint8( unsigned char const * src, uint8_t * tgt );
+/**
+   The unsigned counterpart of whio_decode_uint8().
+*/
+int whio_decode_int8( unsigned char const * src, int8_t * tgt );
 
 
 /**
    Encodes v to dest. This is just a proxy for one of:
-   whio_uint8_encode(), whio_uint16_encode(), whio_uint32_encode() or
-   whio_uint64_encode(), depending on the value of WHIO_SIZE_T_BITS.
+   whio_encode_uint8(), whio_encode_uint16(), whio_encode_uint32() or
+   whio_encode_uint64(), depending on the value of WHIO_SIZE_T_BITS.
 */
-whio_size_t whio_size_t_encode( unsigned char * dest, whio_size_t v );
+whio_size_t whio_encode_size_t( unsigned char * dest, whio_size_t v );
 
 /**
    Decodes v from src. This is just a proxy for one of:
-   whio_uint8_decode(), whio_uint16_decode(), whio_uint32_decode() or
-   whio_uint64_decode(), depending on the value of WHIO_SIZE_T_BITS.
+   whio_decode_uint8(), whio_decode_uint16(), whio_decode_uint32() or
+   whio_decode_uint64(), depending on the value of WHIO_SIZE_T_BITS.
 */
-int whio_size_t_decode( unsigned char const * src, whio_size_t * v );
+int whio_decode_size_t( unsigned char const * src, whio_size_t * v );
 
 /**
    Encodes v to dev using whio_size_t_encode().
 */
-whio_size_t whio_dev_size_t_encode( whio_dev * dev, whio_size_t v );
+whio_size_t whio_dev_encode_size_t( whio_dev * dev, whio_size_t v );
 
 /**
-   Decodes v from dev using whio_size_t_decode().
+   Decodes a whio_size_t object from dev. On success whio_rc.OK is returned
+   and tgt (if not null) is modified, otherwise tgt is not modified.
 */
-int whio_dev_size_t_decode( whio_dev * dev, whio_size_t * v );
+int whio_dev_decode_size_t( whio_dev * dev, whio_size_t * tgt );
 
 /**
-   The 64-bit variant of whio_uint32_encode(). Follows the same
+   The 64-bit variant of whio_encode_uint32(). Follows the same
    conventions as that function but handles a uint64_t value instead
    of uint32_t.
 
-   @see whio_uint16_encode()
-   whio_uint32_encode()
-   whio_uint64_decode()
+   @see whio_encode_uint16()
+   whio_encode_uint32()
+   whio_decode_uint64()
 */
-size_t whio_uint64_encode( unsigned char * dest, uint64_t i );
+size_t whio_encode_uint64( unsigned char * dest, uint64_t i );
+/**
+   The unsigned counterpart of whio_encode_uint64().
+*/
+size_t whio_encode_int64( unsigned char * dest, int64_t i );
 
 /**
-   The 64-bit variant of whio_uint32_decode(). Follows the same
+   The 64-bit variant of whio_decode_uint32(). Follows the same
    conventions as that function but handles a uint64_t value instead
    of uint32_t.
 
-   @see whio_uint16_decode()
-   whio_uint32_decode()
-   whio_uint64_encode()
+   @see whio_decode_uint16()
+   whio_decode_uint32()
+   whio_encode_uint64()
 */
-int whio_uint64_decode( unsigned char const * src, uint64_t * tgt );
+int whio_decode_uint64( unsigned char const * src, uint64_t * tgt );
+/**
+   The unsigned counterpart of whio_decode_uint64().
+*/
+int whio_decode_int64( unsigned char const * src, int64_t * tgt );
 
 /**
-   Uses whio_uint32_encode() to write n elements from the given
+   Uses whio_encode_uint32() to write n elements from the given
    array to dev.  Returns whio_rc.OK on success. Returns the number of
    items written.
 
-   @see whio_uint32_encode()
+   @see whio_encode_uint32()
 */
-size_t whio_uint32_array_encode( unsigned char * dest, size_t n, uint32_t const * list );
+size_t whio_encode_uint32_array( unsigned char * dest, size_t n, uint32_t const * list );
 
 /**
    Reads n consecutive numbers from src, populating list (which must
    point to at least n uint32_t objects) with the results. Returns the
    number of items read, which will be less than n on error.
 
-   @see whio_uint32_decode()
+   @see whio_decode_uint32()
 */
-size_t whio_uint32_array_decode( unsigned char const * src, size_t n, uint32_t * list );
+size_t whio_decode_uint32_array( unsigned char const * src, size_t n, uint32_t * list );
 
 /**
    Encodes a C string into the destination by writing a tag byte, the length of
@@ -1881,12 +1909,12 @@ size_t whio_uint32_array_decode( unsigned char const * src, size_t n, uint32_t *
    terminator (if any) is not stored and not counted in the length.
    s may contain null characters.
 
-   @see whio_cstring_decode()
+   @see whio_decode_cstring()
 */
-size_t whio_cstring_encode( unsigned char * dest, char const * s, uint32_t n );
+size_t whio_encode_cstring( unsigned char * dest, char const * s, uint32_t n );
 
 /**
-   The converse of whio_cstring_encode(), this routine tries to
+   The converse of whio_encode_cstring(), this routine tries to
    decode a string from the given source memory.
 
    src must contain at least (whio_sizeof_encoded_cstring + N) bytes,
@@ -1912,22 +1940,22 @@ size_t whio_cstring_encode( unsigned char * dest, char const * s, uint32_t n );
    - whio_rc.ArgError = dev or tgt are 0.
 
    - whio_rc.ConsistencyError = src does not contain a string written
-   by whio_cstring_encode().
+   by whio_encode_cstring().
 
    Example:
 
 @code
 char * str = 0;
 size_t len = 0;
-int rc = whio_cstring_decode( mySource, &str, &len );
+int rc = whio_decode_cstring( mySource, &str, &len );
 if( whio_rc.OK != rc ) ... error ...
 ... use str ...
 free(str);
 @endcode
 
-   @see whio_cstring_encode()
+   @see whio_encode_cstring()
 */
-int whio_cstring_decode( unsigned char const * src, char ** tgt, size_t * length );
+int whio_decode_cstring( unsigned char const * src, char ** tgt, size_t * length );
 
 
 /**
@@ -1936,12 +1964,12 @@ int whio_cstring_decode( unsigned char const * src, char ** tgt, size_t * length
    the number of bytes written, which will be equal to
    whio_dev_sizeof_uint32 on success.
 
-   @see whio_dev_uint32_decode()
+   @see whio_dev_decode_uint32()
 */
-size_t whio_dev_uint32_encode( whio_dev * dev, uint32_t i );
+size_t whio_dev_encode_uint32( whio_dev * dev, uint32_t i );
 
 /**
-   The converse of whio_dev_uint32_encode(), this tries to read an encoded
+   The converse of whio_dev_encode_uint32(), this tries to read an encoded
    32-bit value from the current position of dev. On success it returns
    whio_rc.OK and sets target to that value. On error it returns some
    other value from whio_rc and does not modify tgt.
@@ -1953,24 +1981,24 @@ size_t whio_dev_uint32_encode( whio_dev * dev, uint32_t i );
    - whio_rc.IOError = an error while reading the value (couldn't read enough bytes)
 
    - whio_rc.ConsistencyError = the bytes at the current location were not encoded
-   with whio_dev_uint32_encode().
+   with whio_dev_encode_uint32().
 
-   @see whio_dev_uint32_encode()
+   @see whio_dev_encode_uint32()
 
 */
-int whio_dev_uint32_decode( whio_dev * dev, uint32_t * tgt );
+int whio_dev_decode_uint32( whio_dev * dev, uint32_t * tgt );
 
 /**
-   Similar to whio_dev_uint32_encode(), with the same conventions, but
+   Similar to whio_dev_encode_uint32(), with the same conventions, but
    works on 16-bit numbers. Returns the number of bytes written, which
    will be equal to whio_dev_sizeof_uint16 on success.
 
-   @see whio_dev_uint16_decode()
+   @see whio_dev_decode_uint16()
 */
-size_t whio_dev_uint16_encode( whio_dev * dev, uint16_t i );
+size_t whio_dev_encode_uint16( whio_dev * dev, uint16_t i );
 
 /**
-   Similar to whio_dev_uint32_decode(), with the same conventions and
+   Similar to whio_dev_decode_uint32(), with the same conventions and
    error codes, but works on 16-bit numbers.  On success it returns
    whio_rc.OK and sets target to that value. On error it returns some
    other value from whio_rc and does not modify tgt.
@@ -1978,54 +2006,48 @@ size_t whio_dev_uint16_encode( whio_dev * dev, uint16_t i );
    @see whio_dev_uint16_encode()
 */
 
-int whio_dev_uint16_decode( whio_dev * dev, uint16_t * tgt );
+int whio_dev_decode_uint16( whio_dev * dev, uint16_t * tgt );
 
 
 /**
-   The 64-bit variant of whio_dev_uint32_encode(). Follows the same
+   The 64-bit variant of whio_dev_encode_uint32(). Follows the same
    conventions as that function but handles a uint64_t value instead
    of uint32_t.
 
    @see whio_dev_uint16_encode()
-   @see whio_dev_uint32_encode()
-   @see whio_dev_uint64_decode()
+   @see whio_dev_encode_uint32()
+   @see whio_dev_decode_uint64()
 */
-size_t whio_dev_uint64_encode( whio_dev * fs, uint64_t i );
+size_t whio_dev_encode_uint64( whio_dev * fs, uint64_t i );
 
 /**
-   The 64-bit variant of whio_dev_uint32_decode(). Follows the same
+   The 64-bit variant of whio_dev_decode_uint32(). Follows the same
    conventions as that function but handles a uint64_t value instead
    of uint32_t.
 
-   @see whio_dev_uint16_decode()
-   @see whio_dev_uint32_decode()
+   @see whio_dev_decode_uint16()
+   @see whio_dev_decode_uint32()
    @see whio_dev_uint64_encode()
 */
-int whio_dev_uint64_decode( whio_dev * dev, uint64_t * tgt );
+int whio_dev_decode_uint64( whio_dev * dev, uint64_t * tgt );
 
 /**
-   Uses whio_dev_uint32_encode() to write n elements from the given
+   Uses whio_dev_encode_uint32() to write n elements from the given
    array to dev.  Returns whio_rc.OK on success. Returns the number of
    items written.
 
-   @see whio_dev_uint32_encode()
+   @see whio_dev_encode_uint32()
 */
-size_t whio_dev_uint32_array_encode( whio_dev * dev, size_t n, uint32_t const * list );
+size_t whio_dev_encode_uint32_array( whio_dev * dev, size_t n, uint32_t const * list );
 
 /**
    Reads n consecutive numbers from dev, populating list (which must
    point to at least n uint32_t objects) with the results. Returns the
    number of items read, which will be less than n on error.
 
-   @see whio_dev_uint32_decode()
+   @see whio_dev_decode_uint32()
 */
-size_t whio_dev_uint32_array_decode( whio_dev * dev, size_t n, uint32_t * list );
-
-/**
-   Decodes a whio_size_t object from dev. On success whio_rc.OK is returned
-   and tgt (if not null) is modified, otherwise tgt is not modified.
-*/
-int whio_dev_size_t_decode( whio_dev * dev, whio_size_t * tgt );
+size_t whio_dev_decode_uint32_array( whio_dev * dev, size_t n, uint32_t * list );
 
 /**
    Encodes a C string into the device by writing a tag byte, the length of
@@ -2033,14 +2055,14 @@ int whio_dev_size_t_decode( whio_dev * dev, whio_size_t * tgt );
    strlen(s). Zero is also legal string length.
 
    Returns the number of bytes written, which will be (n +
-   whio_dev_size_cstring) on success, 0 if !dev or !s.
+   whio_sizeof_encoded_cstring) on success, 0 if !dev or !s.
 
-   @see whio_dev_cstring_decode()
+   @see whio_dev_decode_cstring()
 */
-uint32_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n );
+uint32_t whio_dev_encode_cstring( whio_dev * dev, char const * s, uint32_t n );
 
 /**
-   The converse of whio_dev_cstring_encode(), this routine tries to
+   The converse of whio_dev_encode_cstring(), this routine tries to
    decode a string from the current location in the device.
 
    On success, tgt is assigned to the new (null-terminated) string
@@ -2060,7 +2082,7 @@ uint32_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n );
    - whio_rc.ArgError = dev or tgt are 0.
 
    - whio_rc.ConsistencyError = current position of the device does not
-   appear to be an encoded string written by whio_dev_cstring_encode().
+   appear to be an encoded string written by whio_dev_encode_cstring().
 
    - whio_rc.IOError = some form of IO error.
 
@@ -2070,17 +2092,122 @@ uint32_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n );
 @code
 char * str = 0;
 size_t len = 0;
-int rc = whio_dev_cstring_decode( myDevice, &str, &len );
+int rc = whio_dev_decode_cstring( myDevice, &str, &len );
 if( whio_rc.OK != rc ) ... error ...
 ... use str ...
 free(str);
 @endcode
 
 
-   @see whio_dev_cstring_encode()
+   @see whio_dev_encode_cstring()
 */
-int whio_dev_cstring_decode( whio_dev * dev, char ** tgt, uint32_t * length );
+int whio_dev_decode_cstring( whio_dev * dev, char ** tgt, uint32_t * length );
+/**
+   Parses fmt in the same manner as whio_encode_pack() and returns
+   the number of bytes which would be needed to encode that set
+   of data. On error it returns 0, which is never a legal encoding
+   length value. If itemCount is not null then it is set to he number
+   if objects parsed from the list.
 
+   e.g.
+
+   @code
+   size_t itemCount = 0;
+   size_t len = whio_encode_pack_calc_size("828",&itemCount);
+   // len==24 and itemCount==3
+   @endcode
+
+   Note that the encoded length is longer than the actual data because
+   each encoded elements gets a consistency-checking byte added to it,
+   to allow the decode routines to more safely navigate their input,
+   and the number of items in the list is stored in the encoding. The
+   size also includes bytes for the packing structure itself, and is
+   not a mere accumulation of the types specified in the format
+   string.
+*/
+size_t whio_encode_pack_calc_size( char const * fmt, size_t *itemCount );
+    
+/**
+   Encodes a series of values supported by the various whio_encode_xxx()
+   routines as an atomic unit. They can be unpacked by using
+   whio_decode_pack().
+
+   fmt must contain only the following characters:
+
+   - '1' means the corresponding (...) arg must be a uint8_t.
+   - '2' means the corresponding (...) arg must be a uint16_t.
+   - '4' means the corresponding (...) arg must be a uint32_t.
+   - '8' means the corresponding (...) arg must be a uint64_t.
+   - '+' or '-' followed by a digit means the following number argument is signed.
+
+   
+   Returns the result of calling whio_encode_xxx() for each argument,
+   where XXX is the type designated by the format specifier.
+
+   If itemsWritten is not null then it is set to the number of items
+   successfully written. You can figure out what that number _should_ be
+   by using whio_encode_pack_calc_size().
+   
+   e.g.:
+
+   @code
+   size_t count = 0;
+   size_t rc = whio_encode_pack( mybuffer, &count, "144", myUint16, myInt32a, myInt32b );
+   // count should be 3 now.
+   // rc will be the same as whio_encode_pack_calc_size("144",0).
+   @endcode
+
+   You can use whio_encode_pack_calc_size() to figure out what the return value of whio_encode_pack()
+   _should_ be.
+   
+   TODOS:
+
+   - Consider adding support for whio_encode_cstring(). The problem
+   here is that decoding it requires malloc()ing or some weird
+   arg-passing conventions, e.g. fmt="s" requiring two args (char *
+   dest,size_t destLen) (which wouldn't be all that bad for the uses i
+   have in mind).
+*/
+size_t whio_encode_pack( void * dest, size_t * itemsWritten, char const * fmt, ... );
+
+/**
+   va_list form of whio_encode_pack().
+*/
+size_t whio_encode_pack_v( void * dest, size_t * itemsWritten, char const * fmt, va_list va );
+/**
+   This is the converse of whio_encode_pack(), and is used to unpack
+   sets packaged using that function. It takes the same format string
+   as whio_encode_pack(), but requires pointers to arguments to be
+   passed as the variadic arguments. e.g. fmt "1" requires a (uint8_t*)
+   argument and fmt "-8" requires an int64_t.
+
+   Returns whefs_rc.OK on success.
+
+   If itemsRead is not null then it will be set ot the number items
+   successfully decoded, whether or not an error code is returned.
+
+   You can use whio_decode_pack_calc_size() to figure out how many
+   items _should_ be decoded for the given format string.
+
+   Be aware that a data set saved with whio_encode_pack() must be
+   decoded with the exact same formatting string. Differences will
+   cause the decoding process to return whio_rc.ConsistencyError.
+*/
+int whio_decode_pack( void const * src, size_t * itemsRead, char const * fmt, ... );
+
+/**
+   va_list form of whio_deencode_pack().
+*/
+int whio_decode_pack_v( void const * src, size_t * itemsRead, char const * fmt, va_list va );
+
+/**
+   Parses a whio_encode_pack()-formatted string and figures out the size of the
+   encoded data. If itemCount is not 0 then it is set to the number of items
+   parsed from fmt. On error, 0 is returned but itemCount will contain the number
+   of values parsed before the error.
+*/
+size_t whio_encode_pack_calc_size( char const * fmt, size_t *itemCount );
+    
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
@@ -2621,7 +2748,7 @@ typedef struct whio_blockdev
    A whio_blockdev object for cases where static initialization is necessary
    (e.g. member whio_blockdev objects).
 */
-#define whio_blockdev_init_m {\
+#define whio_blockdev_empty_m {\
 	{ /* blocks */ \
 	    0 /*size*/,\
 	    0 /*count*/,\
@@ -2635,7 +2762,7 @@ typedef struct whio_blockdev
 /**
    Empty initialization object.
 */
-extern const whio_blockdev whio_blockdev_init;
+extern const whio_blockdev whio_blockdev_empty;
 
 
 /**
@@ -2649,15 +2776,19 @@ extern const whio_blockdev whio_blockdev_init;
 whio_blockdev * whio_blockdev_alloc();
 
 /**
-   Initializes the given whio_blockdev object. bdev will use
-   parent_store as its storage device, but will only access the device
-   range [parent_offset,(block_size * block_count)). None of the
-   parameters may be 0 except prototype. If prototype is not null then
-   it must be valid memory at least block_size bytes long. When a
-   block is "wiped" (see whio_blockdev_wipe()), this prototype object
-   is written to it.
+   Initializes the given whio_blockdev object, which must have been
+   allocated using whio_blockdev_alloc() or created on the stack and
+   initialized using whio_blockdev_empty or whio_blockdev_empty_m.
 
-   The parent_store object must outlive bdev. Perforing any i/o on
+   bdev will use parent_store as its storage device, but will only
+   access the device range [parent_offset,(block_size *
+   block_count)). None of the parameters may be 0 except for
+   parent_offset and prototype. If prototype is not null then it must
+   be valid memory at least block_size bytes long. When a block is
+   "wiped" (see whio_blockdev_wipe()), this prototype object is
+   written to it.
+
+   The parent_store object must outlive bdev. Performing any i/o on
    bdev after the parent i/o device is invalidated will lead to
    undefined results.
 
@@ -2670,10 +2801,39 @@ whio_blockdev * whio_blockdev_alloc();
    corresponding call to whio_blockdev_cleanup(), it will leak
    resources.
 
-   Returns whio_rc.OK on success, some other value on error.
+   Returns whio_rc.OK on success, some other value on error:
+
+   - whio_rc.AllocError if allocation of a subdevice fails.
+
+   - whio_rc.ArgError if any of bdev, parent_store, block_size, or
+   block_count are 0.
 */
 int whio_blockdev_setup( whio_blockdev * bdev, whio_dev * parent_store, whio_size_t parent_offset,
 			 whio_size_t block_size, whio_size_t block_count, void const * prototype );
+/**
+   Works similarly to whio_blockdev_setup(), but it uses the parent
+   device directly instead of an explicit subdevice, and does not
+   place an upper limit on the number of blocks it may write.
+
+   parent may be any API-compliant device, including a subdevice.
+   parent must outlive bdev. All i/o on the parent device starts at
+   offset 0 and happens in blocks of block_size.
+
+   whio_blockdev_in_range() will always return true for a blockdev
+   initialized this way.
+
+   See whio_blockdev_setup() for the allocation and cleanup
+   requirements of bdev.
+
+   Returns whio_rc.OK on success or whio_rc.ArgError if
+   !bdev, !parent, or !block_size.
+
+   This routine does not allocate any memory.
+   
+   @see whio_blockdev_free()
+*/
+int whio_blockdev_setup2( whio_blockdev * bdev, whio_dev * parent, whio_size_t block_size, void const * prototype );
+
 /**
    Cleans up internal memory owned by bdev but does not free bdev
    itself. After this, bdev may be passed to whio_blockdev_setup() to
@@ -2692,9 +2852,9 @@ bool whio_blockdev_cleanup( whio_blockdev * bdev );
 
 /**
    Destroys bdev and any internal memory it owns. ONLY pass this
-   object created using whio_blockdev_alloc() or malloc(). DO NOT pass
-   this an object which was created on the stack, as that will lead to
-   a segfault. For stack-allocated objects use whio_blockdev_cleanup()
+   object created using whio_blockdev_alloc(). DO NOT pass this an
+   object which was created on the stack, as that will lead to a
+   segfault. For stack-allocated objects use whio_blockdev_cleanup()
    instead.
 
    @see whio_blockdev_cleanup()
@@ -2704,6 +2864,10 @@ void whio_blockdev_free( whio_blockdev * bdev );
 
 /**
    Returns true if id is a valid block ID for bdev, else false.
+
+   If bdev was initialized with whio_blockdev_setup2() then this
+   function will always return true, with the assumption that the
+   underlying device can indeed be grown if needed.
 */
 bool whio_blockdev_in_range( whio_blockdev const * bdev, whio_size_t id );
 
@@ -2713,8 +2877,19 @@ bool whio_blockdev_in_range( whio_blockdev const * bdev, whio_size_t id );
    returns whio_rc.OK. It returns an error code if bdev or src are
    null, id is not in bounds, or on an i/o error. src must be valid
    memory at least bdev->blocks.size bytes long.
+
+
+   Error conditions:
+
+   - If !bdev or !src: whio_rc.ArgError is returned.
+
+   - If whio_blockdev_in_range(bdev,id) returns false,
+   whio_rc.RangeError is returned.
+  
+   - If writing fails, whio_rc.IOError is returned.
 */
 int whio_blockdev_write( whio_blockdev * bdev, whio_size_t id, void const * src );
+
 /**
    Reads bdev->blocks.size bytes of memory from the block with the
    given id from bdev and copies it to dest. dest must be valid memory
@@ -2723,9 +2898,7 @@ int whio_blockdev_write( whio_blockdev * bdev, whio_size_t id, void const * src 
 int whio_blockdev_read( whio_blockdev * bdev, whio_size_t id, void * dest );
 
 /**
-   If a block prototype object was passed to whio_blockdev_setuo()
-   then that object is written to the given block of bdev, otherwise
-   whio_rc.ArgError is returned. Returns whio_rc.OK on success.
+   This is equivalent to whio_blockdev_wipe(bdev,id,bdev->impl.prototype).
 */
 int whio_blockdev_wipe( whio_blockdev * bdev, whio_size_t id );
 
@@ -2837,7 +3010,7 @@ whio_stream * whio_stream_for_fileno( int fileno, bool writeMode );
 } /* extern "C" */
 #endif
 
-#endif // WANDERINGHORSE_NET_WHIO_STREAMS_H_INCLUDED
+#endif /* WANDERINGHORSE_NET_WHIO_STREAMS_H_INCLUDED */
 /* end file include/wh/whio/whio_streams.h */
 /* begin file include/wh/whio/whio_zlib.h */
 #line 8 "include/wh/whio/whio_zlib.h"
@@ -2888,7 +3061,7 @@ extern "C" {
    @see whio_stream_gunzip()
    @see whio_stream_for_dev()
  */
-int whio_stream_gzip( whio_stream * restrict src, whio_stream * restrict dest, int level );
+int whio_stream_gzip( whio_stream * src, whio_stream * dest, int level );
 
 /**
    Assumes src contains gzipped data and decompresses it to dest.
@@ -2909,7 +3082,7 @@ int whio_stream_gzip( whio_stream * restrict src, whio_stream * restrict dest, i
    @see whio_stream_gzip()
    @see whio_stream_for_dev()
 */
-int whio_stream_gunzip( whio_stream * restrict src, whio_stream * restrict dest );
+int whio_stream_gunzip( whio_stream * src, whio_stream * dest );
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -2957,7 +3130,7 @@ extern "C" {
    The policies which implementations need to follow are:
 
    - arg is an implementation-specific pointer (may be 0) which is
-   passed to whprintf(). whprintfv() doesn't know what this argument is
+   passed to vappendf. whprintfv() doesn't know what this argument is
    but passes it to its whprintf_appender. Typically it will be an
    object or resource handle to which string data is pushed or output.
 
@@ -3018,7 +3191,7 @@ typedef long (*whprintf_appender)( void * arg,
 
  CURRENT (documented) PRINTF EXTENSIONS:
 
- %%z works like %%s, but takes a non-const (char *) and whprintf()
+ %%z works like %%s, but takes a non-const (char *) and vappendf
  deletes the string (using free()) after appending it to the output.
 
  %%h (HTML) works like %s but converts certain characters (like '<' and '&' to
@@ -3043,7 +3216,7 @@ typedef long (*whprintf_appender)( void * arg,
  implementation's sqlite3 genes.)
 
  These extensions may be disabled by setting certain macros when
- compiling whprintf.c (see that file for details).
+ compiling vappendf.c (see that file for details).
 */
 long whprintfv(
   whprintf_appender pfAppend,          /* Accumulate results here */
@@ -3747,7 +3920,7 @@ in place of hard-coding the printf format specifier.
 
     @see WHEFS_MAGIC_STRING_PREFIX WHEFS_MAGIC_STRING
 */
-static const uint32_t whefs_fs_magic_bytes[] = { 2009, 6, 9, WHEFS_ID_TYPE_BITS, 0 };
+static const uint32_t whefs_fs_magic_bytes[] = { 2009, 12, 1, WHEFS_ID_TYPE_BITS, 0 };
 /** @def WHEFS_MAGIC_STRING_PREFIX
 
     WHEFS_MAGIC_STRING_PREFIX is an internal helper macro to avoid
@@ -3758,7 +3931,7 @@ static const uint32_t whefs_fs_magic_bytes[] = { 2009, 6, 9, WHEFS_ID_TYPE_BITS,
 
     @see whefs_fs_magic_bytes WHEFS_MAGIC_STRING
 */
-#define WHEFS_MAGIC_STRING_PREFIX "whefs version 20090609 with "
+#define WHEFS_MAGIC_STRING_PREFIX "whefs version 20091201 with "
 
 #if WHEFS_ID_TYPE_BITS == 8
 /* for very, very limited filesystems. There's lots of room for overflows here! */
@@ -3974,9 +4147,12 @@ performance than we lose when it is disabled.
 #include <stddef.h>
 #include <stdio.h>
 
-//Doxygen won't allow us to have both @page and @mainpage, which is problematic
-//when we re-use headers in different projects which also use doxygen.
-//@page page_whefs_main whefs: Embedded/Virtual Filesystem
+/*
+  Doxygen won't allow us to have both @page and @mainpage, which is problematic
+  when we re-use headers in different projects which also use doxygen.
+
+  @page page_whefs_main whefs: Embedded/Virtual Filesystem
+*/
 /** 
     @mainpage whefs: Embedded/Virtual Filesystem
 
@@ -4284,7 +4460,7 @@ typedef struct whefs_magic
        Must point to at least length bytes of data. The first
        length bytes are used as a magic cookie header.
     */
-    char const * data;
+    unsigned char const * data;
 } whefs_magic;
 
 /**
@@ -4295,15 +4471,15 @@ extern const whefs_magic whefs_magic_default;
 
 /** @struct whefs_fs_options
 
-   whefs_fs_options defines the major parameters of a vfs. Once they
-   are set, the must not be changed for the life of the vfs, as doing
-   so invalidates the vfs and will lead to data corruption. (The public
+   whefs_fs_options defines the major parameters of an EFS. Once they
+   are set, they must not be changed for the life of the EFS, as doing
+   so invalidates the EFS and will lead to data corruption. (The public
    API provides no way for the client to change these options after
-   a VFS is initialized.)
+   a EFS is initialized.)
 
-   Normally this type is used by clients only when creating a new vfs
+   Normally this type is used by clients only when creating a new EFS
    container file (e.g. via whefs_mkfs()). When opening an existing
-   vfs container, the options will be read in from the container.
+   container, the options will be read in from the container.
 */
 struct whefs_fs_options
 {
@@ -4313,9 +4489,10 @@ struct whefs_fs_options
     whefs_magic magic;
     /**
        The size of each data block in the vfs.
+
+       maintenance reminder: this cannot be bigger than whio_size_t.
     */
     whio_size_t block_size;
-    //^^^ maintenance reminder: this cannot be bigger than whio_size_t.
 
     /**
        The number of blocks in the VFS. The implementation
@@ -4344,7 +4521,7 @@ typedef struct whefs_fs_options whefs_fs_options;
    Initializer macro for inlined whefs_magic objects. Sets the magic
    to the given string.
 */
-#define WHEFS_MAGIC_INIT(STR) { sizeof(STR) -1, STR }
+#define WHEFS_MAGIC_INIT(STR) { sizeof(STR) -1, (unsigned char const *)STR }
 
 /**
    The default magic cookie used by the library.
@@ -4354,7 +4531,7 @@ typedef struct whefs_fs_options whefs_fs_options;
 /**
    A static initializer for an empty whefs_magic object.
 */
-#define WHEFS_MAGIC_NIL { 0, "\0" }
+#define WHEFS_MAGIC_NIL { 0, (unsigned char const *)"\0" }
 
 /**
    A static initializer for whefs_fs_options objects. It defaults
@@ -4485,7 +4662,7 @@ typedef struct whefs_file whefs_file;
    @see whefs_fdev()
    @see whefs_dev_open()
 */
-whefs_file * whefs_fopen( whefs_fs * restrict fs, char const * name, char const * mode );
+whefs_file * whefs_fopen( whefs_fs * fs, char const * name, char const * mode );
 
 /**
    Similar to whefs_fopen(), but returns a whio_dev instead of a
@@ -4527,7 +4704,7 @@ whefs_file * whefs_fopen( whefs_fs * restrict fs, char const * name, char const 
    @see whefs_fopen()
    @see whefs_dev_close()
 */
-whio_dev * whefs_dev_open( whefs_fs * restrict fs, char const * name, bool writeMode );
+whio_dev * whefs_dev_open( whefs_fs * fs, char const * name, bool writeMode );
 
 /**
    Similar to whefs_dev_open(), but returns a whio_stream object
@@ -4566,7 +4743,7 @@ whio_stream * whefs_stream_open( whefs_fs * fs, char const * name, bool writeMod
    @see whefs_dev_open()
    @see whefs_fopen().
 */
-whio_dev * whefs_fdev( whefs_file * restrict f );
+whio_dev * whefs_fdev( whefs_file * f );
 
 
 /**
@@ -4580,13 +4757,13 @@ whio_dev * whefs_fdev( whefs_file * restrict f );
    EOF. This behaviour is technically device-dependent, but all
    current device implementations work that way.
 */
-whio_size_t whefs_fseek( whefs_file * restrict f, size_t pos, int whence );
+whio_size_t whefs_fseek( whefs_file * f, size_t pos, int whence );
 
 /**
    "Rewinds" the file pointer back to its starting position.
    Returns whefs_rc.OK on success, else some other value.
 */
-int whefs_frewind( whefs_file * restrict f );
+int whefs_frewind( whefs_file * f );
 
 /**
    Returns the current size of the given file, or whefs_rc.SizeTError
@@ -4596,7 +4773,7 @@ int whefs_frewind( whefs_file * restrict f );
    whio_dev_size(whefs_fdev(f)), but this implementation is different
    in that it respects the constness of f.
 */
-whio_size_t whefs_fsize( whefs_file const * restrict f );
+whio_size_t whefs_fsize( whefs_file const * f );
 
 /**
    Truncates the given pseudofile to the given length.
@@ -4611,13 +4788,13 @@ whio_size_t whefs_fsize( whefs_file const * restrict f );
    If the file shrinks then all data after the new EOF, but which
    previously belonged to the file, are also zeroed out.
 */
-int whefs_ftrunc( whefs_file * restrict f, size_t newLen );
+int whefs_ftrunc( whefs_file * f, size_t newLen );
 
 /**
    Closes f, freeing its resources. After calling this, f is an invalid object.
    Returns whefs_rc.OK on success, or whefs_rc.ArgError if (!f).
  */
-int whefs_fclose( whefs_file * restrict f );
+int whefs_fclose( whefs_file * f );
 
 /**
    Similar to whefs_fclose() but closes a device opened with whefs_dev_open().
@@ -4648,7 +4825,7 @@ int whefs_fclose( whefs_file * restrict f );
 
    @see whefs_dev_open()
 */
-int whefs_dev_close( whio_dev * restrict dev );
+int whefs_dev_close( whio_dev * dev );
 
 /**
    Unlinks (deletes) the given file and its associated inode. It there
@@ -4673,7 +4850,7 @@ int whefs_dev_close( whio_dev * restrict dev );
    won't ever happen. (Unless we store it in a journal of some time,
    but that's a whole other can of worms.)
 */
-int whefs_unlink_filename( whefs_fs * restrict fs, char const * fname );
+int whefs_unlink_filename( whefs_fs * fs, char const * fname );
 
 /**
    Equivalent the fwrite() C function, but works on whefs_file handles.
@@ -4691,20 +4868,20 @@ int whefs_unlink_filename( whefs_fs * restrict fs, char const * fname );
    @see whefs_file_write()
    @see whefs_file_read()
 */
-size_t whefs_fwrite( whefs_file * restrict f, size_t bsize, size_t n, void const * src );
+size_t whefs_fwrite( whefs_file * f, size_t bsize, size_t n, void const * src );
 
 /**
    Writes a printf-style formatted string to f. Returs the number of
    bytes written. It is, in general case, impossible to know if all
    data was written correctly.
 */
-size_t whefs_fwritev( whefs_file * restrict f, char const * fmt, va_list vargs );
+size_t whefs_fwritev( whefs_file * f, char const * fmt, va_list vargs );
 
 /**
    Equivalent to whefs_fwritev() except that it takes elipsis arguments
    instead of a va_list.
  */
-size_t whefs_fwritef( whefs_file * restrict f, char const * fmt, ... );
+size_t whefs_fwritef( whefs_file * f, char const * fmt, ... );
 
 /**
    Reads n objects, each of bsize bytes, from f and writes them to dest.
@@ -4715,7 +4892,7 @@ size_t whefs_fwritef( whefs_file * restrict f, char const * fmt, ... );
    @see whefs_file_write()
    @see whefs_file_read()
 */
-size_t whefs_fread( whefs_file * restrict f, size_t bsize, size_t n, void * dest );
+size_t whefs_fread( whefs_file * f, size_t bsize, size_t n, void * dest );
 
 /**
    Similar to whefs_fwrite(), but takes arguments in the same
@@ -4726,7 +4903,7 @@ size_t whefs_fread( whefs_file * restrict f, size_t bsize, size_t n, void * dest
    @see whefs_fwrite()
    @see whefs_file_read()
 */
-size_t whefs_file_write( whefs_file * restrict f, void const * src, size_t n  );
+size_t whefs_file_write( whefs_file * f, void const * src, size_t n  );
 
 /**
    Similar to whefs_fread(), but takes arguments in the same convention
@@ -4737,12 +4914,12 @@ size_t whefs_file_write( whefs_file * restrict f, void const * src, size_t n  );
    @see whefs_file_write()
    @see whefs_fread()
 */
-size_t whefs_file_read( whefs_file * restrict f, void * dest, size_t n  );
+size_t whefs_file_read( whefs_file * f, void * dest, size_t n  );
 
 /**
    Returns the vfs associated with the given file, or 0 if !f.
 */
-whefs_fs * whefs_file_fs( whefs_file * restrict f );
+whefs_fs * whefs_file_fs( whefs_file * f );
 
 /**
    Flushes the underlying i/o device. Flushing a whefs_file will also
@@ -4756,7 +4933,7 @@ whefs_fs * whefs_file_fs( whefs_file * restrict f );
    use across multiple open handles) then this function will also
    write that cache out to disk.
 */
-int whefs_fs_flush( whefs_fs * restrict fs );
+int whefs_fs_flush( whefs_fs * fs );
 
 /**
    Flushes the file's data to disk, if necessary. A read-only
@@ -4777,7 +4954,7 @@ int whefs_fs_flush( whefs_fs * restrict fs );
    the scenes often enough to not need to use it from client code.
 
 */
-int whefs_fflush( whefs_file * restrict f );
+int whefs_fflush( whefs_file * f );
 
 /**
    Creates a new vfs using the given filename and options. The resulting
@@ -4885,7 +5062,7 @@ int whefs_openfs( char const * filename, whefs_fs ** tgt, bool writeMode );
    objects or otherwise), in particular if more than one have write
    access, the filesystem will in all likelyhood be quickly corrupted.
 */
-int whefs_openfs_dev( whio_dev * restrict dev, whefs_fs ** tgt, bool takeDev );
+int whefs_openfs_dev( whio_dev * dev, whefs_fs ** tgt, bool takeDev );
 
 /**
    Cleans up all resources associated with fs. After calling this,
@@ -4897,23 +5074,23 @@ int whefs_openfs_dev( whio_dev * restrict dev, whefs_fs ** tgt, bool takeDev );
    the client must NOT close them again after calling this - doing so
    will lead to stepping on null pointers or otherwise invalid objects.
 */
-void whefs_fs_finalize( whefs_fs * restrict fs );
+void whefs_fs_finalize( whefs_fs * fs );
 
 /**
    Returns the options associated with fs, or 0 if !fs.
 */
-whefs_fs_options const * whefs_fs_options_get( whefs_fs const * restrict fs );
+whefs_fs_options const * whefs_fs_options_get( whefs_fs const * fs );
 
 /**
    A shorter name for whefs_fs_options_get().
 */
-whefs_fs_options const * whefs_fs_opt( whefs_fs const * restrict fs );
+whefs_fs_options const * whefs_fs_opt( whefs_fs const * fs );
 
 /**
    A debug-only function for showing some information about a
    vfs. It's only for my debugging use, not client-side use.
 */
-void whefs_fs_dump_info( whefs_fs const * restrict fs, FILE * out );
+void whefs_fs_dump_info( whefs_fs const * fs, FILE * out );
 
 /**
    Calculates the size of a vfs container based on the given
@@ -4951,7 +5128,7 @@ whio_size_t whefs_fs_calculate_size( whefs_fs_options const * opt );
    Ownership of outstr is not changed, and this routine does not close
    the stream.
 */
-int whefs_fs_dump_to_FILE( whefs_fs * restrict fs, FILE * outstr );
+int whefs_fs_dump_to_FILE( whefs_fs * fs, FILE * outstr );
 
 /**
    Equivalent to whefs_fs_dump_to_FILE() except that it takes a file name
@@ -4959,7 +5136,7 @@ int whefs_fs_dump_to_FILE( whefs_fs * restrict fs, FILE * outstr );
    routine, it may return whefs_rc.AccessError if it cannot open the
    file for writing.
 */
-int whefs_fs_dump_to_filename( whefs_fs * restrict fs, char const * filename );
+int whefs_fs_dump_to_filename( whefs_fs * fs, char const * filename );
 
 
 /**
@@ -4972,17 +5149,17 @@ typedef struct whefs_file_stats
     /**
        Size of the file, in bytes.
     */
-    size_t bytes;
+    whio_size_t bytes;
 
     /**
        inode number.
     */
-    size_t inode;
+    whefs_id_type inode;
 
     /**
        Number of blocks used by the file.
     */
-    size_t blocks;
+    whefs_id_type blocks;
 } whefs_file_stats;
 
 
@@ -4997,7 +5174,7 @@ typedef struct whefs_file_stats
 
    @code
    whefs_file_stats st;
-   if( whefs_rc.OK == whefs_fstate( myFile, &st ) ) {
+   if( whefs_rc.OK == whefs_fstat( myFile, &st ) ) {
        ... use st ...
    }
    @endcode
@@ -5022,7 +5199,7 @@ int whefs_fstat( whefs_file const * f, whefs_file_stats * st );
 
    - Some other error = something weird happened.
 */
-int whefs_file_name_set( whefs_file * restrict f, char const * newName );
+int whefs_file_name_set( whefs_file * f, char const * newName );
 
 /**
    Returns the given file's current name, or 0 if !f or on some weird
@@ -5041,7 +5218,7 @@ int whefs_file_name_set( whefs_file * restrict f, char const * newName );
    internal reasons (namely whefs_file::name, which needs
    to go away).
 */
-char const * whefs_file_name_get( whefs_file * restrict f );
+char const * whefs_file_name_get( whefs_file * f );
 
 /**
    Returns a static string with the URL of the whefs home page.
@@ -5073,17 +5250,17 @@ void whefs_setup_debug( FILE * ostream, unsigned int flags );
 
     'c' = Caching messages.
 
-    'd' = Default log level.
+    'd' = Default log level. Typically warnings and errors.
 
     'e' = Error messages.
 
     'f' = FIXME messages.
 
-    'h' = Hacker-level messages.
+    'h' = Hacker-level messages. Turns on several other options.
 
     'l' = Locking messages.
 
-    'n' = NYI messages.
+    'n' = NYI (Not Yet Implemented) messages.
 
     'w' = Warning messages.
 
@@ -5125,12 +5302,12 @@ const uint32_t * whefs_get_core_magic();
    Other errors may be returned if something goes wrong during the
    i/o.
 */
-int whefs_fs_append_blocks( whefs_fs * restrict fs, whefs_id_type count );
+int whefs_fs_append_blocks( whefs_fs * fs, whefs_id_type count );
 
 /**
    Returns true if fs was opened in read/write mode, else false.
 */
-bool whefs_fs_is_rw( whefs_fs const * restrict fs );
+bool whefs_fs_is_rw( whefs_fs const * fs );
 
 /**
    Removes the least-visited items from the inode names cache,
@@ -5182,6 +5359,26 @@ int whefs_inode_hash_cache_chomp_lv( whefs_fs * fs );
    default but not pre-loaded, otherwise it is disabled by default.
 */
 int whefs_fs_setopt_hash_cache( whefs_fs * fs, bool on, bool loadNow );
+
+/**
+   By default if a whefs_fs object is closed while pseudofile handles
+   are still opened then they will be properly closed at that time to
+   avoid memory leaks. However, if the client properly closes such
+   handles after the owning whefs_fs has been destroyed, undefined
+   behaviour will result and a segfault is certain.
+
+   If this option is turned off, opened handles are not closed
+   automatically when the whefs_fs has closed. After that, the objects
+   MUST NOT be destroyed via the normal means (and their memory is
+   leaked).
+
+   The original intention of toggling this off was to assist in
+   certain cases when binding whefs to scripting engines where a
+   garbage collector is involved and can complicate proper destruction
+   order. Whether or not it's really necessary is a whole other
+   question, though.
+*/
+int whefs_fs_setopt_autoclose_files( whefs_fs * fs, bool on );
 
 
 #ifdef __cplusplus
@@ -5251,8 +5448,9 @@ struct whefs_hashid
        get a sizeof(8).
 
        Note that we can easily overflow with a 16-bit counter, but for
-       the purposes we're using this number for that won't hurt us. The
-       extra bytes for uint32_t aren't worth it here.
+       the purposes we're using this number for that won't hurt us (it
+       may cause the entry to get dropped if we do LRU shaving, but
+       that's it). The extra bytes for uint32_t aren't worth it here.
     */
     uint16_t hits;
 };
@@ -5260,11 +5458,11 @@ typedef struct whefs_hashid whefs_hashid;
 /**
    Empty initializer object for whefs_hashid.
 */
-#define whefs_hashid_init_m {0/*hash*/,0/*id*/,0/*hits*/}
+#define whefs_hashid_empty_m {0/*hash*/,0/*id*/,0/*hits*/}
 /**
    Empty initializer object for whefs_hashid.
 */
-extern const whefs_hashid whefs_hashid_init;
+extern const whefs_hashid whefs_hashid_empty;
 
 
 /** @struct whefs_hashid_list
@@ -5287,20 +5485,23 @@ struct whefs_hashid_list
     whefs_id_type alloced;
     /** Real number of entries. */
     whefs_id_type count;
-    /** A hint to the allocator to say we'll never need more than this. */
+    /** A hint to the allocator to say we'll never need more than this
+        many entries. If set to 0 it is ignored, which may cause some
+        over-allocation in the worst case.
+     */
     whefs_id_type maxAlloc;
     /** The list of items. */
     whefs_hashid * list;
     /** Functions which unsort a list set this to false. whefs_hashid_list_sort() sets it to true. */
     bool isSorted;
-    /** Internal optimization. */
+    /** Internal optimization hack to avoid auto-sorting when we're inserting many items in a loop. */
     bool skipAutoSort;
 };
 typedef struct whefs_hashid_list whefs_hashid_list;
 /** Empty initializer object. */
-#define whefs_hashid_list_init_m {0U/*alloced*/,0U/*count*/,0U/*maxAlloc*/,0/*list*/,false/*isSorted*/,false/*skipAutoSort*/}
+#define whefs_hashid_list_empty_m {0U/*alloced*/,0U/*count*/,0U/*maxAlloc*/,0/*list*/,false/*isSorted*/,false/*skipAutoSort*/}
 /** Empty initializer object. */
-extern const whefs_hashid_list whefs_hashid_list_init;
+extern const whefs_hashid_list whefs_hashid_list_empty;
 
 /**
    Sorts the entries in li by hash value. It is not specified whether
@@ -5331,7 +5532,7 @@ int whefs_hashid_list_sort( whefs_hashid_list * li );
    Newly-created entries will be initialized to empty values.
  
    tgt may not be 0, but *tgt may be 0. If *tgt is not 0 then it must point
-   to an object (specifically, it may not be an uninitialized pointer).
+   to a valid object (specifically, it may not be an uninitialized object).
  
    The tgt object must eventually be freed using whefs_hashid_list_free().
 
@@ -5341,13 +5542,13 @@ int whefs_hashid_list_sort( whefs_hashid_list * li );
    function allocates the object).
 
    If (*tgt)->alloced is greater than or equal to toAlloc then this
-   function does nothing, has no side-effects, and returns success.
+   function has no side-effects and returns success.
 */
 int whefs_hashid_list_alloc( whefs_hashid_list ** tgt, whefs_id_type toAlloc );
 
 /**
-   Frees a list created by whefs_hashid_list_alloc(). After calling this,
-   tgt is an invalid object.
+   Frees a list created by whefs_hashid_list_alloc(), including all of
+   its entries. After calling this, tgt is an invalid object.
 */
 void whefs_hashid_list_free( whefs_hashid_list * tgt );
 
@@ -5365,16 +5566,16 @@ void whefs_hashid_list_free( whefs_hashid_list * tgt );
    The current usage of the whefs_hashid_list class does not account
    for duplicate hash keys, so ensure that you don't add dupes.
 */
-int whefs_hashid_list_add( whefs_hashid_list * tgt, whefs_hashid const * restrict val );
+int whefs_hashid_list_add( whefs_hashid_list * tgt, whefs_hashid const * val );
 
 /**
    The item at the given index is zeroed out, which is the internal
-   equivalent of erasure. During the next sort(), any zeroed items
+   equivalent of erasure. During the next sort, any zeroed items
    will be removed from the list. This function, to simplify the
    implementation and speed up certain fs operations, does not
    actually modify the structure of the list or change li->count. The
    change in size is deferred until the next sort. When that happens,
-   the zeroed items get sorted to the start of the list, then then get
+   the zeroed items get sorted to the start of the list, then get
    pruned.
 
    A side effect of the mark-for-removal approach is that this routine
@@ -5413,8 +5614,6 @@ int whefs_hashid_list_wipe_index( whefs_hashid_list * li, whefs_id_type ndx );
    IFF !src->isSorted then we fall back to a linear search. The alternative
    would be to sort the list here automatically if needed, but that could
    invalidate data held by loops if this was called in a loop.
-
-
 */
 whefs_id_type whefs_hashid_list_index_of( whefs_hashid_list const * src, whefs_hashval_type hash );
 
@@ -5447,10 +5646,12 @@ size_t whefs_hashid_list_sizeof( whefs_hashid_list const * li );
 
 
 /**
-   Removes the least-visited items from li using the simple heuristic of
-   sorting by visit count, lopping off the bottom half, and re-sorting.
-   li need not be sorted before calling this. The returned list will be
-   sorted and will likely have fewer items in it.
+   Removes the least-visited items from li using the simple heuristic
+   of sorting by visit count, lopping off the bottom half, and
+   re-sorting.  li need not be sorted before calling this. The
+   returned list will be sorted and will likely have fewer items in
+   it. Performance is effectively O(N), where N = li->count, plus the
+   cost the of underlying (unspecified) sort.
 */
 int whefs_hashid_list_chomp_lv( whefs_hashid_list * li );
 
@@ -5484,7 +5685,7 @@ whefs_id_type whefs_hashid_list_search( whefs_hashid_list const * src,
 } /* extern "C"*/
 #endif
 
-#endif // WANDERINGHORSE_NET_WHEFS_HASH_H_INCLUDED
+#endif /* WANDERINGHORSE_NET_WHEFS_HASH_H_INCLUDED */
 /* end file src/whefs_hash.h */
 /* begin file include/wh/whefs/whefs_string.h */
 #line 8 "include/wh/whefs/whefs_string.h"
@@ -5531,7 +5732,7 @@ typedef uint16_t whefs_string_size_t;
    enum { bufSize = MaxPossibleSizeOfStrings + 1 }; // +1 for the trailing NULL
    char buf[bufSize];
    memset( buf, 0, bufSize );
-   whefs_string s = whefs_string_init;
+   whefs_string s = whefs_string_empty;
    s.string = buf;
    s.alloced = bufSize;
    whefs_string_copy_cstring( &s, sourceString );
@@ -5572,12 +5773,12 @@ typedef struct whefs_string whefs_string;
    Empty whefs_string initialization macro for places where static
    initialization is required (e.g. member whefs_string objects).
 */
-#define whefs_string_init_m { 0, 0, 0, 0 }
+#define whefs_string_empty_m { 0, 0, 0, 0 }
 
 /**
    Empty initialization object.
 */
-extern const whefs_string whefs_string_init;
+extern const whefs_string whefs_string_empty;
 
 /**
    Copies the null-terminated string str into tgt. Neither src nor tgt
@@ -5594,7 +5795,7 @@ extern const whefs_string whefs_string_init;
    Example usage:
 
    @code
-   whefs_string str = whefs_string_init; // Important! See below!
+   whefs_string str = whefs_string_empty; // Important! See below!
    whefs_string_copy_cstring( &str, "Hi, world!!" );
    ...
    whefs_string_copy_cstring( &str, "Bye, world!" );
@@ -5607,7 +5808,7 @@ extern const whefs_string whefs_string_init;
    objects. If the members of the object have uninitialized values
    this function may attempt to malloc() a huge amount of memory, use
    an uninitialized string, or otherwise misbehave (been there, done
-   that!). Use the whefs_string_init object to initialize new
+   that!). Use the whefs_string_empty object to initialize new
    whefs_string objects, as shown in the example above.
 
 */
@@ -5646,7 +5847,7 @@ whefs_string * whefs_string_alloc();
 } /* extern "C" */
 #endif
 
-#endif // WANDERINGHORSE_NET_WHEFS_STRING_H_INCLUDED
+#endif /* WANDERINGHORSE_NET_WHEFS_STRING_H_INCLUDED */
 /* end file include/wh/whefs/whefs_string.h */
 /* begin file src/whefs_encode.h */
 #line 8 "src/whefs_encode.h"
@@ -5728,7 +5929,13 @@ whefs_sizeof_encoded_inode_name = 1 /* tag bytes */
 whefs_sizeof_encoded_block = 1 /* tag char */
     + whefs_sizeof_encoded_id_type /* bl->id */
     + whio_sizeof_encoded_uint16 /* bl->flags */
-    + whefs_sizeof_encoded_id_type /* bl->next_block */
+    + whefs_sizeof_encoded_id_type /* bl->next_block */,
+
+/** Not yet used. */
+whefs_sizeof_encoded_hints = 1 /* tag char */
+    + whefs_sizeof_encoded_id_type /* bl->hints.unused_inode_start */
+    + whefs_sizeof_encoded_id_type /* bl->hints.unused_block_start */
+    + 0
 
 };
 
@@ -5792,11 +5999,11 @@ struct whefs_block
 };
 typedef struct whefs_block whefs_block;
 
-/** @def whefs_block_init_m
+/** @def whefs_block_empty_m
 
     Empty static initializer for whefs_block objects.
  */
-#define whefs_block_init_m  \
+#define whefs_block_empty_m  \
     { \
     0U, /* id */ \
     0U, /* next_block */                     \
@@ -5804,7 +6011,7 @@ typedef struct whefs_block whefs_block;
     }
 
 /** Empty initialization object for whefs_block objects. */
-extern const whefs_block whefs_block_init;
+extern const whefs_block whefs_block_empty;
 
 /** @def WHEFS_INODE_RELATIVES
 
@@ -5836,11 +6043,11 @@ typedef struct whefs_block_list
    Empty initialization object. Convenience macro for places where a
    whefs_block_list object must be statically initialized.
 */
-#define whefs_block_list_init_m {0,0,0}
+#define whefs_block_list_empty_m {0,0,0}
 /**
    Empty initialization object.
 */
-extern const whefs_block_list whefs_block_list_init;
+extern const whefs_block_list whefs_block_list_empty;
 
 /** @struct whefs_inode
 
@@ -5895,11 +6102,11 @@ typedef struct whefs_inode
     */
     whefs_block_list blocks;
     /** Transient string used only by opened nodes. */
-    //whefs_string name;
+    /*whefs_string name; */
 } whefs_inode;
 
 /** Empty inode initialization object. */
-#define whefs_inode_init_m { \
+#define whefs_inode_empty_m { \
 	0, /* id */ \
 	WHEFS_FLAG_Unused, /* flags */ \
         0, /* first_block */ \
@@ -5907,10 +6114,10 @@ typedef struct whefs_inode
         0, /* mtime */ \
         0, /* open_count */ \
         0, /* writer */ \
-	whefs_block_list_init_m /*blocks */ \
+	whefs_block_list_empty_m /*blocks */ \
     }
 /** Empty inode initialization object. */
-extern const whefs_inode whefs_inode_init;
+extern const whefs_inode whefs_inode_empty;
 
 /** @struct whefs_inode_list
 
@@ -5924,9 +6131,9 @@ typedef struct whefs_inode_list
     struct whefs_inode_list * prev;
 } whefs_inode_list;
 /** Empty inode_list initialization object. */
-#define whefs_inode_list_init_m { whefs_inode_init_m, 0, 0 }
+#define whefs_inode_list_empty_m { whefs_inode_empty_m, 0, 0 }
 /** Empty inode_list initialization object. */
-extern const whefs_inode_list whefs_inode_list_init;
+extern const whefs_inode_list whefs_inode_list_empty;
 
 
 /**
@@ -5943,7 +6150,7 @@ extern const whefs_inode_list whefs_inode_list_init;
    Typical usage:
 
    @code
-   whefs_inode ino = whefs_inode_init;
+   whefs_inode ino = whefs_inode_empty;
    whefs_inode_id_read( fs, 42, &ino );
    @endcode
 
@@ -5964,35 +6171,6 @@ extern const whefs_inode_list whefs_inode_list_init;
    @see whefs_inode_name_get()
 */
 int whefs_inode_id_read( whefs_fs * fs, whefs_id_type nid, whefs_inode * tgt );
-
-/**
-   Equivalent to whefs_inode_id_read( fs, n->id, n );
-*/
-int whefs_inode_read( whefs_fs * fs, whefs_inode * n );
-
-/**
-    Don't use this function - it's probably going away.
-
-   Reads the flags field of the given inode and assigns the flags
-   argument to their value. fs may not be null and nid must be a valid
-   inode id for fs or the routine will fail. flags may be 0, in which
-   case this is simply a very elaborate way to tell if an inode is
-   valid.
-
-   On success flags is modified (if it is not null) and whefs_rc.OK is
-   returned. On failure flags is not modified and non-OK is returned.
-   
-   This routine returns the fs i/o device to its original position
-   when it is done, so calling this behaves "as if" the cursor has not
-   moved. The one exception is if the seek to the correct inode fails,
-   in which case the cursor position is in an undefined state and
-   error recovery must begin (writing at that point may corrupt the
-   vfs).
-
-   If the given inode ID is currently opened, the flags are taken
-   from the opened copy and no i/o is necessary.
-*/
-//int whefs_inode_read_flags( whefs_fs * fs, whefs_id_type nid, uint32_t * flags );
 
 /**
    "Opens" an inode for concurrent (but NOT multi-threaded!) access
@@ -6072,7 +6250,7 @@ int whefs_inode_flush( whefs_fs * fs, whefs_inode const * n );
    returns some other value and does not update tgt. If it traverses the whole
    list and cannot find a free node it returns whefs_rc.FSFull.
 */
-int whefs_inode_next_free( whefs_fs * restrict fs, whefs_inode * restrict tgt, bool markUsed );
+int whefs_inode_next_free( whefs_fs * fs, whefs_inode * tgt, bool markUsed );
 
 /**
    Searches fs for an inode with the given name. On success, tgt is
@@ -6112,19 +6290,19 @@ int whefs_inode_by_name( whefs_fs * fs, char const * name, whefs_inode * tgt );
 #define whefs_inode_id_is_valid(FS,NID) whefs_inode_id_is_valid_m(FS,NID)
 #define whefs_inode_is_valid(FS,INO) whefs_inode_is_valid_m(FS,INO)
 #else
-/** @fn bool whefs_inode_id_is_valid( whefs_fs const * restrict fs, whefs_id_type nid )
+/** @fn bool whefs_inode_id_is_valid( whefs_fs const * fs, whefs_id_type nid )
 
    Returns true if nid is a valid inode for the given fs. That is, it
    has a non-zero id in a range legal for the given fs object.
 */
-bool whefs_inode_id_is_valid( whefs_fs const * restrict fs, whefs_id_type nid );
+bool whefs_inode_id_is_valid( whefs_fs const * fs, whefs_id_type nid );
 
-/** @fn bool whefs_inode_is_valid( whefs_fs const * restrict fs, whefs_inode const * n )
+/** @fn bool whefs_inode_is_valid( whefs_fs const * fs, whefs_inode const * n )
 
    Returns true if n is "valid" - has a non-zero id in a range legal
    for the given fs object.
 */
-bool whefs_inode_is_valid( whefs_fs const * restrict fs, whefs_inode const * n );
+bool whefs_inode_is_valid( whefs_fs const * fs, whefs_inode const * n );
 #endif
 
 /**
@@ -6163,7 +6341,7 @@ whio_dev * whefs_dev_for_inode( whefs_fs * fs, whefs_id_type nodeID, bool writeM
    (!fs or !nid, or nid is out of range), 0 is returned. Does not require
    any i/o.
 */
-whio_size_t whefs_inode_id_pos( whefs_fs const * restrict fs, whefs_id_type nid );
+whio_size_t whefs_inode_id_pos( whefs_fs const * fs, whefs_id_type nid );
 
 /**
    Seeks to the given inode's on-disk position. Returns whefs_rc.OK
@@ -6191,8 +6369,8 @@ int whefs_inode_id_seek( whefs_fs * fs, whefs_id_type id );
    If node_id is opened then this routine will update the opened
    object's copy of the name.
 */
-//int whefs_inode_name_set( whefs_fs * fs, whefs_inode const * n, char const * name );
 int whefs_inode_name_set( whefs_fs * fs, whefs_id_type node_id, char const * name );
+/*int whefs_inode_name_set( whefs_fs * fs, whefs_inode const * n, char const * name ); */
 
 /**
    Loads the name for the given inode id into the given target string
@@ -6212,7 +6390,7 @@ int whefs_inode_name_set( whefs_fs * fs, whefs_id_type node_id, char const * nam
    @code
    enum { bufSize = WHEFS_MAX_FILENAME_LENGTH + 1 };
    char buf[bufSize] = {0};
-   whefs_string str = whefs_string_init;
+   whefs_string str = whefs_string_empty;
    str.string = buf;
    str.alloced = bufSize;
    int rc = whefs_inode_name_get( fs, id, &str );
@@ -6584,18 +6762,18 @@ struct whefs_fs_entry
        result in attempts to allocate huge amounts of memory or
        reallocate/re-use memory which doesn't belong to the string
        object. To avoid such problems, always initialize
-       whefs_fs_entry objects using the whefs_fs_entry_init object or
-       whefs_fs_entry_init_m macro.
+       whefs_fs_entry objects using the whefs_fs_entry_empty object or
+       whefs_fs_entry_empty_m macro.
      */
     whefs_string name;
 };
 typedef struct whefs_fs_entry whefs_fs_entry;
 
 /** Empty initialization object for whefs_fs_entry. */
-#define whefs_fs_entry_init_m { 0U/*inode_id*/, 0U/*block_id*/, 0U/*mtime*/, 0U/*size*/, whefs_string_init_m }
+#define whefs_fs_entry_empty_m { 0U/*inode_id*/, 0U/*block_id*/, 0U/*mtime*/, 0U/*size*/, whefs_string_empty_m }
 
 /** Empty initialization object for whefs_fs_entry. */
-extern const whefs_fs_entry whefs_fs_entry_init;
+extern const whefs_fs_entry whefs_fs_entry_empty;
 
 /**
    whefs_fs_entry_foreach_f describes a callback for use with
@@ -6647,5 +6825,5 @@ int whefs_fs_entry_foreach( whefs_fs * fs, whefs_fs_entry_foreach_f forEach, voi
 } /* extern "C" */
 #endif
 
-#endif // WANDERINGHORSE_NET_WHEFS_CLIENT_UTIL_INCLUDED
+#endif /* WANDERINGHORSE_NET_WHEFS_CLIENT_UTIL_INCLUDED */
 /* end file include/wh/whefs/whefs_client_util.h */

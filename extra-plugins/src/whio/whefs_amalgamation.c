@@ -1,4 +1,4 @@
-/* auto-generated on Wed Jul  1 16:21:03 CEST 2009. Do not edit! */
+/* auto-generated on Fri Nov  4 11:46:09 CET 2011. Do not edit! */
 #line 1 "whefs_amalgamation.c"
 #if !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200112L /* needed for ftello() and friends */
@@ -33,7 +33,7 @@ const whio_rc_t whio_rc =
     -4, /* AllocError */
     -5, /* InternalError */
     -6, /* RangeError */
-    // -7 can be reused
+    /* -7 can be reused */
     -8, /* AccessError */
     -9, /* ConsistencyError */
     -10, /* NYIError */
@@ -51,8 +51,8 @@ void whio_noop_printf(char const * fmt, ...)
 #line 8 "src/whio_common.c"
 #include <string.h> /* strchr() */
 
-const whio_client_data whio_client_data_init = whio_client_data_init_m;
-const whio_impl_data whio_impl_data_init = whio_impl_data_init_m;
+const whio_client_data whio_client_data_empty = whio_client_data_empty_m;
+const whio_impl_data whio_impl_data_empty = whio_impl_data_empty_m;
 
 short whio_mode_to_iomode( char const * mode )
 {
@@ -96,9 +96,9 @@ short whio_mode_to_iomode( char const * mode )
 #include <stdlib.h> /* calloc() and friends */
 #include <inttypes.h> /* PRIuXX */
 
-#define WHIO_DEV_EMPTY_INIT {0/*api*/, whio_impl_data_init_m, whio_client_data_init_m }
+#define WHIO_DEV_EMPTY_INIT {0/*api*/, whio_impl_data_empty_m, whio_client_data_empty_m }
 
-static const whio_dev whio_dev_empty_init = WHIO_DEV_EMPTY_INIT;
+static const whio_dev whio_dev_empty_empty = WHIO_DEV_EMPTY_INIT;
 
 #if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
@@ -132,13 +132,13 @@ whio_dev * whio_dev_alloc()
     }
 #endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! dev ) dev = (whio_dev *) malloc( sizeof(whio_dev) );
-    if( dev ) *dev = whio_dev_empty_init;
+    if( dev ) *dev = whio_dev_empty_empty;
     return dev;
 }
 
 void whio_dev_free( whio_dev * dev )
 {
-    if( dev ) *dev = whio_dev_empty_init;
+    if( dev ) *dev = whio_dev_empty_empty;
     else return;	
 #if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (dev < &whio_dev_alloc_slots.devs[0]) ||
@@ -174,10 +174,11 @@ void whio_dev_free( whio_dev * dev )
 
 int whio_dev_ioctl( whio_dev * dev, int operation, ... )
 {
-    if( ! dev ) return whio_rc.ArgError;
     va_list vargs;
+    int rc;
+    if( ! dev ) return whio_rc.ArgError;
     va_start( vargs, operation );
-    int rc = dev->api->ioctl( dev, operation, vargs );
+    rc = dev->api->ioctl( dev, operation, vargs );
     va_end(vargs);
     return rc;
 }
@@ -190,21 +191,40 @@ whio_size_t whio_dev_write( whio_dev * dev, void const * data, whio_size_t n )
 whio_size_t whio_dev_writeat( whio_dev * dev, whio_size_t pos, void const * data, whio_size_t n )
 {
     if( ! dev || ! data || !n ) return 0;
-    //WHIO_DEBUG("Writing %u bytes at pos %u\n", n, pos );
-    whio_size_t rc = dev->api->seek( dev, pos, SEEK_SET );
-    return (whio_rc.SizeTError == rc)
-	? rc
-	: whio_dev_write( dev, data, n );
+    else {
+        whio_size_t rc = dev->api->seek( dev, pos, SEEK_SET );
+        /*WHIO_DEBUG("Writing %u bytes at pos %u\n", n, pos ); */
+        return (whio_rc.SizeTError == rc)
+            ? rc
+            : whio_dev_write( dev, data, n );
+    }
 }
+
+whio_size_t whio_dev_readat( whio_dev * dev, whio_size_t pos, void * data, whio_size_t n )
+{
+    if( ! dev || ! data || !n ) return 0;
+    else {
+        whio_size_t rc = dev->api->seek( dev, pos, SEEK_SET );
+        /*WHIO_DEBUG("Writing %u bytes at pos %u\n", n, pos ); */
+        return (whio_rc.SizeTError == rc)
+            ? rc
+            : whio_dev_read( dev, data, n );
+    }
+}
+
 
 whio_size_t whio_dev_size( whio_dev * dev )
 {
     if( ! dev ) return whio_rc.SizeTError;
-    whio_size_t pos = dev->api->tell( dev );
-    if( whio_rc.SizeTError == pos ) return pos;
-    whio_size_t rc = dev->api->seek( dev, 0L, SEEK_END );
-    dev->api->seek( dev, pos, SEEK_SET );
-    return rc;
+    else {
+        whio_size_t pos = dev->api->tell( dev );
+        if( whio_rc.SizeTError == pos ) return pos;
+        else {
+            whio_size_t rc = dev->api->seek( dev, 0L, SEEK_END );
+            dev->api->seek( dev, pos, SEEK_SET );
+            return rc;
+        }
+    }
 }
 
 int whio_dev_rewind( whio_dev * dev )
@@ -218,34 +238,40 @@ int whio_dev_rewind( whio_dev * dev )
 int whio_dev_copy( whio_dev * src, whio_dev * dest )
 {
     if( ! src || ! dest ) return whio_rc.ArgError;
-    int rc = whio_rc.OK;
-    enum { bufSize = (1024 * 4) };
-    unsigned char buf[bufSize];  /* Flawfinder: ignore This is intentional and used correctly in the loop below. */
-    whio_size_t rlen = 0;
-    if( whio_rc.SizeTError == src->api->seek( src, 0L, SEEK_SET ) )
-    {
-	return whio_rc.RangeError;
+    else {
+        int rc = whio_rc.OK;
+        enum { bufSize = (1024 * 4) };
+        unsigned char buf[bufSize];  /* Flawfinder: ignore This is intentional and used correctly in the loop below. */
+        whio_size_t rlen = 0;
+        if( whio_rc.SizeTError == src->api->seek( src, 0L, SEEK_SET ) )
+        {
+            return whio_rc.RangeError;
+        }
+        while( (rlen = src->api->read( src, buf /*Flawfinder: ignore  This is safe in conjunction with bufSize*/, bufSize ) ) )
+        {
+            if( rlen != dest->api->write( dest, buf, rlen ) )
+            {
+                rc = whio_rc.IOError;
+                break;
+            }
+        }
+        return rc;
     }
-    while( (rlen = src->api->read( src, buf /*Flawfinder: ignore  This is safe in conjunction with bufSize*/, bufSize ) ) )
-    {
-	if( rlen != dest->api->write( dest, buf, rlen ) )
-	{
-	    rc = whio_rc.IOError;
-	    break;
-	}
-    }
-    return rc;
 }
 
 
 static long whio_dev_printf_appender( void * arg, char const * data, long n )
 {
     if( ! arg || !data || (n<1) ) return -1;
-    size_t sz = n;
-    if( n < sz ) return -1; /* negative n */
-    whio_dev * dev = (whio_dev*)arg;
-    sz = dev->api->write( dev, data, sz );
-    return (sz == whio_rc.SizeTError) ? 0 : (long) sz; // FIXME: check for overflow!
+    else {
+        size_t sz = n;
+        if( n < sz ) return -1; /* negative n */
+        else {
+            whio_dev * dev = (whio_dev*)arg;
+            sz = dev->api->write( dev, data, sz );
+            return (sz == whio_rc.SizeTError) ? 0 : (long) sz; /* FIXME: check for overflow! */
+        }
+    }
 }
 
 size_t whio_dev_writefv( whio_dev * dev, const char *fmt, va_list ap )
@@ -257,8 +283,9 @@ size_t whio_dev_writefv( whio_dev * dev, const char *fmt, va_list ap )
 size_t whio_dev_writef( whio_dev * dev, const char *fmt, ... )
 {
     va_list vargs;
+    size_t rc;
     va_start( vargs, fmt );
-    size_t rc = whio_dev_writefv( dev, fmt, vargs );
+    rc = whio_dev_writefv( dev, fmt, vargs );
     va_end(vargs);
     return rc;
 }
@@ -278,7 +305,7 @@ whio_size_t whio_dev_tell( whio_dev * dev )
     return dev ? dev->api->tell( dev ) : whio_rc.SizeTError;;
 }
 
-whio_size_t whio_dev_seek( whio_dev * dev, off_t pos, int whence )
+whio_size_t whio_dev_seek( whio_dev * dev, whio_off_t pos, int whence )
 {
     return dev ? dev->api->seek( dev, pos, whence ) : whio_rc.SizeTError;
 }
@@ -288,7 +315,7 @@ int whio_dev_flush( whio_dev * dev )
     return dev ? dev->api->flush( dev ) : whio_rc.ArgError;
 }
 
-int whio_dev_truncate( whio_dev * dev, off_t size )
+int whio_dev_truncate( whio_dev * dev, whio_off_t size )
 {
     return dev ? dev->api->truncate( dev, size ) : whio_rc.ArgError;
 }
@@ -306,24 +333,27 @@ bool whio_dev_close( whio_dev * dev )
 
 whio_fetch_result * whio_dev_fetch( whio_dev * dev, whio_size_t n )
 {
+    whio_fetch_result * rc;
     if( ! dev ) return 0;
-    whio_fetch_result * rc = (whio_fetch_result*)malloc(sizeof(whio_fetch_result));
+    rc = (whio_fetch_result*)malloc(sizeof(whio_fetch_result));
     if( ! rc ) return 0;
     rc->alloced = 0;
     rc->requested = n;
     rc->read = 0;
     if( ! n ) return rc;
-    const whio_size_t sza = n+1; /* the +1 is necessary so we can ensure nulls for script-side strings. */
-    rc->data = (char *)malloc(sza);
-    if( ! rc->data )
-    {
-	free(rc);
-	return 0;
+    else {
+        const whio_size_t sza = n+1; /* the +1 is necessary so we can ensure nulls for script-side strings. */
+        rc->data = (char *)malloc(sza);
+        if( ! rc->data )
+        {
+            free(rc);
+            return 0;
+        }
+        rc->alloced = sza;
+        memset( rc->data, 0, sza );
+        rc->read = dev->api->read( dev, rc->data, n ); /*Flawfinder: ignore rc->data will always be longer than (see above). */
+        return rc;
     }
-    rc->alloced = sza;
-    memset( rc->data, 0, sza );
-    rc->read = dev->api->read( dev, rc->data, n ); /*Flawfinder: ignore rc->data will always be longer than (see above). */
-    return rc;
 }
 
 int whio_dev_fetch_r( whio_dev * dev, whio_size_t n, whio_fetch_result * tgt )
@@ -373,7 +403,7 @@ int whio_dev_fetch_free_data( whio_fetch_result * r )
 }
 
 
-const whio_blockdev whio_blockdev_init = whio_blockdev_init_m;
+const whio_blockdev whio_blockdev_empty = whio_blockdev_empty_m;
 #if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
 /**
@@ -387,7 +417,7 @@ static struct
 {
     whio_blockdev objs[whio_blockdev_alloc_count]; /* Flawfinder: ignore This is intentional. */
     char used[whio_blockdev_alloc_count]; /* Flawfinder: ignore This is intentional. */
-} whio_blockdev_alloc_slots = { { whio_blockdev_init_m }, {0} };
+} whio_blockdev_alloc_slots = { { whio_blockdev_empty_m }, {0} };
 #endif
 
 whio_blockdev * whio_blockdev_alloc()
@@ -404,12 +434,13 @@ whio_blockdev * whio_blockdev_alloc()
     }
 #endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whio_blockdev *) malloc( sizeof(whio_blockdev) );
-    if( obj ) *obj = whio_blockdev_init;
+    if( obj ) *obj = whio_blockdev_empty;
     return obj;
 }
 
 void whio_blockdev_free( whio_blockdev * obj )
 {
+    if( ! obj ) return;
     whio_blockdev_cleanup( obj );
 #if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whio_blockdev_alloc_slots.objs[0]) ||
@@ -421,12 +452,11 @@ void whio_blockdev_free( whio_blockdev * obj )
     else
     {
 	const size_t ndx = (obj - &whio_blockdev_alloc_slots.objs[0]);
-	whio_blockdev_alloc_slots.objs[ndx] = whio_blockdev_init;
+	whio_blockdev_alloc_slots.objs[ndx] = whio_blockdev_empty;
 	whio_blockdev_alloc_slots.used[ndx] = 0;
 	return;
     }
 #else
-    if( obj ) *obj = whio_blockdev_init;
     free(obj);
 #endif /* WHIO_CONFIG_ENABLE_STATIC_MALLOC */
 }
@@ -436,10 +466,14 @@ bool whio_blockdev_cleanup( whio_blockdev * self )
     if( ! self ) return false;
     if( self->impl.fence )
     {
-	self->impl.fence->api->finalize( self->impl.fence );
+        if( self->blocks.count )
+        {
+            self->impl.fence->api->finalize( self->impl.fence );
+        }
+        /* else fence was pointing back to the parent device. */
 	self->impl.fence = 0;
     }
-    *self = whio_blockdev_init;
+    *self = whio_blockdev_empty;
     return true;
 }
 
@@ -448,7 +482,7 @@ int whio_blockdev_setup( whio_blockdev * self, whio_dev * parent, whio_size_t pa
 			   whio_size_t block_size, whio_size_t count, void const * prototype )
 {
     if( ! self || ! parent || ! count || ! block_size ) return whio_rc.ArgError;
-    *self = whio_blockdev_init;
+    *self = whio_blockdev_empty;
     self->impl.fence = whio_dev_subdev_create( parent, parent_offset, parent_offset + (count * block_size) );
     if( ! self->impl.fence ) return whio_rc.AllocError;
     self->blocks.prototype = prototype;
@@ -457,16 +491,27 @@ int whio_blockdev_setup( whio_blockdev * self, whio_dev * parent, whio_size_t pa
     return whio_rc.OK;
 }
 
+int whio_blockdev_setup2( whio_blockdev * self, whio_dev * parent, whio_size_t block_size, void const * prototype )
+{
+    if( ! self || ! parent || ! block_size ) return whio_rc.ArgError;
+    *self = whio_blockdev_empty;
+    self->impl.fence = parent;
+    self->blocks.prototype = prototype;
+    self->blocks.size = block_size;
+    self->blocks.count = 0;
+    return whio_rc.OK;
+}
+
 int whio_blockdev_wipe( whio_blockdev * self, whio_size_t id )
 {
-    return whio_blockdev_write( self, id, self->blocks.prototype );
+    return self ? whio_blockdev_write( self, id, self->blocks.prototype ) : whio_rc.ArgError;
 }
 
 bool whio_blockdev_in_range( whio_blockdev const * self, whio_size_t id )
 {
     return !self
 	? false
-	: (id < self->blocks.count);
+	: (self->blocks.count ? (id < self->blocks.count) : true);
 }
 
 /**
@@ -484,17 +529,19 @@ static whio_size_t whio_block_offset_for_id( whio_blockdev * self, whio_size_t i
 int whio_blockdev_write( whio_blockdev * self, whio_size_t id, void const * src )
 {
     if( ! src ) return whio_rc.ArgError;
-    whio_size_t pos = whio_block_offset_for_id( self, id );
-    if( whio_rc.SizeTError == pos )
-    {
-	WHIO_DEBUG("id #%"WHIO_SIZE_T_PFMT" is not valid for this whio_blockdev. block count=%"WHIO_SIZE_T_PFMT"\n",id,self->blocks.count);
-	return whio_rc.RangeError;
+    else {
+        whio_size_t pos = whio_block_offset_for_id( self, id );
+        if( whio_rc.SizeTError == pos )
+        {
+            WHIO_DEBUG("id #%"WHIO_SIZE_T_PFMT" is not valid for this whio_blockdev. block count=%"WHIO_SIZE_T_PFMT"\n",id,self->blocks.count);
+            return whio_rc.RangeError;
+        }
+        if( ! src ) return false;
+        if( pos != self->impl.fence->api->seek( self->impl.fence, pos, SEEK_SET ) ) return whio_rc.IOError;
+        return (self->blocks.size == self->impl.fence->api->write( self->impl.fence, src, self->blocks.size ))
+            ? whio_rc.OK
+            : whio_rc.IOError;
     }
-    if( ! src ) return false;
-    if( pos != self->impl.fence->api->seek( self->impl.fence, pos, SEEK_SET ) ) return whio_rc.IOError;
-    return (self->blocks.size == self->impl.fence->api->write( self->impl.fence, src, self->blocks.size ))
-	? whio_rc.OK
-	: whio_rc.IOError;
 }
 
 int whio_blockdev_read( whio_blockdev * self, whio_size_t id, void * dest )
@@ -524,8 +571,8 @@ along with the factory functions for creating the device objects.
 #if !defined(_POSIX_C_SOURCE)
 /* required for for fileno(), ftello(), maybe others */
 #  define _POSIX_C_SOURCE 200112L
-//#  define _POSIX_C_SOURCE 199309L
-//#  define _POSIX_C_SOURCE 199506L
+/*#  define _POSIX_C_SOURCE 199309L */
+/*#  define _POSIX_C_SOURCE 199506L */
 #endif
 
 #include <unistd.h> /* ftruncate() */
@@ -536,9 +583,9 @@ along with the factory functions for creating the device objects.
 /* i don't actually know which versions need this, but 4.0.2 does. */
     extern int ftruncate(int , off_t);
     extern int fsync(int fd);
-//#  warning "Kludging ftruncate() and fsync() declartions."
-//#else
-//#  warning "Hoping ftruncate() and fsync() are declared."
+/*#  warning "Kludging ftruncate() and fsync() declartions." */
+/*#else */
+/*#  warning "Hoping ftruncate() and fsync() are declared." */
 #endif
 #endif /* __GNUC__ */
 
@@ -679,12 +726,13 @@ static int whio_dev_FILE_eof( whio_dev * dev )
 
 static whio_size_t whio_dev_FILE_tell( whio_dev * dev )
 {
+    off_t rc;
     WHIO_FILE_DECL(whio_rc.SizeTError);
-    off_t rc = ftello(f->fp);
+    rc = ftello(f->fp);
     return (rc>=0) ? (whio_size_t)rc : whio_rc.SizeTError;
 }
 
-static whio_size_t whio_dev_FILE_seek( whio_dev * dev, off_t pos, int whence )
+static whio_size_t whio_dev_FILE_seek( whio_dev * dev, whio_off_t pos, int whence )
 {
     WHIO_FILE_DECL(whio_rc.SizeTError);
     if( 0 == fseeko( f->fp, pos, whence ) )
@@ -704,7 +752,7 @@ static int whio_dev_FILE_flush( whio_dev * dev )
 	: whio_rc.IOError;
 }
 
-static int whio_dev_FILE_trunc( whio_dev * dev, off_t len )
+static int whio_dev_FILE_trunc( whio_dev * dev, whio_off_t len )
 {
     WHIO_FILE_DECL(whio_rc.ArgError);
     return ftruncate( f->fileno, len );
@@ -713,6 +761,7 @@ static int whio_dev_FILE_trunc( whio_dev * dev, off_t len )
 
 static int whio_dev_FILE_ioctl( whio_dev * dev, int arg, va_list vargs )
 {
+    int rc = whio_rc.UnsupportedError;
     WHIO_FILE_DECL(whio_rc.ArgError);
     /**
        The standard ioctl() looks like:
@@ -725,7 +774,6 @@ static int whio_dev_FILE_ioctl( whio_dev * dev, int arg, va_list vargs )
        and casting the first ... arg to the proper type (which is
        likely platform-dependent).
     */
-    int rc = whio_rc.UnsupportedError;
     switch( arg )
     {
       case whio_dev_ioctl_FILE_fd:
@@ -747,16 +795,16 @@ static bool whio_dev_FILE_close( whio_dev * dev )
 {
     if( dev )
     {
+        whio_dev_FILE * f;
 	dev->api->flush(dev);
 	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
-	dev->client = whio_client_data_init;
-	whio_dev_FILE * f = (whio_dev_FILE*)dev->impl.data;
+	dev->client = whio_client_data_empty;
+	f = (whio_dev_FILE*)dev->impl.data;
 	if( f )
 	{
 	    dev->impl.data = 0;
 	    if( f->fp && f->ownsFile ) fclose( f->fp );
 	    f->fileno = 0;
-	    //free( f );
 	    whio_dev_FILE_free( f );
 	    return true;
 	}
@@ -811,20 +859,22 @@ whio_dev * whio_dev_for_FILE( FILE * F, bool takeOwnership )
 #endif
     whio_dev * dev = whio_dev_alloc();
     if( ! dev ) return 0;
-    whio_dev_FILE * meta = whio_dev_FILE_alloc();
-    if( ! meta )
-    {
-	whio_dev_free(dev);
-	return 0;
+    else {
+        whio_dev_FILE * meta = whio_dev_FILE_alloc();
+        if( ! meta )
+        {
+            whio_dev_free(dev);
+            return 0;
+        }
+        *dev = whio_dev_FILE_init;
+        *meta = whio_dev_FILE_meta_init;
+        dev->impl.data = meta;
+        meta->fp = F;
+        meta->ownsFile = takeOwnership;
+        meta->fileno = fileno(F);
+        meta->iomode = -1;
+        return dev;
     }
-    *dev = whio_dev_FILE_init;
-    *meta = whio_dev_FILE_meta_init;
-    dev->impl.data = meta;
-    meta->fp = F;
-    meta->ownsFile = takeOwnership;
-    meta->fileno = fileno(F);
-    meta->iomode = -1;
-    return dev;
 }
 
 #if 0 /* now implemented in whio_dev_fileno.c, but this may be interesting for later. */
@@ -869,8 +919,8 @@ to provide dramatic speed increases.
 #if !defined(_POSIX_C_SOURCE)
 /* required for for fileno(), ftello(), fdatasync(), maybe others */
 #  define _POSIX_C_SOURCE 200112L
-//#  define _POSIX_C_SOURCE 199309L
-//#  define _POSIX_C_SOURCE 199506L
+/*#  define _POSIX_C_SOURCE 199309L */
+/*#  define _POSIX_C_SOURCE 199506L */
 #endif
 
 #include <stdlib.h>
@@ -884,9 +934,9 @@ to provide dramatic speed increases.
 /* i don't actually know which versions need this, but 4.0.2 does. */
     extern int ftruncate(int, off_t);
     extern int fsync(int fd);
-//#  warning "Kludging ftruncate() and fsync() declartions."
-//#else
-//#  warning "Hoping ftruncate() and fsync() are declared."
+/*#  warning "Kludging ftruncate() and fsync() declartions." */
+/*#else */
+/*#  warning "Hoping ftruncate() and fsync() are declared." */
 #endif
 #endif /* __GNUC__ */
 
@@ -922,7 +972,7 @@ typedef struct whio_dev_fileno
     0, /* errstate */                       \
    -1 /*iomode*/ \
     }
-static const whio_dev_fileno whio_dev_fileno_meta_init = WHIO_DEV_fileno_INIT;
+static const whio_dev_fileno whio_dev_fileno_meta_empty = WHIO_DEV_fileno_INIT;
 
 #if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
@@ -948,7 +998,7 @@ static whio_dev_fileno * whio_dev_fileno_alloc()
     {
 	if( whio_dev_fileno_alloc_slots.used[i] ) continue;
 	whio_dev_fileno_alloc_slots.used[i] = 1;
-	whio_dev_fileno_alloc_slots.objs[i] = whio_dev_fileno_meta_init;
+	whio_dev_fileno_alloc_slots.objs[i] = whio_dev_fileno_meta_empty;
 	obj = &whio_dev_fileno_alloc_slots.objs[i];
 	break;
     }
@@ -969,7 +1019,7 @@ static void whio_dev_fileno_free( whio_dev_fileno * obj )
     else
     {
 	const size_t ndx = (obj - &whio_dev_fileno_alloc_slots.objs[0]);
-	whio_dev_fileno_alloc_slots.objs[ndx] = whio_dev_fileno_meta_init;
+	whio_dev_fileno_alloc_slots.objs[ndx] = whio_dev_fileno_meta_empty;
 	whio_dev_fileno_alloc_slots.used[ndx] = 0;
 	return;
     }
@@ -984,36 +1034,40 @@ static void whio_dev_fileno_free( whio_dev_fileno * obj )
    parameter be-a whio_dev and that that device is-a whio_dev_fileno.
  */
 #define WHIO_fileno_DECL(RV) whio_dev_fileno * f = (dev ? (whio_dev_fileno*)dev->impl.data : 0); \
-    if( !f || !f->fp || ((void const *)&whio_dev_fileno_meta_init != dev->impl.typeID) ) return RV
+    if( !f || !f->fp || ((void const *)&whio_dev_fileno_meta_empty != dev->impl.typeID) ) return RV
 
 static whio_size_t whio_dev_fileno_read( whio_dev * dev, void * dest, whio_size_t n )
 {
     WHIO_fileno_DECL(whio_rc.SizeTError);
     if( ! dest || !n ) return 0;
-    ssize_t rc = read( f->fileno, dest, n );
-    if( 0 == rc )
-    {
-	f->atEOF = true;
+    else {
+        ssize_t rc = read( f->fileno, dest, n );
+        if( 0 == rc )
+        {
+            f->atEOF = true;
+        }
+        else if( (ssize_t)-1 == rc )
+        {
+            f->errstate = errno;
+            rc = 0;
+        }
+        return (whio_size_t)rc;
     }
-    else if( (ssize_t)-1 == rc )
-    {
-	f->errstate = errno;
-	rc = 0;
-    }
-    return (whio_size_t)rc;
 }
 
 static whio_size_t whio_dev_fileno_write( whio_dev * dev, void const * src, whio_size_t n )
 {
     WHIO_fileno_DECL(0);
     if( ! src || !n ) return 0;
-    ssize_t rc = write( f->fileno, src, n );
-    if( (ssize_t)-1 == rc )
-    {
-	f->errstate = errno;
-	rc = 0;
+    else {
+        ssize_t rc = write( f->fileno, src, n );
+        if( (ssize_t)-1 == rc )
+        {
+            f->errstate = errno;
+            rc = 0;
+        }
+        return rc;
     }
-    return rc;
 }
 
 static int whio_dev_fileno_error( whio_dev * dev )
@@ -1023,7 +1077,7 @@ static int whio_dev_fileno_error( whio_dev * dev )
       ferror(f->fp) is not likely to be valid b/c we're
       using the low-level i/o API, but what the heck...
     */
-    //return ferror(f->fp);
+    /*return ferror(f->fp); */
     return f->errstate;
 }
 
@@ -1034,7 +1088,7 @@ static int whio_dev_fileno_clear_error( whio_dev * dev )
 	and friends, using clearerr(f->fp) isn't really going to give us anything.
 	We'll go ahead and call it and assume the best.
     */
-    //clearerr(f->fp);
+    /*clearerr(f->fp); */
     f->errstate = 0;
     f->atEOF = false;
     return whio_rc.OK;
@@ -1048,14 +1102,17 @@ static int whio_dev_fileno_eof( whio_dev * dev )
 
 static whio_size_t whio_dev_fileno_tell( whio_dev * dev )
 {
+    off_t rc;
     WHIO_fileno_DECL(whio_rc.SizeTError);
-    return (whio_size_t) lseek( f->fileno, 0L, SEEK_CUR );
+    rc = lseek( f->fileno, 0L, SEEK_CUR );
+    return (rc>=0) ? (whio_size_t)rc : whio_rc.SizeTError;
 }
 
-static whio_size_t whio_dev_fileno_seek( whio_dev * dev, off_t pos, int whence )
+static whio_size_t whio_dev_fileno_seek( whio_dev * dev, whio_off_t pos, int whence )
 {
+    off_t rc;
     WHIO_fileno_DECL(whio_rc.SizeTError);
-    off_t rc = lseek( f->fileno, pos, whence );
+    rc = lseek( f->fileno, pos, whence );
     if( pos == rc )
     {
 	/**
@@ -1066,7 +1123,7 @@ static whio_size_t whio_dev_fileno_seek( whio_dev * dev, off_t pos, int whence )
 	*/
 	f->atEOF = false;
     }
-    return (whio_size_t) rc;
+    return (rc>=0) ? (whio_size_t) rc : whio_rc.SizeTError;
 }
 
 static int whio_dev_fileno_flush( whio_dev * dev )
@@ -1077,10 +1134,11 @@ static int whio_dev_fileno_flush( whio_dev * dev )
     *cough* Solaris *cough* don't appear to have it. */
 }
 
-static int whio_dev_fileno_trunc( whio_dev * dev, off_t len )
+static int whio_dev_fileno_trunc( whio_dev * dev, whio_off_t len )
 {
+    int rc;
     WHIO_fileno_DECL(whio_rc.ArgError);
-    int rc = ftruncate( f->fileno, len );
+    rc = ftruncate( f->fileno, len );
     if( 0 == rc )
     {
 	whio_dev_fileno_flush( dev );
@@ -1096,6 +1154,7 @@ short whio_dev_fileno_iomode( whio_dev * dev )
 
 static int whio_dev_fileno_ioctl( whio_dev * dev, int arg, va_list vargs )
 {
+    int rc = whio_rc.UnsupportedError;
     WHIO_fileno_DECL(whio_rc.ArgError);
     /**
        The standard ioctl() looks like:
@@ -1108,7 +1167,6 @@ static int whio_dev_fileno_ioctl( whio_dev * dev, int arg, va_list vargs )
        and casting the first ... arg to the proper type (which is
        likely platform-dependent).
     */
-    int rc = whio_rc.UnsupportedError;
     switch( arg )
     {
       case whio_dev_ioctl_FILE_fd:
@@ -1158,15 +1216,16 @@ static bool whio_dev_fileno_close( whio_dev * dev )
 {
     if( dev )
     {
+        whio_dev_fileno * f;
 	dev->api->flush(dev);
 	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
-	dev->client = whio_client_data_init;
-	whio_dev_fileno * f = (whio_dev_fileno*)dev->impl.data;
+	dev->client = whio_client_data_empty;
+	f = (whio_dev_fileno*)dev->impl.data;
 	if( f )
 	{
 	    dev->impl.data = 0;
 	    if( f->fp ) fclose( f->fp );
-	    *f = whio_dev_fileno_meta_init;
+	    *f = whio_dev_fileno_meta_empty;
 	    whio_dev_fileno_free( f );
 	    return true;
 	}
@@ -1201,12 +1260,12 @@ static const whio_dev_api whio_dev_fileno_api =
     whio_dev_fileno_iomode
     };
 
-static const whio_dev whio_dev_fileno_init =
+static const whio_dev whio_dev_fileno_empty =
     {
     &whio_dev_fileno_api,
     { /* impl */
     0, /* data. Must be-a (whio_dev_fileno*) */
-    (void const *)&whio_dev_fileno_meta_init /* typeID */
+    (void const *)&whio_dev_fileno_meta_empty /* typeID */
     }
     };
 
@@ -1222,38 +1281,42 @@ static whio_dev * whio_dev_for_file_impl( char const * fname, int filenum, char 
     {
         return 0;
     }
-    /** Maintenance reminder:
+    else {
+        /** Maintenance reminder:
 
         i would like to move these two allocs to below the fopen(),
         but if we open the file first then we have to check whether we
         created the file, and delete it if we did not.
-    */
-    whio_dev * dev = whio_dev_alloc();
-    if( ! dev )
-    {
-        return 0;
+        */
+        whio_dev_fileno * meta;
+        FILE * f;
+        whio_dev * dev = whio_dev_alloc();
+        if( ! dev )
+        {
+            return 0;
+        }
+        meta = whio_dev_fileno_alloc();
+        if( ! meta )
+        {
+            whio_dev_free(dev);
+            return 0;
+        }
+        f = (fname && *fname) ? fopen(fname,mode) : fdopen( filenum, mode );
+        if( ! f )
+        {
+            whio_dev_free(dev);
+            whio_dev_fileno_free(meta);
+            return 0;
+        }
+        *dev = whio_dev_fileno_empty;
+        *meta = whio_dev_fileno_meta_empty;
+        dev->impl.data = meta;
+        meta->fp = f;
+        meta->fileno = fileno(f);
+        meta->filename = fname;
+        meta->iomode = whio_mode_to_iomode( mode );
+        return dev;
     }
-    whio_dev_fileno * meta = whio_dev_fileno_alloc();
-    if( ! meta )
-    {
-	whio_dev_free(dev);
-	return 0;
-    }
-    FILE * f = (fname && *fname) ? fopen(fname,mode) : fdopen( filenum, mode );
-    if( ! f )
-    {
-        whio_dev_free(dev);
-        whio_dev_fileno_free(meta);
-	return 0;
-    }
-    *dev = whio_dev_fileno_init;
-    *meta = whio_dev_fileno_meta_init;
-    dev->impl.data = meta;
-    meta->fp = f;
-    meta->fileno = fileno(f);
-    meta->filename = fname;
-    meta->iomode = whio_mode_to_iomode( mode );
-    return dev;
 }
 
 whio_dev * whio_dev_for_fileno( int fileno, char const * mode )
@@ -1352,7 +1415,7 @@ typedef struct whio_dev_membuf_meta
 /**
    Initialization object for new whio_dev_membuf objects.
 */
-static const whio_dev_membuf_meta whio_dev_membuf_meta_init = WHIO_DEV_MEMBUF_META_INIT;
+static const whio_dev_membuf_meta whio_dev_membuf_meta_empty = WHIO_DEV_MEMBUF_META_INIT;
 
 #if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
@@ -1378,7 +1441,7 @@ static whio_dev_membuf_meta * whio_dev_membuf_meta_alloc()
     {
 	if( whio_dev_membuf_meta_alloc_slots.used[i] ) continue;
 	whio_dev_membuf_meta_alloc_slots.used[i] = 1;
-	whio_dev_membuf_meta_alloc_slots.objs[i] = whio_dev_membuf_meta_init;
+	whio_dev_membuf_meta_alloc_slots.objs[i] = whio_dev_membuf_meta_empty;
 	obj = &whio_dev_membuf_meta_alloc_slots.objs[i];
 	break;
     }
@@ -1389,6 +1452,7 @@ static whio_dev_membuf_meta * whio_dev_membuf_meta_alloc()
 
 static void whio_dev_membuf_meta_free( whio_dev_membuf_meta * obj )
 {
+    if( ! obj ) return;
 #if WHIO_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whio_dev_membuf_meta_alloc_slots.objs[0]) ||
 	(obj > &whio_dev_membuf_meta_alloc_slots.objs[whio_dev_membuf_meta_alloc_count-1]) )
@@ -1399,7 +1463,7 @@ static void whio_dev_membuf_meta_free( whio_dev_membuf_meta * obj )
     else
     {
 	const size_t ndx = (obj - &whio_dev_membuf_meta_alloc_slots.objs[0]);
-	whio_dev_membuf_meta_alloc_slots.objs[ndx] = whio_dev_membuf_meta_init;
+	whio_dev_membuf_meta_alloc_slots.objs[ndx] = whio_dev_membuf_meta_empty;
 	whio_dev_membuf_meta_alloc_slots.used[ndx] = 0;
 	return;
     }
@@ -1418,10 +1482,11 @@ static void whio_dev_membuf_meta_free( whio_dev_membuf_meta * obj )
 
 static whio_size_t whio_dev_membuf_read( whio_dev * dev, void * dest, whio_size_t n )
 {
-    WHIO_MEMBUF_DECL(0); //whio_rc.SizeTError);
-    if( ! dest ) return 0; //whio_rc.SizeTError;
+    whio_size_t rlen;
+    WHIO_MEMBUF_DECL(0);
+    if( ! dest ) return 0;
     if( mb->pos >= mb->size ) return 0;
-    whio_size_t rlen = n;
+    rlen = n;
     if( ((mb->pos + n) >= mb->size )
 	|| ((mb->pos + n) < mb->pos)
 	)
@@ -1438,15 +1503,16 @@ static whio_size_t whio_dev_membuf_read( whio_dev * dev, void * dest, whio_size_
 
 static whio_size_t whio_dev_membuf_write( whio_dev * dev, void const * src, whio_size_t n )
 {
+    whio_size_t newEnd, wlen;
     WHIO_MEMBUF_DECL(0);
     if( ! n || !src ) return 0;
-    whio_size_t newEnd = mb->pos + n;
+    newEnd = mb->pos + n;
     if( newEnd < mb->pos ) return 0; /* overflow! fixme: write as much as we can */
-    whio_size_t wlen = n;
+    wlen = n;
 
     if( newEnd >= mb->size )
     {
-	//WHIO_DEBUG("write of %u bytes to pos %u would go out of bounds (%u). Expanding==%d\n",n, mb->pos, mb->size,mb->expandable);
+	/*WHIO_DEBUG("write of %u bytes to pos %u would go out of bounds (%u). Expanding==%d\n",n, mb->pos, mb->size,mb->expandable); */
 	if( mb->expandable )
 	{
 	    dev->api->truncate( dev, newEnd );
@@ -1466,14 +1532,14 @@ static whio_size_t whio_dev_membuf_write( whio_dev * dev, void const * src, whio
 	  We likely got seek()ed out of bounds. Behave like FILE does
 	  on my Linux box and resize now...
 	*/
-	//WHIO_DEBUG("pos(%u) > size(%u). Expanding to %u = %s\n", mb->pos, mb->size, newEnd, mb->expandable ? "yes" : "no");
+	/*WHIO_DEBUG("pos(%u) > size(%u). Expanding to %u = %s\n", mb->pos, mb->size, newEnd, mb->expandable ? "yes" : "no"); */
 	if( ! mb->expandable ) return 0;
-	//WHIO_DEBUG("Seems we've been truncated from %u to %u\n",mb->size, mb->pos);
+	/*WHIO_DEBUG("Seems we've been truncated from %u to %u\n",mb->size, mb->pos); */
 	mb->size = newEnd;
     }
 
     if( (newEnd >= mb->size ) /* will overflow current EOF. */
-	//|| (newEnd < mb->pos ) /* overflow in mb->pos+n. */
+	/*|| (newEnd < mb->pos )*/ /* overflow in mb->pos+n. */
 	)
     {
 	/* write as much as we can, to EOF. */
@@ -1515,10 +1581,11 @@ static whio_size_t whio_dev_membuf_tell( whio_dev * dev )
     return mb->pos;
 }
 
-static whio_size_t whio_dev_membuf_seek( whio_dev * dev, off_t pos, int whence )
+static whio_size_t whio_dev_membuf_seek( whio_dev * dev, whio_off_t pos, int whence )
 {
+    whio_size_t too;
     WHIO_MEMBUF_DECL(whio_rc.SizeTError);
-    whio_size_t too = mb->pos;
+    too = mb->pos;
     switch( whence )
     {
       case SEEK_SET:
@@ -1548,11 +1615,12 @@ static int whio_dev_membuf_flush( whio_dev * dev )
     return whio_rc.OK;
 }
 
-static int whio_dev_membuf_trunc( whio_dev * dev, off_t _len )
+static int whio_dev_membuf_trunc( whio_dev * dev, whio_off_t _len )
 {
+    whio_size_t ulen;
     WHIO_MEMBUF_DECL(whio_rc.ArgError);
     if( _len < 0 ) return whio_rc.RangeError;
-    whio_size_t ulen = (whio_size_t)_len;
+    ulen = (whio_size_t)_len;
     if( 0 == ulen )
     {
 #if 1 /* arguable. Hmmm. */
@@ -1574,16 +1642,17 @@ static int whio_dev_membuf_trunc( whio_dev * dev, off_t _len )
     if( !mb->alloced || (ulen > mb->alloced) )
     { /* try to grow */
 	whio_size_t alen = ulen;
+        void * b;
 	if( mb->expandable )
 	{ /* see how much to expand by. */
 	    alen = (whio_size_t)(mb->alloced * (mb->expfactor+0.01));
 	    /* ^^^ that +0.01 kludge is to work around (100*1.8)==179 and (100*1.9)==189 */
 	    if( alen < ulen ) alen = ulen;
 	}
-	void * b = realloc( mb->buffer, alen );
+	b = realloc( mb->buffer, alen );
 	if( ! b ) return whio_rc.AllocError;
 	mb->buffer = b;
-	//WHIO_DEBUG("Grew buffer from %u to %u bytes\n", mb->alloced, alen);
+	/*WHIO_DEBUG("Grew buffer from %u to %u bytes\n", mb->alloced, alen); */
 	if( mb->alloced < alen )
 	{   /* clean up new memory to avoid RAM artifacts. */
 	    memset( WHIO_VOID_PTR_ADD(b,mb->alloced), 0, alen - mb->alloced );
@@ -1600,8 +1669,8 @@ static int whio_dev_membuf_trunc( whio_dev * dev, off_t _len )
 	   we could no longer write to the buffer (as we can't expand
 	   it).
 	*/
-	//const whio_size_t oldAlloc = mb->alloced;
-	//WHIO_DEBUG("oldAlloc=%u mb->alloced=%u ulen=%u\n",oldAlloc,mb->alloced,ulen);
+	/*const whio_size_t oldAlloc = mb->alloced; */
+	/*WHIO_DEBUG("oldAlloc=%u mb->alloced=%u ulen=%u\n",oldAlloc,mb->alloced,ulen); */
 	whio_size_t alen = ulen;
 	if( alen < (mb->alloced/mb->expfactor) )
 	{
@@ -1610,7 +1679,7 @@ static int whio_dev_membuf_trunc( whio_dev * dev, off_t _len )
 	    {
 		mb->buffer = b;
 		mb->alloced = alen;
-		//WHIO_DEBUG("Shrunk buffer from %u to %u bytes\n", oldAlloc, mb->alloced);
+		/*WHIO_DEBUG("Shrunk buffer from %u to %u bytes\n", oldAlloc, mb->alloced); */
 	    }
 	    /* ignore realloc failure if we're shrinking - just keep the old block. */
 	}
@@ -1628,9 +1697,11 @@ short whio_dev_membuf_iomode( whio_dev * dev )
 static int whio_dev_membuf_ioctl( whio_dev * dev, int arg, va_list vargs )
 {
     int rc = whio_rc.UnsupportedError;
+    whio_size_t * x;
+    unsigned char const ** cp;
     WHIO_MEMBUF_DECL(rc);
-    whio_size_t * x = 0;
-    unsigned char const ** cp = 0;
+    x = NULL;
+    cp = NULL;
     switch( arg )
     {
       case whio_dev_ioctl_BUFFER_uchar_ptr:
@@ -1675,36 +1746,9 @@ static int whio_dev_membuf_ioctl( whio_dev * dev, int arg, va_list vargs )
     return rc;
 }
 
-static bool whio_dev_membuf_close( whio_dev * dev )
-{
-    if( dev )
-    {
-	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
-	dev->client = whio_client_data_init;
-	whio_dev_membuf_meta * f = (whio_dev_membuf_meta*)dev->impl.data;
-	if( f )
-	{
-	    dev->impl.data = 0;
-	    free(f->buffer);
-	    //*f = whio_dev_membuf_meta_init;
-	    //free(f);
-	    whio_dev_membuf_meta_free( f );
-	    return true;
-	}
-    }
-    return false;
-}
-
-static void whio_dev_membuf_finalize( whio_dev * dev )
-{
-    if( dev )
-    {
-	dev->api->close(dev);
-	whio_dev_free(dev);
-    }
-}
-#undef WHIO_MEMBUF_DECL
-
+static bool whio_dev_membuf_close( whio_dev * dev );
+static void whio_dev_membuf_finalize( whio_dev * dev );
+    
 const whio_dev_api whio_dev_api_membuf =
     {
     whio_dev_membuf_read,
@@ -1729,32 +1773,66 @@ const whio_dev_api whio_dev_api_membuf =
     (void const *)&whio_dev_api_membuf /* typeID */ \
     } }
 
-static const whio_dev whio_dev_membuf_init = WHIO_DEV_MEMBUF_INIT;
+static const whio_dev whio_dev_membuf_empty = WHIO_DEV_MEMBUF_INIT;
+
+static bool whio_dev_membuf_close( whio_dev * dev )
+{
+    if( dev )
+    {
+        whio_dev_membuf_meta * f;
+	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
+	dev->client = whio_client_data_empty;
+	f = (whio_dev_membuf_meta*)dev->impl.data;
+	if( f )
+	{
+	    dev->impl.data = 0;
+	    free(f->buffer);
+	    /**f = whio_dev_membuf_meta_empty; */
+	    /*free(f); */
+	    whio_dev_membuf_meta_free( f );
+	    return true;
+	}
+        *dev = whio_dev_membuf_empty;
+    }
+    return false;
+}
+
+static void whio_dev_membuf_finalize( whio_dev * dev )
+{
+    if( dev )
+    {
+	dev->api->close(dev);
+	whio_dev_free(dev);
+    }
+}
+#undef WHIO_MEMBUF_DECL
 
 whio_dev * whio_dev_for_membuf( whio_size_t size, float expFactor )
 {
     whio_dev * dev = whio_dev_alloc();
     if( ! dev ) return 0;
-    *dev = whio_dev_membuf_init;
-    whio_dev_membuf_meta * mb = whio_dev_membuf_meta_alloc();
-    if( !mb )
-    {
-	whio_dev_free(dev);
-	return 0;
+    else {
+        whio_dev_membuf_meta * mb;
+        *dev = whio_dev_membuf_empty;
+        mb = whio_dev_membuf_meta_alloc();
+        if( !mb )
+        {
+            whio_dev_free(dev);
+            return 0;
+        }
+        *mb = whio_dev_membuf_meta_empty;
+        dev->impl.data = mb;
+        /*mb->alloc_policy = expandable ? whio_dev_membuf_alloc_policy_133 : 0; */
+        mb->expandable = (expFactor >= 1.0);
+        mb->expfactor = expFactor;
+        if( whio_rc.OK != dev->api->truncate( dev, size ) )
+        {
+            dev->api->finalize( dev );
+            dev = 0;
+        }
+        /*WHIO_DEBUG( "membuf @%p, buffer @%p: size=%u\n", (void const *)dev, (void const *)mb->buffer, mb->size ); */
+        return dev;
     }
-    *mb = whio_dev_membuf_meta_init;
-    dev->impl.data = mb;
-    //mb->alloc_policy = expandable ? whio_dev_membuf_alloc_policy_133 : 0;
-    mb->expandable = (expFactor >= 1.0);
-    mb->expfactor = expFactor;
-    int rc = dev->api->truncate( dev, size );
-    if( whio_rc.OK != rc )
-    {
-	dev->api->finalize( dev );
-	dev = 0;
-    }
-    //WHIO_DEBUG( "membuf @%p, buffer @%p: size=%u\n", (void const *)dev, (void const *)mb->buffer, mb->size );
-    return dev;
 }
 
 
@@ -1806,7 +1884,7 @@ typedef struct whio_dev_memmap
     0 /* ro */ \
     }
 
-static const whio_dev_memmap whio_dev_memmap_init = WHIO_DEV_MEMMAP_INIT;
+static const whio_dev_memmap whio_dev_memmap_empty = WHIO_DEV_MEMMAP_INIT;
 
 
 #if WHIO_CONFIG_ENABLE_STATIC_MALLOC
@@ -1833,7 +1911,7 @@ static whio_dev_memmap * whio_dev_memmap_alloc()
     {
 	if( whio_dev_memmap_alloc_slots.used[i] ) continue;
 	whio_dev_memmap_alloc_slots.used[i] = 1;
-	whio_dev_memmap_alloc_slots.objs[i] = whio_dev_memmap_init;
+	whio_dev_memmap_alloc_slots.objs[i] = whio_dev_memmap_empty;
 	obj = &whio_dev_memmap_alloc_slots.objs[i];
 	break;
     }
@@ -1854,7 +1932,7 @@ static void whio_dev_memmap_free( whio_dev_memmap * obj )
     else
     {
 	const size_t ndx = (obj - &whio_dev_memmap_alloc_slots.objs[0]);
-	whio_dev_memmap_alloc_slots.objs[ndx] = whio_dev_memmap_init;
+	whio_dev_memmap_alloc_slots.objs[ndx] = whio_dev_memmap_empty;
 	whio_dev_memmap_alloc_slots.used[ndx] = 0;
 	return;
     }
@@ -1876,22 +1954,24 @@ static void whio_dev_memmap_free( whio_dev_memmap * obj )
 
 static whio_size_t whio_dev_memmap_read( whio_dev * dev, void * dest, whio_size_t n )
 {
-    WHIO_MEMMAP_DECL(0); //whio_rc.SizeTError);
-    if( ! dest || !mb->ro ) return 0; //whio_rc.SizeTError;
-    if( mb->pos >= mb->size ) return 0;
-    whio_size_t rlen = n;
-    if( ((mb->pos + n) >= mb->size )
-	|| ((mb->pos + n) < mb->pos)
-	)
-    {
-	rlen = mb->size - mb->pos;
+    WHIO_MEMMAP_DECL(0);
+    if( ! dest || !mb->ro ) return 0;
+    else if( mb->pos >= mb->size ) return 0;
+    else {
+        whio_size_t rlen = n;
+        if( ((mb->pos + n) >= mb->size )
+            || ((mb->pos + n) < mb->pos)
+            )
+        {
+            rlen = mb->size - mb->pos;
+        }
+        if( rlen )
+        {
+            memcpy( dest, WHIO_VOID_CPTR_ADD(mb->ro,mb->pos), rlen );
+            mb->pos += rlen;
+        }
+        return rlen;
     }
-    if( rlen )
-    {
-	memcpy( dest, WHIO_VOID_CPTR_ADD(mb->ro,mb->pos), rlen );
-	mb->pos += rlen;
-    }
-    return rlen;
 }
 
 static whio_size_t whio_dev_memmap_write( whio_dev * dev, void const * src, whio_size_t n )
@@ -1900,24 +1980,26 @@ static whio_size_t whio_dev_memmap_write( whio_dev * dev, void const * src, whio
     if( ! n || !src || !mb->rw ) return 0;
     if( mb->pos >= mb->size )
     {
-	//WHIO_DEBUG("write would go out of bounds.\n");
+	/*WHIO_DEBUG("write would go out of bounds.\n"); */
 	return 0;
     }
-    const whio_size_t newEnd = mb->pos + n;
-    whio_size_t wlen = n;
-    if( (newEnd >= mb->size ) /* would overflow EOF. */
-	|| (newEnd < mb->pos ) /* overflow in mb->pos+n. */
-	)
-    {
-	/* write as much as we can, to EOF. */
-	wlen = mb->size - mb->pos;
+    else {
+        const whio_size_t newEnd = mb->pos + n;
+        whio_size_t wlen = n;
+        if( (newEnd >= mb->size ) /* would overflow EOF. */
+            || (newEnd < mb->pos ) /* overflow in mb->pos+n. */
+            )
+        {
+            /* write as much as we can, to EOF. */
+            wlen = mb->size - mb->pos;
+        }
+        if( wlen )
+        {
+            memcpy( WHIO_VOID_PTR_ADD(mb->rw,mb->pos), src, wlen );
+            mb->pos += wlen;
+        }
+        return wlen;
     }
-    if( wlen )
-    {
-	memcpy( WHIO_VOID_PTR_ADD(mb->rw,mb->pos), src, wlen );
-	mb->pos += wlen;
-    }
-    return wlen;
 }
 
 static int whio_dev_memmap_error( whio_dev * dev )
@@ -1954,10 +2036,11 @@ static whio_size_t whio_dev_memmap_tell( whio_dev * dev )
 #endif
 }
 
-static whio_size_t whio_dev_memmap_seek( whio_dev * dev, off_t pos, int whence )
+static whio_size_t whio_dev_memmap_seek( whio_dev * dev, whio_off_t pos, int whence )
 {
+    whio_size_t too;
     WHIO_MEMMAP_DECL(whio_rc.SizeTError);
-    whio_size_t too = mb->pos;
+    too = mb->pos;
     switch( whence )
     {
       case SEEK_SET:
@@ -1986,17 +2069,19 @@ static int whio_dev_memmap_flush( whio_dev * dev )
     return whio_rc.OK;
 }
 
-static int whio_dev_memmap_trunc( whio_dev * dev, off_t _len )
+static int whio_dev_memmap_trunc( whio_dev * dev, whio_off_t _len )
 {
     WHIO_MEMMAP_DECL(whio_rc.ArgError);
     if( _len < 0 ) return whio_rc.RangeError;
-    whio_size_t ulen = (whio_size_t)_len;
-    if( ulen > mb->maxsize )
-    {
-	return whio_rc.RangeError;
+    else {
+        whio_size_t ulen = (whio_size_t)_len;
+        if( ulen > mb->maxsize )
+        {
+            return whio_rc.RangeError;
+        }
+        mb->size = ulen;
+        return whio_rc.OK;
     }
-    mb->size = ulen;
-    return whio_rc.OK;
 }
 
 short whio_dev_memmap_iomode( whio_dev * dev )
@@ -2008,8 +2093,8 @@ short whio_dev_memmap_iomode( whio_dev * dev )
 static int whio_dev_memmap_ioctl( whio_dev * dev, int arg, va_list vargs )
 {
     int rc = whio_rc.UnsupportedError;
+    whio_size_t * x = NULL;
     WHIO_MEMMAP_DECL(rc);
-    whio_size_t * x = 0;
     switch( arg )
     {
       case whio_dev_ioctl_GENERAL_size:
@@ -2046,13 +2131,14 @@ static bool whio_dev_memmap_close( whio_dev * dev )
 {
     if( dev )
     {
+        whio_dev_memmap * f;
 	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
-	dev->client = whio_client_data_init;
-	whio_dev_memmap * f = (whio_dev_memmap*)dev->impl.data;
+	dev->client = whio_client_data_empty;
+	f = (whio_dev_memmap*)dev->impl.data;
 	if( f )
 	{
 	    dev->impl.data = 0;
-	    *f = whio_dev_memmap_init;
+	    *f = whio_dev_memmap_empty;
 	    whio_dev_memmap_free(f);
 	    return true;
 	}
@@ -2087,7 +2173,7 @@ const whio_dev_api whio_dev_api_memmap =
     whio_dev_memmap_iomode
     };
 
-static const whio_dev whio_dev_memmap_dev_init =
+static const whio_dev whio_dev_memmap_dev_empty =
     {
     &whio_dev_api_memmap,
     { /* impl */
@@ -2121,27 +2207,31 @@ static const whio_dev whio_dev_memmap_dev_init =
 */
 static whio_dev * whio_dev_for_memmap( void * rw, void const * ro, whio_size_t size )
 {
-    if( (!rw && !ro) || ! size ) return 0;
+    whio_dev * dev;
+    if( (!rw && !ro) || ! size ) return NULL;
     if( rw && ro )
     {
 	if( ro != rw ) return 0;
     }
-    whio_dev * dev = whio_dev_alloc();
-    if( ! dev ) return 0;
-    *dev = whio_dev_memmap_dev_init;
-    whio_dev_memmap * mb = whio_dev_memmap_alloc();
-    if( !mb )
-    {
-	whio_dev_free(dev);
-	return 0;
+    dev = whio_dev_alloc();
+    if( ! dev ) return NULL;
+    else {
+        whio_dev_memmap * mb;
+        *dev = whio_dev_memmap_dev_empty;
+        mb = whio_dev_memmap_alloc();
+        if( !mb )
+        {
+            whio_dev_free(dev);
+            return 0;
+        }
+        *mb = whio_dev_memmap_empty;
+        dev->impl.data = mb;
+        mb->size = mb->maxsize = size;
+        mb->rw = rw;
+        mb->ro = ro ? ro : rw;
+        /*WHIO_DEBUG( "memmap @%p, buffer @%p: size=%u\n", (void const *)dev, (void const *)mb->ro, mb->size ); */
+        return dev;
     }
-    *mb = whio_dev_memmap_init;
-    dev->impl.data = mb;
-    mb->size = mb->maxsize = size;
-    mb->rw = rw;
-    mb->ro = ro ? ro : rw;
-    //WHIO_DEBUG( "memmap @%p, buffer @%p: size=%u\n", (void const *)dev, (void const *)mb->ro, mb->size );
-    return dev;
 }
 
 whio_dev * whio_dev_for_memmap_rw( void * mem, whio_size_t size )
@@ -2172,8 +2262,8 @@ along with the factory functions for creating the device objects.
 #if !defined(_POSIX_C_SOURCE)
 /* required for for fileno(), ftello(), maybe others */
 #  define _POSIX_C_SOURCE 200112L
-//#  define _POSIX_C_SOURCE 199309L
-//#  define _POSIX_C_SOURCE 199506L
+/*#  define _POSIX_C_SOURCE 199309L */
+/*#  define _POSIX_C_SOURCE 199506L */
 #endif
 
 #include <stdlib.h>
@@ -2215,7 +2305,7 @@ typedef struct whio_dev_subdev_meta
     0, /* upper */ \
     0 /* pos */ \
     }
-static const whio_dev_subdev_meta whio_dev_subdev_meta_init = WHIO_DEV_SUBDEV_META_INIT;
+static const whio_dev_subdev_meta whio_dev_subdev_meta_empty = WHIO_DEV_SUBDEV_META_INIT;
 
 #if WHIO_CONFIG_ENABLE_STATIC_MALLOC
 enum {
@@ -2241,7 +2331,7 @@ whio_dev_subdev_meta * whio_dev_subdev_meta_alloc()
     {
 	if( whio_dev_subdev_meta_alloc_slots.used[i] ) continue;
 	whio_dev_subdev_meta_alloc_slots.used[i] = 1;
-	whio_dev_subdev_meta_alloc_slots.objs[i] = whio_dev_subdev_meta_init;
+	whio_dev_subdev_meta_alloc_slots.objs[i] = whio_dev_subdev_meta_empty;
 	obj = &whio_dev_subdev_meta_alloc_slots.objs[i];
 	//WHIO_DEBUG("Allocated device #%u @0x%p\n", i, (void const *)obj );
 	break;
@@ -2276,7 +2366,7 @@ void whio_dev_subdev_meta_free( whio_dev_subdev_meta * obj )
 		       (void const *)&whio_dev_subdev_meta_alloc_slots.objs[ndx] );
 	}
 
-	whio_dev_subdev_meta_alloc_slots.objs[ndx] = whio_dev_subdev_meta_init;
+	whio_dev_subdev_meta_alloc_slots.objs[ndx] = whio_dev_subdev_meta_empty;
 	whio_dev_subdev_meta_alloc_slots.used[ndx] = 0;
 	return;
     }
@@ -2291,53 +2381,63 @@ void whio_dev_subdev_meta_free( whio_dev_subdev_meta * obj )
    parameter be-a whio_dev and that that device is-a whio_dev_subdev.
  */
 #define WHIO_subdev_DECL(RV) whio_dev_subdev_meta * sub = (dev ? (whio_dev_subdev_meta*)dev->impl.data : 0); \
-    if( !sub || ((void const *)&whio_dev_subdev_meta_init != dev->impl.typeID) || (!sub->dev)) return RV
+    if( !sub || ((void const *)&whio_dev_subdev_meta_empty != dev->impl.typeID) || (!sub->dev)) return RV
 
 
 static whio_size_t whio_dev_subdev_read( whio_dev * dev, void * dest, whio_size_t n )
 {
     WHIO_subdev_DECL(whio_rc.SizeTError);
     if( (sub->pos < sub->lower) || (sub->pos >= sub->upper ) ) return 0;
-    const whio_size_t opos = sub->dev->api->tell( sub->dev );
-    if( whio_rc.SizeTError == opos ) return 0;
-    if( sub->pos != sub->dev->api->seek( sub->dev, sub->pos, SEEK_SET ) ) return 0;
-    whio_size_t rend = sub->pos + n;
-    if( rend > sub->upper )
-    {
-	rend = sub->upper;
+    else {
+        const whio_size_t opos = sub->dev->api->tell( sub->dev );
+        if( whio_rc.SizeTError == opos ) return 0;
+        if( sub->pos != sub->dev->api->seek( sub->dev, sub->pos, SEEK_SET ) ) return 0;
+        else {
+            whio_size_t rlen, rc;
+            whio_size_t rend = sub->pos + n;
+            if( rend > sub->upper )
+            {
+                rend = sub->upper;
+            }
+            rlen = rend - sub->pos;
+            rc = 0;
+            if( rlen )
+            {
+                rc = sub->dev->api->read( sub->dev, dest, rlen );
+            }
+            sub->pos += rc;
+            sub->dev->api->seek( sub->dev, opos, SEEK_SET );
+            return rc;
+        }
     }
-    whio_size_t rlen = rend - sub->pos;
-    whio_size_t rc = 0;
-    if( rlen )
-    {
-	rc = sub->dev->api->read( sub->dev, dest, rlen );
-    }
-    sub->pos += rc;
-    sub->dev->api->seek( sub->dev, opos, SEEK_SET );
-    return rc;
 }
 
 static whio_size_t whio_dev_subdev_write( whio_dev * dev, void const * src, whio_size_t n )
 {
     WHIO_subdev_DECL(0);
     if( (sub->pos < sub->lower) || (sub->pos >= sub->upper ) ) return 0;
-    const whio_size_t opos = sub->dev->api->tell( sub->dev );
-    if( whio_rc.SizeTError == opos ) return 0;
-    if( sub->pos != sub->dev->api->seek( sub->dev, sub->pos, SEEK_SET ) ) return 0;
-    whio_size_t rend = sub->pos + n;
-    if( rend > sub->upper )
-    {
-	rend = sub->upper;
+    else {
+        const whio_size_t opos = sub->dev->api->tell( sub->dev );
+        if( whio_rc.SizeTError == opos ) return 0;
+        if( sub->pos != sub->dev->api->seek( sub->dev, sub->pos, SEEK_SET ) ) return 0;
+        else {
+            whio_size_t wlen, rc;
+            whio_size_t rend = sub->pos + n;
+            if( rend > sub->upper )
+            {
+                rend = sub->upper;
+            }
+            wlen = rend - sub->pos;
+            rc = 0;
+            if( wlen )
+            {
+                rc = sub->dev->api->write( sub->dev, src, wlen );
+            }
+            sub->pos += rc;
+            sub->dev->api->seek( sub->dev, opos, SEEK_SET );
+            return rc;
+        }
     }
-    whio_size_t wlen = rend - sub->pos;
-    whio_size_t rc = 0;
-    if( wlen )
-    {
-	rc = sub->dev->api->write( sub->dev, src, wlen );
-    }
-    sub->pos += rc;
-    sub->dev->api->seek( sub->dev, opos, SEEK_SET );
-    return rc;
 }
 
 static int whio_dev_subdev_error( whio_dev * dev )
@@ -2365,12 +2465,13 @@ static whio_size_t whio_dev_subdev_tell( whio_dev * dev )
     else return sub->pos - sub->lower;
 }
 
-static whio_size_t whio_dev_subdev_seek( whio_dev * dev, off_t pos, int whence )
+static whio_size_t whio_dev_subdev_seek( whio_dev * dev, whio_off_t pos, int whence )
 {
+    whio_size_t too, ppos, top, upos;
     WHIO_subdev_DECL(whio_rc.SizeTError);
-    whio_size_t too = sub->pos;
-    whio_size_t ppos = sub->dev->api->tell( sub->dev );
-    whio_size_t top = sub->upper;
+    too = sub->pos;
+    ppos = sub->dev->api->tell( sub->dev );
+    top = sub->upper;
 #define OVERFLOW return whio_rc.SizeTError
 #define UNDERFLOW return whio_rc.SizeTError
     switch( whence )
@@ -2407,7 +2508,7 @@ static whio_size_t whio_dev_subdev_seek( whio_dev * dev, off_t pos, int whence )
     };
 #undef OVERFLOW
 #undef UNDERFLOW
-    const whio_size_t upos = sub->dev->api->seek( sub->dev, (sub->pos = too), SEEK_SET );
+    upos = sub->dev->api->seek( sub->dev, (sub->pos = too), SEEK_SET );
     return (upos == sub->pos)
 	? (sub->pos - sub->lower)
 	: whio_rc.SizeTError;
@@ -2425,18 +2526,18 @@ short whio_dev_subdev_iomode( whio_dev * dev )
     return sub->dev->api->iomode( sub->dev );
 }
 
-static int whio_dev_subdev_trunc( whio_dev * dev, off_t len )
+static int whio_dev_subdev_trunc( whio_dev * dev, whio_off_t len )
 {
     return whio_rc.UnsupportedError;
-    //WHIO_subdev_DECL(whio_rc.ArgError);
-    //return sub->dev->api->truncate( sub->dev, len );
+    /*WHIO_subdev_DECL(whio_rc.ArgError); */
+    /*return sub->dev->api->truncate( sub->dev, len ); */
 }
 
 static int whio_dev_subdev_ioctl( whio_dev * dev, int arg, va_list vargs )
 {
-    WHIO_subdev_DECL(whio_rc.ArgError);
     int rc = whio_rc.UnsupportedError;
-    whio_size_t * sz = 0;
+    whio_size_t * sz = NULL;
+    WHIO_subdev_DECL(whio_rc.ArgError);
     switch( arg )
     {
       case whio_dev_ioctl_SUBDEV_parent_dev:
@@ -2461,9 +2562,11 @@ static bool whio_dev_subdev_close( whio_dev * dev )
 {
     WHIO_subdev_DECL(false);
     dev->api->flush(dev);
-    *sub = whio_dev_subdev_meta_init;
+    if( dev->client.dtor ) dev->client.dtor( dev->client.data );
+    dev->client = whio_client_data_empty;
+    *sub = whio_dev_subdev_meta_empty;
     whio_dev_subdev_meta_free( sub );
-    dev->impl.data = 0;
+    dev->impl = whio_impl_data_empty;
     return true;
 }
 
@@ -2495,45 +2598,51 @@ static const whio_dev_api whio_dev_api_subdev =
     whio_dev_subdev_iomode
     };
 
-static const whio_dev whio_dev_subdev_init =
+static const whio_dev whio_dev_subdev_empty =
     {
     &whio_dev_api_subdev,
     { /* impl */
     0, /* implData. Must be-a (whio_dev_subdev_meta*) */
-    (void const *)&whio_dev_subdev_meta_init /* typeID */
+    (void const *)&whio_dev_subdev_meta_empty /* typeID */
     }
     };
 
 whio_dev * whio_dev_subdev_create( whio_dev * parent, whio_size_t lowerBound, whio_size_t upperBound )
 {
     if( ! parent || (upperBound && (upperBound <= lowerBound)) ) return 0;
-    whio_dev * dev = whio_dev_alloc();
-    if( ! dev ) return 0;
-    whio_dev_subdev_meta * meta = whio_dev_subdev_meta_alloc();
-    if( ! meta )
-    {
-	whio_dev_free(dev);
-	return 0;
+    else {
+        whio_dev * dev = whio_dev_alloc();
+        if( ! dev ) return 0;
+        else {
+            whio_dev_subdev_meta * meta = whio_dev_subdev_meta_alloc();
+            if( ! meta )
+            {
+                whio_dev_free(dev);
+                return 0;
+            }
+            *dev = whio_dev_subdev_empty;
+            *meta = whio_dev_subdev_meta_empty;
+            dev->impl.data = meta;
+            meta->dev = parent;
+            meta->lower = lowerBound;
+            meta->pos = lowerBound;
+            meta->upper = upperBound;
+            return dev;
+        }
     }
-    *dev = whio_dev_subdev_init;
-    *meta = whio_dev_subdev_meta_init;
-    dev->impl.data = meta;
-    meta->dev = parent;
-    meta->lower = lowerBound;
-    meta->pos = lowerBound;
-    meta->upper = upperBound;
-    return dev;
 }
 
 int whio_dev_subdev_rebound( whio_dev * dev, whio_size_t lowerBound, whio_size_t upperBound )
 {
     if( !dev || (upperBound && (upperBound <= lowerBound)) ) return whio_rc.ArgError;
-    if( (void const *)&whio_dev_subdev_meta_init != dev->impl.typeID ) return whio_rc.TypeError;
-    whio_dev_subdev_meta * sub = (whio_dev_subdev_meta*)dev->impl.data;
-    if( ! sub || !sub->dev ) return whio_rc.InternalError;
-    sub->lower = sub->pos = lowerBound;
-    sub->upper = upperBound;
-    return whio_rc.OK;
+    else if( (void const *)&whio_dev_subdev_meta_empty != dev->impl.typeID ) return whio_rc.TypeError;
+    else {
+        whio_dev_subdev_meta * sub = (whio_dev_subdev_meta*)dev->impl.data;
+        if( ! sub || !sub->dev ) return whio_rc.InternalError;
+        sub->lower = sub->pos = lowerBound;
+        sub->upper = upperBound;
+        return whio_rc.OK;
+    }
 }
 /* end file src/whio_dev_subdev.c */
 /* begin file src/whio_stream.c */
@@ -2576,7 +2685,7 @@ int whio_stream_default_flush( whio_stream * ARG_UNUSED(self) )
 bool whio_stream_default_close( whio_stream * ARG_UNUSED(self) )
 {
     if( self->client.dtor ) self->client.dtor( self->client.data );
-    self->client = whio_client_data_init;
+    self->client = whio_client_data_empty;
     return false;
 }
 
@@ -2585,12 +2694,11 @@ void whio_stream_default_finalize( whio_stream * ARG_UNUSED(self) )
     if(self)
     {
 	self->api->close( self );
-	//C11N_LOGME_DEALLOCT(whio_stream);
 	free(self);
     }
 }
 
-const whio_stream_api whio_stream_api_init = 
+const whio_stream_api whio_stream_api_empty = 
     {
     whio_stream_default_read,
     whio_stream_default_write,
@@ -2600,20 +2708,22 @@ const whio_stream_api whio_stream_api_init =
     whio_stream_default_isgood
     };
 
-const whio_stream whio_stream_init = 
+const whio_stream whio_stream_empty = 
     {
-    &whio_stream_api_init,
-    whio_impl_data_init_m,
-    whio_client_data_init_m
+    &whio_stream_api_empty,
+    whio_impl_data_empty_m,
+    whio_client_data_empty_m
     };
 
 bool whio_stream_getchar( whio_stream * self, char * tgt )
 {
     if( ! self ) return false;
-    char x = 0;
-    if( 1 != self->api->read( self, &x, 1 ) ) return false;
-    if( tgt ) *tgt = x;
-    return true;
+    else {
+        char x = 0;
+        if( 1 != self->api->read( self, &x, 1 ) ) return false;
+        if( tgt ) *tgt = x;
+        return true;
+    }
 }
 
 
@@ -2627,11 +2737,15 @@ bool whio_stream_getchar( whio_stream * self, char * tgt )
 static long whio_stream_printf_appender( void * arg, char const * data, long n )
 {
     if( ! arg || !data ) return -1;
-    whio_size_t sz = n;
-    if( n < sz ) return -1; /* negative n */
-    whio_stream * str = (whio_stream*)arg;
-    sz = str->api->write( str, data, sz );
-    return (sz == whio_rc.SizeTError) ? 0 : (long) sz; // FIXME: check for overflow!
+    else {
+        whio_size_t sz = n;
+        if( n < sz ) return -1; /* negative n */
+        else {
+            whio_stream * str = (whio_stream*)arg;
+            sz = str->api->write( str, data, sz );
+            return (sz == whio_rc.SizeTError) ? 0 : (long) sz; /* FIXME: check for overflow! */
+        }
+    }
 }
 
 whio_size_t whio_stream_writefv( whio_stream * str, const char *fmt, va_list ap )
@@ -2643,27 +2757,30 @@ whio_size_t whio_stream_writefv( whio_stream * str, const char *fmt, va_list ap 
 whio_size_t whio_stream_writef( whio_stream * str, const char *fmt, ... )
 {
     va_list vargs;
+    whio_size_t rc;
     va_start( vargs, fmt );
-    whio_size_t rc = whio_stream_writefv( str, fmt, vargs );
+    rc = whio_stream_writefv( str, fmt, vargs );
     va_end(vargs);
     return rc;
 }
 
-int whio_stream_copy( whio_stream * restrict istr, whio_stream * restrict ostr )
+int whio_stream_copy( whio_stream * istr, whio_stream * ostr )
 {
     if( istr == ostr ) return 0;
-    whio_size_t rdrc = 0;
-    whio_size_t wrc = 0;
-    enum { bufSize = 1024 * 4 };
-    unsigned char buf[bufSize];
-    do
-    {
-        rdrc = istr->api->read( istr, buf, bufSize );
-        if( ! rdrc ) return whio_rc.IOError;
-        wrc = ostr->api->write( ostr, buf, rdrc );
-        if( rdrc != wrc ) return whio_rc.IOError;
-    } while( bufSize == rdrc );
-    return whio_rc.OK;
+    else {
+        whio_size_t rdrc = 0;
+        whio_size_t wrc = 0;
+        enum { bufSize = 1024 * 4 };
+        unsigned char buf[bufSize];
+        do
+        {
+            rdrc = istr->api->read( istr, buf, bufSize );
+            if( ! rdrc ) return whio_rc.IOError;
+            wrc = ostr->api->write( ostr, buf, rdrc );
+            if( rdrc != wrc ) return whio_rc.IOError;
+        } while( bufSize == rdrc );
+        return whio_rc.OK;
+    }
 }
 
 
@@ -2721,7 +2838,7 @@ typedef struct whio_stream_dev_meta
     bool ownsDev;
 } whio_stream_dev_meta;
 
-static const whio_stream_dev_meta whio_stream_dev_meta_init =
+static const whio_stream_dev_meta whio_stream_dev_meta_empty =
     {
     0, /* dev */
     0 /* ownsDev */
@@ -2770,7 +2887,7 @@ bool whio_stream_dev_close( whio_stream * self )
         }
     }
     if( self->client.dtor ) self->client.dtor( self->client.data );
-    self->client = whio_client_data_init;
+    self->client = whio_client_data_empty;
     if( meta->dev && meta->ownsDev )
     {
         meta->dev->api->finalize( meta->dev );
@@ -2799,20 +2916,24 @@ void whio_stream_dev_finalize( whio_stream * self )
 whio_stream * whio_stream_for_dev( whio_dev * dev, bool takeOwnership )
 {
     if( ! dev ) return 0;
-    whio_stream * str = (whio_stream *) malloc( sizeof(whio_stream) );
-    if( ! str ) return 0;
-    whio_stream_dev_meta * meta = (whio_stream_dev_meta *) malloc( sizeof(whio_stream_dev_meta) );
-    if( ! meta )
-    {
-	free(str);
-	return 0;
+    else {
+        whio_stream * str = (whio_stream *) malloc( sizeof(whio_stream) );
+        if( ! str ) return 0;
+        else {
+            whio_stream_dev_meta * meta = (whio_stream_dev_meta *) malloc( sizeof(whio_stream_dev_meta) );
+            if( ! meta )
+            {
+                free(str);
+                return 0;
+            }
+            *str = whio_stream_dev;
+            *meta = whio_stream_dev_meta_empty;
+            str->impl.data = meta;
+            meta->dev = dev;
+            meta->ownsDev = takeOwnership;
+            return str;
+        }
     }
-    *str = whio_stream_dev;
-    *meta = whio_stream_dev_meta_init;
-    str->impl.data = meta;
-    meta->dev = dev;
-    meta->ownsDev = takeOwnership;
-    return str;
 }
 
 
@@ -2893,57 +3014,67 @@ static const whio_stream_FILEINFO whio_stream_FILEINFO_init =
 whio_stream * whio_stream_for_FILE( FILE * fp, bool takeOwnership )
 {
     if( ! fp ) return 0;
-    whio_stream * st = (whio_stream *) malloc( sizeof(whio_stream) );
-    if( ! st ) return 0;
-    whio_stream_FILEINFO * meta = (whio_stream_FILEINFO*) malloc( sizeof(whio_stream_FILEINFO) );
-    if( ! meta )
-    {
-	free( st );
-	return 0;
+    else {
+        whio_stream * st = (whio_stream *) malloc( sizeof(whio_stream) );
+        if( ! st ) return 0;
+        else {
+            whio_stream_FILEINFO * meta = (whio_stream_FILEINFO*) malloc( sizeof(whio_stream_FILEINFO) );
+            if( ! meta )
+            {
+                free( st );
+                return 0;
+            }
+            *st = whio_stream_FILE_init;
+            st->impl.data = meta;
+            *meta = whio_stream_FILEINFO_init;
+            meta->ownsFile = takeOwnership;
+            meta->fp = fp;
+            meta->fileno = fileno(fp);
+            meta->iomode = -1;
+            return st;
+        }
     }
-    *st = whio_stream_FILE_init;
-    st->impl.data = meta;
-    *meta = whio_stream_FILEINFO_init;
-    meta->ownsFile = takeOwnership;
-    meta->fp = fp;
-    meta->fileno = fileno(fp);
-    meta->iomode = -1;
-    return st;
 }
 
 whio_stream * whio_stream_for_filename( char const * src, char const * mode )
 {
     if( ! src || ! mode ) return 0;
-    FILE * fp = fopen( src, mode );
-    if( ! fp ) return 0;
-    whio_stream * st = whio_stream_for_FILE(fp, true);
-    if( ! st )
-    {
-	fclose(fp);
+    else {
+        FILE * fp = fopen( src, mode );
+        if( ! fp ) return 0;
+        else {
+            whio_stream * st = whio_stream_for_FILE(fp, true);
+            if( ! st )
+            {
+                fclose(fp);
+            }
+            else
+            {
+                whio_stream_FILEINFO * meta = (whio_stream_FILEINFO*)st->impl.data;
+                meta->iomode = whio_mode_to_iomode( mode );
+            }
+            return st;
+        }
     }
-    else
-    {
-        whio_stream_FILEINFO * meta = (whio_stream_FILEINFO*)st->impl.data;
-        meta->iomode = whio_mode_to_iomode( mode );
-    }
-    return st;
 }
 
 whio_stream * whio_stream_for_fileno( int fileno, bool writeMode )
 {
     FILE * fp = fdopen( fileno, writeMode ? "wb" : "r+b" );
     if( ! fp ) return 0;
-    whio_stream * st = whio_stream_for_FILE(fp, true);
-    if( ! st )
-    {
-	fclose(fp);
+    else {
+        whio_stream * st = whio_stream_for_FILE(fp, true);
+        if( ! st )
+        {
+            fclose(fp);
+        }
+        else
+        {
+            whio_stream_FILEINFO * meta = (whio_stream_FILEINFO*)st->impl.data;
+            meta->iomode = writeMode ? 1 : 0;
+        }
+        return st;
     }
-    else
-    {
-        whio_stream_FILEINFO * meta = (whio_stream_FILEINFO*)st->impl.data;
-        meta->iomode = writeMode ? 1 : 0;
-    }
-    return st;
 }
 
 /**
@@ -3009,7 +3140,7 @@ static bool whio_stream_FILE_close( whio_stream * self )
     if( ! meta ) return false;
     self->api->flush( self );
     if( self->client.dtor ) self->client.dtor( self->client.data );
-    self->client = whio_client_data_init;
+    self->client = whio_client_data_empty;
     self->impl.data = 0;
     if( meta->fp && meta->ownsFile )
     {
@@ -3053,11 +3184,11 @@ static void whio_stream_FILE_finalize( whio_stream * self )
 #include <stdlib.h> /* calloc() */
 #include <string.h> /* memset() */
 static const unsigned char whio_uint64_tag_char = 0x80 | 64;
-size_t whio_uint64_encode( unsigned char * dest, uint64_t i )
+size_t whio_encode_uint64( unsigned char * dest, uint64_t i )
 {
-    if( ! dest ) return 0;
     static const uint64_t mask = UINT64_C(0x00ff);
     size_t x = 0;
+    if( ! dest ) return 0;
     dest[x++] = whio_uint64_tag_char;
     dest[x++] = (unsigned char)((i>>56) & mask);
     dest[x++] = (unsigned char)((i>>48) & mask);
@@ -3071,34 +3202,81 @@ size_t whio_uint64_encode( unsigned char * dest, uint64_t i )
 }
 
 
-int whio_uint64_decode( unsigned char const * src, uint64_t * tgt )
+int whio_decode_uint64( unsigned char const * src, uint64_t * tgt )
 {
     if( ! src || ! tgt ) return whio_rc.ArgError;
-    if( whio_uint64_tag_char != src[0] )
+    else if( whio_uint64_tag_char != src[0] )
     {
 	return whio_rc.ConsistencyError;
     }
+    else {
 #define SHIFT(X) ((uint64_t)src[X])
-    uint64_t val = (SHIFT(1) << UINT64_C(56))
-	+ (SHIFT(2) << UINT64_C(48))
-	+ (SHIFT(3) << UINT64_C(40))
-	+ (SHIFT(4) << UINT64_C(32))
-	+ (SHIFT(5) << UINT64_C(24))
-	+ (SHIFT(6) << UINT64_C(16))
-	+ (SHIFT(7) << UINT64_C(8))
-	+ (SHIFT(8));
+        uint64_t val = (SHIFT(1) << UINT64_C(56))
+            + (SHIFT(2) << UINT64_C(48))
+            + (SHIFT(3) << UINT64_C(40))
+            + (SHIFT(4) << UINT64_C(32))
+            + (SHIFT(5) << UINT64_C(24))
+            + (SHIFT(6) << UINT64_C(16))
+            + (SHIFT(7) << UINT64_C(8))
+            + (SHIFT(8));
 #undef SHIFT
-    *tgt = val;
-    return whio_rc.OK;
+        *tgt = val;
+        return whio_rc.OK;
+    }
+}
+
+
+static const unsigned char whio_int64_tag_char = 0x80 | 65;
+size_t whio_encode_int64( unsigned char * dest, int64_t i )
+{
+    static const int64_t mask = INT64_C(0x00ff);
+    if( ! dest ) return 0;
+    else {
+        size_t x = 0;
+        dest[x++] = whio_int64_tag_char;
+        dest[x++] = (unsigned char)((i>>56) & mask);
+        dest[x++] = (unsigned char)((i>>48) & mask);
+        dest[x++] = (unsigned char)((i>>40) & mask);
+        dest[x++] = (unsigned char)((i>>32) & mask);
+        dest[x++] = (unsigned char)((i>>24) & mask);
+        dest[x++] = (unsigned char)((i>>16) & mask);
+        dest[x++] = (unsigned char)((i>>8) & mask);
+        dest[x++] = (unsigned char)(i & mask);
+        return whio_sizeof_encoded_int64;
+    }
+}
+
+
+int whio_decode_int64( unsigned char const * src, int64_t * tgt )
+{
+    if( ! src || ! tgt ) return whio_rc.ArgError;
+    else if( whio_int64_tag_char != src[0] )
+    {
+	return whio_rc.ConsistencyError;
+    }
+    else {
+#define SHIFT(X) ((int64_t)src[X])
+        int64_t val = (SHIFT(1) << INT64_C(56))
+            + (SHIFT(2) << INT64_C(48))
+            + (SHIFT(3) << INT64_C(40))
+            + (SHIFT(4) << INT64_C(32))
+            + (SHIFT(5) << INT64_C(24))
+            + (SHIFT(6) << INT64_C(16))
+            + (SHIFT(7) << INT64_C(8))
+            + (SHIFT(8));
+#undef SHIFT
+        *tgt = val;
+        return whio_rc.OK;
+    }
 }
 
 
 static const unsigned char whio_uint32_tag_char = 0x80 | 32;
-size_t whio_uint32_encode( unsigned char * dest, uint32_t i )
+size_t whio_encode_uint32( unsigned char * dest, uint32_t i )
 {
-    if( ! dest ) return 0;
     static const unsigned short mask = 0x00ff;
     size_t x = 0;
+    if( ! dest ) return 0;
     /** We tag all entries with a prefix mainly to simplify debugging
 	of the vfs files (it's easy to spot them in a file viewer),
 	but it incidentally also gives us a sanity-checker at
@@ -3113,49 +3291,120 @@ size_t whio_uint32_encode( unsigned char * dest, uint32_t i )
     return whio_sizeof_encoded_uint32;
 }
 
-int whio_uint32_decode( unsigned char const * src, uint32_t * tgt )
+int whio_decode_uint32( unsigned char const * src, uint32_t * tgt )
 {
     if( ! src ) return whio_rc.ArgError;
-    if( whio_uint32_tag_char != src[0] )
+    else if( whio_uint32_tag_char != src[0] )
     {
-	//WHIO_DEBUG("read bytes are not an encoded integer value!\n");
+	/*WHIO_DEBUG("read bytes are not an encoded integer value!\n"); */
 	return whio_rc.ConsistencyError;
     }
-    uint32_t val = (src[1] << 24)
-	+ (src[2] << 16)
-	+ (src[3] << 8)
-	+ (src[4]);
-    if( tgt ) *tgt = val;
-    return whio_rc.OK;
+    else {
+        uint32_t val = (src[1] << 24)
+            + (src[2] << 16)
+            + (src[3] << 8)
+            + (src[4]);
+        if( tgt ) *tgt = val;
+        return whio_rc.OK;
+    }
 }
 
-static const unsigned char whio_uint16_tag_char = 0x80 | 16;
-size_t whio_uint16_encode( unsigned char * dest, uint16_t i )
+static const unsigned char whio_int32_tag_char = 0x80 | 33;
+size_t whio_encode_int32( unsigned char * dest, int32_t i )
 {
+    static const unsigned short mask = 0x00ff;
+    size_t x = 0;
     if( ! dest ) return 0;
+    /** We tag all entries with a prefix mainly to simplify debugging
+	of the vfs files (it's easy to spot them in a file viewer),
+	but it incidentally also gives us a sanity-checker at
+	read-time (we simply confirm that the first byte is this
+	prefix).
+    */
+    dest[x++] = whio_int32_tag_char;
+    dest[x++] = (unsigned char)(i>>24) & mask;
+    dest[x++] = (unsigned char)(i>>16) & mask;
+    dest[x++] = (unsigned char)(i>>8) & mask;
+    dest[x++] = (unsigned char)(i & mask);
+    return whio_sizeof_encoded_int32;
+}
+
+int whio_decode_int32( unsigned char const * src, int32_t * tgt )
+{
+    if( ! src ) return whio_rc.ArgError;
+    else if( whio_int32_tag_char != src[0] )
+    {
+	/*WHIO_DEBUG("read bytes are not an encoded integer value!\n"); */
+	return whio_rc.ConsistencyError;
+    }
+    else {
+        int32_t val = (src[1] << 24)
+            + (src[2] << 16)
+            + (src[3] << 8)
+            + (src[4]);
+        if( tgt ) *tgt = val;
+        return whio_rc.OK;
+    }
+}
+
+
+static const unsigned char whio_uint16_tag_char = 0x80 | 16;
+size_t whio_encode_uint16( unsigned char * dest, uint16_t i )
+{
     static const uint16_t mask = 0x00ff;
     uint8_t x = 0;
+    if( ! dest ) return 0;
     dest[x++] = whio_uint16_tag_char;
     dest[x++] = (unsigned char)(i>>8) & mask;
     dest[x++] = (unsigned char)(i & mask);
     return whio_sizeof_encoded_uint16;
 }
 
-int whio_uint16_decode( unsigned char const * src, uint16_t * tgt )
+int whio_decode_uint16( unsigned char const * src, uint16_t * tgt )
 {
     if( ! src ) return whio_rc.ArgError;
-    if( whio_uint16_tag_char != src[0] )
+    else if( whio_uint16_tag_char != src[0] )
     {
 	return whio_rc.ConsistencyError;
     }
-    uint16_t val = + (src[1] << 8)
-	+ (src[2]);
-    *tgt = val;
-    return whio_rc.OK;
+    else {
+        uint16_t val = + (src[1] << 8)
+            + (src[2]);
+        *tgt = val;
+        return whio_rc.OK;
+    }
 }
 
+static const unsigned char whio_int16_tag_char = 0x80 | 17;
+size_t whio_encode_int16( unsigned char * dest, int16_t i )
+{
+    static const int16_t mask = 0x00ff;
+    int8_t x = 0;
+    if( ! dest ) return 0;
+    dest[x++] = whio_int16_tag_char;
+    dest[x++] = (unsigned char)(i>>8) & mask;
+    dest[x++] = (unsigned char)(i & mask);
+    return whio_sizeof_encoded_int16;
+}
+
+int whio_decode_int16( unsigned char const * src, int16_t * tgt )
+{
+    if( ! src ) return whio_rc.ArgError;
+    else if( whio_int16_tag_char != src[0] )
+    {
+	return whio_rc.ConsistencyError;
+    }
+    else {
+        int16_t val = + (src[1] << 8)
+            + (src[2]);
+        *tgt = val;
+        return whio_rc.OK;
+    }
+}
+
+
 static const unsigned char whio_uint8_tag_char = 0x80 | 8;
-size_t whio_uint8_encode( unsigned char * dest, uint8_t i )
+size_t whio_encode_uint8( unsigned char * dest, uint8_t i )
 {
     if( ! dest ) return 0;
     dest[0] = whio_uint8_tag_char;
@@ -3163,25 +3412,49 @@ size_t whio_uint8_encode( unsigned char * dest, uint8_t i )
     return whio_sizeof_encoded_uint8;
 }
 
-int whio_uint8_decode( unsigned char const * src, uint8_t * tgt )
+int whio_decode_uint8( unsigned char const * src, uint8_t * tgt )
 {
     if( ! src ) return whio_rc.ArgError;
-    if( whio_uint8_tag_char != src[0] )
+    else if( whio_uint8_tag_char != src[0] )
     {
 	return whio_rc.ConsistencyError;
     }
-    *tgt = src[1];
-    return whio_rc.OK;
+    else {
+        *tgt = src[1];
+        return whio_rc.OK;
+    }
+}
+
+static const unsigned char whio_int8_tag_char = 0x80 | 8;
+size_t whio_encode_int8( unsigned char * dest, int8_t i )
+{
+    if( ! dest ) return 0;
+    dest[0] = whio_int8_tag_char;
+    dest[1] = i;
+    return whio_sizeof_encoded_int8;
+}
+
+int whio_decode_int8( unsigned char const * src, int8_t * tgt )
+{
+    if( ! src ) return whio_rc.ArgError;
+    else if( whio_int8_tag_char != src[0] )
+    {
+	return whio_rc.ConsistencyError;
+    }
+    else {
+        *tgt = src[1];
+        return whio_rc.OK;
+    }
 }
 
 
-size_t whio_uint32_array_encode( unsigned char * dest, size_t n, uint32_t const * list )
+size_t whio_encode_uint32_array( unsigned char * dest, size_t n, uint32_t const * list )
 {
     size_t i = (dest && n && list) ? 0 : n;
     size_t rc = 0;
     for( ; i < n; ++i, ++rc )
     {
-	if( whio_sizeof_encoded_uint32 != whio_uint32_encode( dest, *(list++) ) )
+	if( whio_sizeof_encoded_uint32 != whio_encode_uint32( dest, *(list++) ) )
 	{
 	    break;
 	}
@@ -3189,13 +3462,13 @@ size_t whio_uint32_array_encode( unsigned char * dest, size_t n, uint32_t const 
     return rc;
 }
 
-size_t whio_uint32_array_decode( unsigned char const * src, size_t n, uint32_t * list )
+size_t whio_decode_uint32_array( unsigned char const * src, size_t n, uint32_t * list )
 {
     size_t i = (src && n && list) ? 0 : n;
     size_t rc = 0;
     for( ; i < n; ++i, ++rc )
     {
-	if( whio_rc.OK != whio_uint32_decode( src, &list[i] ) )
+	if( whio_rc.OK != whio_decode_uint32( src, &list[i] ) )
 	{
 	    break;
 	}
@@ -3204,22 +3477,23 @@ size_t whio_uint32_array_decode( unsigned char const * src, size_t n, uint32_t *
 }
 
 static const unsigned char whio_cstring_tag_char = 0x80 | '"';
-size_t whio_cstring_encode( unsigned char * dest, char const * s, uint32_t n )
+size_t whio_encode_cstring( unsigned char * dest, char const * s, uint32_t n )
 {
+    size_t rc;
+    size_t i;
     if( ! dest || !s ) return 0;
     if( ! n )
     {
 	char const * x = s;
 	loop: if( x && *x ) { ++x; ++n; goto loop; }
-	//for( ; x && *x ; ++x, ++n ){}
+	/*for( ; x && *x ; ++x, ++n ){} */
     }
     *(dest++) = whio_cstring_tag_char;
-    size_t rc = whio_uint32_encode( dest, n );
+    rc = whio_encode_uint32( dest, n );
     if( whio_sizeof_encoded_uint32 != rc ) return rc;
     dest += rc;
     rc = 1 + whio_sizeof_encoded_uint32;
-    size_t i = 0;
-    for( ; i < n; ++i, ++rc )
+    for( i = 0 ; i < n; ++i, ++rc )
     {
 	*(dest++) = *(s++);
     }
@@ -3227,160 +3501,174 @@ size_t whio_cstring_encode( unsigned char * dest, char const * s, uint32_t n )
     return rc;
 }
 
-int whio_cstring_decode( unsigned char const * src, char ** tgt, size_t * length )
+int whio_decode_cstring( unsigned char const * src, char ** tgt, size_t * length )
 {
     if( !src || ! tgt ) return whio_rc.ArgError;
-
-    if( whio_cstring_tag_char != *src )
+    else if( whio_cstring_tag_char != *src )
     {
 	return whio_rc.ConsistencyError;
     }
-    ++src;
-    uint32_t slen = 0;
-    int rc = whio_uint32_decode( src, &slen );
-    if( whio_rc.OK != rc ) return rc;
-    if( ! slen )
-    {
-	*tgt = 0;
-	if(length) *length = 0;
-	return whio_rc.OK;
+    else {
+        uint32_t slen = 0;
+        int rc;
+        ++src;
+        rc = whio_decode_uint32( src, &slen );
+        if( whio_rc.OK != rc ) return rc;
+        if( ! slen )
+        {
+            *tgt = 0;
+            if(length) *length = 0;
+            return whio_rc.OK;
+        }
+        else {
+            size_t i = 0;
+            char * buf = (char *)calloc( slen + 1, sizeof(char) );
+            if( ! buf ) return whio_rc.AllocError;
+            if( length ) *length = slen;
+            *tgt = buf;
+            src += whio_sizeof_encoded_uint32;
+            for( i = 0 ; i < slen; ++i )
+            {
+                *(buf++) = *(src++);
+            }
+            *buf = 0;
+            return whio_rc.OK;
+        }
     }
-    char * buf = (char *)calloc( slen + 1, sizeof(char) );
-    if( ! buf ) return whio_rc.AllocError;
-    if( length ) *length = slen;
-    *tgt = buf;
-    size_t i = 0;
-    src += whio_sizeof_encoded_uint32;
-    for(  ; i < slen; ++i )
-    {
-	*(buf++) = *(src++);
-    }
-    *buf = 0;
-    return whio_rc.OK;
 }
 
 /**
    tag byte for encoded whio_id_type objects.
 */
 static const unsigned int whio_size_t_tag_char = 0x08 | 'p';
-whio_size_t whio_size_t_encode( unsigned char * dest, whio_size_t v )
+whio_size_t whio_encode_size_t( unsigned char * dest, whio_size_t v )
 {
 #if WHIO_SIZE_T_BITS == 64
-    return whio_uint64_encode( dest, v );
+    return whio_encode_uint64( dest, v );
 #elif WHIO_SIZE_T_BITS == 32
-    return whio_uint32_encode( dest, v );
+    return whio_encode_uint32( dest, v );
 #elif WHIO_SIZE_T_BITS == 16
-    return whio_uint16_encode( dest, v );
+    return whio_encode_uint16( dest, v );
 #elif WHIO_SIZE_T_BITS == 8
-    return whio_uint8_encode( dest, v );
+    return whio_encode_uint8( dest, v );
 #else
 #error "whio_size_t size (WHIO_SIZE_T_BITS) is not supported!"
 #endif
 }
 
-int whio_size_t_decode( unsigned char const * src, whio_size_t * v )
+int whio_decode_size_t( unsigned char const * src, whio_size_t * v )
 {
 #if WHIO_SIZE_T_BITS == 64
-    return whio_uint64_decode( src, v );
+    return whio_decode_uint64( src, v );
 #elif WHIO_SIZE_T_BITS == 32
-    return whio_uint32_decode( src, v );
+    return whio_decode_uint32( src, v );
 #elif WHIO_SIZE_T_BITS == 16
-    return whio_uint16_decode( src, v );
+    return whio_decode_uint16( src, v );
 #elif WHIO_SIZE_T_BITS == 8
-    return whio_uint8_decode( src, v );
+    return whio_decode_uint8( src, v );
 #else
 #error "whio_size_t is not a supported type!"
 #endif
 }
 
-whio_size_t whio_dev_size_t_encode( whio_dev * dev, whio_size_t v )
+whio_size_t whio_dev_encode_size_t( whio_dev * dev, whio_size_t v )
 {
     unsigned char buf[whio_sizeof_encoded_size_t];
-    whio_size_t_encode( buf, v );
+    whio_encode_size_t( buf, v );
     return dev->api->write( dev, &buf, whio_sizeof_encoded_size_t );
 }
 
-int whio_dev_size_t_decode( whio_dev * dev, whio_size_t * tgt )
+int whio_dev_decode_size_t( whio_dev * dev, whio_size_t * tgt )
 {
-    unsigned char buf[whio_sizeof_encoded_size_t]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint16 is the correct size. */
+    unsigned char buf[whio_sizeof_encoded_size_t]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_size_t is the correct size. */
+    size_t rc;
     memset( buf, 0, whio_sizeof_encoded_size_t );
-    size_t rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint16*/, whio_sizeof_encoded_size_t );
+    rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_xxx*/, whio_sizeof_encoded_size_t );
     return ( whio_sizeof_encoded_size_t == rc )
-        ? whio_size_t_decode( buf, tgt )
+        ? whio_decode_size_t( buf, tgt )
         : whio_rc.IOError;
 }
 
 
-size_t whio_dev_uint64_encode( whio_dev * dev, uint64_t i )
+size_t whio_dev_encode_uint64( whio_dev * dev, uint64_t i )
 {
     unsigned char buf[whio_sizeof_encoded_uint64]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint64 is the correct size. */
-    size_t const x = whio_uint64_encode( buf, i );
+    size_t const x = whio_encode_uint64( buf, i );
     return ( whio_sizeof_encoded_uint64 == x )
         ? whio_dev_write( dev, buf, whio_sizeof_encoded_uint64 )
         : 0;
 }
 
-int whio_dev_uint64_decode( whio_dev * dev, uint64_t * tgt )
+int whio_dev_decode_uint64( whio_dev * dev, uint64_t * tgt )
 {
     if( ! dev || ! tgt ) return whio_rc.ArgError;
-    unsigned char buf[whio_sizeof_encoded_uint64]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint64 is the correct size. */
-    memset( buf, 0, whio_sizeof_encoded_uint64 );
-    size_t rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint64*/, whio_sizeof_encoded_uint64 );
-    return ( whio_sizeof_encoded_uint64 == rc )
-        ? whio_uint64_decode( buf, tgt )
-        : whio_rc.IOError;
+    else {
+        unsigned char buf[whio_sizeof_encoded_uint64]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint64 is the correct size. */
+        size_t rc;
+        memset( buf, 0, whio_sizeof_encoded_uint64 );
+        rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint64*/, whio_sizeof_encoded_uint64 );
+        return ( whio_sizeof_encoded_uint64 == rc )
+            ? whio_decode_uint64( buf, tgt )
+            : whio_rc.IOError;
+    }
 }
 
 
-size_t whio_dev_uint32_encode( whio_dev * dev, uint32_t i )
+size_t whio_dev_encode_uint32( whio_dev * dev, uint32_t i )
 {
     unsigned char buf[whio_sizeof_encoded_uint32]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint32 is the correct size. */
-    size_t const x = whio_uint32_encode( buf, i );
+    size_t const x = whio_encode_uint32( buf, i );
     return ( whio_sizeof_encoded_uint32 == x )
         ? whio_dev_write( dev, buf, whio_sizeof_encoded_uint32 )
         : 0;
 }
 
-int whio_dev_uint32_decode( whio_dev * dev, uint32_t * tgt )
+int whio_dev_decode_uint32( whio_dev * dev, uint32_t * tgt )
 {
     if( ! dev || ! tgt ) return whio_rc.ArgError;
-    unsigned char buf[whio_sizeof_encoded_uint32]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint32 is the correct size. */
-    memset( buf, 0, whio_sizeof_encoded_uint32 );
-    size_t rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint32*/, whio_sizeof_encoded_uint32 );
-    return ( whio_sizeof_encoded_uint32 == rc )
-        ? whio_uint32_decode( buf, tgt )
-        : whio_rc.IOError;
+    else {
+        size_t rc;
+        unsigned char buf[whio_sizeof_encoded_uint32]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint32 is the correct size. */
+        memset( buf, 0, whio_sizeof_encoded_uint32 );
+        rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint32*/, whio_sizeof_encoded_uint32 );
+        return ( whio_sizeof_encoded_uint32 == rc )
+            ? whio_decode_uint32( buf, tgt )
+            : whio_rc.IOError;
+    }
 }
 
 
 static const unsigned char whio_dev_uint16_tag_char = 0x80 | 16;
-size_t whio_dev_uint16_encode( whio_dev * dev, uint16_t i )
+size_t whio_dev_encode_uint16( whio_dev * dev, uint16_t i )
 {
     unsigned char buf[whio_sizeof_encoded_uint16]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint16 is the correct size. */
-    size_t const x = whio_uint16_encode( buf, i );
+    size_t const x = whio_encode_uint16( buf, i );
     return ( whio_sizeof_encoded_uint16 == x )
         ? whio_dev_write( dev, buf, whio_sizeof_encoded_uint16 )
         : 0;
 }
 
-int whio_dev_uint16_decode( whio_dev * dev, uint16_t * tgt )
+int whio_dev_decode_uint16( whio_dev * dev, uint16_t * tgt )
 {
     if( ! dev || ! tgt ) return whio_rc.ArgError;
-    unsigned char buf[whio_sizeof_encoded_uint16]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint16 is the correct size. */
-    memset( buf, 0, whio_sizeof_encoded_uint16 );
-    size_t rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint16*/, whio_sizeof_encoded_uint16 );
-    return ( whio_sizeof_encoded_uint16 == rc )
-        ? whio_uint16_decode( buf, tgt )
-        : whio_rc.IOError;
+    else {
+        size_t rc;
+        unsigned char buf[whio_sizeof_encoded_uint16]; /* Flawfinder: ignore This is intentional and safe as long as whio_sizeof_encoded_uint16 is the correct size. */
+        memset( buf, 0, whio_sizeof_encoded_uint16 );
+        rc = dev->api->read( dev, buf  /*Flawfinder: ignore  This is safe in conjunction with whio_sizeof_encoded_uint16*/, whio_sizeof_encoded_uint16 );
+        return ( whio_sizeof_encoded_uint16 == rc )
+            ? whio_decode_uint16( buf, tgt )
+            : whio_rc.IOError;
+    }
 }
 
-size_t whio_dev_uint32_array_encode( whio_dev * dev, size_t n, uint32_t const * list )
+size_t whio_dev_encode_uint32_array( whio_dev * dev, size_t n, uint32_t const * list )
 {
     size_t i = (dev && n && list) ? 0 : n;
     size_t rc = 0;
     for( ; i < n; ++i, ++rc )
     {
-	if( whio_sizeof_encoded_uint32 != whio_dev_uint32_encode( dev, *(list++) ) )
+	if( whio_sizeof_encoded_uint32 != whio_dev_encode_uint32( dev, *(list++) ) )
 	{
 	    break;
 	}
@@ -3388,13 +3676,13 @@ size_t whio_dev_uint32_array_encode( whio_dev * dev, size_t n, uint32_t const * 
     return rc;
 }
 
-size_t whio_dev_uint32_array_decode( whio_dev * dev, size_t n, uint32_t * list )
+size_t whio_dev_decode_uint32_array( whio_dev * dev, size_t n, uint32_t * list )
 {
     size_t i = (dev && n && list) ? 0 : n;
     size_t rc = 0;
     for( ; i < n; ++i, ++rc )
     {
-	if( whio_rc.OK != whio_dev_uint32_decode( dev, &list[i] ) )
+	if( whio_rc.OK != whio_dev_decode_uint32( dev, &list[i] ) )
 	{
 	    break;
 	}
@@ -3403,53 +3691,254 @@ size_t whio_dev_uint32_array_decode( whio_dev * dev, size_t n, uint32_t * list )
 }
 
 static const unsigned char whio_dev_cstring_tag_char = 0x80 | '"';
-whio_size_t whio_dev_cstring_encode( whio_dev * dev, char const * s, uint32_t n )
+whio_size_t whio_dev_encode_cstring( whio_dev * dev, char const * s, uint32_t n )
 {
+    whio_size_t rc;
     if( ! dev || !s ) return 0;
     if( ! n )
     {
 	char const * x = s;
 	loop: if( x && *x ) { ++x; ++n; goto loop; }
-	//for( ; x && *x ; ++x, ++n ){}
+	/*for( ; x && *x ; ++x, ++n ){} */
     }
-    whio_size_t rc = dev->api->write( dev, &whio_dev_cstring_tag_char, 1 );
+    rc = dev->api->write( dev, &whio_dev_cstring_tag_char, 1 );
     if( 1 != rc ) return rc;
-    rc += whio_dev_uint32_encode( dev, n );
+    rc += whio_dev_encode_uint32( dev, n );
     if( (1 + whio_sizeof_encoded_uint32) != rc ) return rc;
     return rc + dev->api->write( dev, s, (whio_size_t)n );
 }
 
-int whio_dev_cstring_decode( whio_dev * dev, char ** tgt, uint32_t * length )
+int whio_dev_decode_cstring( whio_dev * dev, char ** tgt, uint32_t * length )
 {
     if( !dev || ! tgt ) return whio_rc.ArgError;
+    else {
+        uint32_t slen = 0;
+        int rc;
+        { /* check tag byte */
+            unsigned char tagbuf[1] = {0}; /* Flawfinder: ignore  This is intended and safe. */
+            whio_size_t const sz = dev->api->read( dev, tagbuf, 1 );/*Flawfinder: ignore  This is safe used safely.*/
+            if( (1 != sz) || (whio_dev_cstring_tag_char != tagbuf[0]) )
+            {
+                return sz ? whio_rc.ConsistencyError : whio_rc.IOError;
+            }
+        }
+        rc = whio_dev_decode_uint32( dev, &slen );
+        if( whio_rc.OK != rc ) return rc;
+        else if( ! slen )
+        {
+            *tgt = 0;
+            if(length) *length = 0;
+            return whio_rc.OK;
+        }
+        else {
+            char * buf = (char *)calloc( slen + 1, sizeof(char) );
+            if( ! buf ) return whio_rc.AllocError;
+            if( slen != dev->api->read( dev, buf /*Flawfinder: ignore  This is safe in conjunction with slen. See above. */, slen ) )
+            {
+                free( buf );
+                return whio_rc.IOError;
+            }
+            *tgt = buf;
+            if( length ) *length = slen;
+            return whio_rc.OK;
+        }
+    }
+}
 
-    { /* check tag byte */
-	unsigned char tagbuf[1] = {0}; /* Flawfinder: ignore  This is intended and safe. */
-	whio_size_t const sz = dev->api->read( dev, tagbuf, 1 );/*Flawfinder: ignore  This is safe used safely.*/
-	if( (1 != sz) || (whio_dev_cstring_tag_char != tagbuf[0]) )
-	{
-	    return sz ? whio_rc.ConsistencyError : whio_rc.IOError;
-	}
+static const unsigned char whio_encode_pack_tag = 0xF0 | 'P';
+size_t whio_encode_pack_calc_size( char const * fmt, size_t *itemCount )
+{
+    if( ! fmt || !*fmt ) return 0;
+    else {
+        char const * at = fmt;
+        size_t rc = 1 + whio_sizeof_encoded_uint8;
+        size_t exp = 0;
+        for( ;at && *at; ++at )
+        {
+            exp =0;
+            switch( *at )
+            {
+              case ' ':
+              case '+':
+              case '-': continue;
+              case '1': exp = whio_sizeof_encoded_uint8;
+                  break;
+              case '2': exp = whio_sizeof_encoded_uint16;
+                  break;
+              case '4': exp = whio_sizeof_encoded_uint32;
+                  break;
+              case '8': exp = whio_sizeof_encoded_uint64;
+                  break;
+              default: return 0;
+            }
+            if( ! exp ) return 0;
+            if( itemCount ) ++(*itemCount);
+            rc += exp;
+        }
+        return rc;
     }
-    uint32_t slen = 0;
-    int rc = whio_dev_uint32_decode( dev, &slen );
-    if( whio_rc.OK != rc ) return rc;
-    if( ! slen )
-    {
-	*tgt = 0;
-	if(length) *length = 0;
-	return whio_rc.OK;
+}
+
+size_t whio_encode_pack( void * dest, size_t * itemsWritten, char const * fmt, ... )
+{
+    va_list va;
+    size_t rc = 0;
+    va_start(va,fmt);
+    rc = whio_encode_pack_v( dest, itemsWritten, fmt, va );
+    va_end(va);
+    return rc;
+}
+
+size_t whio_encode_pack_v( void * dest_, size_t * itemCount, char const * fmt, va_list va )
+{
+
+    if( ! fmt || !dest_ ) return 0;
+    else {
+        size_t rc = 0;
+        size_t shouldItems = 0;
+        size_t const shouldBytes = whio_encode_pack_calc_size( fmt, &shouldItems );
+        unsigned char * dest = (unsigned char *)dest_;
+        char const * at = fmt;
+        unsigned char * countPos;
+        bool isSigned = false;
+        size_t ck;
+        size_t count = 0;
+        size_t exp = 0;
+        *(dest++) = whio_encode_pack_tag;
+        countPos = dest;
+        dest += whio_sizeof_encoded_uint8;
+        rc = (dest - (unsigned char const *)dest_);
+        for( ;at && *at; ++at )
+        {
+            ck = 0;
+            exp = 0;
+            switch( *at )
+            {
+              case ' ': continue;
+              case '+':
+              case '-': isSigned = true;
+                  continue;
+#define CASE(TAG,STYPE,UTYPE) if( isSigned ) {                          \
+                      isSigned = false;                                 \
+                      ck = whio_encode_##TAG( dest, va_arg(va,STYPE));  \
+                      exp = whio_sizeof_encoded_##TAG;                  \
+                  } else {                                              \
+                      ck = whio_encode_u##TAG( dest, va_arg(va,UTYPE)); \
+                      exp = whio_sizeof_encoded_u##TAG;                 \
+                  } break
+              case '1':
+                  CASE(int8,int,int);
+                  /* ^^^ gcc complaints about type promotion if i pass a uint8_t there.
+                     It threatens to abort() if the code is run that way.
+                  */
+              case '2':
+                  CASE(int16,int,int); /* <<--- see uint8_t notes above */
+              case '4':
+                  CASE(int32,int32_t,uint32_t);
+              case '8':
+                  CASE(int64,int64_t,uint64_t);
+                  break;
+              default: continue;
+#undef CASE
+            }
+            if( ! ck || (ck != exp) ) return rc;
+            ++count;
+            rc += ck;
+            dest += ck;
+        }
+        if( itemCount ) *itemCount = count;
+        if( shouldBytes == rc )
+        {
+            whio_encode_uint8( countPos, count );
+        }
+        return rc;
     }
-    char * buf = (char *)calloc( slen + 1, sizeof(char) );
-    if( ! buf ) return whio_rc.AllocError;
-    if( slen != dev->api->read( dev, buf /*Flawfinder: ignore  This is safe in conjunction with slen. See above. */, slen ) )
-    {
-	free( buf );
-	return whio_rc.IOError;
+}
+
+
+int whio_decode_pack( void const * src, size_t * itemCount, char const * fmt, ... )
+{
+    va_list va;
+    int rc = 0;
+    va_start(va,fmt);
+    rc = whio_decode_pack_v( src, itemCount, fmt, va );
+    va_end(va);
+    return rc;
+}
+
+int whio_decode_pack_v( void const * src_, size_t * itemCount, char const * fmt, va_list va )
+{
+
+    if( ! fmt || !src_ ) return 0;
+    else {
+        int rc = 0;
+        size_t shouldItems = 0;
+        size_t const shouldBytes = whio_encode_pack_calc_size( fmt, &shouldItems );
+        unsigned char const * src = (unsigned char const *)src_;
+        char const * at = fmt;
+        uint8_t shouldPackedItems = 0;
+        bool isSigned = false;
+        size_t count = 0;
+        size_t exp = 0;
+        if( *(src++) != whio_encode_pack_tag )
+        {
+            return whio_rc.ConsistencyError;
+        }
+        rc = whio_decode_uint8( src, &shouldPackedItems );
+        if( (whio_rc.OK != rc) || !shouldPackedItems )
+        {
+            return whio_rc.ConsistencyError;
+        }
+        src += whio_sizeof_encoded_uint8;
+        for( ;at && *at; ++at )
+        {
+            rc = 0;
+            exp = 0;
+            switch( *at )
+            {
+              case ' ': continue;
+              case '+':
+              case '-': isSigned = true;
+                  continue;
+#define CASE(TAG) if( isSigned ) {                                      \
+                      isSigned = false;                                 \
+                      rc = whio_decode_##TAG( src, va_arg(va,TAG##_t*)); \
+                      exp = whio_sizeof_encoded_##TAG;                  \
+                  } else {                                              \
+                      rc = whio_decode_u##TAG( src, va_arg(va,u##TAG##_t*)); \
+                      exp = whio_sizeof_encoded_u##TAG;                 \
+                  } break
+              case '1':
+                  CASE(int8);
+              case '2':
+                  CASE(int16);
+              case '4':
+                  CASE(int32);
+              case '8':
+                  CASE(int64);
+                  break;
+              default: continue;
+#undef CASE
+            }
+            if( rc != whio_rc.OK ) return rc;
+            if( ! exp ) return whio_rc.RangeError;
+            ++count;
+            src += exp;
+        }
+        if( itemCount ) *itemCount = count;
+        if( whio_rc.OK == rc )
+        {
+            if( shouldBytes != (src-(unsigned char const*)src_) )
+            {
+                rc = whio_rc.ConsistencyError;
+            }
+            else if( shouldPackedItems != count )
+            {
+                rc = whio_rc.ConsistencyError;
+            }
+        }
+        return rc;
     }
-    *tgt = buf;
-    if( length ) *length = slen;
-    return whio_rc.OK;
 }
 /* end file src/whio_encode.c */
 /* begin file src/whio_zlib.c */
@@ -3466,18 +3955,11 @@ int whio_dev_cstring_decode( whio_dev * dev, char ** tgt, uint32_t * length )
 #include <zlib.h>
 #endif /* WHIO_ENABLE_ZLIB */
 
-int whio_stream_gzip( whio_stream * restrict src, whio_stream * restrict dest, int level )
+int whio_stream_gzip( whio_stream * src, whio_stream * dest, int level )
 {
 #if ! WHIO_ENABLE_ZLIB
     return whio_rc.UnsupportedError;
 #else
-    if( !src || !dest || (src == dest) ) return whio_rc.ArgError;
-    if( level != Z_DEFAULT_COMPRESSION )
-    {
-	if( level < Z_NO_COMPRESSION ) level = Z_NO_COMPRESSION;
-	else if (level > Z_BEST_COMPRESSION) level = Z_BEST_COMPRESSION;
-    }
-    /* Code taken 99% from http://zlib.net/zlib_how.html */
     int ret;
     int flush;
     size_t have;
@@ -3486,11 +3968,19 @@ int whio_stream_gzip( whio_stream * restrict src, whio_stream * restrict dest, i
     unsigned char in[bufSize];
     unsigned char out[bufSize];
 
+    if( !src || !dest || (src == dest) ) return whio_rc.ArgError;
+    if( level != Z_DEFAULT_COMPRESSION )
+    {
+	if( level < Z_NO_COMPRESSION ) level = Z_NO_COMPRESSION;
+	else if (level > Z_BEST_COMPRESSION) level = Z_BEST_COMPRESSION;
+    }
+    /* Code taken 99% from http://zlib.net/zlib_how.html */
+
     /* allocate deflate state */
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
-    ret = //deflateInit(&strm, level)
+    ret = /*deflateInit(&strm, level) */
 	deflateInit2( &strm, level, Z_DEFLATED, 16+MAX_WBITS, 8, Z_DEFAULT_STRATEGY )
 	;
     if (ret != Z_OK)
@@ -3544,7 +4034,7 @@ int whio_stream_gzip( whio_stream * restrict src, whio_stream * restrict dest, i
 	}
         /* done when last data in file processed */
     } while (flush != Z_FINISH);
-    //assert(ret == Z_STREAM_END);        /* stream will be complete */
+    /*assert(ret == Z_STREAM_END);*/        /* stream will be complete */
     /* clean up and return */
     (void)deflateEnd(&strm);
     return (ret == Z_STREAM_END) ? Z_OK : ret;
@@ -3553,13 +4043,11 @@ int whio_stream_gzip( whio_stream * restrict src, whio_stream * restrict dest, i
 }
 
 
-int whio_stream_gunzip( whio_stream * restrict src, whio_stream * restrict dest )
+int whio_stream_gunzip( whio_stream * src, whio_stream * dest )
 {
 #if ! WHIO_ENABLE_ZLIB
     return whio_rc.UnsupportedError;
 #else
-    if( !src || !dest || (src == dest) ) return whio_rc.ArgError;
-    /* Code taken 99% from http://zlib.net/zlib_how.html */
     int ret;
     size_t have;
     z_stream strm;
@@ -3567,12 +4055,15 @@ int whio_stream_gunzip( whio_stream * restrict src, whio_stream * restrict dest 
     unsigned char in[bufSize];
     unsigned char out[bufSize];
 
+    if( !src || !dest || (src == dest) ) return whio_rc.ArgError;
+    /* Code taken 99% from http://zlib.net/zlib_how.html */
+
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
     strm.avail_in = 0;
     strm.next_in = Z_NULL;
-    ret = //inflateInit( &strm )
+    ret = /*inflateInit( &strm ) */
 	inflateInit2( &strm, 16+MAX_WBITS )
 	;
     if (ret != Z_OK)
@@ -3659,8 +4150,10 @@ See below for several WHPRINTF_OMIT_xxx macros which can be set to
 remove certain features/extensions.
 ************************************************************************/
 
+#if 0
 #if !defined(_ISOC99_SOURCE)
 #define _ISOC99_SOURCE 1 /* needed for snprintf() */
+#endif
 #endif
 
 #include <stdio.h> /* FILE */
@@ -3668,7 +4161,9 @@ remove certain features/extensions.
 #include <stdlib.h> /* free/malloc() */
 #include <ctype.h>
 #include <stdint.h>
+
 typedef long double LONGDOUBLE_TYPE;
+
 
 /*
    If WHPRINTF_OMIT_FLOATING_POINT is defined to a true value, then
@@ -3691,7 +4186,7 @@ typedef long double LONGDOUBLE_TYPE;
    the %q and %Q specifiers are disabled.
 */
 #ifndef WHPRINTF_OMIT_SQL
-#  define WHPRINTF_OMIT_SQL 0
+#  define WHPRINTF_OMIT_SQL 1 /* requires c99 */
 #endif
 
 /*
@@ -3719,7 +4214,11 @@ explicitly running in c99 mode.
 #  if defined(__TINYC__)
 #    define WHPRINTF_HAVE_VARARRAY 0
 #  else
-#    define WHPRINTF_HAVE_VARARRAY 1
+#    if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
+#        define WHPRINTF_HAVE_VARARRAY 1 /*use 1 in C99 mode */
+#    else
+#        define WHPRINTF_HAVE_VARARRAY 0
+#    endif
 #  endif
 #endif
 
@@ -3899,7 +4398,11 @@ static const et_info fmtinfo[] = {
   {'N'/*78*/, 0, 0, 0, 0, 0 },
   {'O'/*79*/, 0, 0, 0, 0, 0 },
   {'P'/*80*/, 0, 0, 0, 0, 0 },
+#if WHPRINTF_OMIT_SQL
+  {'Q'/*81*/, 0, 0, 0, 0, 0 },
+#else
   {'Q'/*81*/, 0, FLAG_STRING, etSQLESCAPE2, 0, 0 },
+#endif
   {'R'/*82*/, 0, 0, 0, 0, 0 },
   {'S'/*83*/, 0, 0, 0, 0, 0 },
   {'T'/*84*/,  0, FLAG_STRING, etURLDECODE, 0, 0 },
@@ -3931,13 +4434,21 @@ static const et_info fmtinfo[] = {
   {'n'/*110*/, 0, 0, etSIZE, 0, 0 },
   {'o'/*111*/, 8, 0, etRADIX,      0,  2 },
   {'p'/*112*/, 16, 0, etPOINTER, 0, 1 },
+#if WHPRINTF_OMIT_SQL
+  {'q'/*113*/, 0, 0, 0, 0, 0 },
+#else
   {'q'/*113*/, 0, FLAG_STRING, etSQLESCAPE,  0, 0 },
+#endif
   {'r'/*114*/, 10, (FLAG_EXTENDED|FLAG_SIGNED), etORDINAL,    0,  0},
   {'s'/*115*/, 0, FLAG_STRING, etSTRING,     0,  0 },
   {'t'/*116*/,  0, FLAG_STRING, etURLENCODE, 0, 0 },
   {'u'/*117*/, 10, 0, etRADIX,      0,  0 },
   {'v'/*118*/, 0, 0, 0, 0, 0 },
+#if WHPRINTF_OMIT_SQL
+  {'w'/*119*/, 0, 0, 0, 0, 0 },
+#else
   {'w'/*119*/, 0, FLAG_STRING, etSQLESCAPE3, 0, 0 },
+#endif
   {'x'/*120*/, 16, 0, etRADIX,      16, 1  },
   {'y'/*121*/, 0, 0, 0, 0, 0 },
   {'z'/*122*/, 0, FLAG_STRING, etDYNSTRING,  0,  0},
@@ -4160,9 +4671,11 @@ static long spech_urlencode( whprintf_appender pf,
             continue;
         }
         else {
-            slen = snprintf( xbuf, xbufsz, "%%%c%c",
-                             hex[((ch>>4)&0xf)],
-                             hex[(ch&0xf)]);
+            xbuf[0] = '%';
+            xbuf[1] = hex[((ch>>4)&0xf)];
+            xbuf[2] = hex[(ch&0xf)];
+            xbuf[3] = 0;
+            slen = 3;
             ret += pf( pfArg, xbuf, slen );
         }
     }
@@ -4199,12 +4712,12 @@ static long spech_urldecode( whprintf_appender pf,
                              void * varg )
 {
     char const * str = (char const *) varg;
-    if( ! str ) return 0;
     long ret = 0;
     char ch = 0;
     char ch2 = 0;
     char xbuf[4];
     int decoded;
+    if( ! str ) return 0;
     ch = *str;
     while( ch )
     {
@@ -4217,7 +4730,6 @@ static long spech_urldecode( whprintf_appender pf,
             {
                 decoded = (hexchar_to_int( ch ) * 16)
                     + hexchar_to_int( ch2 );
-                //printf("DECODED: %s, %d, %c\n", xbuf, decoded, (char) decoded );
                 xbuf[0] = (char)decoded;
                 xbuf[1] = 0;
                 ret += pf( pfArg, xbuf, 1 );
@@ -4273,7 +4785,8 @@ static long spech_sqlstring_main( int xtype,
         int needQuote;
         char q = ((xtype==etSQLESCAPE3)?'"':'\'');   /* Quote character */
         char const * escarg = (char const *) varg;
-	char * bufpt = 0;
+	char * bufpt = NULL;
+        long ret;
         isnull = escarg==0;
         if( isnull ) escarg = (xtype==etSQLESCAPE2 ? "NULL" : "(NULL)");
         for(i=n=0; (ch=escarg[i])!=0; i++){
@@ -4281,7 +4794,7 @@ static long spech_sqlstring_main( int xtype,
         }
         needQuote = !isnull && xtype==etSQLESCAPE2;
         n += i + 1 + needQuote*2;
-	// FIXME: use a static buffer here instead of malloc()! Shame on you!
+	/* FIXME: use a static buffer here instead of malloc()! Shame on you! */
 	bufpt = (char *)malloc( n );
 	if( ! bufpt ) return -1;
         j = 0;
@@ -4292,7 +4805,7 @@ static long spech_sqlstring_main( int xtype,
         }
         if( needQuote ) bufpt[j++] = q;
         bufpt[j] = 0;
-	long ret = pf( pfArg, bufpt, j );
+	ret = pf( pfArg, bufpt, j );
 	free( bufpt );
 	return ret;
 }
@@ -4530,7 +5043,7 @@ if(1){				       \
     infop = ((c>=(fmtinfo[0].fmttype)) && (c<fmtinfo[etNINFO-1].fmttype))
 	? &FMTINFO(c)
 	: 0;
-    //fprintf(stderr,"char '%c'/%d @ %d,  type=%c/%d\n",c,c,FMTNDX(c),infop->fmttype,infop->type);
+    /*fprintf(stderr,"char '%c'/%d @ %d,  type=%c/%d\n",c,c,FMTNDX(c),infop->fmttype,infop->type);*/
     if( infop ) xtype = infop->type;
 #undef FMTINFO
 #undef FMTNDX
@@ -4820,9 +5333,9 @@ if(1){				       \
         break;
       case etSTRING:
       case etDYNSTRING: {
-	  bufpt = va_arg(ap,char*);
 	  whprintf_spec_handler spf = (xtype==etSTRING)
               ? spech_string : spech_dynstring;
+	  bufpt = va_arg(ap,char*);
 	  pfrc = spf( pfAppend, pfAppendArg, bufpt );
 	  WHPRINTF_CHECKERR(0);
 	  length = 0;
@@ -4915,8 +5428,9 @@ long whprintf(whprintf_appender pfAppend,          /* Accumulate results here */
 	    ... )
 {
 	va_list vargs;
+        long ret;
 	va_start( vargs, fmt );
-	long ret = whprintfv( pfAppend, pfAppendArg, fmt, vargs );
+	ret = whprintfv( pfAppend, pfAppendArg, fmt, vargs );
 	va_end(vargs);
 	return ret;
 }
@@ -4926,16 +5440,20 @@ long whprintf_FILE_appender( void * a, char const * s, long n )
 {
 	FILE * fp = (FILE *)a;
 	if( ! fp ) return -1;
-	long ret = fwrite( s, sizeof(char), n, fp );
-	return (ret >= 0) ? ret : -2;
+        else
+        {
+            long ret = fwrite( s, sizeof(char), n, fp );
+            return (ret >= 0) ? ret : -2;
+        }
 }
 
 
 long whprintf_file( FILE * fp, char const * fmt, ... )
 {
 	va_list vargs;
+        int ret;
 	va_start( vargs, fmt );
-	int ret = whprintfv( whprintf_FILE_appender, fp, fmt, vargs );
+	ret = whprintfv( whprintf_FILE_appender, fp, fmt, vargs );
 	va_end(vargs);
 	return ret;
 }
@@ -4965,45 +5483,56 @@ static long whprintfv_appender_stringbuf( void * arg, char const * data, long n 
 {
     whprintfv_stringbuf * sb = (whprintfv_stringbuf*)arg;
     if( ! sb || (n<0) ) return -1;
-    if( ! n ) return 0;
-    size_t npos = sb->pos + n;
-    if( npos >= sb->alloced )
+    else if( ! n ) return 0;
+    else
     {
-	const size_t asz = (npos * 1.5) + 1;
-	if( asz < npos ) return -1; /* overflow */
-	char * buf = realloc( sb->buffer, asz );
-	if( ! buf ) return -1;
-	memset( buf + sb->pos, 0, (npos + 1 - sb->pos) ); // the +1 adds our \0 for us
-	sb->buffer = buf;
-	sb->alloced = asz;
+        long rc;
+        size_t npos = sb->pos + n;
+        if( npos >= sb->alloced )
+        {
+            const size_t asz = (npos * 1.5) + 1;
+            if( asz < npos ) return -1; /* overflow */
+            else
+            {
+                char * buf = (char *)realloc( sb->buffer, asz );
+                if( ! buf ) return -1;
+                memset( buf + sb->pos, 0, (npos + 1 - sb->pos) ); /* the +1 adds our NUL for us*/
+                sb->buffer = buf;
+                sb->alloced = asz;
+            }
+        }
+        rc = 0;
+        for( ; rc < n; ++rc, ++sb->pos )
+        {
+            sb->buffer[sb->pos] = data[rc];
+        }
+        return rc;
     }
-    long rc = 0;
-    for( ; rc < n; ++rc, ++sb->pos )
-    {
-	sb->buffer[sb->pos] = data[rc];
-    }
-    return rc;
 }
 
 
 char * whprintfv_str( char const * fmt, va_list vargs )
 {
     if( ! fmt ) return 0;
-    whprintfv_stringbuf sb = whprintfv_stringbuf_init;
-    long rc = whprintfv( whprintfv_appender_stringbuf, &sb, fmt, vargs );
-    if( rc <= 0 )
+    else
     {
-	free( sb.buffer );
-	sb.buffer = 0;
+        whprintfv_stringbuf sb = whprintfv_stringbuf_init;
+        long rc = whprintfv( whprintfv_appender_stringbuf, &sb, fmt, vargs );
+        if( rc <= 0 )
+        {
+            free( sb.buffer );
+            sb.buffer = 0;
+        }
+        return sb.buffer;
     }
-    return sb.buffer;
 }
 
 char * whprintf_str( char const * fmt, ... )
 {
     va_list vargs;
+    char * ret;
     va_start( vargs, fmt );
-    char * ret = whprintfv_str( fmt, vargs );
+    ret = whprintfv_str( fmt, vargs );
     va_end( vargs );
     return ret;
 }
@@ -5058,13 +5587,13 @@ WHEFS_DBG_F_mymask = 0x0f000000,
 WHEFS_DBG_F_LOCK = WHEFS_DBG_F_mymask & 0x01000000,
 WHEFS_DBG_F_CACHE = WHEFS_DBG_F_mymask & 0x02000000,
 WHEFS_DBG_F_DEFAULTS_CLIENT = WHEFS_DBG_F_WARNING | WHEFS_DBG_F_ERROR | WHDBG_NYI,
-WHEFS_DBG_F_DEFAULTS_HACKER = WHEFS_DBG_F_DEFAULTS_CLIENT | WHDBG_FIXME | WHEFS_DBG_F_FYI | WHDBG_VERBOSE, // | WHEFS_DBG_F_CACHE, // | WHEFS_DBG_F_LOCK,
+WHEFS_DBG_F_DEFAULTS_HACKER = WHEFS_DBG_F_DEFAULTS_CLIENT | WHDBG_FIXME | WHEFS_DBG_F_FYI | WHDBG_VERBOSE, /* | WHEFS_DBG_F_CACHE | WHEFS_DBG_F_LOCK, */
 
 #if defined(NDEBUG)
 WHEFS_DBG_F_DEFAULT = 0 /* they'll be if(0)'d out in this case, anyway. */
 #else
 WHEFS_DBG_F_DEFAULT = WHEFS_DBG_F_DEFAULTS_CLIENT
-//WHEFS_DBG_F_DEFAULTS_HACKER
+/*WHEFS_DBG_F_DEFAULTS_HACKER */
 #endif
 };
 
@@ -5114,7 +5643,13 @@ WHEFS_FLAG_FS_IsMMapped = 0x10,
    is enabled.
 */
 WHEFS_FLAG_FS_EnableHashCache = 0x20,
-//WHEFS_FLAG_FS_AutoExpand = 0x0020,
+/**
+   If set, the whefs_fs will not try to close any opened
+   whefs_file/whio_dev/whio_stream handles.
+*/
+WHEFS_FLAG_FS_NoAutoCloseFiles = 0x40,
+
+/*WHEFS_FLAG_FS_AutoExpand = 0x0080, */
 /**
    Mark error state for whefs_file objects.
 */
@@ -5129,6 +5664,7 @@ WHEFS_OFF_SIZE = 0,
 WHEFS_OFF_CORE_MAGIC,
 WHEFS_OFF_CLIENT_MAGIC,
 WHEFS_OFF_OPTIONS,
+WHEFS_OFF_HINTS/*not yet used*/,
 WHEFS_OFF_INODE_NAMES,
 WHEFS_OFF_INODES_NO_STR,
 WHEFS_OFF_BLOCK_TABLE,
@@ -5145,6 +5681,7 @@ WHEFS_SZ_INODE_NO_STR,
 WHEFS_SZ_INODE_NAME,
 WHEFS_SZ_BLOCK,
 WHEFS_SZ_OPTIONS,
+WHEFS_SZ_HINTS,
 WHEFS_SZ_COUNT /* must be the last entry! */
 };
 
@@ -5166,6 +5703,7 @@ WHEFS_CLOSER_TYPE_DEV = 'd',
 /** Type flag for whio_stream objects. */
 WHEFS_CLOSER_TYPE_STREAM = 's'
 };
+
 /** @struct whefs_fs_closer_list
 
    A type for holding a list of "opened objects" which refer to
@@ -5205,10 +5743,10 @@ struct whefs_fs_closer_list
 typedef struct whefs_fs_closer_list whefs_fs_closer_list;
 
 /** Empty initialize object for whefs_fs_closer_list instances. */
-#define whefs_fs_closer_list_init_m { 0/*type*/,{/*item*/NULL},NULL/*next*/}
+#define whefs_fs_closer_list_empty_m { 0/*type*/,{/*item*/NULL},NULL/*next*/}
 
 /** Empty initialize object for whefs_fs_closer_list instances. */
-extern const whefs_fs_closer_list whefs_fs_closer_list_init;
+extern const whefs_fs_closer_list whefs_fs_closer_list_empty;
 
 /**
    Allocates a new whefs_fs_closer_list instance containing
@@ -5266,7 +5804,7 @@ int whefs_fs_closer_dev_remove( whefs_fs * fs, whio_dev const * d );
 
 /**
    Adds s to fs's close-at-shutdown list. s MUST be a proxy for the
-   whio_dev d and d MUST have been added to fs via
+   whio_dev d, it MUST own d, and d MUST have been added to fs via
    whefs_fs_closer_dev_add(), or results are undefined.
 
    Closing s will automatically remove it from the list.
@@ -5290,9 +5828,38 @@ struct whefs_fs
     */
     unsigned int flags;
     /**
-       Error code.
+       Error code. Not yet used everywhere it should be.
+
+       It should be set by routines which discover any
+       unrecoverable error, such as the following:
+
+       - whefs_rc.ConsistencyError
+       - whefs_rc.IOError
+       - whefs_rc.InternalError
+       - any state which signifies that the object really
+       should not be used any more.
+
+       If should not normally be set for:
+
+       - whefs_rc.ArgError
+       - whefs_rc.RangeError
+
+       as those might signify a recoverable error.
+
+       It _might_ be useful to set it for:
+       
+       - whefs_rc.UnsupportedError
+       - whefs_rc.AccessError
+       - whefs_rc.FSFull
+       - whefs_rc.NYIError
+
+       But that's not yet clear, and may be case-specific.
+
+       Certain routines should error out if the fs->err
+       is set, but that can't be done until fs->err is used
+       as cleared properly everywhere.
      */
-    unsigned int err;
+    int err;
     /**
        Stores file position offsets for commonly-used
        reference points within a vfs.
@@ -5425,7 +5992,7 @@ struct whefs_fs
 };
 
 /** Empty initialization object. */
-extern const whefs_fs whefs_fs_init;
+extern const whefs_fs whefs_fs_empty;
 
 /** inode/block in-use caching... */
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
@@ -5454,7 +6021,7 @@ extern const whefs_fs whefs_fs_init;
 
 #define WHEFS_FS_ISRO(FS) ((FS) && ((FS)->flags & WHEFS_FLAG_Read))
 #define WHEFS_FS_ISRW(FS) ((FS) && ((FS)->flags & WHEFS_FLAG_Write))
-//#define WHEFS_FS_ISERR(F) ((F) && ((F)->err != WHEFS_ERR_None))
+/*#define WHEFS_FS_ISERR(F) ((F) && ((F)->err != WHEFS_ERR_None)) */
 
 /**
    Equivalent to calling whio_dev::read() on fs's underlying i/o
@@ -5538,7 +6105,7 @@ int whefs_block_flush( whefs_fs * fs, whefs_block const * bl );
    otherwise it is not marked (in which case a future call to this
    routine may return that same block).
 */
-int whefs_block_next_free( whefs_fs * restrict fs, whefs_block * restrict tgt, bool markUsed );
+int whefs_block_next_free( whefs_fs * fs, whefs_block * tgt, bool markUsed );
 
 /**
    Zeroes out parts of the given data block. Unlike most routines,
@@ -5646,38 +6213,6 @@ bool whefs_block_id_is_valid( whefs_fs const * fs, whefs_id_type blockID );
 bool whefs_block_is_valid( whefs_fs const * fs, whefs_block const * bl );
 #endif
 
-
-#if 0 // unused code
-/**
-   Appends a block to a chain of blocks.
-
-   If bl is a valid block:
-
-   - Find the last block in bl's chain. Call that B.
-   - Append a new block after B. Call that B2.
-   - Update B to point to B2.
-   - Flush blocks to disk
-   - Assign tgt to B2.
-
-   If bl is not null and bl->next_block is not 0 then
-   whefs_rc.ArgError is returned to avoid orphaning bl's current next
-   block.
-
-   If bl is not a valid block (is null or id is out of range)
-
-   - Find next free block and mark it as used.
-   - Flush block to disk.
-   - Assign tgt to that block.
-
-   On success returns whefs_rc.OK, else some other value is returned
-   and tgt is left in an undefined state.
-
-   It is theoretically OK for bl and tgt to be the same underlying
-   object.
-*/
-int whefs_block_append( whefs_fs * fs, whefs_block const * bl, whefs_block * tgt );
-#endif
-
 /**
    This updates the internal used-blocks cache (if enabled) and search
    hints for the block with id bl->id.
@@ -5718,7 +6253,7 @@ struct whefs_file
     whefs_string name;
 };
 /** Empty initialization object. */
-extern const whefs_file whefs_file_init;
+extern const whefs_file whefs_file_empty;
 
 /**
    Writes an object of type whefs_id_type to the given
@@ -5844,6 +6379,11 @@ int whefs_fs_unlock_range( whefs_fs * fs, whefs_fs_range_locker const * range );
 
    Returns whefs_rc.OK on success. Errors
    include: !name, id is not valid for fs, or an i/o error.
+
+   Note that this function pays no attention whatsoever to the list of
+   opened inodes, and it is up to the caller to ensure that any opened
+   inodes have the same name. It also doesn't update any caches,
+   though it arguably should.
 */
 int whefs_fs_name_write( whefs_fs * fs, whefs_id_type id, char const * name );
 
@@ -5853,7 +6393,25 @@ int whefs_fs_name_write( whefs_fs * fs, whefs_id_type id, char const * name );
    or 0 if !opt.
 */
 size_t whefs_fs_sizeof_name( whefs_fs_options const * opt );
+/**
+    Writes the current fs->hints values to the position
+    fs->offets[WHEFS_OFF_HINTS] in the efs. On error it sets fs->err
+    and returns that value.
 
+    if !whefs_fs_is_rw(fs) then this will return whefs_rc.AccessError
+    but will not set fs->err.
+
+    On success, fs->err is not modified.
+*/
+int whefs_fs_hints_write( whefs_fs * fs );
+/**
+   Populates fs->hints from the position fs->offets[WHEFS_OFF_HINTS]
+   in the efs.
+
+   On error, fs->err is modified and that value is returned. If this
+   routine fails then an i/o or consistency error was encountered.
+*/
+int whefs_fs_hints_read( whefs_fs * fs );
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
@@ -5866,23 +6424,25 @@ size_t whefs_fs_sizeof_name( whefs_fs_options const * opt );
 /**
    whefs_string implementations.
 */
-#include <stdlib.h> // malloc()/free()
-#include <string.h> // memset()
+#include <stdlib.h> /* malloc()/free() */
+#include <string.h> /* memset() */
 
-const whefs_string whefs_string_init = whefs_string_init_m;
+const whefs_string whefs_string_empty = whefs_string_empty_m;
 
 whefs_string * whefs_string_alloc()
 {
     whefs_string * x = (whefs_string*)malloc(sizeof(whefs_string));
-    if( x ) *x = whefs_string_init;
+    if( x ) *x = whefs_string_empty;
     return x;
 }
 
 
 int whefs_string_copy_cstring( whefs_string * tgt, char const * str )
 {
-    if( ! str || !tgt ) return whefs_rc.ArgError;
     size_t slen = 0;
+    whefs_string_size_t alen;
+    char * xp;
+    if( ! str || !tgt ) return whefs_rc.ArgError;
     {
 	char const * x = str;
 	for( ; x && *x; ++x, ++slen ) {}
@@ -5892,7 +6452,7 @@ int whefs_string_copy_cstring( whefs_string * tgt, char const * str )
         tgt->length = 0;
         if( tgt->string /* && tgt->alloced */)
         {
-            //tgt->string[0] = 0;
+            /*tgt->string[0] = 0; */
             memset( tgt->string, 0, tgt->alloced );
         }
         return 0;
@@ -5905,15 +6465,15 @@ int whefs_string_copy_cstring( whefs_string * tgt, char const * str )
 	return whefs_rc.OK;
     }
     if( (slen+1) >= UINT16_MAX ) return whefs_rc.RangeError;
-    const whefs_string_size_t alen =
-        //slen + 1
-        slen * 1.5 // FIXME: cap at WHEFS_MAX_FILENAME_LENGTH
+    alen =
+        /*slen + 1 */
+        slen * 1.5 /* FIXME: cap at WHEFS_MAX_FILENAME_LENGTH */
         ;
     if( alen < slen )
     { /* overflow! */
 	return whefs_rc.RangeError;
     }
-    char * xp = (char *) realloc( tgt->string, alen );
+    xp = (char *) realloc( tgt->string, alen );
     if( ! xp ) return whefs_rc.AllocError;
     tgt->string = xp;
     tgt->alloced = alen;
@@ -5930,7 +6490,7 @@ int whefs_string_clear( whefs_string * tgt, bool clearChain )
     {
 	whefs_string * n = tgt->next;
         if( tgt->alloced && tgt->string ) free( tgt->string );
-	*tgt = whefs_string_init;
+	*tgt = whefs_string_empty;
 	if( ! clearChain ) break;
 	tgt = n;
     }
@@ -5944,7 +6504,7 @@ int whefs_string_finalize( whefs_string * tgt, bool clearChain )
     {
 	whefs_string * n = tgt->next;
 	free( tgt->string );
-	*tgt = whefs_string_init;
+	*tgt = whefs_string_empty;
 	free(tgt);
 	if( ! clearChain ) break;
 	tgt = n;
@@ -5978,10 +6538,10 @@ uint64_t whefs_bytes_hash( void const * data, uint32_t len )
 
        http://eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
     */
-    if( ! data || !len ) return 0;
     unsigned const char *p = data;
     uint64_t h = 0;
     uint32_t i;
+    if( ! data || !len ) return 0;
     for ( i = 0; i < len; i++ )
     {
 	h += p[i];
@@ -6001,14 +6561,14 @@ static const unsigned int whefs_id_type_tag_char = 0x08 | 8;
 size_t whefs_dev_id_encode( whio_dev * dev, whefs_id_type v )
 {
 #if WHEFS_ID_TYPE_BITS == 64
-    return whio_dev_uint64_encode( dev, v );
+    return whio_dev_encode_uint64( dev, v );
 #elif WHEFS_ID_TYPE_BITS == 32
-    return whio_dev_uint32_encode( dev, v );
+    return whio_dev_encode_uint32( dev, v );
 #elif WHEFS_ID_TYPE_BITS == 16
-    return whio_dev_uint16_encode( dev, v );
+    return whio_dev_encode_uint16( dev, v );
 #elif WHEFS_ID_TYPE_BITS == 8
-    if( ! dev ) return whefs_rc.ArgError;
     unsigned char buf[2];
+    if( ! dev ) return whefs_rc.ArgError;
     buf[0] = whefs_id_type_tag_char;
     buf[1] = v;
     return dev->api->write( dev, buf, 2 );
@@ -6020,11 +6580,11 @@ size_t whefs_dev_id_encode( whio_dev * dev, whefs_id_type v )
 size_t whefs_id_encode( unsigned char * dest, whefs_id_type v )
 {
 #if WHEFS_ID_TYPE_BITS == 64
-    return whio_uint64_encode( dest, v );
+    return whio_encode_uint64( dest, v );
 #elif WHEFS_ID_TYPE_BITS == 32
-    return whio_uint32_encode( dest, v );
+    return whio_encode_uint32( dest, v );
 #elif WHEFS_ID_TYPE_BITS == 16
-    return whio_uint16_encode( dest, v );
+    return whio_encode_uint16( dest, v );
 #elif WHEFS_ID_TYPE_BITS == 8
     if( ! dest ) return whefs_rc.ArgError;
     dest[0] = whefs_id_type_tag_char;
@@ -6038,15 +6598,16 @@ size_t whefs_id_encode( unsigned char * dest, whefs_id_type v )
 int whefs_dev_id_decode( whio_dev * dev, whefs_id_type * v )
 {
 #if WHEFS_ID_TYPE_BITS == 64
-    return whio_dev_uint64_decode( dev, v );
+    return whio_dev_decode_uint64( dev, v );
 #elif WHEFS_ID_TYPE_BITS == 32
-    return whio_dev_uint32_decode( dev, v );
+    return whio_dev_decode_uint32( dev, v );
 #elif WHEFS_ID_TYPE_BITS == 16
-    return whio_dev_uint16_decode( dev, v );
+    return whio_dev_decode_uint16( dev, v );
 #elif WHEFS_ID_TYPE_BITS == 8
-    if( ! v || ! dev ) return whefs_rc.ArgError;
     unsigned char buf[2] = {0,0};
-    size_t sz = dev->api->read( dev, buf, 2 );
+    whio_size_t sz;
+    if( ! v || ! dev ) return whefs_rc.ArgError;
+    sz = dev->api->read( dev, buf, 2 );
     if( 2 != sz)
     {
 	return whefs_rc.IOError;
@@ -6068,11 +6629,11 @@ int whefs_dev_id_decode( whio_dev * dev, whefs_id_type * v )
 int whefs_id_decode( unsigned char const * src, whefs_id_type * v )
 {
 #if WHEFS_ID_TYPE_BITS == 64
-    return whio_uint64_decode( src, v );
+    return whio_decode_uint64( src, v );
 #elif WHEFS_ID_TYPE_BITS == 32
-    return whio_uint32_decode( src, v );
+    return whio_decode_uint32( src, v );
 #elif WHEFS_ID_TYPE_BITS == 16
-    return whio_uint16_decode( src, v );
+    return whio_decode_uint16( src, v );
 #elif WHEFS_ID_TYPE_BITS == 8
     if( ! src ) return whefs_rc.ArgError;
     else if( src[0] != whefs_id_type_tag_char )
@@ -6142,17 +6703,46 @@ const uint32_t * whefs_get_core_magic()
     return whefs_fs_magic_bytes;
 }
 
+typedef struct WhprintfToString {
+    char * dest;
+    size_t pos;
+    size_t maxLen;
+} WhprintfToString;
+
+static long whprintf_appender_sprintf( void * arg, char const * data, long n )
+{
+    WhprintfToString * state = (WhprintfToString*)arg;
+    long rc = 0;
+    for(; rc < n; ++rc){
+        state->dest[state->pos++] = *(data++);
+    }
+    return rc;
+}
+
+static long whefs_sprintf( char * dest, char const * fmt, ... ){
+    WhprintfToString state;
+    va_list vargs;
+    long rc;
+    state.dest = dest;
+    state.pos = 0;
+    state.maxLen = 0 /*FIXME: implement this*/;
+    va_start(vargs,fmt);
+    rc = whprintf( whprintf_appender_sprintf, &state, fmt, vargs );
+    va_end(vargs);
+    return rc;
+}
+
 char const * whefs_data_format_version_string()
 {
     enum { bufLen = 60 };
     static char buf[bufLen] = {0,};
     if( ! *buf )
     {
-	snprintf( buf, bufLen, "%4u-%02u-%02u with %02u-bit IDs",
-		  whefs_fs_magic_bytes[0],
-		  whefs_fs_magic_bytes[1],
-		  whefs_fs_magic_bytes[2],
-		  whefs_fs_magic_bytes[3] );
+	whefs_sprintf( buf, "%4u-%02u-%02u with %02u-bit IDs",
+                       whefs_fs_magic_bytes[0],
+                       whefs_fs_magic_bytes[1],
+                       whefs_fs_magic_bytes[2],
+                       whefs_fs_magic_bytes[3] );
     }
     return buf;
 }
@@ -6192,7 +6782,7 @@ typedef struct
     char const * descr;
 } whefs_dbg_flag_info;
 static const whefs_dbg_flag_info whefs_dbg_flags[] =
-    {// keep sorted on the letter field.
+    {/* keep sorted on the letter field. */
     {'a',WHDBG_ALWAYS,"All messages."},
     {'c',WHEFS_DBG_F_CACHE,"Caching messages."},
     {'d',WHEFS_DBG_F_DEFAULT,"Default log level."},
@@ -6258,9 +6848,9 @@ extern "C" {
 #endif
 
 
-#define WHEFS_LOAD_CACHES_ON_OPEN 1 /* make sure and test whefs-cp and friends if setting this to 0. */
+#define WHEFS_LOAD_CACHES_ON_OPEN 0 /* make sure and test whefs-cp and friends if setting this to 0. */
 #if ! WHEFS_LOAD_CACHES_ON_OPEN
-#  warning "(0==WHEFS_LOAD_CACHES_ON_OPEN) is is known to cause bugs. Fix it!"
+    /*#warning "(0==WHEFS_LOAD_CACHES_ON_OPEN) is is known to cause bugs. Fix it!" */
 /*
   Reminder to self: the problem here is one of "how do we distinguish empty names vs. not-cached names,"
 and is complicated by the voodoo we use to store the strings inside whefs_fs::cache::strings.
@@ -6312,9 +6902,8 @@ but i need to look closer to be sure.
 /**
    An empty whefs_fs object for us in initializing new objects.
 */
-//const whefs_fs whefs_fs_init =
-#define whefs_fs_init_m { \
-    (WHEFS_CONFIG_ENABLE_STRINGS_HASH_CACHE ? WHEFS_FLAG_FS_EnableHashCache : 0), /* flags */ \
+#define whefs_fs_empty_m { \
+    /* flags */ (WHEFS_CONFIG_ENABLE_STRINGS_HASH_CACHE ? WHEFS_FLAG_FS_EnableHashCache : 0), \
     0, /* err */ \
     {0}, /* offsets */ \
     {0}, /* sizes */ \
@@ -6330,7 +6919,7 @@ but i need to look closer to be sure.
     WHEFS_FS_STRUCT_THREAD_INFO, \
     WHEFS_FS_STRUCT_CACHE,       \
     } /* end of whefs_fs */
-const whefs_fs whefs_fs_init = whefs_fs_init_m;
+const whefs_fs whefs_fs_empty = whefs_fs_empty_m;
 
 #if WHEFS_CONFIG_ENABLE_STATIC_MALLOC
 enum {
@@ -6345,7 +6934,7 @@ static struct
     whefs_fs objs[whefs_fs_alloc_count];
     char used[whefs_fs_alloc_count];
     size_t next;
-} whefs_fs_alloc_slots = { {whefs_fs_init_m}, {0}, 0 };
+} whefs_fs_alloc_slots = { {whefs_fs_empty_m}, {0}, 0 };
 #endif
 /** @internal
 
@@ -6369,7 +6958,7 @@ static whefs_fs * whefs_fs_alloc()
     }
 #endif /* WHEFS_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whefs_fs *) malloc( sizeof(whefs_fs) );
-    if( obj ) *obj = whefs_fs_init;
+    if( obj ) *obj = whefs_fs_empty;
     return obj;
 }
 /** @internal
@@ -6378,7 +6967,7 @@ static whefs_fs * whefs_fs_alloc()
 */
 static void whefs_fs_free( whefs_fs * obj )
 {
-    if( obj ) *obj = whefs_fs_init;
+    if( obj ) *obj = whefs_fs_empty;
     else return;
 #if WHEFS_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whefs_fs_alloc_slots.objs[0]) ||
@@ -6400,20 +6989,21 @@ static void whefs_fs_free( whefs_fs * obj )
 }
 
 
-int whefs_fs_lock( whefs_fs * restrict fs, bool writeLock, off_t start, int whence, off_t len )
+int whefs_fs_lock( whefs_fs * fs, bool writeLock, off_t start, int whence, off_t len )
 {
 #if WHEFS_CONFIG_ENABLE_FCNTL
     if( ! fs ) return whefs_rc.ArgError;
-    //WHEFS_DBG_FYI("whefs_fs_lock(%p [fileno=%d],%d,%ld,%d,%ld)",fs,fs->fileno,writeLock,start,whence,len);
+    /*WHEFS_DBG_FYI("whefs_fs_lock(%p [fileno=%d],%d,%ld,%d,%ld)",fs,fs->fileno,writeLock,start,whence,len); */
     if( fs->fileno < 1 ) return whefs_rc.UnsupportedError;
     else
     {
+        int rc;
 	struct flock lock;
 	lock.l_type = writeLock ? F_WRLCK : F_RDLCK;
 	lock.l_start = start;
 	lock.l_whence = whence;
 	lock.l_len = len;
-	int rc = fcntl( fs->fileno, F_SETLKW, &lock);
+	rc = fcntl( fs->fileno, F_SETLKW, &lock);
         WHEFS_DBG_LOCK("whefs_fs_lock(fs=%p,writeMode=%d,start=%ld,whence=%d,len=%ld) rc=%d",fs,writeLock,start,whence,len,rc);
         return rc;
     }
@@ -6422,19 +7012,20 @@ int whefs_fs_lock( whefs_fs * restrict fs, bool writeLock, off_t start, int when
 #endif
 }
 
-int whefs_fs_unlock( whefs_fs * restrict fs, off_t start, int whence, off_t len )
+int whefs_fs_unlock( whefs_fs * fs, off_t start, int whence, off_t len )
 {
 #if WHEFS_CONFIG_ENABLE_FCNTL
     if( ! fs ) return whefs_rc.ArgError;
     if( fs->fileno < 1 ) return whefs_rc.UnsupportedError;
     else
     {
+        int rc;
 	struct flock lock;
 	lock.l_type = F_UNLCK;
 	lock.l_start = start;
 	lock.l_whence = whence;
 	lock.l_len = len;
-	int rc = fcntl( fs->fileno, F_SETLK, &lock);
+	rc = fcntl( fs->fileno, F_SETLK, &lock);
         WHEFS_DBG_LOCK("whefs_fs_unlock(fs=%p,start=%ld,whence=%d,len=%ld) rc=%d",fs,start,whence,len,rc);
         return rc;
     }
@@ -6443,14 +7034,14 @@ int whefs_fs_unlock( whefs_fs * restrict fs, off_t start, int whence, off_t len 
 #endif
 }
 
-int whefs_fs_lock_range( whefs_fs * restrict fs, bool writeLock, whefs_fs_range_locker const * range )
+int whefs_fs_lock_range( whefs_fs * fs, bool writeLock, whefs_fs_range_locker const * range )
 {
     return (fs && range)
 	? whefs_fs_lock( fs, writeLock, range->start, range->whence, range->len )
 	: whefs_rc.ArgError;
 }
 
-int whefs_fs_unlock_range( whefs_fs * restrict fs, whefs_fs_range_locker const * range )
+int whefs_fs_unlock_range( whefs_fs * fs, whefs_fs_range_locker const * range )
 {
     return (fs && range)
 	? whefs_fs_unlock( fs, range->start, range->whence, range->len )
@@ -6473,9 +7064,10 @@ static const WhioDevMMapInfo WhioDevMMapInfo_init = {NULL,NULL,0,0,false,false};
 /** Internal whio_dev_api::flush() impl for mmap()'d storage. */
 static int whio_dev_mmap_flush( whio_dev * dev )
 {
+    WhioDevMMapInfo * m;
     if(0) whio_dev_mmap_flush(0); /* avoid "static func defined but not used" warning. */
-    //WHEFS_DBG("msyncing mmap()...");
-    WhioDevMMapInfo * m = (WhioDevMMapInfo *)dev->client.data;
+    /*WHEFS_DBG("msyncing mmap()..."); */
+    m = (WhioDevMMapInfo *)dev->client.data;
     return m->writeMode
         ? msync( m->mem, m->size, m->async ? MS_ASYNC : MS_SYNC )
         : whio_rc.OK;
@@ -6485,23 +7077,25 @@ static bool whio_dev_mmap_close( whio_dev * dev )
 {
     if(0) whio_dev_mmap_close(0); /* avoid "static func defined but not used" warning. */
     if( ! dev ) return false;
-    //WHEFS_DBG("closing mmap()...");
-    WhioDevMMapInfo * m = (WhioDevMMapInfo *)dev->client.data;
-    if( ! m ) return true;
-    if( m->mem )
-    {
-        dev->api->flush( dev );
-        //WHEFS_DBG("munmap()...");
-        munmap( m->mem, m->size );
+    else {
+        /*WHEFS_DBG("closing mmap()..."); */
+        WhioDevMMapInfo * m = (WhioDevMMapInfo *)dev->client.data;
+        if( ! m ) return true;
+        if( m->mem )
+        {
+            dev->api->flush( dev );
+            /*WHEFS_DBG("munmap()..."); */
+            munmap( m->mem, m->size );
+        }
+        if( m->fdev ) m->fdev->api->finalize(m->fdev);
+        *m = WhioDevMMapInfo_init;
+        free(m);
+        dev->client.data = 0;
+        return whio_dev_api_memmap.close( dev );
     }
-    if( m->fdev ) m->fdev->api->finalize(m->fdev);
-    *m = WhioDevMMapInfo_init;
-    free(m);
-    dev->client.data = 0;
-    return whio_dev_api_memmap.close( dev );
 }
 
-#endif // WHEFS_CONFIG_ENABLE_MMAP
+#endif /* WHEFS_CONFIG_ENABLE_MMAP */
 
 /**
    If WHEFS_CONFIG_ENABLE_MMAP is true then this tries to mmap() the
@@ -6520,64 +7114,71 @@ static bool whio_dev_mmap_close( whio_dev * dev )
 static int whefs_fs_mmap_connect( whefs_fs * fs )
 {
     if( !fs || !fs->dev ) return whefs_rc.ArgError;
-    //WHEFS_DBG("Trying mmap? fileno=%d",fs->fileno);
+    /*WHEFS_DBG("Trying mmap? fileno=%d",fs->fileno); */
 #if ! WHEFS_CONFIG_ENABLE_MMAP
     return whefs_rc.UnsupportedError;
 #else
     if( WHEFS_FLAG_FS_IsMMapped & fs->flags ) return whefs_rc.OK;
     if( !whefs_fs_is_rw(fs) ) return whefs_rc.OK;
-    if( fs->fileno < 1 ) return whefs_rc.UnsupportedError;
-    /**
-       HOLY FARGING SHITE! What a speed difference mmap() makes!!!
-
-       Here we do a bit of trickery: we swap out fs->dev with a proxy
-       device which mmap()'s the file.
-    */
-    static whio_dev_api whio_dev_api_mmap = {0};
-    static bool doneIt = false;
-    if( !doneIt )
-    {
-        whio_dev_api_mmap = whio_dev_api_memmap;
-        whio_dev_api_mmap.flush = whio_dev_mmap_flush;
-        whio_dev_api_mmap.close = whio_dev_mmap_close;
-        doneIt = true;
+    else if( fs->fileno < 1 ) return whefs_rc.UnsupportedError;
+    else {
+        /**
+           HOLY FARGING SHITE! What a speed difference mmap() makes!!!
+           
+           Here we do a bit of trickery: we swap out fs->dev with a proxy
+           device which mmap()'s the file.
+        */
+        static whio_dev_api whio_dev_api_mmap = {0};
+        static bool doneIt = false;
+        whio_size_t dsz;
+        void * m;
+        whio_dev * md;
+        WhioDevMMapInfo * minfo;
+        if( !doneIt )
+        {
+            doneIt = true;
+            whio_dev_api_mmap = whio_dev_api_memmap;
+            whio_dev_api_mmap.flush = whio_dev_mmap_flush;
+            whio_dev_api_mmap.close = whio_dev_mmap_close;
+        }
+        dsz = whio_dev_size( fs->dev );
+        m = mmap( 0, dsz, whefs_fs_is_rw(fs) ? PROT_WRITE : PROT_READ, MAP_SHARED, fs->fileno, 0 );
+        if( ! m )
+        {
+            WHEFS_DBG_WARN("mmap() failed for %"WHIO_SIZE_T_PFMT" bytes of fs->fileno (#%d)!",dsz,fs->fileno);
+            return whefs_rc.IOError;
+        }
+        md = whefs_fs_is_rw(fs)
+            ? whio_dev_for_memmap_rw( m, dsz )
+            : whio_dev_for_memmap_ro( m, dsz );
+        if( ! md )
+        {
+            WHEFS_DBG_WARN("whio_dev_for_memmap_%s() failed for %"WHIO_SIZE_T_PFMT" bytes of fs->fileno (#%d)!",
+                           (whefs_fs_is_rw(fs) ? "rw" : "ro"), dsz,fs->fileno);
+            munmap( m, dsz );
+            return whefs_rc.IOError;
+        }
+        md->api = &whio_dev_api_mmap;
+        minfo = (WhioDevMMapInfo*)malloc(sizeof(WhioDevMMapInfo)); /* FIXME: add static allocator for WhioDevMMApInfo */
+        if( ! minfo )
+        {
+            WHEFS_DBG_ERR("Allocation of %u bytes for WhioDevMMapInfo failed!",sizeof(WhioDevMMapInfo));
+            md->api->finalize(md);
+            return whefs_rc.AllocError;
+        }
+        md->client.data = minfo;
+        minfo->size = dsz;
+        minfo->fileno = fs->fileno;
+        minfo->mem = m;
+        minfo->fdev = fs->dev;
+        minfo->writeMode = whefs_fs_is_rw(fs);
+        minfo->async = WHEFS_CONFIG_ENABLE_MMAP_ASYNC ? true : false;
+        fs->dev = md;
+        fs->flags |= WHEFS_FLAG_FS_IsMMapped;
+        WHEFS_DBG_FYI("Swapped out EFS file-based whio_dev with mmap() wrapper! Flushing in %s mode.",
+                      WHEFS_CONFIG_ENABLE_MMAP_ASYNC ? "asynchronous" : "synchronous");
+        return whefs_rc.OK;
     }
-    whio_size_t dsz = whio_dev_size( fs->dev );
-    void * m = mmap( 0, dsz, whefs_fs_is_rw(fs) ? PROT_WRITE : PROT_READ, MAP_SHARED, fs->fileno, 0 );
-    if( ! m )
-    {
-        WHEFS_DBG_WARN("mmap() failed for %"WHIO_SIZE_T_PFMT" bytes of fs->fileno (#%d)!",dsz,fs->fileno);
-        return whefs_rc.IOError;
-    }
-    whio_dev * md = whefs_fs_is_rw(fs)
-        ? whio_dev_for_memmap_rw( m, dsz )
-        : whio_dev_for_memmap_ro( m, dsz );
-    if( ! md )
-    {
-        WHEFS_DBG_WARN("whio_dev_for_memmap_%s() failed for %"WHIO_SIZE_T_PFMT" bytes of fs->fileno (#%d)!",
-                       (whefs_fs_is_rw(fs) ? "rw" : "ro"), dsz,fs->fileno);
-        return whefs_rc.IOError;
-    }
-    md->api = &whio_dev_api_mmap;
-    WhioDevMMapInfo * minfo = (WhioDevMMapInfo*)malloc(sizeof(WhioDevMMapInfo)); // FIXME: add static allocator for WhioDevMMApInfo
-    if( ! minfo )
-    {
-        WHEFS_DBG_ERR("Allocation of %u bytes for WhioDevMMapInfo failed!",sizeof(WhioDevMMapInfo));
-        md->api->finalize(md);
-        return whefs_rc.AllocError;
-    }
-    md->client.data = minfo;
-    minfo->size = dsz;
-    minfo->fileno = fs->fileno;
-    minfo->mem = m;
-    minfo->fdev = fs->dev;
-    minfo->writeMode = whefs_fs_is_rw(fs);
-    minfo->async = WHEFS_CONFIG_ENABLE_MMAP_ASYNC ? true : false;
-    fs->dev = md;
-    fs->flags |= WHEFS_FLAG_FS_IsMMapped;
-    WHEFS_DBG_FYI("Swapped out EFS file-based whio_dev with mmap() wrapper! Flushing in %s mode.",
-                  WHEFS_CONFIG_ENABLE_MMAP_ASYNC ? "asynchronous" : "synchronous");
-    return whefs_rc.OK;
 #endif
 }
 
@@ -6598,29 +7199,31 @@ static int whefs_fs_mmap_disconnect( whefs_fs * fs )
     return whefs_rc.UnsupportedError;
 #else
     if( ! fs ) return whefs_rc.ArgError;
-    if( ! (fs->flags & WHEFS_FLAG_FS_IsMMapped) ) return whefs_rc.OK;
-    if( fs->fileno < 1 ) return whefs_rc.InternalError;
-    if( fs->dev->impl.typeID != &whio_dev_api_memmap ) return whefs_rc.InternalError;
-    // We appear to have an mmap() proxy in place...
-    WhioDevMMapInfo * m = (WhioDevMMapInfo *)fs->dev->client.data;
-    whio_dev * dx = m->fdev;
-    m->fdev = 0;
-    fs->dev->api->finalize(fs->dev);
-    fs->dev = dx;
-    WHEFS_DBG_FYI("Disconnected mmap() proxy. Restored fs->dev to %p.",
-                  (void const *)fs->dev );
-    return whefs_rc.OK;
+    else if( ! (fs->flags & WHEFS_FLAG_FS_IsMMapped) ) return whefs_rc.OK;
+    else if( fs->fileno < 1 ) return whefs_rc.InternalError;
+    else if( fs->dev->impl.typeID != &whio_dev_api_memmap ) return whefs_rc.InternalError;
+    else {
+        /* We appear to have an mmap() proxy in place... */
+        WhioDevMMapInfo * m = (WhioDevMMapInfo *)fs->dev->client.data;
+        whio_dev * dx = m->fdev;
+        m->fdev = 0;
+        fs->dev->api->finalize(fs->dev);
+        fs->dev = dx;
+        WHEFS_DBG_FYI("Disconnected mmap() proxy. Restored fs->dev to %p.",
+                      (void const *)fs->dev );
+        return whefs_rc.OK;
+    }
 #endif
 }
 
 
-whio_size_t whefs_fs_read( whefs_fs * restrict fs, void * dest, whio_size_t n )
+whio_size_t whefs_fs_read( whefs_fs * fs, void * dest, whio_size_t n )
 {
     return (fs && fs->dev)
 	? fs->dev->api->read( fs->dev, dest, n )
 	: 0;
 }
-whio_size_t whefs_fs_write( whefs_fs * restrict fs, void const * src, whio_size_t n )
+whio_size_t whefs_fs_write( whefs_fs * fs, void const * src, whio_size_t n )
 {
     return (fs && fs->dev)
 	? fs->dev->api->write( fs->dev, src, n )
@@ -6641,21 +7244,21 @@ whio_size_t whefs_fs_readat( whefs_fs * fs, whio_size_t pos, void * dest, whio_s
     return whefs_fs_read( fs, dest, n );
 }
 
-whio_size_t whefs_fs_seek( whefs_fs * restrict fs, off_t offset, int whence )
+whio_size_t whefs_fs_seek( whefs_fs * fs, off_t offset, int whence )
 {
     return (fs && fs->dev)
 	? fs->dev->api->seek( fs->dev, offset, whence )
 	: whio_rc.SizeTError;
 }
 
-whio_size_t whefs_fs_tell( whefs_fs * restrict fs )
+whio_size_t whefs_fs_tell( whefs_fs * fs )
 {
     return (fs && fs->dev)
 	? fs->dev->api->tell( fs->dev )
 	: whio_rc.SizeTError;
 }
 
-int whefs_fs_flush( whefs_fs * restrict fs )
+int whefs_fs_flush( whefs_fs * fs )
 {
     if(fs && fs->dev)
     {
@@ -6680,7 +7283,7 @@ WHEFS_ERR_IO_READ   = WHEFS_ERR_IO | 0x01,
 WHEFS_ERR_IO_WRITE   = WHEFS_ERR_IO | 0x02
 } whefs_errors;
 
-void whefs_fs_caches_names_clear( whefs_fs * restrict fs )
+void whefs_fs_caches_names_clear( whefs_fs * fs )
 {
     if( fs->cache.hashes )
     {
@@ -6697,42 +7300,53 @@ void whefs_fs_caches_names_clear( whefs_fs * restrict fs )
             WHEFS_DBG_CACHE("inode #%"WHEFS_ID_TYPE_PFMT" cached entry.", h->id);
         }
 #endif
-        whefs_hashid_list_alloc( &fs->cache.hashes, 0 );// reminder: we keep fs->cache.hashes itself until finalization.
+        whefs_hashid_list_alloc( &fs->cache.hashes, 0 );/* reminder: we keep fs->cache.hashes itself until finalization. */
     }
 }
-void whefs_fs_caches_clear( whefs_fs * restrict fs )
+void whefs_fs_caches_clear( whefs_fs * fs )
 {
     whbits_free_bits( &fs->bits.i );
     whbits_free_bits( &fs->bits.b );
     whefs_fs_caches_names_clear( fs );
 }
 
-void whefs_fs_finalize( whefs_fs * restrict fs )
+void whefs_fs_finalize( whefs_fs * fs )
 {
     if( ! fs ) return;
     whefs_fs_flush(fs);
     whefs_fs_mmap_disconnect( fs );
+    whefs_fs_hints_write( fs );
     if( fs->closers )
     {
-	WHEFS_DBG_WARN("We're closing with opened objects! Closing them...");
-        while( fs->closers->prev )
+        if( ! (fs->flags & WHEFS_FLAG_FS_NoAutoCloseFiles) )
         {
-            fs->closers = fs->closers->prev;
+            whefs_fs_closer_list * x;
+            WHEFS_DBG_WARN("We're closing with opened objects! Closing them...");
+            while( fs->closers->prev )
+            {
+                fs->closers = fs->closers->prev;
+            }
+            x = fs->closers;
+            fs->closers = 0; /* we must do this b/c whefs_fs_closer_list_close() will indirectly use this list. */
+            whefs_fs_closer_list_close( x, true );
         }
-        whefs_fs_closer_list * x = fs->closers;
+        else
+        {
+            WHEFS_DBG_WARN("We're closing with opened objects and auto-close of files is disabled! They are leaking and MUST NOT be properly destroyed now!");
+            whefs_fs_closer_list_free( fs->closers );
+        }
         fs->closers = 0;
-        whefs_fs_closer_list_close( x, true );
     }
     if( fs->opened_nodes )
     {
 	WHEFS_DBG_WARN("We're closing with opened inodes! Closing them...");
         while( fs->opened_nodes )
         {
-            WHEFS_DBG_WARN("Auto-closing inode #"WHEFS_ID_TYPE_PFMT", but leaking its whefs_file or whio_dev handle (if any).");
+            WHEFS_DBG_WARN("Auto-closing inode #%"WHEFS_ID_TYPE_PFMT", but leaking its whefs_file, whio_dev, or whio_stream handle (if any).",fs->opened_nodes->inode.id);
             whefs_inode_close( fs, &fs->opened_nodes->inode, fs->opened_nodes->inode.writer );
+            /* reminder: whefs_inode_close() updates fs->opened_nodes directly. */
 	}
-        // FIXME: this doesn't stop us from leaking unclosed whefs_file or whio_dev handles!
-        // We don't currently track those.
+        /* this doesn't stop us from leaking unclosed whefs_file/whio_dev/whio_stream handles! */
     }
     whefs_fs_caches_clear(fs);
     whefs_fs_setopt_hash_cache( fs, false, false );
@@ -6751,11 +7365,11 @@ void whefs_fs_finalize( whefs_fs * restrict fs )
     whefs_fs_free( fs );
 }
 
-whefs_fs_options const * whefs_fs_options_get( whefs_fs const * restrict fs )
+whefs_fs_options const * whefs_fs_options_get( whefs_fs const * fs )
 {
     return fs ? &fs->options : 0;
 }
-whefs_fs_options const * whefs_fs_opt( whefs_fs const * restrict fs )
+whefs_fs_options const * whefs_fs_opt( whefs_fs const * fs )
 {
     return fs ? &fs->options : 0;
 }
@@ -6765,42 +7379,111 @@ whefs_fs_options const * whefs_fs_opt( whefs_fs const * restrict fs )
    Seeks to the start of fs, writes the magic bytes. Returns
    whefs_rc.OK on success.
 */
-static int whefs_mkfs_write_magic( whefs_fs * restrict fs )
+static int whefs_mkfs_write_magic( whefs_fs * fs )
 {
     if( ! fs || !fs->dev ) return whefs_rc.ArgError;
-    /*
-      TODO: encode the butes in a buffer and only do one write().
+    else {
+        whio_size_t wrc;
+        /*
+          TODO: encode the butes in a buffer and only do one write().
+          
+          TODO: double-check the expected positions again:
+          
+          fs->offsets[WHEFS_OFF_CORE_MAGIC]
+          fs->offsets[WHEFS_OFF_CLIENT_MAGIC]
+          fs->offsets[WHEFS_OFF_SIZE]
+        */
+        fs->dev->api->seek( fs->dev, 0L, SEEK_SET );
+        whio_dev_encode_uint32_array( fs->dev, whefs_fs_magic_bytes_len, whefs_fs_magic_bytes );
+        whio_dev_encode_uint32( fs->dev, fs->filesize /*will be overwritten at end of mkfs*/ );
+        whio_dev_encode_uint16( fs->dev, fs->options.magic.length );
+        wrc = whio_dev_write( fs->dev, fs->options.magic.data, fs->options.magic.length );
+        return (wrc == fs->options.magic.length)
+            ? whefs_rc.OK
+            : whefs_rc.IOError;
+    }
+}
 
-      TODO: double-check the expected positions again:
-       
-      fs->offsets[WHEFS_OFF_CORE_MAGIC]
-      fs->offsets[WHEFS_OFF_CLIENT_MAGIC]
-      fs->offsets[WHEFS_OFF_SIZE]
-    */
-    fs->dev->api->seek( fs->dev, 0L, SEEK_SET );
-    whio_dev_uint32_array_encode( fs->dev, whefs_fs_magic_bytes_len, whefs_fs_magic_bytes );
-    whio_dev_uint32_encode( fs->dev, fs->filesize /*will be overwritten at end of mkfs*/ );
-    whio_dev_uint16_encode( fs->dev, fs->options.magic.length );
-    const whio_size_t wrc = whio_dev_write( fs->dev, fs->options.magic.data, fs->options.magic.length );
-    return (wrc == fs->options.magic.length)
-	? whefs_rc.OK
-	: whefs_rc.IOError;
+
+static const unsigned char whefs_hints_tag_char = 'H';
+int whefs_fs_hints_write( whefs_fs * fs )
+{
+    if( ! fs || !fs->dev ) return whefs_rc.ArgError;
+    else if( !whefs_fs_is_rw(fs) ) return whefs_rc.AccessError;
+    else {
+        whio_size_t wrc;
+        whefs_id_type hlen;
+        enum { Len = whefs_sizeof_encoded_hints };
+        unsigned char buf[Len];
+        unsigned char * bp = buf;
+        whefs_id_type i = 0;
+        whefs_id_type h[2];
+        h[0] = fs->hints.unused_inode_start;
+        h[1] = fs->hints.unused_block_start;
+        fs->dev->api->seek( fs->dev, fs->offsets[WHEFS_OFF_HINTS], SEEK_SET );
+        hlen = (sizeof(h)/sizeof(h[0]));
+        *(bp++) = whefs_hints_tag_char;
+        for( i = 0; i < hlen; ++i )
+        {
+            bp += whefs_id_encode( bp, h[i] );
+        }
+        wrc = whio_dev_write( fs->dev, buf, Len );
+        return fs->err =
+            (wrc == Len)
+            ? whefs_rc.OK
+            : whefs_rc.IOError;
+    }
+}
+int whefs_fs_hints_read( whefs_fs * fs )
+{
+    enum { Len = whefs_sizeof_encoded_hints };
+    whio_size_t sk;
+    unsigned char buf[Len+1];
+    unsigned char * bp = buf;
+    if( ! fs || !fs->dev ) return whefs_rc.ArgError;
+    sk = fs->dev->api->seek( fs->dev, fs->offsets[WHEFS_OFF_HINTS], SEEK_SET );
+    buf[Len] = 0;
+    if( sk != fs->offsets[WHEFS_OFF_HINTS] )
+    {
+        return fs->err = whefs_rc.IOError;
+    }
+    else if( Len != whio_dev_read( fs->dev, buf, Len ) )
+    {
+        return fs->err = whefs_rc.IOError;
+    }
+    else {
+        if( whefs_hints_tag_char != *(bp++) )
+        {
+            return fs->err = whefs_rc.ConsistencyError;
+        }
+        else {
+            int rc = whefs_id_decode( bp, &fs->hints.unused_inode_start );
+            if( whefs_rc.OK == rc )
+            {
+                bp += whefs_sizeof_encoded_id_type;
+                rc = whefs_id_decode( bp, &fs->hints.unused_block_start );
+                if( whefs_rc.OK != rc ) fs->err = rc;
+            }
+            return rc;
+        }
+    }
 }
 
 /**
    Writes fs->options to the current position of the stream.  Returns
    whefs_rc.OK on success.
 */
-static int whefs_mkfs_write_options( whefs_fs * restrict fs )
+static int whefs_mkfs_write_options( whefs_fs * fs )
 {
+    size_t pos, sz;
     whefs_fs_seek( fs, fs->offsets[WHEFS_OFF_OPTIONS], SEEK_SET );
     assert( fs->dev->api->tell( fs->dev ) == fs->offsets[WHEFS_OFF_OPTIONS] );
-    size_t pos = whio_dev_uint32_encode( fs->dev, fs->options.block_size );
-    size_t sz = whefs_dev_id_encode( fs->dev, fs->options.block_count );
+    pos = whio_dev_encode_size_t( fs->dev, fs->options.block_size );
+    sz = whefs_dev_id_encode( fs->dev, fs->options.block_count );
     if( whefs_sizeof_encoded_id_type != sz ) return whefs_rc.IOError;
     sz = whefs_dev_id_encode( fs->dev, fs->options.inode_count );
     if( whefs_sizeof_encoded_id_type != sz ) return whefs_rc.IOError;
-    pos += whio_dev_uint16_encode( fs->dev, fs->options.filename_length );
+    pos += whio_dev_encode_uint16( fs->dev, fs->options.filename_length );
     return (pos>0) /* <--- this is not technically correct. */
 	? whefs_rc.OK
 	: whefs_rc.IOError;
@@ -6811,7 +7494,7 @@ static int whefs_mkfs_write_options( whefs_fs * restrict fs )
 */
 static size_t whefs_fs_sizeof_options()
 {
-    const size_t sz = whio_sizeof_encoded_uint32;
+    const size_t sz = whio_sizeof_encoded_size_t;
     return sz /* block_size */
 	+ whefs_sizeof_encoded_id_type /* block_count */
 	+ whefs_sizeof_encoded_id_type /* inode_count */
@@ -6831,51 +7514,35 @@ size_t whefs_fs_sizeof_name( whefs_fs_options const * opt )
 }
 
 
-#if 0 // not needed anymore?
-/**
-   Returns the on-disk position of the given inode's name record,
-   or 0 if id is not valid for fs.
-*/
-static size_t whefs_name_pos( whefs_fs const * restrict fs, whefs_id_type id )
-{
-    if( ! whefs_inode_id_is_valid( fs, id ) )
-    {
-	return 0;
-    }
-    else
-    {
-	return fs->offsets[WHEFS_OFF_INODE_NAMES]
-	    + ( (id-1) * fs->sizes[WHEFS_SZ_INODE_NAME] );
-    }
-}
-#endif
-
 /**
    Tag byte for use in encoding inode name table entries.
 */
-static unsigned char const whefs_inode_name_tag_char = 0x80 | '\'';
+static unsigned char const whefs_inode_name_tag_char = '"';
 
-int whefs_inode_name_get( whefs_fs * restrict fs, whefs_id_type id, whefs_string * tgt )
+int whefs_inode_name_get( whefs_fs * fs, whefs_id_type id, whefs_string * tgt )
 { /* Maintenance reminder: this "should" be in whefs_inode.c, but it's not because
      of whefs_inode_name_tag_char.
    */
-    if( ! tgt || ! whefs_inode_id_is_valid( fs, id ) ) return whefs_rc.ArgError;
-    assert(fs->sizes[WHEFS_SZ_INODE_NAME] && "fs has not been set up properly!");
     int rc = 0;
     enum { bufSize = whefs_sizeof_encoded_inode_name };
     unsigned char buf[bufSize + 1];
+    whio_size_t toRead, spos, rsz;
+    unsigned char * bufP;
+    uint16_t sl;
+    if( ! tgt || ! whefs_inode_id_is_valid( fs, id ) ) return whefs_rc.ArgError;
+    assert(fs->sizes[WHEFS_SZ_INODE_NAME] && "fs has not been set up properly!");
     memset( buf, 0, bufSize + 1 );
-    whio_size_t const toRead = whefs_fs_sizeof_name(&fs->options);
+    toRead = whefs_fs_sizeof_name(&fs->options);
     assert( toRead <= bufSize );
-    whio_size_t spos = fs->offsets[WHEFS_OFF_INODE_NAMES]
+    spos = fs->offsets[WHEFS_OFF_INODE_NAMES]
         + (fs->sizes[WHEFS_SZ_INODE_NAME] * (id-1));
-    whio_size_t rsz = whefs_fs_readat( fs, spos, buf, toRead );
+    rsz = whefs_fs_readat( fs, spos, buf, toRead );
     if( toRead != rsz )
     {
 	WHEFS_DBG_ERR("Error #%d reading inode #"WHEFS_ID_TYPE_PFMT"'s name record!",rc,id);
 	return whefs_rc.IOError;
     }
-    //unsigned char const * buf = fs->buffers.nodeName;
+    /*unsigned char const * buf = fs->buffers.nodeName; */
     if( buf[0] != whefs_inode_name_tag_char )
     {
 	WHEFS_DBG_ERR("Error reading inode #%"WHEFS_ID_TYPE_PFMT"'s name record! "
@@ -6883,21 +7550,20 @@ int whefs_inode_name_get( whefs_fs * restrict fs, whefs_id_type id, whefs_string
 		      id, whefs_inode_name_tag_char, buf[0] );
 	return whefs_rc.ConsistencyError;
     }
-    unsigned char * bufP = buf;
-    ++bufP; // skip tag byte
-    bufP += whefs_sizeof_encoded_id_type //skip id field
-        //+ whio_sizeof_encoded_uint64 //skip hash field
+    bufP = buf;
+    ++bufP; /* skip tag byte */
+    bufP += whefs_sizeof_encoded_id_type /*skip id field */
+        /*+ whio_sizeof_encoded_uint64 //skip hash field */
         ;
-    uint16_t sl = 0; // string length
-    rc = whio_uint16_decode( bufP, &sl );
+    rc = whio_decode_uint16( bufP, &sl );
     if( whio_rc.OK != rc )
     {
 	WHEFS_DBG_ERR("Could not decode string length token from inode #"WHEFS_ID_TYPE_PFMT"'s "
 		      "name record! RC=%d",id,rc);
 	return rc;
     }
-    bufP += whio_sizeof_encoded_uint16; // skip over size field
-    //bufP += whio_sizeof_encoded_uint64; // skip hash field
+    bufP += whio_sizeof_encoded_uint16; /* skip over size field */
+    /*bufP += whio_sizeof_encoded_uint64; // skip hash field */
     rc = whefs_string_copy_cstring( tgt, (char const *)bufP );
     if( whio_rc.OK != rc )
     {
@@ -6907,9 +7573,9 @@ int whefs_inode_name_get( whefs_fs * restrict fs, whefs_id_type id, whefs_string
     }
     if( tgt->length )
     {
-        //WHEFS_DBG("Caching inode name [%s]",tgt->string);
+        /*WHEFS_DBG("Caching inode name [%s]",tgt->string); */
         whefs_inode_hash_cache( fs, id, tgt->string );
-        // A necessary evil to avoid lots of O(N) searches.
+        /* A necessary evil to avoid lots of O(N) searches. */
         if( fs->cache.hashes && ! fs->cache.hashes->skipAutoSort )
         {
             whefs_inode_hash_cache_sort(fs);
@@ -6918,65 +7584,65 @@ int whefs_inode_name_get( whefs_fs * restrict fs, whefs_id_type id, whefs_string
     return rc;
 }
 
-int whefs_fs_name_write( whefs_fs * restrict fs, whefs_id_type id, char const * name )
+int whefs_fs_name_write( whefs_fs * fs, whefs_id_type id, char const * name )
 {
     if( ! whefs_inode_id_is_valid( fs, id ) || !name)
     {
 	return whefs_rc.ArgError;
     }
-    uint16_t slen = 0;
-    {
-	char const * c = name;
-	uint16_t i = 0;
-	for( ; c && *c && (i < fs->options.filename_length); ++i, ++c, ++slen )
-	{
-	}
-	if( (i == fs->options.filename_length) && *c )
-	{ /** too long! */
-	    return whefs_rc.RangeError;
-	}
+    else {
+        uint16_t slen = 0;
+        int rc = 0;
+        char const * c = name;
+        uint16_t i = 0;
+        size_t bsz;
+        size_t off;
+        enum { bufSize = whefs_sizeof_encoded_inode_name };
+        unsigned char buf[bufSize+1];
+        unsigned char const * dbgStr;
+        off_t spos;
+        whio_size_t sz;
+        for( ; c && *c && (i < fs->options.filename_length); ++i, ++c, ++slen )
+        {
+        }
+        if( (i == fs->options.filename_length) && *c )
+        { /** too long! */
+            return whefs_rc.RangeError;
+        }
+        /**
+           Encode the string to a temp buffer then write it in one go to
+           disk. Takes more code than plain i/o, but using this approach
+           here means much less overall i/o and requies less error
+           handling for the encoding (which can't fail as long as we
+           provide the proper parameters and memory buffer sizes).
+        */
+        bsz = fs->sizes[WHEFS_SZ_INODE_NAME];
+        assert(fs->sizes[WHEFS_SZ_INODE_NAME] && "fs has not been set up properly!");
+        assert( bsz == fs->sizes[WHEFS_SZ_INODE_NAME] );
+        memset( buf+1, 0, bufSize );
+        buf[0] = whefs_inode_name_tag_char;
+        off = 1;
+        off += whefs_id_encode( buf + off, id );
+        off += whio_encode_uint16( buf + off, slen );
+        memcpy( buf + off, name, slen );
+        dbgStr = buf+off;
+        off += slen;
+        if( off < bsz ) memset( buf + off, 0, bsz - off );
+        assert( off <= bsz );
+        spos = fs->offsets[WHEFS_OFF_INODE_NAMES] +
+            (bsz * (id-1));
+        sz = whefs_fs_writeat( fs, spos, buf, bsz );
+        if( bsz != sz )
+        {
+            WHEFS_DBG_ERR("Writing inode #%"WHEFS_ID_TYPE_PFMT"[%s] name failed! rc=%d bsz=%u",id,name,rc,bsz);
+            return whefs_rc.IOError;
+        }
+        if( 0 && *name )
+        {
+            WHEFS_DBG("Writing inode #%"WHEFS_ID_TYPE_PFMT"[%s] name: [%s]",id,name,dbgStr);
+        }
+        return whefs_rc.OK;
     }
-    int rc = 0;
-    /**
-       Encode the string to a temp buffer then write it in one go to
-       disk. Takes more code than plain i/o, but using this approach
-       here means much less overall i/o and requies less error
-       handling for the encoding (which can't fail as long as we
-       provide the proper parameters and memory buffer sizes).
-    */
-    const size_t bsz =
-        fs->sizes[WHEFS_SZ_INODE_NAME]
-        ;
-    assert(fs->sizes[WHEFS_SZ_INODE_NAME] && "fs has not been set up properly!");
-    assert( bsz == fs->sizes[WHEFS_SZ_INODE_NAME] );
-    //    unsigned char * buf = fs->buffers.nodeName;
-    enum { bufSize = whefs_sizeof_encoded_inode_name };
-    unsigned char buf[bufSize+1];
-    memset( buf+1, 0, bufSize );
-    buf[0] = whefs_inode_name_tag_char;
-    size_t off = 1;
-    off += whefs_id_encode( buf + off, id );
-    off += whio_uint16_encode( buf + off, slen );
-    //uint64_t shash = 0UL; //whefs_bytes_hash( name, slen );
-    //off += whefs_uint64_encode( buf + off, shash );
-    memcpy( buf + off, name, slen );
-    unsigned char const * dbgStr = buf+off;
-    off += slen;
-    if( off < bsz ) memset( buf + off, 0, bsz - off );
-    assert( off <= bsz );
-    const off_t spos = fs->offsets[WHEFS_OFF_INODE_NAMES] +
-        (bsz * (id-1));
-    whio_size_t const sz = whefs_fs_writeat( fs, spos, buf, bsz );
-    if( bsz != sz )
-    {
-	WHEFS_DBG_ERR("Writing inode #%"WHEFS_ID_TYPE_PFMT"[%s] name failed! rc=%d bsz=%u",id,name,rc,bsz);
-	return whefs_rc.IOError;
-    }
-    if( 0 && *name )
-    {
-	WHEFS_DBG("Writing inode #%"WHEFS_ID_TYPE_PFMT"[%s] name: [%s]",id,name,dbgStr);
-    }
-    return whefs_rc.OK;
 
 }
 
@@ -6985,20 +7651,20 @@ int whefs_fs_name_write( whefs_fs * restrict fs, whefs_id_type id, char const * 
    Writes the inode names table to pos fs->offsets[WHEFS_OFF_INODE_NAMES].
    Returns whefs_rc.OK on success.
 */
-static int whefs_mkfs_write_names_table( whefs_fs * restrict fs )
+static int whefs_mkfs_write_names_table( whefs_fs * fs )
 {
     whefs_id_type i = 1;
     int rc = whefs_rc.OK;
+    char empty[1] = {'\0'};
     whefs_fs_seek( fs, fs->offsets[WHEFS_OFF_INODE_NAMES], SEEK_SET );
     assert( fs->dev->api->tell( fs->dev ) == fs->offsets[WHEFS_OFF_INODE_NAMES] );
-    char empty[1] = {'\0'};
     for( ; (i <= fs->options.inode_count) && (whefs_rc.OK == rc); ++i )
     {
 	rc = whefs_fs_name_write( fs, i, empty );
     }
     if( whefs_rc.OK == rc )
     {
-	// Unfortunate workaround for expectations of mkfs...
+	/* Unfortunate workaround for expectations of mkfs... */
 	whefs_fs_seek( fs, fs->offsets[WHEFS_OFF_INODES_NO_STR], SEEK_SET );
     }
     return rc;
@@ -7011,11 +7677,12 @@ whio_size_t whefs_fs_calculate_size( whefs_fs_options const * opt )
     static const whio_size_t sz = (whio_size_t)whio_sizeof_encoded_uint32;
     if( ! opt ) return 0;
     else return (whio_size_t)(
-	(whio_sizeof_encoded_uint32 * whefs_fs_magic_bytes_len) // core magic
-	+ sz // file size header
-	+ whio_sizeof_encoded_uint16 // client magic size
+        (whio_sizeof_encoded_uint32 * whefs_fs_magic_bytes_len) /* core magic */
+	+ sz /* file size header */
+	+ whio_sizeof_encoded_uint16 /* client magic size */
 	+ opt->magic.length
 	+ whefs_fs_sizeof_options()
+        + whefs_sizeof_encoded_hints
 	+ (whefs_fs_sizeof_name( opt ) * opt->inode_count)/* inode names table */
 	+ (whefs_sizeof_encoded_inode * opt->inode_count) /* inode table */
 	+ (whefs_fs_sizeof_block( opt ) * opt->block_count)/* blocks table */
@@ -7028,13 +7695,13 @@ whio_size_t whefs_fs_calculate_size( whefs_fs_options const * opt )
    fs->offsets[WHEFS_OFF_BLOCKS] of the data store.  Returns
    whefs_rc.OK on success.
 */
-static int whefs_mkfs_write_blocklist( whefs_fs * restrict fs )
+static int whefs_mkfs_write_blocklist( whefs_fs * fs )
 {
     whefs_id_type i = 0;
     int rc = whefs_rc.OK;
+    whefs_block bl = whefs_block_empty;
     whefs_fs_seek( fs, fs->offsets[WHEFS_OFF_BLOCKS], SEEK_SET );
     assert( fs->dev->api->tell( fs->dev ) == fs->offsets[WHEFS_OFF_BLOCKS] );
-    whefs_block bl = whefs_block_init;
     for( i = 1; (i <= fs->options.block_count) && (whefs_rc.OK == rc); ++i )
     {
 	bl.id = i;
@@ -7051,15 +7718,15 @@ static int whefs_mkfs_write_blocklist( whefs_fs * restrict fs )
    Writes all (empty) inodes to the current position of
    fs->dev. Returns whefs_rc.OK on success.
 */
-static int whefs_mkfs_write_inodelist( whefs_fs * restrict fs )
+static int whefs_mkfs_write_inodelist( whefs_fs * fs )
 {
-    whefs_fs_seek( fs, fs->offsets[WHEFS_OFF_INODES_NO_STR], SEEK_SET );
-    assert( fs->dev->api->tell( fs->dev ) == fs->offsets[WHEFS_OFF_INODES_NO_STR] );
     size_t i = 0;
     int rc = whefs_rc.OK;
-    whefs_inode node = whefs_inode_init;
+    whefs_inode node = whefs_inode_empty;
     enum { bufSize = whefs_sizeof_encoded_inode };
     unsigned char buf[bufSize];
+    whefs_fs_seek( fs, fs->offsets[WHEFS_OFF_INODES_NO_STR], SEEK_SET );
+    assert( fs->dev->api->tell( fs->dev ) == fs->offsets[WHEFS_OFF_INODES_NO_STR] );
     memset( buf, 0, bufSize );
     for( i = 1; (i <= fs->options.inode_count) && (whefs_rc.OK == rc); ++i )
     {
@@ -7071,13 +7738,15 @@ static int whefs_mkfs_write_inodelist( whefs_fs * restrict fs )
 			  rc,i);
 	    return rc;
 	}
-        whio_size_t check = whefs_fs_writeat( fs, whefs_inode_id_pos( fs, i ), buf, bufSize );
-        if( check != bufSize )
-        {
-            rc = whefs_rc.IOError;
-	    WHEFS_DBG_ERR("Error #%d while writing inode #%"WHEFS_ID_TYPE_PFMT"!",
-			  rc, i);
-            break;
+        else {
+            whio_size_t check = whefs_fs_writeat( fs, whefs_inode_id_pos( fs, i ), buf, bufSize );
+            if( check != bufSize )
+            {
+                rc = whefs_rc.IOError;
+                WHEFS_DBG_ERR("Error #%d while writing inode #%"WHEFS_ID_TYPE_PFMT"!",
+                              rc, i);
+                break;
+            }
         }
     }
     return rc;
@@ -7088,18 +7757,18 @@ static int whefs_mkfs_write_inodelist( whefs_fs * restrict fs )
    associated with fs->dev. If it succeeds we store the descriptor
    so we can later use it to implement file locking.
 */
-static void whefs_fs_check_fileno( whefs_fs * restrict fs )
+static void whefs_fs_check_fileno( whefs_fs * fs )
 {
+    char const * fname = NULL;
     if( !fs || !fs->dev ) return;
-    char const * fname = 0;
     whio_dev_ioctl( fs->dev, whio_dev_ioctl_GENERAL_name, &fname );
     if( whio_rc.OK != whio_dev_ioctl( fs->dev, whio_dev_ioctl_FILE_fd, &fs->fileno ) )
     {
-        //WHEFS_DBG("Backing store does not appear to be a FILE." );
+        /*WHEFS_DBG("Backing store does not appear to be a FILE." ); */
         return;
     }
-    //WHEFS_DBG_FYI("Backing store appears to be a FILE (named [%s]) with descriptor #%d.", fname, fs->fileno );
-    //posix_fadvise( fs->fileno, 0L, 0L, POSIX_FADV_RANDOM );
+    /*WHEFS_DBG_FYI("Backing store appears to be a FILE (named [%s]) with descriptor #%d.", fname, fs->fileno ); */
+    /*posix_fadvise( fs->fileno, 0L, 0L, POSIX_FADV_RANDOM ); */
 }
 
 /**
@@ -7113,11 +7782,12 @@ static void whefs_fs_check_fileno( whefs_fs * restrict fs )
    is ignored if !writeMode or if the file can be opened using "r+"
    mode.
 */
-static whio_dev * whefs_open_FILE( char const * filename, whefs_fs * restrict fs,
+static whio_dev * whefs_open_FILE( char const * filename, whefs_fs * fs,
                                    bool writeMode, bool createIt )
 {
+    int lk;
     if( ! filename || !fs ) return 0;
-    if( fs->dev )
+    else if( fs->dev )
     {
 	fs->dev->api->finalize( fs->dev );
 	fs->dev = 0;
@@ -7130,10 +7800,10 @@ static whio_dev * whefs_open_FILE( char const * filename, whefs_fs * restrict fs
     }
     if( ! fs->dev ) return 0;
     whefs_fs_check_fileno( fs );
-    int lk = whefs_fs_lock( fs, writeMode, 0, SEEK_SET, 0 );
+    lk = whefs_fs_lock( fs, writeMode, 0, SEEK_SET, 0 );
     if( (whefs_rc.OK == lk) || (whefs_rc.UnsupportedError == lk) )
     {
-        // okay
+        /* okay */
     }
     else
     {
@@ -7143,13 +7813,14 @@ static whio_dev * whefs_open_FILE( char const * filename, whefs_fs * restrict fs
     return fs->dev;
 }
 
-static int whefs_fs_init_bitset_inodes( whefs_fs * restrict fs )
+static int whefs_fs_init_bitset_inodes( whefs_fs * fs )
 {
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
-    if( ! fs ) return whefs_rc.ArgError;
     const size_t nbits = 1; /* flags: used */
-    const size_t nbc = fs->options.inode_count * nbits + 1; /* +1 b/c we use the ID (1...N) as bit address */
-    //WHEFS_DBG("Initializing bitsets. Node count/bits/bytes=%u/%u/%u", fs->options.inode_count, nbc, nbytes  );
+    size_t nbc;
+    if( ! fs ) return whefs_rc.ArgError;
+    nbc = fs->options.inode_count * nbits + 1; /* +1 b/c we use the ID (1...N) as bit address */
+    /*WHEFS_DBG("Initializing bitsets. Node count/bits/bytes=%u/%u/%u", fs->options.inode_count, nbc, nbytes  ); */
     if( 0 != whbits_init( &fs->bits.i, nbc, 0 ) ) return whefs_rc.AllocError;
 #if 0
     WHEFS_DBG("Initialized inode bitset. Node count/bits/bytes=%u/%u/%u",
@@ -7161,14 +7832,15 @@ static int whefs_fs_init_bitset_inodes( whefs_fs * restrict fs )
     return whefs_rc.OK;
 }
 
-static int whefs_fs_init_bitset_blocks( whefs_fs * restrict fs )
+static int whefs_fs_init_bitset_blocks( whefs_fs * fs )
 {
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
-    //WHEFS_DBG("Setting up bitsets for fs@0x%p", (void const *)fs );
-    if( ! fs ) return whefs_rc.ArgError;
+    /*WHEFS_DBG("Setting up bitsets for fs@0x%p", (void const *)fs ); */
     const size_t bbits = 1; /* flag: used */
-    const size_t bbc = fs->options.block_count * bbits + 1; /* +1 b/c we use the ID (1...N) as bit address */
-    //WHEFS_DBG("Initializing bitsets. block count/bits/bytes=%u/%u/%u", fs->options.block_count, bbc, bbytes  );
+    size_t bbc;
+    if( ! fs ) return whefs_rc.ArgError;
+    bbc = fs->options.block_count * bbits + 1; /* +1 b/c we use the ID (1...N) as bit address */
+    /*WHEFS_DBG("Initializing bitsets. block count/bits/bytes=%u/%u/%u", fs->options.block_count, bbc, bbytes  ); */
     if( 0 != whbits_init( &fs->bits.b, bbc, 0 ) ) return whefs_rc.AllocError;
 #if 0
     WHEFS_DBG("Initialized bitsets. block count/bits/bytes=%u/%u/%u",
@@ -7189,7 +7861,7 @@ static int whefs_fs_init_bitset_blocks( whefs_fs * restrict fs )
 
    Returns whefs_rc.OK on success.
 */
-static int whefs_fs_init_bitsets( whefs_fs * restrict fs )
+static int whefs_fs_init_bitsets( whefs_fs * fs )
 {
     int rc = whefs_fs_init_bitset_inodes(fs);
     if( whefs_rc.OK == rc ) rc = whefs_fs_init_bitset_blocks(fs);
@@ -7202,39 +7874,39 @@ static int whefs_fs_init_bitsets( whefs_fs * restrict fs )
 
    Returns whefs_rc.OK on success.
 */
-static int whefs_fs_inode_cache_load( whefs_fs * restrict fs )
+static int whefs_fs_inode_cache_load( whefs_fs * fs )
 {
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
+    WHEFS_DBG_CACHE("Loading inode bitset cache.");
     if( ! fs || !fs->dev ) return whefs_rc.ArgError;
-    //return 0;
-    const whefs_id_type nc = whefs_fs_options_get(fs)->inode_count;
-    whefs_id_type id = 2; // root node (id=1) is always considered used
-    int rc = 0;
-    uint32_t flags;
-    //whefs_id_type count = 0;
-    whefs_inode ino = whefs_inode_init;
-    for( ; id <= nc; ++id )
-    {
-	//WHEFS_DBG("Trying to cache inode #%"WHEFS_ID_TYPE_PFMT"'s state.", id);
-	flags = 0;
-	rc = whefs_inode_id_read( fs, id, &ino );
-	if( whefs_rc.OK != rc )
-	{
-	    WHEFS_DBG_ERR("Error #%d while reading inode #%"WHEFS_ID_TYPE_PFMT"!", rc, id);
-	    return rc;
-	}
-	if( ino.flags & WHEFS_FLAG_Used )
-	{
-	    //++count;
-	    WHEFS_ICACHE_SET_USED(fs,id);
-	}
-	else
-	{
-	    WHEFS_ICACHE_UNSET_USED(fs,id);
-	}
+    else {
+        const whefs_id_type nc = whefs_fs_options_get(fs)->inode_count;
+        whefs_id_type id = 2; /* root node (id=1) is always considered used */
+        int rc = 0;
+        uint32_t flags;
+        whefs_inode ino = whefs_inode_empty;
+        for( ; id <= nc; ++id )
+        {
+            /*WHEFS_DBG("Trying to cache inode #%"WHEFS_ID_TYPE_PFMT"'s state.", id); */
+            flags = 0;
+            rc = whefs_inode_id_read( fs, id, &ino );
+            if( whefs_rc.OK != rc )
+            {
+                WHEFS_DBG_ERR("Error #%d while reading inode #%"WHEFS_ID_TYPE_PFMT"!", rc, id);
+                return rc;
+            }
+            if( ino.flags & WHEFS_FLAG_Used )
+            {
+                WHEFS_ICACHE_SET_USED(fs,id);
+            }
+            else
+            {
+                WHEFS_ICACHE_UNSET_USED(fs,id);
+            }
+        }
+        fs->bits.i_loaded = true;
+        /*WHEFS_DBG_FYI("Initialized inode cache (entries: %u)", count); */
     }
-    fs->bits.i_loaded = true;
-    //WHEFS_DBG_FYI("Initialized inode cache (entries: %u)", count);
 #endif /* WHEFS_CONFIG_ENABLE_BITSET_CACHE */
     return whefs_rc.OK;
 }
@@ -7242,35 +7914,36 @@ static int whefs_fs_inode_cache_load( whefs_fs * restrict fs )
 /**
    Loads the block cache. Returns whefs_rc.OK on success,
 */
-static int whefs_fs_block_cache_load( whefs_fs * restrict fs )
+static int whefs_fs_block_cache_load( whefs_fs * fs )
 {
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
     /* FIXME: instead of using whefs_block_read(), simply extract the
        flags field from each block entry. That'll be much faster. */
     if( ! fs || !fs->dev ) return whefs_rc.ArgError;
-    //return 0;
-    const size_t bc = whefs_fs_options_get(fs)->block_count;
-    size_t id = 1;
-    int rc = 0;
-    whefs_block bl;
-    for( ; id <= bc; ++id )
-    {
-	bl = whefs_block_init;
-	rc = whefs_block_read( fs, id, &bl ); /* this will update the used-blocks cache */
-	if( whefs_rc.OK != rc )
-	{
-	    WHEFS_DBG_ERR("Error #%d while reading block #%u!", rc, id);
-	    return rc;
-	}
-	//WHEFS_DBG("block cache. #%u is %s",bl.id, (WHEFS_BCACHE_IS_USED(fs,id) ? "used" : "unused") );
+    else {
+        const size_t bc = whefs_fs_options_get(fs)->block_count;
+        size_t id = 1;
+        int rc = 0;
+        whefs_block bl;
+        for( ; id <= bc; ++id )
+        {
+            bl = whefs_block_empty;
+            rc = whefs_block_read( fs, id, &bl ); /* this will update the used-blocks cache */
+            if( whefs_rc.OK != rc )
+            {
+                WHEFS_DBG_ERR("Error #%d while reading block #%u!", rc, id);
+                return rc;
+            }
+            /*WHEFS_DBG("block cache. #%u is %s",bl.id, (WHEFS_BCACHE_IS_USED(fs,id) ? "used" : "unused") ); */
+        }
+        /*WHEFS_DBG("Initialized block cache."); */
+        fs->bits.b_loaded = true;
     }
-    //WHEFS_DBG("Initialized block cache.");
-    fs->bits.b_loaded = true;
 #endif /* WHEFS_CONFIG_ENABLE_BITSET_CACHE */
     return whefs_rc.OK;
 }
 
-bool whefs_fs_is_rw( whefs_fs const * restrict fs )
+bool whefs_fs_is_rw( whefs_fs const * fs )
 {
     return fs && (fs->flags & WHEFS_FLAG_Write);
 }
@@ -7280,7 +7953,7 @@ bool whefs_fs_is_rw( whefs_fs const * restrict fs )
 #if WHEFS_LOAD_CACHES_ON_OPEN
 static
 #endif
-int whefs_fs_caches_load( whefs_fs * restrict fs )
+int whefs_fs_caches_load( whefs_fs * fs )
 {
     int rc = whefs_fs_inode_cache_load( fs );
     if( whefs_rc.OK == rc ) rc = whefs_fs_block_cache_load( fs );
@@ -7295,16 +7968,17 @@ int whefs_fs_caches_load( whefs_fs * restrict fs )
    Initializes fs->sizes[] and fs->offsets[]. fs->options must have
    been populated in order for this to work.
 */
-static void whefs_fs_init_sizes( whefs_fs * restrict fs )
+static void whefs_fs_init_sizes( whefs_fs * fs )
 {
+    size_t sz;
     fs->sizes[WHEFS_SZ_INODE_NO_STR] = whefs_sizeof_encoded_inode;
     fs->sizes[WHEFS_SZ_INODE_NAME] = whefs_fs_sizeof_name( &fs->options );
     fs->sizes[WHEFS_SZ_BLOCK] = whefs_fs_sizeof_block( &fs->options );
     fs->sizes[WHEFS_SZ_OPTIONS] = whefs_fs_sizeof_options();
-
+    fs->sizes[WHEFS_SZ_HINTS] = whefs_sizeof_encoded_hints;
     fs->offsets[WHEFS_OFF_CORE_MAGIC] = 0;
 
-    size_t sz =	/* core magic len */
+    sz = /* core magic len */
 	(whio_sizeof_encoded_uint32 * whefs_fs_magic_bytes_len);
 
     fs->offsets[WHEFS_OFF_SIZE] =
@@ -7317,16 +7991,20 @@ static void whefs_fs_init_sizes( whefs_fs * restrict fs )
 	fs->offsets[WHEFS_OFF_SIZE]
 	+ sz;
     sz = /* client magic size */
-	whio_sizeof_encoded_uint16 // length
+	whio_sizeof_encoded_uint16 /* length */
 	+ fs->options.magic.length;
 
     fs->offsets[WHEFS_OFF_OPTIONS] = 
 	fs->offsets[WHEFS_OFF_CLIENT_MAGIC]
 	+ sz;
 
+    fs->offsets[WHEFS_OFF_HINTS] =
+        fs->offsets[WHEFS_OFF_OPTIONS]
+        + fs->sizes[WHEFS_SZ_OPTIONS];
+    
     fs->offsets[WHEFS_OFF_INODE_NAMES] =
-	fs->offsets[WHEFS_OFF_OPTIONS]
-	+ fs->sizes[WHEFS_SZ_OPTIONS];
+	fs->offsets[WHEFS_OFF_HINTS]
+	+ fs->sizes[WHEFS_SZ_HINTS];
     sz = /* names table size */
 	(fs->options.inode_count * fs->sizes[WHEFS_SZ_INODE_NAME]);
 
@@ -7335,8 +8013,6 @@ static void whefs_fs_init_sizes( whefs_fs * restrict fs )
 	+ sz;
     sz = /* new inodes table size */
 	(fs->options.inode_count * fs->sizes[WHEFS_SZ_INODE_NO_STR]);
-
-    //fs->offsets[WHEFS_OFF_BLOCK_TABLE] NYI
 
     fs->offsets[WHEFS_OFF_BLOCKS] =
 	fs->offsets[WHEFS_OFF_INODES_NO_STR]
@@ -7355,19 +8031,20 @@ static void whefs_fs_init_sizes( whefs_fs * restrict fs )
     OFF(SIZE);
     OFF(CLIENT_MAGIC);
     OFF(OPTIONS);
+    OFF(HINTS);
     OFF(INODE_NAMES);
-    OFF(INODES);
     OFF(INODES_NO_STR);
     OFF(BLOCKS);
     OFF(EOF);
 #undef OFF
 #define OFF(X) fprintf(stdout,"\t\tfs->sizes[%s]\t= %u\n",# X, fs->sizes[WHEFS_SZ_ ## X])
-    OFF(INODE);
+    OFF(INODE_NO_STR);
     OFF(INODE_NAME);
     OFF(BLOCK);
     OFF(OPTIONS);
+    OFF(HINTS);
     fflush(stdout);
-    //assert(0 && "on purpose");
+    assert(0 && "on purpose");
 #undef OFF
 #endif
 }
@@ -7381,7 +8058,7 @@ static void whefs_fs_init_sizes( whefs_fs * restrict fs )
 static int whefs_mkfs_stage1( whefs_fs_options const * opt, whefs_fs ** tgt )
 {
     if( !opt || !tgt ) return whefs_rc.ArgError;
-    if( (opt->inode_count < 2)
+    else if( (opt->inode_count < 2)
 	|| (opt->block_size < 32)
 	|| !opt->filename_length
 	|| (opt->filename_length > WHEFS_MAX_FILENAME_LENGTH)
@@ -7392,34 +8069,37 @@ static int whefs_mkfs_stage1( whefs_fs_options const * opt, whefs_fs ** tgt )
     {
 	return whefs_rc.RangeError;
     }
-    whefs_fs * fs = whefs_fs_alloc();
-    if( ! fs ) return whefs_rc.AllocError;
-    *fs = whefs_fs_init;
-    fs->flags |= WHEFS_FLAG_ReadWrite;
-    fs->options = *opt;
-
-    whefs_fs_init_sizes( fs );
-
-    int rc = whefs_fs_init_bitsets( fs );
-    if( whefs_rc.OK != rc )
-    {
-	WHEFS_DBG_ERR("Init of bitsets failed with rc %d!", rc);
-	whefs_fs_finalize( fs );
-	return rc;
+    else {
+        int rc;
+        whefs_fs * fs = whefs_fs_alloc();
+        if( ! fs ) return whefs_rc.AllocError;
+        *fs = whefs_fs_empty;
+        fs->flags |= WHEFS_FLAG_ReadWrite;
+        fs->options = *opt;
+        
+        whefs_fs_init_sizes( fs );
+        
+        rc = whefs_fs_init_bitsets( fs );
+        if( whefs_rc.OK != rc )
+        {    
+            WHEFS_DBG_ERR("Init of bitsets failed with rc %d!", rc);
+            whefs_fs_finalize( fs );
+            return rc;
+        }
+        *tgt = fs;
+        return whefs_rc.OK;
     }
-    *tgt = fs;
-
-    return whefs_rc.OK;
 }
 
 /**
    Moves the seek position to fs->offsets[WHEFS_OFF_SIZE] and
    writes fs->filesize to that location.
 */
-static int whefs_fs_write_filesize( whefs_fs * restrict fs )
+static int whefs_fs_write_filesize( whefs_fs * fs )
 {
+    whio_size_t ck;
     fs->dev->api->seek( fs->dev, fs->offsets[WHEFS_OFF_SIZE], SEEK_SET );
-    const whio_size_t ck = whio_dev_uint32_encode( fs->dev, fs->filesize );
+    ck = whio_dev_encode_uint32( fs->dev, fs->filesize );
     return ( whio_sizeof_encoded_uint32 == ck )
         ? whefs_rc.OK
         : whefs_rc.IOError;
@@ -7430,14 +8110,14 @@ static int whefs_fs_write_filesize( whefs_fs * restrict fs )
    success whefs_rc.OK is returned. On error, fs is destroyed and some
    other value is returned.
 */
-static int whefs_mkfs_stage2( whefs_fs * restrict fs )
+static int whefs_mkfs_stage2( whefs_fs * fs )
 {
+    size_t szcheck;
+    int rc;
     if( ! fs || !fs->dev ) return whefs_rc.ArgError;
-
-    size_t szcheck = whefs_fs_calculate_size(&fs->options);
-    //WHEFS_DBG("szcheck = %u", szcheck );
-
-    int rc = fs->dev->api->truncate( fs->dev, szcheck );
+    szcheck = whefs_fs_calculate_size(&fs->options);
+    /*WHEFS_DBG("szcheck = %u", szcheck ); */
+    rc = fs->dev->api->truncate( fs->dev, szcheck );
     if( whio_rc.OK != rc )
     {
 	WHEFS_DBG_ERR("Could not truncate EFS container to %u bytes!", szcheck );
@@ -7445,15 +8125,14 @@ static int whefs_mkfs_stage2( whefs_fs * restrict fs )
 	return rc;
     }
 
-    //size_t bogo = 0;
 #define CHECKRC if( rc != whefs_rc.OK ) { whefs_fs_finalize(fs); return rc; } \
-    /*bogo= whio_dev_size( fs->dev ); WHEFS_DBG("device size=[%u]", bogo );*/
-
-    // The following orders are important, as fs->offsets[] is used to confirm
-    // expected file positions.
+    /* The following orders are important, as fs->offsets[] is used to confirm
+       expected file positions. */
     rc = whefs_mkfs_write_magic( fs );
     CHECKRC;
     rc = whefs_mkfs_write_options( fs );
+    CHECKRC;
+    rc = whefs_fs_hints_write( fs );
     CHECKRC;
     rc = whefs_mkfs_write_names_table( fs );
     CHECKRC;
@@ -7464,9 +8143,9 @@ static int whefs_mkfs_stage2( whefs_fs * restrict fs )
 #undef CHECKRC
     whefs_fs_flush(fs);
     fs->filesize = whio_dev_size( fs->dev );
-    //WHEFS_DBG("File size is(?) %u", fs->filesize );
+    /*WHEFS_DBG("File size is(?) %u", fs->filesize ); */
 
-    szcheck = whefs_fs_calculate_size(&fs->options);
+    /*szcheck = whefs_fs_calculate_size(&fs->options); */
     if( szcheck != fs->filesize )
     {
 	WHEFS_DBG_ERR("EFS size error: the calculated size (%u) does not match the real size (%u)!", szcheck, fs->filesize );
@@ -7482,9 +8161,10 @@ static int whefs_mkfs_stage2( whefs_fs * restrict fs )
 
 int whefs_mkfs( char const * filename, whefs_fs_options const * opt, whefs_fs ** tgt )
 {
-    if( ! filename || !opt || !tgt ) return whefs_rc.ArgError;
     whefs_fs * fs = 0;
-    int rc = whefs_mkfs_stage1( opt, &fs );
+    int rc;
+    if( ! filename || !opt || !tgt ) return whefs_rc.ArgError;
+    rc = whefs_mkfs_stage1( opt, &fs );
     if( whefs_rc.OK != rc ) return rc;
 
     if( 0 == strcmp(":memory:",filename) )
@@ -7521,9 +8201,10 @@ int whefs_mkfs( char const * filename, whefs_fs_options const * opt, whefs_fs **
 
 int whefs_mkfs_dev( whio_dev * dev, whefs_fs_options const * opt, whefs_fs ** tgt, bool takeDev )
 {
-    if( ! dev || !opt || !tgt ) return whefs_rc.ArgError;
     whefs_fs * fs = 0;
-    int rc = whefs_mkfs_stage1( opt, &fs );
+    int rc;
+    if( ! dev || !opt || !tgt ) return whefs_rc.ArgError;
+    rc = whefs_mkfs_stage1( opt, &fs );
     if( whefs_rc.OK != rc ) return rc;
     fs->ownsDev = false;
     fs->dev = dev;
@@ -7535,7 +8216,7 @@ int whefs_mkfs_dev( whio_dev * dev, whefs_fs_options const * opt, whefs_fs ** tg
 	fs = 0;
     }
 #if 0
-    // FIXME: we don't yet have the in-use cache for devices opened using mkfs!
+    /* FIXME: we don't yet have the in-use cache for devices opened using mkfs! */
     /* weird. When i do this here i get read() errors in the file-based i/o handler,
        with read() reporting that errno==EBADF (bad file descriptor)!!!
 
@@ -7570,25 +8251,26 @@ int whefs_mkfs_dev( whio_dev * dev, whefs_fs_options const * opt, whefs_fs ** tg
    fs will be modified quite significantly here, but this stuff must
    be called before the vfs can be used.
 */
-static int whefs_openfs_stage2( whefs_fs * restrict fs )
+static int whefs_openfs_stage2( whefs_fs * fs )
 {
+    int rc = 0;
+    uint32_t coreMagic[whefs_fs_magic_bytes_len];
+    uint32_t fsize;
+    size_t aSize;
+    whefs_fs_options * opt;
     if( ! fs ) return whefs_rc.ArgError;
-
     fs->offsets[WHEFS_OFF_CORE_MAGIC] = 0;
     fs->offsets[WHEFS_OFF_SIZE] = (whefs_fs_magic_bytes_len * whio_sizeof_encoded_uint32);
-    int rc = whefs_rc.OK;
-    uint32_t coreMagic[whefs_fs_magic_bytes_len];
-
     while(1)
     {
-	if( whefs_fs_magic_bytes_len != whio_dev_uint32_array_decode( fs->dev, whefs_fs_magic_bytes_len, coreMagic ) )
+	size_t i = 0;
+	if( whefs_fs_magic_bytes_len != whio_dev_decode_uint32_array( fs->dev, whefs_fs_magic_bytes_len, coreMagic ) )
 	{
 	    WHEFS_DBG_ERR("Error reading the core magic bytes.");
 	    rc = whefs_rc.BadMagicError;
 	    break;
 	}
-	//WHEFS_DBG("Core magic = %04u %02u %02u %02u", coreMagic[0], coreMagic[1], coreMagic[2], coreMagic[3] );
-	size_t i = 0;
+	/*WHEFS_DBG("Core magic = %04u %02u %02u %02u", coreMagic[0], coreMagic[1], coreMagic[2], coreMagic[3] ); */
 	for( ; i < whefs_fs_magic_bytes_len; ++i )
 	{
 	    if( coreMagic[i] != whefs_fs_magic_bytes[i] )
@@ -7607,8 +8289,8 @@ static int whefs_openfs_stage2( whefs_fs * restrict fs )
 	return rc;
     }
 
-    uint32_t fsize = 0;
-    rc = whio_dev_uint32_decode( fs->dev, &fsize );
+    fsize = 0;
+    rc = whio_dev_decode_uint32( fs->dev, &fsize );
     if( whefs_rc.OK != rc )
     {
 	WHEFS_DBG_ERR("Doesn't seem to be a whefs file! error code=%d",rc);
@@ -7617,7 +8299,7 @@ static int whefs_openfs_stage2( whefs_fs * restrict fs )
     }
     fs->filesize = fsize;
     fs->offsets[WHEFS_OFF_CLIENT_MAGIC] = fs->dev->api->tell(fs->dev);
-    size_t aSize = whio_dev_size( fs->dev );
+    aSize = whio_dev_size( fs->dev );
     if( !fsize || !aSize || (aSize != fsize) )
     { /* reminder: (aSize > fsize) must be allowed for static memory buffers to be usable as i/o devices. */
 	WHEFS_DBG_ERR("File sizes don't agree: expected %u but got %u", fsize, aSize );
@@ -7627,24 +8309,22 @@ static int whefs_openfs_stage2( whefs_fs * restrict fs )
     fs->offsets[WHEFS_OFF_EOF] = fsize;
 
 #define CHECK if( whefs_rc.OK != rc ) { whefs_fs_finalize(fs); WHEFS_DBG_WARN("Decode of vfs options failed!"); return rc; }
-    whefs_fs_options * opt = &fs->options;
+    opt = &fs->options;
     *opt = whefs_fs_options_nil;
     /* Read FS options... */
-    // FIXME: factor this out into whefs_options_read():
+    /* FIXME: factor this out into whefs_options_read(): */
     fs->dev->api->seek( fs->dev, fs->offsets[WHEFS_OFF_CLIENT_MAGIC], SEEK_SET );
-    rc = whio_dev_uint16_decode( fs->dev, &opt->magic.length );
+    rc = whio_dev_decode_uint16( fs->dev, &opt->magic.length );
     CHECK;
-    ///fs->offsets[WHEFS_OFF_OPTIONS] = 
     fs->dev->api->seek( fs->dev, opt->magic.length, SEEK_CUR );
     /* FIXME: store the opt->magic.data somewhere! Ownership requires some changes in other code. */
-    // FIXME: add whio_dev_size_t_en/decode()
-    rc = whio_dev_uint32_decode( fs->dev, &opt->block_size );
+    rc = whio_dev_decode_size_t( fs->dev, &opt->block_size );
     CHECK;
     rc = whefs_dev_id_decode( fs->dev, &opt->block_count );
     CHECK;
     rc = whefs_dev_id_decode( fs->dev, &opt->inode_count );
     CHECK;
-    rc = whio_dev_uint16_decode( fs->dev, &opt->filename_length );
+    rc = whio_dev_decode_uint16( fs->dev, &opt->filename_length );
     CHECK;
 #undef CHECK
     whefs_fs_init_sizes( fs );
@@ -7658,7 +8338,15 @@ static int whefs_openfs_stage2( whefs_fs * restrict fs )
 	whefs_fs_finalize( fs );
 	return rc;
     }
+    rc = whefs_fs_hints_read( fs );
+    if( whefs_rc.OK != rc )
+    {    
+	WHEFS_DBG_ERR("Reading of hints failed rc %d!", rc);
+	whefs_fs_finalize( fs );
+	return rc;
+    }
 #if WHEFS_LOAD_CACHES_ON_OPEN
+    //WHEFS_DBG_CACHE("Pre-loading inode cache.");
     rc = whefs_fs_caches_load( fs );
     if( whefs_rc.OK != rc )
     {
@@ -7670,19 +8358,22 @@ static int whefs_openfs_stage2( whefs_fs * restrict fs )
     return whefs_rc.OK;
 }
 
-int whefs_openfs_dev( whio_dev * restrict dev, whefs_fs ** tgt, bool takeDev )
+int whefs_openfs_dev( whio_dev * dev, whefs_fs ** tgt, bool takeDev )
 {
+    whefs_fs * fs;
+    int rc = 0;
     if( ! dev || !tgt ) return whefs_rc.ArgError;
-    whefs_fs * fs = whefs_fs_alloc();
+    fs = whefs_fs_alloc();
     if( ! fs ) return whefs_rc.AllocError;
-    *fs = whefs_fs_init;
-    // FIXME: do a 1-byte write test to see if the device is writeable,
-    // or add a parameter to the function defining the write mode.
+    *fs = whefs_fs_empty;
+    /* FIXME: do a 1-byte write test to see if the device is writeable,
+       or add a parameter to the function defining the write mode.
+    */
     fs->flags |= WHEFS_FLAG_ReadWrite; /* we're guessing!!! */
     fs->dev = dev;
     fs->ownsDev = takeDev;
     whefs_fs_check_fileno( fs );
-    int rc = whefs_openfs_stage2( fs );
+    rc = whefs_openfs_stage2( fs );
     if( whefs_rc.OK == rc )
     {
         whefs_fs_mmap_connect( fs );
@@ -7693,12 +8384,14 @@ int whefs_openfs_dev( whio_dev * restrict dev, whefs_fs ** tgt, bool takeDev )
 
 int whefs_openfs( char const * filename, whefs_fs ** tgt, bool writeMode )
 {
-    // FIXME: refactor this to take a whio_dev and split it into
-    // two or three parts.
+    /* FIXME: refactor this to take a whio_dev and split it into
+       two or three parts.*/
+    whefs_fs * fs;
+    int rc = 0;
     if( ! filename || !tgt ) return whefs_rc.ArgError;
-    whefs_fs * fs = whefs_fs_alloc();
+    fs = whefs_fs_alloc();
     if( ! fs ) return whefs_rc.AllocError;
-    *fs = whefs_fs_init;
+    *fs = whefs_fs_empty;
     fs->flags |= (writeMode ? WHEFS_FLAG_ReadWrite : WHEFS_FLAG_Read);
     if( ! whefs_open_FILE( filename, fs, writeMode, false ) )
     {
@@ -7707,7 +8400,7 @@ int whefs_openfs( char const * filename, whefs_fs ** tgt, bool writeMode )
 	whefs_fs_free(fs);
 	return whefs_rc.IOError;
     }
-    int rc = whefs_openfs_stage2( fs );
+    rc = whefs_openfs_stage2( fs );
     if( whefs_rc.OK == rc )
     {
         whefs_fs_mmap_connect( fs );
@@ -7716,7 +8409,7 @@ int whefs_openfs( char const * filename, whefs_fs ** tgt, bool writeMode )
     return rc;
 }
 
-void whefs_fs_dump_info( whefs_fs const * restrict fs, FILE * out )
+void whefs_fs_dump_info( whefs_fs const * fs, FILE * out )
 {
     struct SizeOfs
     {
@@ -7743,10 +8436,11 @@ void whefs_fs_dump_info( whefs_fs const * restrict fs, FILE * out )
     {0,0}
     };
 #undef X
-
+    struct SizeOfs * so;
+    whefs_fs_options const * o;
     fprintf( out,"%s:%d:%s():\n", __FILE__, __LINE__, __func__);
 
-    struct SizeOfs * so = sizeofs;
+    so = sizeofs;
     fprintf( out, "sizeof() of various internal types:\n");
     for( ;so && so->label; ++so )
     {
@@ -7756,7 +8450,7 @@ void whefs_fs_dump_info( whefs_fs const * restrict fs, FILE * out )
 
 
     fprintf( out,"Various EFS stats:\n" );
-    whefs_fs_options const * o = &fs->options;
+    o = &fs->options;
     fprintf( out,
 	     "\ton-disk sizeof whefs_inode = %u (+%"PRIu64" bytes for the name)\n"
 	     "\tbits used for node/block IDs: %d\n"
@@ -7783,6 +8477,7 @@ void whefs_fs_dump_info( whefs_fs const * restrict fs, FILE * out )
     OFF(SIZE);
     OFF(CLIENT_MAGIC);
     OFF(OPTIONS);
+    OFF(HINTS);
     OFF(INODE_NAMES);
     OFF(INODES_NO_STR);
     OFF(BLOCKS);
@@ -7792,10 +8487,16 @@ void whefs_fs_dump_info( whefs_fs const * restrict fs, FILE * out )
 
 }
 
-int whefs_fs_append_blocks( whefs_fs * restrict fs, whefs_id_type count )
+int whefs_fs_append_blocks( whefs_fs * fs, whefs_id_type count )
 {
+    whefs_block bl = whefs_block_empty;
+    whefs_id_type id;
+    whefs_fs_options * opt;
+    whefs_id_type oldCount;
+    size_t oldEOF, newEOF;
+    int rc;
     if( !count || !fs || !fs->dev ) return whefs_rc.ArgError;
-    if( !whefs_fs_is_rw(fs) )
+    else if( !whefs_fs_is_rw(fs) )
     {
         return whefs_rc.AccessError;
     }
@@ -7807,49 +8508,55 @@ int whefs_fs_append_blocks( whefs_fs * restrict fs, whefs_id_type count )
        afterwards.
     */
     whefs_fs_mmap_disconnect(fs);
-    whefs_fs_options * opt = &fs->options;
-    const whefs_id_type oldCount = opt->block_count;
-    const size_t oldEOF = fs->offsets[WHEFS_OFF_EOF];
-    const size_t newEOF = oldEOF + (whefs_fs_sizeof_block(opt) * count);
-    int rc = fs->dev->api->truncate( fs->dev, newEOF );
-    //WHEFS_DBG("Adding %"WHEFS_ID_TYPE_PFMT" blocks to fs (current count=%"WHEFS_ID_TYPE_PFMT").",count,oldCount);
+    opt = &fs->options;
+    oldCount = opt->block_count;
+    oldEOF = fs->offsets[WHEFS_OFF_EOF];
+    newEOF = oldEOF + (whefs_fs_sizeof_block(opt) * count);
+    rc = fs->dev->api->truncate( fs->dev, newEOF );
+    /*WHEFS_DBG("Adding %"WHEFS_ID_TYPE_PFMT" blocks to fs (current count=%"WHEFS_ID_TYPE_PFMT").",count,oldCount); */
     if( whio_rc.OK != rc )
     {
         WHEFS_DBG_ERR("Could not truncate fs to %u bytes to add %"WHEFS_ID_TYPE_PFMT" blocks!",newEOF, count);
-        fs->dev->api->truncate( fs->dev, oldEOF ); // just to be sure
+        fs->dev->api->truncate( fs->dev, oldEOF ); /* just to be sure */
         whefs_fs_mmap_connect(fs);
-        return rc;
+        return fs->err = rc;
     }
     fs->offsets[WHEFS_OFF_EOF] = newEOF;
     fs->filesize = newEOF;
     opt->block_count += count;
-    // FIXME: error handling!
-    // If anything goes wrong here, the EFS *will* be corrupted.
+    /* FIXME: error handling! */
+    /* If anything goes wrong here, the EFS *will* be corrupted. */
     whefs_fs_write_filesize( fs );
     whefs_mkfs_write_options( fs );
-    whefs_fs_init_bitset_blocks( fs ); // will re-alloc the bitset cache.
-    whefs_block bl = whefs_block_init;
-    whefs_id_type id;
+    whefs_fs_init_bitset_blocks( fs ); /* will re-alloc the bitset cache. */
     for( id = (oldCount+1); id <= opt->block_count; ++id )
     {
-        //WHEFS_DBG("Adding block #%"WHEFS_ID_TYPE_PFMT,id);
+        /*WHEFS_DBG("Adding block #%"WHEFS_ID_TYPE_PFMT,id); */
         bl.id = id;
         rc = whefs_block_wipe( fs, &bl, true, true, false );
         if( whefs_rc.OK != rc ) break;
     }
     whefs_fs_flush( fs );
-    whefs_fs_mmap_connect( fs ); // We need to re-mmap() to account for the new size!
+    whefs_fs_mmap_connect( fs ); /* We need to re-mmap() to account for the new size! */
     return rc;
+}
+
+int whefs_fs_setopt_autoclose_files( whefs_fs * fs, bool on )
+{
+    if( ! fs ) return whefs_rc.ArgError;
+    if( ! on ) fs->flags |= WHEFS_FLAG_FS_NoAutoCloseFiles;
+    else fs->flags &= ~WHEFS_FLAG_FS_NoAutoCloseFiles;
+    return whefs_rc.OK;
 }
 
 int whefs_fs_setopt_hash_cache( whefs_fs * fs, bool on, bool loadNow )
 {
-    if( ! fs ) return whefs_rc.ArgError;
     int rc = whefs_rc.OK;
+    if( ! fs ) return whefs_rc.ArgError;
     if( on )
     {
-        // Reminder: we don't check if it was already on so we
-        // can more easily honor loadNow.
+        /* Reminder: we don't check if it was already on so we
+           can more easily honor loadNow.*/
         fs->flags |= WHEFS_FLAG_FS_EnableHashCache;
         if( loadNow )
         {
@@ -7878,9 +8585,9 @@ int whefs_fs_setopt_hash_cache( whefs_fs * fs, bool on, bool loadNow )
 /* begin file src/whefs_block.c */
 #line 8 "src/whefs_block.c"
 #include <string.h> /* memset() */
-// FIXME: there are lots of size_t's which should be replaced by whio_size_t
-const whefs_block whefs_block_init = whefs_block_init_m;
-const whefs_block_list whefs_block_list_init = whefs_block_list_init_m;
+/* FIXME: there are lots of size_t's which should be replaced by whio_size_t */
+const whefs_block whefs_block_empty = whefs_block_empty_m;
+const whefs_block_list whefs_block_list_empty = whefs_block_list_empty_m;
 
 #if ! WHEFS_MACROIZE_SMALL_CHECKS
 bool whefs_block_id_is_valid( whefs_fs const * fs, whefs_id_type blid )
@@ -7892,7 +8599,7 @@ bool whefs_block_is_valid( whefs_fs const * fs, whefs_block const * bl )
 {
     return whefs_block_is_valid_m(fs,bl);
 }
-#endif //  WHEFS_MACROIZE_SMALL_CHECKS
+#endif /*  WHEFS_MACROIZE_SMALL_CHECKS */
 
 
 whio_size_t whefs_block_id_pos( whefs_fs const * fs, whefs_id_type id )
@@ -7911,7 +8618,7 @@ whio_size_t whefs_block_id_pos( whefs_fs const * fs, whefs_id_type id )
 void whefs_block_update_used( whefs_fs * fs, whefs_block const * bl )
 {
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
-    //if( ! whefs_block_id_is_valid( fs, bl ? bl->id : 0) ) return; // this is relatively costly here
+    /*if( ! whefs_block_id_is_valid( fs, bl ? bl->id : 0) ) return; // this is relatively costly here */
     if( ! fs->bits.b_loaded ) return;
     if( bl->flags & WHEFS_FLAG_Used )
     {
@@ -7953,9 +8660,10 @@ whio_size_t whefs_block_data_pos( whefs_fs const * fs, whefs_block const * bl )
 
 int whefs_block_id_seek( whefs_fs const * fs, whefs_id_type id )
 {
+    whio_size_t sk;
     whio_size_t p = whefs_block_id_pos( fs, id );
     if( ! p ) return whefs_rc.ArgError;
-    whio_size_t sk = fs->dev->api->seek( fs->dev, p, SEEK_SET );
+    sk = fs->dev->api->seek( fs->dev, p, SEEK_SET );
     return (p == sk) ? whefs_rc.OK : whefs_rc.IOError;
 }
 
@@ -7966,9 +8674,10 @@ int whefs_block_seek( whefs_fs const * fs, whefs_block const * bl )
 
 int whefs_block_id_seek_data( whefs_fs const * fs, whefs_id_type id, whio_size_t * tgt )
 {
+    whio_size_t sk;
     whio_size_t p = whefs_block_id_data_pos( fs, id );
     if( ! p ) return whefs_rc.ArgError;
-    whio_size_t sk = fs->dev->api->seek( fs->dev, p, SEEK_SET );
+    sk = fs->dev->api->seek( fs->dev, p, SEEK_SET );
     return (p == sk) ? ((tgt?(*tgt=sk):0),whefs_rc.OK) : whefs_rc.IOError;
 }
 
@@ -7981,14 +8690,13 @@ int whefs_block_seek_data( whefs_fs const * fs, whefs_block const * bl, whio_siz
 /**
    On-disk blocks are prefixed with this character.
 */
-static const unsigned char whefs_block_tag_char = 0xdf /* sharp S, becase it looks like a B */;
+static const unsigned char whefs_block_tag_char = 'B';
 
 int whefs_block_flush( whefs_fs * fs, whefs_block const * bl )
 {
-    //if( ! whefs_block_id_is_valid(fs,bl ? bl->id : 0) ) return whefs_rc.ArgError;
-    if( ! whefs_fs_is_rw(fs) ) return whefs_rc.AccessError;
     int rc = whefs_rc.OK;
-
+    /*if( ! whefs_block_id_is_valid(fs,bl ? bl->id : 0) ) return whefs_rc.ArgError; */
+    if( ! whefs_fs_is_rw(fs) ) return whefs_rc.AccessError;
     rc = whefs_block_id_seek( fs, bl->id );
     if( whefs_rc.OK != rc )
     {
@@ -7996,35 +8704,38 @@ int whefs_block_flush( whefs_fs * fs, whefs_block const * bl )
         return rc;
     }
 
-#if 0
-    fs->dev->api->write( fs->dev, &whefs_block_tag_char, 1 );
-    whio_size_t check = 0;
-    //check = whio_dev_uint32_encode( fs->dev, EXP );
-    //if( whio_dev_sizeof_uint32 != check ) return whefs_rc.IOError
-    // TODO: encode this data to a buffer and do a single write():
-    check = whefs_dev_id_encode( fs->dev, bl->id );
-    if( whefs_sizeof_encoded_id_type != check ) return whefs_rc.IOError;
-    check = whio_dev_uint32_encode( fs->dev, bl->flags );
-    if( whio_dev_sizeof_uint32 != check ) return whefs_rc.IOError;
-    check = whefs_dev_id_encode( fs->dev, bl->next_block );
-    if( whefs_sizeof_encoded_id_type != check ) return whefs_rc.IOError;
-#else
-    unsigned char buf[whefs_sizeof_encoded_block];
-    // TODO: use whefs_encode_xxx() here
-    buf[0] = whefs_block_tag_char;
-    whio_size_t off = 1;
-    off += whefs_id_encode( buf + off, bl->id );
-    off += whio_uint8_encode( buf + off, bl->flags );
-    whefs_id_encode( buf + off, bl->next_block );
-    const whio_size_t wsz = fs->dev->api->write( fs->dev, buf, whefs_sizeof_encoded_block );
-    if( whefs_sizeof_encoded_block != wsz )
     {
-        WHEFS_DBG_ERR("FAILED flushing block info to disk for block #%"WHEFS_ID_TYPE_PFMT". wsz=%"WHIO_SIZE_T_PFMT, bl->id, wsz );
-        return whefs_rc.IOError;
-    }
+#if 0
+        whio_size_t check = 0;
+        fs->dev->api->write( fs->dev, &whefs_block_tag_char, 1 );
+        /*check = whio_dev_uint32_encode( fs->dev, EXP ); */
+        /*if( whio_dev_sizeof_uint32 != check ) return whefs_rc.IOError */
+        /* TODO: encode this data to a buffer and do a single write(): */
+        check = whefs_dev_id_encode( fs->dev, bl->id );
+        if( whefs_sizeof_encoded_id_type != check ) return whefs_rc.IOError;
+        check = whio_dev_uint32_encode( fs->dev, bl->flags );
+        if( whio_dev_sizeof_uint32 != check ) return whefs_rc.IOError;
+        check = whefs_dev_id_encode( fs->dev, bl->next_block );
+        if( whefs_sizeof_encoded_id_type != check ) return whefs_rc.IOError;
+#else
+        unsigned char buf[whefs_sizeof_encoded_block] = {0};
+        whio_size_t off = 1;
+        whio_size_t wsz;
+        /* TODO: use whefs_encode_xxx() here */
+        buf[0] = whefs_block_tag_char;
+        off += whefs_id_encode( buf + off, bl->id );
+        off += whio_encode_uint8( buf + off, bl->flags );
+        whefs_id_encode( buf + off, bl->next_block );
+        wsz = fs->dev->api->write( fs->dev, buf, whefs_sizeof_encoded_block );
+        if( whefs_sizeof_encoded_block != wsz )
+        {
+            WHEFS_DBG_ERR("FAILED flushing block info to disk for block #%"WHEFS_ID_TYPE_PFMT". wsz=%"WHIO_SIZE_T_PFMT, bl->id, wsz );
+            return whefs_rc.IOError;
+        }
 #endif
+    }
     whefs_block_update_used( fs, bl );
-    //WHEFS_DBG("block_write for block #%u returning %d", bl->id, rc );
+    /*WHEFS_DBG("block_write for block #%u returning %d", bl->id, rc ); */
     return rc;
 }
 
@@ -8033,13 +8744,12 @@ int whefs_block_flush( whefs_fs * fs, whefs_block const * bl )
    It is decoded and dest is populated with the results. If any code other
    than whefs_rc.OK is returned then dest is left in an undefined state.
 */
-//static
+/*static */
 int whefs_block_decode( whefs_block * dest, unsigned char const * src )
 {
-
-    if( ! dest || !src ) return whefs_rc.ArgError;
     unsigned const char * x = src;
     int rc = 0;
+    if( ! dest || !src ) return whefs_rc.ArgError;
     if( whefs_block_tag_char != *(x++) )
     {
 	return whefs_rc.ConsistencyError;
@@ -8048,7 +8758,7 @@ int whefs_block_decode( whefs_block * dest, unsigned char const * src )
     rc = whefs_id_decode( x, &dest->id );
     RC;
     x += whefs_sizeof_encoded_id_type;
-    rc = whio_uint8_decode( x, &dest->flags );
+    rc = whio_decode_uint8( x, &dest->flags );
     RC;
     x += whio_sizeof_encoded_uint8;
     rc = whefs_id_decode( x, &dest->next_block );
@@ -8059,77 +8769,85 @@ int whefs_block_decode( whefs_block * dest, unsigned char const * src )
 
 int whefs_block_read( whefs_fs * fs, whefs_id_type bid, whefs_block * bl )
 {
+    whio_size_t to;
     if( ! whefs_block_id_is_valid(fs,bid)  )
     {
 	if( bl )
-	{ // WTF?
-	    *bl = whefs_block_init;
+	{ /* WTF? */
+	    *bl = whefs_block_empty;
 	    return whefs_rc.OK;
 	}
 	return whefs_rc.ArgError;
     }
-    whio_size_t to = whefs_block_id_pos( fs, bid );
+    to = whefs_block_id_pos( fs, bid );
     if( (whefs_rc.SizeTError == fs->dev->api->seek( fs->dev, to, SEEK_SET )) )
     {
         return whefs_rc.IOError;
     }
+    else {
 #if 0
-    // FIXME: error handling!
-    // FIXME: read the whole block in one go and decode it from the buffer.
-    unsigned char check = 0;
-    fs->dev->api->read( fs->dev, &check, 1 );
-    if( whefs_block_tag_char != check )
-    {
-	WHEFS_DBG_ERR("Cursor is not positioned at a data block!");
-	return whefs_rc.InternalError;
-    }
-    whefs_dev_id_decode( fs->dev, &bl->id );
-    whio_dev_uint32_decode( fs->dev, &bl->flags );
-    whefs_dev_id_decode( fs->dev, &bl->next_block );
+        /* FIXME: error handling! */
+        /* FIXME: read the whole block in one go and decode it from the buffer. */
+        unsigned char check = 0;
+        fs->dev->api->read( fs->dev, &check, 1 );
+        if( whefs_block_tag_char != check )
+        {
+            WHEFS_DBG_ERR("Cursor is not positioned at a data block!");
+            return whefs_rc.InternalError;
+        }
+        whefs_dev_id_decode( fs->dev, &bl->id );
+        whio_dev_uint32_decode( fs->dev, &bl->flags );
+        whefs_dev_id_decode( fs->dev, &bl->next_block );
 #else
-    // Read block metadata in one go and decode it from memory.
-    unsigned char buf[whefs_sizeof_encoded_block];
-    memset( buf, 0, whefs_sizeof_encoded_block );
-    whio_size_t iorc = fs->dev->api->read( fs->dev, buf, whefs_sizeof_encoded_block );
-    if( iorc != whefs_sizeof_encoded_block )
-    {
-	WHEFS_DBG_ERR("read() error while reading block #%"WHEFS_ID_TYPE_PFMT". "
-                      "Expected %"WHIO_SIZE_T_PFMT" bytes but got %"WHIO_SIZE_T_PFMT"!",
-		      bid, whefs_sizeof_encoded_block, iorc );
-        return whefs_rc.IOError;
-    }
-    int rc = whefs_block_decode( bl, buf );
-    if( whefs_rc.OK != rc )
-    {
-	WHEFS_DBG_ERR("Error #%d while decoding block #%"WHEFS_ID_TYPE_PFMT"!",
-		      rc, bid );
-	return rc;
-    }
+        /* Read block metadata in one go and decode it from memory. */
+        int rc;
+        unsigned char buf[whefs_sizeof_encoded_block];
+        whio_size_t iorc;
+        memset( buf, 0, whefs_sizeof_encoded_block );
+        iorc = fs->dev->api->read( fs->dev, buf, whefs_sizeof_encoded_block );
+        if( iorc != whefs_sizeof_encoded_block )
+        {
+            WHEFS_DBG_ERR("read() error while reading block #%"WHEFS_ID_TYPE_PFMT". "
+                          "Expected %"WHIO_SIZE_T_PFMT" bytes but got %"WHIO_SIZE_T_PFMT"!",
+                          bid, whefs_sizeof_encoded_block, iorc );
+            return whefs_rc.IOError;
+        }
+        rc = whefs_block_decode( bl, buf );
+        if( whefs_rc.OK != rc )
+        {
+            WHEFS_DBG_ERR("Error #%d while decoding block #%"WHEFS_ID_TYPE_PFMT"!",
+                          rc, bid );
+            return rc;
+        }
 #endif
-    whefs_block_update_used( fs, bl );
-    //WHEFS_DBG("Read block #%"WHEFS_ID_TYPE_PFMT". flags=0x%x",bl->id,bl->flags);
-    return whefs_rc.OK;
+        whefs_block_update_used( fs, bl );
+        /*WHEFS_DBG("Read block #%"WHEFS_ID_TYPE_PFMT". flags=0x%x",bl->id,bl->flags); */
+        return whefs_rc.OK;
+    }
 }
 
 int whefs_block_wipe_data( whefs_fs * fs, whefs_block const * bl, whio_size_t startPos )
 {
-    whio_size_t fpos = 0;
     const size_t bs = whefs_fs_options_get(fs)->block_size;
+    whio_size_t seekPos;
+    whio_size_t count;
     if( startPos >= bs ) return whefs_rc.RangeError;
-    int rc = whefs_block_id_seek_data( fs, bl->id, &fpos );
-    if( whefs_rc.OK != rc ) return rc;
-    if( (fpos + bs) < fpos /* overflow! */ ) return whefs_rc.RangeError;
-    const size_t count = bs - startPos;
+    seekPos = startPos + whefs_block_data_pos(fs, bl);
+    if( whefs_fs_seek( fs, (off_t)seekPos, SEEK_SET ) != seekPos )
+    {
+        return whio_rc.IOError;
+    }
+    count = bs - startPos;
     {
 	enum { bufSize = 1024 * 4 };
 	static unsigned char buf[bufSize] = {'*',0};
+	size_t wrc = 0;
+	size_t total = 0;
 	if( '*' == buf[0] )
 	{
 	    memset( buf+1, 0, bufSize-1 );
 	    buf[0] = 0;
 	}
-	size_t wrc = 0;
-	size_t total = 0;
 	while( total < count )
 	{
 	    const size_t x = count - total;
@@ -8139,7 +8857,7 @@ int whefs_block_wipe_data( whefs_fs * fs, whefs_block const * bl, whio_size_t st
             if( wsz != wrc ) return whefs_rc.IOError;
 	    total += wrc;
 	}
-	//WHEFS_DBG("Wrote %u bytes to zero block #%u. Range=[%u .. %u)", total, bl->id, fpos, fpos+count );
+	/*WHEFS_DBG("Wrote %u bytes to zero block #%u. Range=[%u .. %u)", total, bl->id, fpos, fpos+count ); */
     }
     return whefs_rc.OK;
 }
@@ -8149,11 +8867,12 @@ int whefs_block_wipe( whefs_fs * fs, whefs_block * bl,
 		      bool wipeMeta,
 		      bool deep )
 {
-    if( ! whefs_block_id_is_valid( fs, bl ? bl->id : 0 ) ) return whefs_rc.ArgError;
     size_t fpos = 0;
-    const size_t bs = whefs_fs_options_get(fs)->block_size;
-    if( (fpos + bs) < fpos /* overflow! */ ) return whefs_rc.RangeError;
+    whio_size_t bs;
     int rc = 0;
+    if( ! whefs_block_id_is_valid( fs, bl ? bl->id : 0 ) ) return whefs_rc.ArgError;
+    bs = whefs_fs_options_get(fs)->block_size;
+    if( (fpos + bs) < fpos /* overflow! */ ) return whefs_rc.RangeError;
     if( deep && bl->next_block )
     {
 	whefs_block next = *bl;
@@ -8177,13 +8896,13 @@ int whefs_block_wipe( whefs_fs * fs, whefs_block * bl,
     }
     if( wipeMeta )
     {
+	const whefs_id_type oid = bl->id;
 	if( ! deep && bl->next_block )
 	{
 	    WHEFS_FIXME("Warning: we're cleaning up the metadata without cleaning up children! We're losing blocks!");
 	}
-	const whefs_id_type oid = bl->id;
-	//WHEFS_DBG("Wiping block #%"WHEFS_ID_TYPE_PFMT". flags=0x%x",bl->id,bl->flags);
-	*bl = whefs_block_init;
+	/*WHEFS_DBG("Wiping block #%"WHEFS_ID_TYPE_PFMT". flags=0x%x",bl->id,bl->flags); */
+	*bl = whefs_block_empty;
 	bl->id = oid;
 	rc = whefs_block_flush( fs, bl );
 	if( whefs_rc.OK != rc )
@@ -8191,7 +8910,7 @@ int whefs_block_wipe( whefs_fs * fs, whefs_block * bl,
 	    WHEFS_DBG_ERR("Wiping block #%"WHEFS_ID_TYPE_PFMT" failed: flush failed with error code #%d!\n", bl->id, rc);
 	    return rc;
 	}
-	//WHEFS_DBG("Wiped block #%"WHEFS_ID_TYPE_PFMT". flags=0x%x",bl->id,bl->flags);
+	/*WHEFS_DBG("Wiped block #%"WHEFS_ID_TYPE_PFMT". flags=0x%x",bl->id,bl->flags); */
 	if( oid < fs->hints.unused_block_start )
 	{
 	    fs->hints.unused_block_start = oid;
@@ -8211,39 +8930,42 @@ int whefs_block_wipe( whefs_fs * fs, whefs_block * bl,
 
 int whefs_block_read_next( whefs_fs * fs, whefs_block const * bl, whefs_block * nextBlock )
 {
+    size_t nb;
     if( !nextBlock || !whefs_block_id_is_valid(fs,bl?bl->id:0) ) return whefs_rc.ArgError;
-    size_t nb = bl->next_block;
+    nb = bl->next_block;
     /** don't reference bl after this, for the case that (bl == nextBlock) */
     if( ! nb ) return whefs_rc.RangeError;
-    *nextBlock = whefs_block_init;
+    *nextBlock = whefs_block_empty;
     return whefs_block_read( fs, nb, nextBlock );
 }
 
 
-int whefs_block_next_free( whefs_fs * restrict fs, whefs_block * restrict tgt, bool markUsed )
+int whefs_block_next_free( whefs_fs * fs, whefs_block * tgt, bool markUsed )
 {
+    whefs_id_type i;
+    whefs_block bl = whefs_block_empty;
+    int rc;
     if( ! fs || !tgt ) return whefs_rc.ArgError;
-    whefs_id_type i = fs->hints.unused_block_start;
+    i = fs->hints.unused_block_start;
     if( ! i )
     {
 	i = fs->hints.unused_block_start = 1;
     }
-    whefs_block bl = whefs_block_init;
     for( ; i <= fs->options.block_count; ++i )
     {
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
-        // TODO(?): i think we could skip 8 entries at a time as long as (0xFF & fs->bits.b.bytes[i*8])
+        /* TODO(?): i think we could skip 8 entries at a time as long as (0xFF & fs->bits.b.bytes[i*8]) */
 	if( fs->bits.b_loaded && WHEFS_BCACHE_IS_USED(fs,i) )
 	{
-	    //WHEFS_DBG("Got cached block USED entry for block #%u", i );
+	    /*WHEFS_DBG("Got cached block USED entry for block #%u", i ); */
 	    continue;
 	}
-	//WHEFS_DBG("Cache says block #%i is unused. markUsed=%d", i, markUsed );
+	/*WHEFS_DBG("Cache says block #%i is unused. markUsed=%d", i, markUsed ); */
 #endif
-        // FIXME: try an flock here and skip to the next if we can't get a lock.
-        // Use a write lock if markUsed is true???
-	int rc = whefs_block_read( fs, i, &bl );
-	//WHEFS_DBG("Checking block #%u for freeness. Read rc=%d",i,rc);
+        /* FIXME: try an flock here and skip to the next if we can't get a lock. */
+        /* Use a write lock if markUsed is true??? */
+	rc = whefs_block_read( fs, i, &bl );
+	/*WHEFS_DBG("Checking block #%u for freeness. Read rc=%d",i,rc); */
 	if( whefs_rc.OK != rc )
 	{
 	    return rc;
@@ -8264,42 +8986,16 @@ int whefs_block_next_free( whefs_fs * restrict fs, whefs_block * restrict tgt, b
 	    bl.flags = WHEFS_FLAG_Used;
 	    whefs_block_flush( fs, &bl );
 	    fs->hints.unused_block_start = bl.id + 1;
-	    // FIXME: error handling!
+	    /* FIXME: error handling! */
 	}
 	*tgt = bl;
-	//WHEFS_DBG( "Returning next free block: #%u",tgt->id );
+	/*WHEFS_DBG( "Returning next free block: #%u",tgt->id ); */
 	return whefs_rc.OK;
     }
     WHEFS_DBG_ERR("VFS appears to be full :(");
     return whefs_rc.FSFull;
 }
 
-
-#if 0 // unused code
-int whefs_block_append( whefs_fs * fs, whefs_block const * bl, whefs_block * tgt )
-{
-    if( ! fs || !tgt ) return whefs_rc.ArgError;
-    if( bl && bl->next_block ) return whefs_rc.ArgError;
-    int rc = 0;
-    const size_t oid = bl ? bl->id : 0;
-    if( ! oid )
-    { // WTF did i do this for?
-	return whefs_block_next_free( fs, tgt, true );
-    }
-    whefs_block tail = *bl;// = whefs_block_init;
-    while( tail.next_block )
-    {
-	rc = whefs_block_read_next( fs, &tail, &tail );
-	if( whefs_rc.OK != rc ) return rc;
-    }
-    rc = whefs_block_next_free( fs, tgt, true );
-    if( whefs_rc.OK != rc ) return rc;
-    tail.next_block = tgt->id;
-    whefs_block_flush( fs, &tail );
-    whefs_block_flush( fs, tgt );
-    return whefs_rc.OK;
-}
-#endif
 /* end file src/whefs_block.c */
 /* begin file src/whefs_inode.c */
 #line 8 "src/whefs_inode.c"
@@ -8313,13 +9009,12 @@ int whefs_block_append( whefs_fs * fs, whefs_block const * bl, whefs_block * tgt
 #include <string.h>
 #include <stdlib.h> /* realloc() and friends. */
 
-
 #include <time.h> /* gettimeofday() */
 #include <sys/time.h>
 
-const whefs_inode whefs_inode_init = whefs_inode_init_m;
+const whefs_inode whefs_inode_empty = whefs_inode_empty_m;
 
-const whefs_inode_list whefs_inode_list_init = whefs_inode_list_init_m;
+const whefs_inode_list whefs_inode_list_empty = whefs_inode_list_empty_m;
 
 
 /**
@@ -8340,7 +9035,7 @@ static struct
     whefs_inode_list objs[whefs_inode_list_alloc_count];
     char used[whefs_inode_list_alloc_count];
     size_t next;
-} whefs_inode_list_alloc_slots = { {whefs_inode_list_init_m}, {0}, 0 };
+} whefs_inode_list_alloc_slots = { {whefs_inode_list_empty_m}, {0}, 0 };
 #endif
 
 static whefs_inode_list * whefs_inode_list_alloc()
@@ -8358,13 +9053,13 @@ static whefs_inode_list * whefs_inode_list_alloc()
     }
 #endif /* WHEFS_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whefs_inode_list *) malloc( sizeof(whefs_inode_list) );
-    if( obj ) *obj = whefs_inode_list_init;
+    if( obj ) *obj = whefs_inode_list_empty;
     return obj;
 }
 
 static void whefs_inode_list_free( whefs_inode_list * obj )
 {
-    if( obj ) *obj = whefs_inode_list_init;
+    if( obj ) *obj = whefs_inode_list_empty;
     else return;
 #if WHEFS_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whefs_inode_list_alloc_slots.objs[0]) ||
@@ -8410,86 +9105,88 @@ static void whefs_inode_update_used( whefs_fs * fs, whefs_inode const * ino )
 
 int whefs_inode_name_set( whefs_fs * fs, whefs_id_type nid, char const * name )
 {
-    //if( !n || !n->id ) return whefs_rc.ArgError;
+    /*if( !n || !n->id ) return whefs_rc.ArgError; */
     if( !whefs_inode_id_is_valid(fs,nid) )
     {
         return whefs_rc.ArgError;
     }
-    int rc = 0;
-
-    /**
-       We have to see if we have an existing entry for the given inode ID, so
-       we can replace its hashvalue in the cache. If we don't do this we end
-       up with stale/useless entries in the cache.
-    */
-    whefs_hashid * H = 0;
-    char const * nameCheck = name;
-    enum { bufSize = WHEFS_MAX_FILENAME_LENGTH + 1 };
-    char buf[bufSize] = {0};
-    whefs_string ncheck = whefs_string_init;
-    ncheck.string = buf;
-    ncheck.alloced = bufSize;
-    if(1)
-    {
-        rc = whefs_inode_name_get( fs, nid, &ncheck );
-        assert( (ncheck.string == buf) && "illegal (re)alloc!");
-        if( whefs_rc.OK != rc ) return rc;
-        if( *buf && (0==strcmp(buf,name))) return whefs_rc.OK;
-        if( *buf ) nameCheck = ncheck.string;
-    }
-    WHEFS_DBG_CACHE("inode-name-set check for collision in [old=[%s]][new=[%s]][checkAgainst=[%s]].",ncheck.string,name,nameCheck);
-    whefs_id_type ndx = whefs_inode_hash_cache_search_ndx( fs, nameCheck );
-    if( ndx != whefs_rc.IDTypeEnd )
-    {
-        WHEFS_DBG_CACHE("inode-name-set found an existing entry for [%s].",nameCheck);
-        H = &fs->cache.hashes->list[ndx];
-        if( H->id != nid )
+    else {
+        int rc = 0;
+        /**
+           We have to see if we have an existing entry for the given inode ID, so
+           we can replace its hashvalue in the cache. If we don't do this we end
+           up with stale/useless entries in the cache.
+        */
+        whefs_hashid * H = 0;
+        char const * nameCheck = name;
+        enum { bufSize = WHEFS_MAX_FILENAME_LENGTH + 1 };
+        char buf[bufSize] = {0};
+        whefs_string ncheck = whefs_string_empty;
+        whefs_id_type ndx;
+        ncheck.string = buf;
+        ncheck.alloced = bufSize;
+        if(1)
         {
-            WHEFS_DBG_ERR("Internal error: cache hash collision for name [%s]!",name);
-            return whefs_rc.InternalError;
+            rc = whefs_inode_name_get( fs, nid, &ncheck );
+            assert( (ncheck.string == buf) && "illegal (re)alloc!");
+            if( whefs_rc.OK != rc ) return rc;
+            if( *buf && (0==strcmp(buf,name))) return whefs_rc.OK;
+            if( *buf ) nameCheck = ncheck.string;
         }
-    }
-    /**
-       Maintenance reminders:
-
-       We write to disk before updating any opened inode because
-       writing is much more likely to fail then updating the opened
-       inode is, since the latter operation is either just a string
-       copy and possibly a relatively small malloc for the name
-       strings cache. So we do the ops in order of likely failure, to
-       reduce the possibility of, e.g. on-disk and in-memory inode
-       names not matching.
-    */
-    rc = whefs_fs_name_write( fs, nid, name );
-    if( whefs_rc.OK != rc ) return rc;
+        WHEFS_DBG_CACHE("inode-name-set check for collision in [old=[%s]][new=[%s]][checkAgainst=[%s]].",ncheck.string,name,nameCheck);
+        ndx = whefs_inode_hash_cache_search_ndx( fs, nameCheck );
+        if( ndx != whefs_rc.IDTypeEnd )
+        {
+            WHEFS_DBG_CACHE("inode-name-set found an existing entry for [%s].",nameCheck);
+            H = &fs->cache.hashes->list[ndx];
+            if( H->id != nid )
+            {
+                WHEFS_DBG_ERR("Internal error: cache hash collision for name [%s]!",name);
+                return whefs_rc.InternalError;
+            }
+        }
+        /**
+           Maintenance reminders:
+           
+           We write to disk before updating any opened inode because
+           writing is much more likely to fail than updating the opened
+           inode is, since the latter operation is either just a string
+           copy and possibly a relatively small malloc for the name
+           strings cache. So we do the ops in order of likely failure, to
+           reduce the possibility of, e.g. on-disk and in-memory inode
+           names not matching.
+        */
+        rc = whefs_fs_name_write( fs, nid, name );
+        if( whefs_rc.OK != rc ) return rc;
 #if 1
-    if( H )
-    {
-        H->hash = fs->cache.hashfunc(name);
-        //fs->cache.hashes->isSorted = false;
-        whefs_hashid_list_sort( fs->cache.hashes );
-        WHEFS_DBG_CACHE("Replacing hashcode for file [%s].",name);
-    }
+        if( H )
+        {
+            H->hash = fs->cache.hashfunc(name);
+            /*fs->cache.hashes->isSorted = false; */
+            whefs_hashid_list_sort( fs->cache.hashes );
+            WHEFS_DBG_CACHE("Replacing hashcode for file [%s].",name);
+        }
 #endif
-    return rc;
+        return rc;
+    }
 }
 
 
 #if ! WHEFS_MACROIZE_SMALL_CHECKS
-bool whefs_inode_id_is_valid( whefs_fs const * restrict fs, whefs_id_type nid )
+bool whefs_inode_id_is_valid( whefs_fs const * fs, whefs_id_type nid )
 {
     return whefs_inode_id_is_valid_m(fs,nid);
 }
 #endif
 
 #if ! WHEFS_MACROIZE_SMALL_CHECKS
-bool whefs_inode_is_valid( whefs_fs const * restrict fs, whefs_inode const * n )
+bool whefs_inode_is_valid( whefs_fs const * fs, whefs_inode const * n )
 {
     return n ? whefs_inode_id_is_valid( fs, n->id ) : false;
 }
 #endif
 
-whio_size_t whefs_inode_id_pos( whefs_fs const * restrict fs, whefs_id_type nid )
+whio_size_t whefs_inode_id_pos( whefs_fs const * fs, whefs_id_type nid )
 {
     if( ! whefs_inode_id_is_valid( fs, nid ) )
     {
@@ -8506,8 +9203,10 @@ int whefs_inode_id_seek( whefs_fs * fs, whefs_id_type id )
 {
     whio_size_t p = whefs_inode_id_pos( fs, id );
     if( ! p ) return whefs_rc.ArgError;
-    whio_size_t sk = whefs_fs_seek( fs, p, SEEK_SET );
-    return (p == sk) ? whefs_rc.OK : whefs_rc.IOError;
+    else {
+        whio_size_t sk = whefs_fs_seek( fs, p, SEEK_SET );
+        return (p == sk) ? whefs_rc.OK : whefs_rc.IOError;
+    }
 }
 
 int whefs_inode_seek( whefs_fs * fs, whefs_inode const * n )
@@ -8519,36 +9218,41 @@ int whefs_inode_seek( whefs_fs * fs, whefs_inode const * n )
    On-disk inodes are prefixed with this character as a
    consistency-checking measure.
 */
-static const unsigned char whefs_inode_tag_char = 0xef /* small i with diaeresis */;
+static const unsigned char whefs_inode_tag_char = 'I';
 
 int whefs_inode_flush( whefs_fs * fs, whefs_inode const * n )
 {
     if( ! whefs_inode_is_valid( fs, n ) ) return whefs_rc.ArgError;
-    if( ! whefs_fs_is_rw(fs) ) return whefs_rc.AccessError;
-    if(0) WHEFS_DBG_FYI("Flushing inode #%"WHEFS_ID_TYPE_PFMT". inode->data_size=%u",
+    else if( ! whefs_fs_is_rw(fs) ) return whefs_rc.AccessError;
+    else {
+        enum { bufSize = whefs_sizeof_encoded_inode };
+        unsigned char buf[bufSize];
+        int rc;
+        whio_size_t wsz;
+        if(0) WHEFS_DBG_FYI("Flushing inode #%"WHEFS_ID_TYPE_PFMT". inode->data_size=%u",
 			n->id, n->data_size );
-    whefs_inode_update_used( fs, n );
-    //WHEFS_DBG("Writing node #%"WHEFS_ID_TYPE_PFMT" at offset %u", n->id, pos );
-    enum { bufSize = whefs_sizeof_encoded_inode };
-    unsigned char buf[bufSize];
-    memset( buf, 0, bufSize );
-    whefs_inode_encode( n, buf );
+        whefs_inode_update_used( fs, n );
+        /*WHEFS_DBG("Writing node #%"WHEFS_ID_TYPE_PFMT" at offset %u", n->id, pos ); */
+        memset( buf, 0, bufSize );
+        whefs_inode_encode( n, buf );
 #if 0
-    return whio_blockdev_write( &fs->fences.i, n->id - 1, buf );
+        return whio_blockdev_write( &fs->fences.i, n->id - 1, buf );
 #else
-    int rc = whefs_inode_id_seek( fs, n->id );
-    if( whefs_rc.OK != rc ) return rc;
-    whio_size_t const wsz = whefs_fs_write( fs, buf, bufSize );
-    return (wsz == bufSize) ? whefs_rc.OK : whefs_rc.IOError;
+        rc = whefs_inode_id_seek( fs, n->id );
+        if( whefs_rc.OK != rc ) return rc;
+        wsz = whefs_fs_write( fs, buf, bufSize );
+        return (wsz == bufSize) ? whefs_rc.OK : whefs_rc.IOError;
 #endif
+    }
 }
 
 int whefs_inode_id_read( whefs_fs * fs, whefs_id_type nid, whefs_inode * tgt )
 {
-    if( !tgt || !whefs_inode_id_is_valid( fs, nid ) ) return whefs_rc.ArgError;
     int rc = whefs_rc.OK;
     enum { bufSize = whefs_sizeof_encoded_inode };
     unsigned char buf[bufSize];
+    whio_size_t rsz;
+    if( !tgt || !whefs_inode_id_is_valid( fs, nid ) ) return whefs_rc.ArgError;
     memset( buf, 0, bufSize );
 #if 0
     rc = whio_blockdev_read( &fs->fences.i, nid - 1, buf );
@@ -8566,7 +9270,7 @@ int whefs_inode_id_read( whefs_fs * fs, whefs_id_type nid, whefs_inode * tgt )
 		      rc, nid );
 	return rc;
     }
-    whio_size_t const rsz = whefs_fs_read( fs, buf, bufSize );
+    rsz = whefs_fs_read( fs, buf, bufSize );
     if( rsz != bufSize )
     {
 	WHEFS_DBG_ERR("Error reading %u bytes for inode #%"WHEFS_ID_TYPE_PFMT". Only got %"WHIO_SIZE_T_PFMT" bytes!",
@@ -8585,16 +9289,12 @@ int whefs_inode_id_read( whefs_fs * fs, whefs_id_type nid, whefs_inode * tgt )
     return rc;
 }
 
-int whefs_inode_read( whefs_fs * fs, whefs_inode * n )
-{
-    return whefs_inode_id_read( fs, n ? n->id : 0, n );
-}
-
 int whefs_inode_read_flags( whefs_fs * fs, whefs_id_type nid, uint32_t * flags )
 {
+    whefs_inode ino = whefs_inode_empty;
+    int rc;
     if( ! whefs_inode_id_is_valid( fs, nid ) || !fs->dev ) return whefs_rc.ArgError;
-    whefs_inode ino = whefs_inode_init;
-    int rc = whefs_inode_id_read( fs, nid, &ino );
+    rc = whefs_inode_id_read( fs, nid, &ino );
     if( whefs_rc.OK == rc )
     {
         if( flags ) *flags = ino.flags;
@@ -8612,56 +9312,60 @@ int whefs_inode_foreach( whefs_fs * fs, whefs_inode_predicate_f where, void * wh
                          whefs_inode_foreach_f func, void * foreachData )
 {
     if( ! fs || !func ) return whefs_rc.ArgError;
-    whefs_id_type i = 2;// skip root inode
-    whefs_inode n = whefs_inode_init;
-    int rc = whefs_rc.OK;
-    for( ; i <= fs->options.inode_count; ++i )
-    {
+    else {
+        whefs_id_type i = 2/* skip root inode */;
+        whefs_inode n = whefs_inode_empty;
+        int rc = whefs_rc.OK;
+        for( ; i <= fs->options.inode_count; ++i )
+        {
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
-	if( fs->bits.i_loaded && !WHEFS_ICACHE_IS_USED(fs,i) )
-	{
-	    continue;
-	}
+            if( fs->bits.i_loaded && !WHEFS_ICACHE_IS_USED(fs,i) )
+            {
+                continue;
+            }
 #endif
-	rc = whefs_inode_id_read( fs, i, &n );
-	if( whefs_rc.OK != rc ) return rc;
-	if( n.id != i )
-	{
-	    assert( 0 && "node id mismatch after whefs_inode_id_read()" );
-	    WHEFS_FIXME("Node id mismatch after successful whefs_inode_id_read(). Expected %"WHEFS_ID_TYPE_PFMT" but got %"WHEFS_ID_TYPE_PFMT".", i, n.id );
-	    return whefs_rc.InternalError;
-	}
-        if( where && ! where( fs, &n, whereData ) ) continue;
-        rc = func( fs, &n, foreachData );
-        if( whefs_rc.OK != rc ) break;
+            rc = whefs_inode_id_read( fs, i, &n );
+            if( whefs_rc.OK != rc ) return rc;
+            if( n.id != i )
+            {
+                assert( 0 && "node id mismatch after whefs_inode_id_read()" );
+                WHEFS_FIXME("Node id mismatch after successful whefs_inode_id_read(). Expected %"WHEFS_ID_TYPE_PFMT" but got %"WHEFS_ID_TYPE_PFMT".", i, n.id );
+                return whefs_rc.InternalError;
+            }
+            if( where && ! where( fs, &n, whereData ) ) continue;
+            rc = func( fs, &n, foreachData );
+            if( whefs_rc.OK != rc ) break;
+        }
+        return rc;
     }
-    return rc;
 }
-int whefs_inode_next_free( whefs_fs * restrict fs, whefs_inode * restrict tgt, bool markUsed )
+int whefs_inode_next_free( whefs_fs * fs, whefs_inode * tgt, bool markUsed )
 {
+    whefs_id_type i;
+    whefs_inode n = whefs_inode_empty;
     if( ! fs || !tgt ) return whefs_rc.ArgError;
-    whefs_id_type i = fs->hints.unused_inode_start;
+    i = fs->hints.unused_inode_start;
     if( i < 2 )
     {
 	i = fs->hints.unused_inode_start = 2;
 	/* we skip the root node, which is reserved at ID 1. */
     }
-    whefs_inode n = whefs_inode_init;
     if(0) WHEFS_DBG("i=%"WHEFS_ID_TYPE_PFMT", fs->hints.unused_inode_start=%"WHEFS_ID_TYPE_PFMT
 		    ", fs->options.inode_count=%"WHEFS_ID_TYPE_PFMT,
 		    i, fs->hints.unused_inode_start, fs->options.inode_count );
     for( ; i <= fs->options.inode_count; ++i )
     {
+        int rc;
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
 	if( fs->bits.i_loaded && WHEFS_ICACHE_IS_USED(fs,i) )
 	{
-	    //WHEFS_DBG("Got cached inode USED entry for inode #%"WHEFS_ID_TYPE_PFMT"", i );
+	    /*WHEFS_DBG("Got cached inode USED entry for inode #%"WHEFS_ID_TYPE_PFMT"", i ); */
 	    continue;
 	}
-	//WHEFS_DBG("Cache says inode #%i is unused.", i );
+	/*WHEFS_DBG("Cache says inode #%i is unused.", i ); */
 #endif
-	int rc = whefs_inode_id_read( fs, i, &n );
-	//WHEFS_DBG("Checking inode #%"WHEFS_ID_TYPE_PFMT" for freeness. Read rc=%d",i,rc);
+	rc = whefs_inode_id_read( fs, i, &n );
+	/*WHEFS_DBG("Checking inode #%"WHEFS_ID_TYPE_PFMT" for freeness. Read rc=%d",i,rc); */
 	if( whefs_rc.OK != rc )
 	{
 	    return rc;
@@ -8683,10 +9387,10 @@ int whefs_inode_next_free( whefs_fs * restrict fs, whefs_inode * restrict tgt, b
 	    whefs_inode_update_mtime( fs, &n );
 	    whefs_inode_flush( fs, &n );
 	    fs->hints.unused_inode_start = n.id + 1;
-	    // FIXME: error checking!
+	    /* FIXME: error checking! */
 	}
 	*tgt = n;
-	//WHEFS_DBG( "Returning next free inode: %"WHEFS_ID_TYPE_PFMT"",tgt->id );
+	/*WHEFS_DBG( "Returning next free inode: %"WHEFS_ID_TYPE_PFMT"",tgt->id ); */
 	return whefs_rc.OK;
     }
     WHEFS_DBG_ERR("VFS appears to be full :(");
@@ -8710,36 +9414,34 @@ int whefs_inode_update_mtime( whefs_fs * fs, whefs_inode * n )
 
 int whefs_inode_search_opened( whefs_fs * fs, whefs_id_type nodeID, whefs_inode ** tgt )
 {
-    // FIXME: need to lock the fs here, or at least lock fs->opened_nodes.
+    /* FIXME: need to lock the fs here, or at least lock fs->opened_nodes. */
     if( ! whefs_inode_id_is_valid(fs, nodeID) || !tgt ) return whefs_rc.ArgError;
-    whefs_inode_list * li = fs->opened_nodes;
-    for( ; li; li = li->next )
-    {
-	if( li->inode.id < nodeID ) continue;
-	else if( li->inode.id > nodeID ) break;
-	else
-	{
-	    //WHEFS_DBG("Found opened node #%"WHEFS_ID_TYPE_PFMT".", nodeID );
-	    *tgt = &li->inode;
-	    return whefs_rc.OK;
-	}
+    else {
+        whefs_inode_list * li = fs->opened_nodes;
+        for( ; li; li = li->next )
+        {
+            if( li->inode.id < nodeID ) continue;
+            else if( li->inode.id > nodeID ) break;
+            else
+            {
+                /*WHEFS_DBG("Found opened node #%"WHEFS_ID_TYPE_PFMT".", nodeID ); */
+                *tgt = &li->inode;
+                return whefs_rc.OK;
+            }
+        }
+        return whefs_rc.RangeError;
     }
-    return whefs_rc.RangeError;
 }
 
 int whefs_inode_open( whefs_fs * fs, whefs_id_type nodeID, whefs_inode ** tgt, void const * writer )
 {
-    /**
-       Design note/reminder: the preference would have been to use an
-       expanding array of whefs_inode for the opened nodes list, but
-       when we realloc() it that could invalidate older pointers to
-       those inodes (been there, done that). Thus we suffer a linked
-       list and the associated mallocs...
-    */
-    if( ! whefs_inode_id_is_valid(fs, nodeID) || !tgt ) return whefs_rc.ArgError;
-    //WHEFS_DBG_FYI( "Got request to open inode #%"WHEFS_ID_TYPE_PFMT". writer=@0x%p", nodeID, writer );
     whefs_inode * x = 0;
-    int rc = whefs_inode_search_opened( fs, nodeID, &x );
+    int rc;
+    whefs_inode_list * ent;
+    whefs_inode_list * li;
+    if( ! whefs_inode_id_is_valid(fs, nodeID) || !tgt ) return whefs_rc.ArgError;
+    /*WHEFS_DBG_FYI( "Got request to open inode #%"WHEFS_ID_TYPE_PFMT". writer=@0x%p", nodeID, writer ); */
+    rc = whefs_inode_search_opened( fs, nodeID, &x );
     if( whefs_rc.OK == rc )
     { /* got an existing entry... */
 	if(0) WHEFS_DBG_FYI( "Found existing entry for inode %"WHEFS_ID_TYPE_PFMT". entry->writer=@0x%p, writer param=@0x%p",
@@ -8780,10 +9482,16 @@ int whefs_inode_open( whefs_fs * fs, whefs_id_type nodeID, whefs_inode ** tgt, v
 			    x->id, x->open_count, x->data_size );
 	return  whefs_rc.OK;
     }
-    whefs_inode_list * ent = whefs_inode_list_alloc();
+    /**
+       Design note/reminder: the preference would have been to use an
+       expanding array of whefs_inode for the opened nodes list, but
+       when we realloc() it that could invalidate older pointers to
+       those inodes (been there, done that). Thus we suffer a linked
+       list and the associated mallocs...
+    */
+    ent = whefs_inode_list_alloc();
     if( ! ent ) return whefs_rc.AllocError;
-    *ent = whefs_inode_list_init;
-    
+    *ent = whefs_inode_list_empty;
     ent->inode.id = nodeID;
     rc = whefs_inode_id_read( fs, nodeID, &ent->inode );
     if( whefs_rc.OK != rc )
@@ -8792,17 +9500,17 @@ int whefs_inode_open( whefs_fs * fs, whefs_id_type nodeID, whefs_inode ** tgt, v
 	WHEFS_DBG_ERR("Opening inode #%"WHEFS_ID_TYPE_PFMT" FAILED - whefs_inode_id_read() returned %d", ent->inode.id, rc );
 	return rc;
     }
-    //WHEFS_DBG("Opened inode #%"WHEFS_ID_TYPE_PFMT" with name [%s]", ent->inode.id, ent->inode.name.string );
+    /*WHEFS_DBG("Opened inode #%"WHEFS_ID_TYPE_PFMT" with name [%s]", ent->inode.id, ent->inode.name.string ); */
     x = &ent->inode;
     x->writer = writer;
-    whefs_inode_list * li = fs->opened_nodes;
+    li = fs->opened_nodes;
     if( ! li )
     { /* we have the distinction of being the first entry. */
 	fs->opened_nodes = li = ent;
     }
     else
     { /* let's keep the list sorted here, as that can save us some comparisons later. */
-	while( li->next && li && (li->inode.id < ent->inode.id) )
+	while( li->next && (li->inode.id < ent->inode.id) )
 	{
 	    li = li->next;
 	}
@@ -8831,16 +9539,17 @@ int whefs_inode_open( whefs_fs * fs, whefs_id_type nodeID, whefs_inode ** tgt, v
 
 int whefs_inode_close( whefs_fs * fs, whefs_inode * src, void const * writer )
 {
+    whefs_inode * np = 0;
+    whefs_inode_list * li;
     if( ! whefs_inode_is_valid(fs, src) ) return whefs_rc.ArgError;
     if(0) WHEFS_DBG_FYI("Closing shared inode #%"WHEFS_ID_TYPE_PFMT": Use count=%u, data size=%u",
 			src->id, src->open_count, src->data_size );
-    whefs_inode * np = 0;
-    whefs_inode_list * li = fs->opened_nodes;
+    li = fs->opened_nodes;
     for( ; li; li = li->next )
     {
 	if( li->inode.id < src->id ) continue;
 	else if( li->inode.id > src->id) break;
-	//if( li->inode.id != src->id ) continue;
+	/*if( li->inode.id != src->id ) continue; */
 	else
 	{
 	    if(0) WHEFS_DBG_FYI("Found opened node #%"WHEFS_ID_TYPE_PFMT". We'll close this one.", src->id );
@@ -8878,7 +9587,7 @@ int whefs_inode_close( whefs_fs * fs, whefs_inode * src, void const * writer )
 	{
 	    free(np->blocks.list);
 	}
-	np->blocks = whefs_block_list_init;
+	np->blocks = whefs_block_list_empty;
 	whefs_inode_list_free(li);
     }
     if(0) WHEFS_DBG_FYI("%p %p Closed shared inode #%"WHEFS_ID_TYPE_PFMT": Use count=%u, data size=%u",
@@ -8889,6 +9598,8 @@ int whefs_inode_close( whefs_fs * fs, whefs_inode * src, void const * writer )
 
 int whefs_inode_unlink( whefs_fs * fs, whefs_inode * ino )
 {
+    whefs_id_type nid;
+    int rc;
     if( ! whefs_inode_is_valid(fs,ino) ) return whefs_rc.ArgError;
     while(1)
     {
@@ -8898,16 +9609,18 @@ int whefs_inode_unlink( whefs_fs * fs, whefs_inode * ino )
 		       op->id, op->open_count );
 	return whefs_rc.AccessError;
     }
-    const whefs_id_type nid = ino->id;
-    int rc = whefs_rc.OK;
+    nid = ino->id;
+    rc = whefs_rc.OK;
     if( ino->first_block )
     {
-	whefs_block bl = whefs_block_init;
+	whefs_block bl = whefs_block_empty;
 	whefs_block_read( fs, ino->first_block, &bl );
  	rc = whefs_block_wipe( fs, &bl, true, true, true );
     }
-    *ino = whefs_inode_init;
+    if( rc != 0 ) return rc;
+    *ino = whefs_inode_empty;
     ino->id = nid;
+    rc = whefs_inode_name_set( fs, ino->id, "" );
     return ( whefs_rc.OK != rc )
 	? rc
 	: whefs_inode_flush( fs, ino );
@@ -8916,65 +9629,72 @@ int whefs_inode_unlink( whefs_fs * fs, whefs_inode * ino )
 int whefs_inode_id_unlink( whefs_fs * fs, whefs_id_type nid )
 {
     if( ! whefs_inode_id_is_valid(fs,nid) ) return whefs_rc.ArgError;
-    whefs_inode ino = whefs_inode_init;
-    int rc = whefs_inode_id_read( fs, nid, &ino );
-    if( whefs_rc.OK == rc )
-    {
-	rc = whefs_inode_unlink( fs, &ino );
+    else {
+        whefs_inode ino = whefs_inode_empty;
+        int rc = whefs_inode_id_read( fs, nid, &ino );
+        if( whefs_rc.OK == rc )
+        {
+            rc = whefs_inode_unlink( fs, &ino );
+        }
+        return rc;
     }
-    return rc;
 }
 
 
 int whefs_inode_by_name( whefs_fs * fs, char const * name, whefs_inode * tgt )
 {
+    size_t slen;
+    whefs_string ns = whefs_string_empty;
+    int rc = whefs_rc.OK;
+    bool expectExact = false; /* when true, we stop with error if first guess isn't correct */
+    whefs_hashval_type nameHash;
+    char const * cname;
+    whefs_id_type i;
+    enum { bufSize = WHEFS_MAX_FILENAME_LENGTH+1 };
+    unsigned char buf[bufSize] = {0};
     if( ! fs || !name || !*name || !tgt ) return whefs_rc.ArgError;
-    if( ! fs->options.inode_count ) return whefs_rc.RangeError;
-    const size_t slen = strlen(name);
+    else if( ! fs->options.inode_count ) return whefs_rc.RangeError;
+    slen = strlen(name);
     if( slen > fs->options.filename_length )
     {
 	return whefs_rc.RangeError;
     }
-    whefs_string ns = whefs_string_init;
-    int rc = whefs_rc.OK;
-    bool expectExact = false; // when true, we stop with error if first guess isn't correct
-    const whefs_hashval_type nameHash = fs->cache.hashfunc( name );
+    nameHash = fs->cache.hashfunc( name );
 #if 1
     if( fs->cache.hashes && !fs->cache.hashes->isSorted )
     {
         whefs_inode_hash_cache_sort(fs);
     }
 #endif
-    char const * cname = 0; // cached name entry
-    whefs_id_type i = whefs_hashid_list_index_of( fs->cache.hashes, nameHash );
+    cname = NULL; /* cached name entry */
+    i = whefs_hashid_list_index_of( fs->cache.hashes, nameHash );
     if( whefs_rc.IDTypeEnd == i )
-    { // no cached record. Start from the beginning.
-        i = 2; // 2 = first client-usable inode.
+    { /* no cached record. Start from the beginning. */
+        i = 2; /* 2 = first client-usable inode. */
     }
     else
-    { // we know directly what inode record to jump to now...
+    { /* we know directly what inode record to jump to now... */
+        whefs_hashid * H;
         expectExact = true;
-        if(0) WHEFS_DBG_CACHE("Filename matched cached INDEX (%"WHEFS_ID_TYPE_PFMT") for hash code 0x%"WHEFS_HASHVAL_TYPE_PFMT" for name [%s]",i, nameHash,name);
-        whefs_hashid * H = &fs->cache.hashes->list[i];
+        WHEFS_DBG_CACHE("Filename matched cached INDEX (%"WHEFS_ID_TYPE_PFMT") for hash code 0x%"WHEFS_HASHVAL_TYPE_PFMT" for name [%s]",i, nameHash,name);
+        H = &fs->cache.hashes->list[i];
         ++H->hits;
         i = H->id;
     }
 
-    enum { bufSize = WHEFS_MAX_FILENAME_LENGTH+1 };
-    unsigned char buf[bufSize] = {0};
     memset(buf,0,bufSize);
     ns.string = (char *)buf;
     ns.alloced = bufSize;
     ns.length = 0;
     rc = whefs_rc.RangeError;
     for( ; i <= fs->options.inode_count; ++i )
-    { // brute force... walk the inodes and compare them...
-#if WHEFS_CONFIG_ENABLE_BITSET_CACHE // we can't rely on this here.
+    { /* brute force... walk the inodes and compare them... */
+#if WHEFS_CONFIG_ENABLE_BITSET_CACHE /* we can't rely on this here. */
         if( fs->bits.i_loaded )
         {
             if( ! WHEFS_ICACHE_IS_USED(fs,i) )
             {
-                //WHEFS_DBG("Skipping unused inode entry #%"WHEFS_ID_TYPE_PFMT, i );
+                /*WHEFS_DBG("Skipping unused inode entry #%"WHEFS_ID_TYPE_PFMT, i ); */
                 if( expectExact )
                 {
                     assert(0 && "If we have a cached entry for a specific bit then it must have been flagged as used.");
@@ -8984,17 +9704,17 @@ int whefs_inode_by_name( whefs_fs * fs, char const * name, whefs_inode * tgt )
                 else continue;
             }
         }
-        //WHEFS_DBG("Cache says inode #%i is used.", i );
+        /*WHEFS_DBG("Cache says inode #%i is used.", i ); */
 #endif
         rc = whefs_inode_name_get( fs, i, &ns );
         assert( (ns.string == (char const *)buf) && "Internal consistency error!");
         if( whefs_rc.OK != rc )
         {
-            WHEFS_DBG_ERR("whefs_string_read(fs,%"WHEFS_ID_TYPE_PFMT",&ns) returned error code %d. file name=[%s]", i, rc, name );
+            WHEFS_DBG_ERR("whefs_inode_name_get(fs,%"WHEFS_ID_TYPE_PFMT",&ns) returned error code %d. file name=[%s]", i, rc, name );
             break;
         }
         if( 0 && *ns.string ) WHEFS_DBG("Trying inode #%"WHEFS_ID_TYPE_PFMT": name [%s] =? [%s]", i, name, ns.string);
-        if( !*ns.string ) continue;
+        if( !*ns.string || !ns.length ) continue;
         rc = strcmp( ns.string, name );
         if( 0 == rc )
         {
@@ -9016,7 +9736,7 @@ int whefs_inode_by_name( whefs_fs * fs, char const * name, whefs_inode * tgt )
     assert( cname && "cname must be non-0 or we should have returned by now!" );
     do
     {
-        whefs_inode n = whefs_inode_init;
+        whefs_inode n = whefs_inode_empty;
         rc = whefs_inode_id_read( fs, i, &n );
         if( whefs_rc.OK != rc )
         {
@@ -9032,69 +9752,73 @@ int whefs_inode_by_name( whefs_fs * fs, char const * name, whefs_inode * tgt )
 int whefs_inode_encode( whefs_inode const * src, unsigned char * dest )
 {
     if( ! dest || !src ) return whefs_rc.ArgError;
-    unsigned char * x = dest;
-    *(x++) = whefs_inode_tag_char;
-    whefs_id_encode( x, src->id );
-    x += whefs_sizeof_encoded_id_type;
+    else {
+        unsigned char * x = dest;
+        *(x++) = whefs_inode_tag_char;
+        whefs_id_encode( x, src->id );
+        x += whefs_sizeof_encoded_id_type;
 
-    whio_uint8_encode( x, src->flags );
-    x += whio_sizeof_encoded_uint8;
+        whio_encode_uint8( x, src->flags );
+        x += whio_sizeof_encoded_uint8;
 
-    whio_uint32_encode( x, src->mtime );
-    x += whio_sizeof_encoded_uint32;
+        whio_encode_uint32( x, src->mtime );
+        x += whio_sizeof_encoded_uint32;
 
-    whio_uint32_encode( x, src->data_size );
-    x += whio_sizeof_encoded_uint32;
+        whio_encode_uint32( x, src->data_size );
+        x += whio_sizeof_encoded_uint32;
 
-    whefs_id_encode( x, src->first_block );
-    return whefs_rc.OK;
+        whefs_id_encode( x, src->first_block );
+        return whefs_rc.OK;
+    }
 }
 
 int whefs_inode_decode( whefs_inode * dest, unsigned char const * src )
 {
 
     if( ! dest || !src ) return whefs_rc.ArgError;
-    unsigned const char * x = src;
-    int rc = 0;
-    if( whefs_inode_tag_char != *(x++) )
-    {
-	return whefs_rc.ConsistencyError;
-    }
+    else {
+        unsigned const char * x = src;
+        int rc = 0;
+        if( whefs_inode_tag_char != *(x++) )
+        {
+            return whefs_rc.ConsistencyError;
+        }
 #define RC if( rc != whefs_rc.OK ) return rc
-    rc = whefs_id_decode( x, &dest->id );
-    RC;
-    x += whefs_sizeof_encoded_id_type;
-    rc = whio_uint8_decode( x, &dest->flags );
-    RC;
-    x += whio_sizeof_encoded_uint8;
-    rc = whio_uint32_decode( x, &dest->mtime );
-    RC;
-    x += whio_sizeof_encoded_uint32;
-    rc = whio_uint32_decode( x,  &dest->data_size );
-    RC;
+        rc = whefs_id_decode( x, &dest->id );
+        RC;
+        x += whefs_sizeof_encoded_id_type;
+        rc = whio_decode_uint8( x, &dest->flags );
+        RC;
+        x += whio_sizeof_encoded_uint8;
+        rc = whio_decode_uint32( x, &dest->mtime );
+        RC;
+        x += whio_sizeof_encoded_uint32;
+        rc = whio_decode_uint32( x,  &dest->data_size );
+        RC;
 #undef RC
-    x += whio_sizeof_encoded_uint32;
-    rc = whefs_id_decode( x, &dest->first_block );
-    return rc;
+        x += whio_sizeof_encoded_uint32;
+        rc = whefs_id_decode( x, &dest->first_block );
+        return rc;
+    }
 }
 
 /* end file src/whefs_inode.c */
 /* begin file src/whefs_hash.c */
 #line 8 "src/whefs_hash.c"
-#include <stdlib.h> // qsort(), bsearch()
-#include <string.h> // memmove()
+#include <stdlib.h> /* qsort(), bsearch() */
+#include <string.h> /* memmove() */
 
 #include <assert.h>
 
-const whefs_hashid whefs_hashid_init = whefs_hashid_init_m;
+const whefs_hashid whefs_hashid_empty = whefs_hashid_empty_m;
 
 whefs_hashval_type whefs_hash_cstring( char const * vstr)
 {
 #if 1
     /* "djb2" algo code taken from: http://www.cse.yorku.ca/~oz/hash.html */
-    if( ! vstr ) return 0U;
     whefs_hashval_type hash = 5381;
     int c = 0;
+    if( ! vstr ) return 0U;
     while( (c = *vstr++) )
     {
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
@@ -9116,7 +9840,7 @@ whefs_hashval_type whefs_hash_cstring( char const * vstr)
 /**
    A compare routine for bsearch(). Compares the hash fields of lhs
    and rhs based on their hash member. They must be (whefs_hashid
-   const *)-compatible.
+   const *).
 */
 static int whefs_hashid_cmp( void const * lhs, void const * rhs )
 {
@@ -9135,8 +9859,7 @@ static int whefs_hashid_cmp( void const * lhs, void const * rhs )
    and rhs based on their hits member. They must be (whefs_hashid
    const *)-compatible.
 */
-//static
-int whefs_hashid_cmp_hits( void const * lhs, void const * rhs )
+static int whefs_hashid_cmp_hits( void const * lhs, void const * rhs )
 {
     whefs_hashid const * l  = (whefs_hashid const *)lhs;
     whefs_hashid const * r  = (whefs_hashid const *)rhs;
@@ -9150,21 +9873,21 @@ int whefs_hashid_cmp_hits( void const * lhs, void const * rhs )
         : ( ( l->hits < r->hits ) ? -1 : 1);
 }
 
-const whefs_hashid_list whefs_hashid_list_init = whefs_hashid_list_init_m;
+const whefs_hashid_list whefs_hashid_list_empty = whefs_hashid_list_empty_m;
 
 int  whefs_hashid_list_sort( whefs_hashid_list * li )
 {
+    whefs_id_type off = 0;
+    whefs_hashid * h;
     if( ! li ) return whefs_rc.ArgError;
     li->isSorted = true;
     if( li->count < 2 ) return whefs_rc.OK;
     qsort( li->list, li->count, sizeof(whefs_hashid), whefs_hashid_cmp );
-    //qsort( li->_head, li->count, sizeof(whefs_hashid), whefs_hashid_cmp );
 #if 1
-    // shave off zeroed items...
-    whefs_id_type off = 0;
-    whefs_hashid * h = li->list;
+    /* shave off zeroed items... */
+    h = li->list;
     while( ! h->id && (off<li->count) ) { ++off; ++h; }
-    // FIXME: simply move li->_head, so we can easily re-use those slots in whefs_hashid_list_add().
+    /* FIXME???: simply move li->_head, so we can easily re-use those slots in whefs_hashid_list_add(). */
     if( (h != li->list) && (off < li->count) )
     {
         const whefs_id_type tail = li->alloced; /* li->count? */
@@ -9179,15 +9902,18 @@ int  whefs_hashid_list_sort( whefs_hashid_list * li )
 
 int whefs_hashid_list_alloc( whefs_hashid_list ** tgt, whefs_id_type toAlloc )
 {
+    whefs_hashid_list * obj;
+    whefs_hashid * li;
+    whefs_id_type i;
     if( ! tgt ) return whefs_rc.ArgError;
     if( ! *tgt )
     {
         if( ! toAlloc ) return whefs_rc.OK;
         *tgt = (whefs_hashid_list*) malloc(sizeof(whefs_hashid_list));
         if( ! tgt ) return whefs_rc.AllocError;
-        **tgt = whefs_hashid_list_init;
+        **tgt = whefs_hashid_list_empty;
     }
-    whefs_hashid_list * obj = *tgt;
+    obj = *tgt;
     if( 0 == toAlloc )
     {
 	if( obj->alloced )
@@ -9195,7 +9921,7 @@ int whefs_hashid_list_alloc( whefs_hashid_list ** tgt, whefs_id_type toAlloc )
             WHEFS_DBG_CACHE("Freeing whefs_hashid_list->list with %"WHEFS_ID_TYPE_PFMT"/%"WHEFS_ID_TYPE_PFMT" used/allocated items.",obj->count,obj->alloced);
             free( obj->list );
         }
-        *obj = whefs_hashid_list_init;
+        *obj = whefs_hashid_list_empty;
         obj->isSorted = true;
 	return whefs_rc.OK;
     }
@@ -9203,8 +9929,7 @@ int whefs_hashid_list_alloc( whefs_hashid_list ** tgt, whefs_id_type toAlloc )
     {
         return whefs_rc.OK;
     }
-    obj->isSorted = false;
-    // else realloc...
+    /* else realloc... */
     if( obj->maxAlloc )
     {
         if( toAlloc > obj->maxAlloc )
@@ -9214,19 +9939,19 @@ int whefs_hashid_list_alloc( whefs_hashid_list ** tgt, whefs_id_type toAlloc )
             return whefs_rc.AllocError;
         }
     }
-
-    whefs_hashid * li = (whefs_hashid *) realloc( obj->list, toAlloc * sizeof(whefs_hashid) );
+    li = (whefs_hashid *) realloc( obj->list, toAlloc * sizeof(whefs_hashid) );
     if( ! li ) return whefs_rc.AllocError;
     obj->list = li;
     obj->alloced = toAlloc;
-    whefs_id_type i = obj->count;
+    obj->isSorted = false; /* ???needed/desired??? */
+    i = obj->count;
     if( toAlloc < obj->count )
     {
         obj->count = toAlloc;
     }
     for( ; i < toAlloc; ++i )
     {
-	obj->list[i] = whefs_hashid_init;
+	obj->list[i] = whefs_hashid_empty;
     }
     return whefs_rc.OK;
 }
@@ -9242,6 +9967,7 @@ void whefs_hashid_list_free( whefs_hashid_list * tgt )
 
 int whefs_hashid_list_chomp_lv( whefs_hashid_list * li )
 {
+    whefs_id_type i;
     if( ! li ) return whefs_rc.ArgError;
     if( (li->count<2)
         || (li->count < (li->alloced/2) )
@@ -9250,22 +9976,21 @@ int whefs_hashid_list_chomp_lv( whefs_hashid_list * li )
         return whefs_rc.OK;
     }
     qsort( li->list, li->count, sizeof(whefs_hashid), whefs_hashid_cmp_hits );
-    //qsort( li->_head, li->count, sizeof(whefs_hashid), whefs_hashid_cmp_hits );
-    whefs_id_type i;
     for( i = li->count/2; i < li->count; ++i )
     {
-        li->list[i] = whefs_hashid_init;
+        li->list[i] = whefs_hashid_empty;
     }
-    whefs_hashid_list_sort(li);
+    whefs_hashid_list_sort(li); /* re-order by name hash */
     return whefs_rc.OK;
 }
 
-int whefs_hashid_list_add( whefs_hashid_list * tgt, whefs_hashid const * restrict val )
+int whefs_hashid_list_add( whefs_hashid_list * tgt, whefs_hashid const * val )
 {
     if( ! tgt || !val ) return whefs_rc.ArgError;
     tgt->isSorted = false;
     if( tgt->count >= tgt->alloced )
     {
+        int rc;
         whefs_id_type sz = (whefs_id_type)((tgt->count+1) * 2);
         if( tgt->maxAlloc && (sz > tgt->maxAlloc ) )
         {
@@ -9275,7 +10000,7 @@ int whefs_hashid_list_add( whefs_hashid_list * tgt, whefs_hashid const * restric
         { /* overflow or incorrect handling of maxAlloc  */
             return whefs_rc.RangeError;
         }
-        int rc = whefs_hashid_list_alloc( &tgt, sz );
+        rc = whefs_hashid_list_alloc( &tgt, sz );
         if( whefs_rc.OK != rc ) return rc;
     }
     tgt->list[tgt->count++] = *val;
@@ -9284,13 +10009,13 @@ int whefs_hashid_list_add( whefs_hashid_list * tgt, whefs_hashid const * restric
 
 whefs_id_type whefs_hashid_list_index_of( whefs_hashid_list const * src, whefs_hashval_type val )
 {
-    if( ! src || !src->count ) return whefs_rc.IDTypeEnd;
+    if( ! src || !src->count /*  || !val*/  ) return whefs_rc.IDTypeEnd;
     if( ! src->isSorted )
-    { // horrible special case to avoid having to re-sort on every inode name-set
+    { /* horrible special case to avoid having to re-sort on every inode name-set */
 #if 1
-        WHEFS_DBG_CACHE("Warning: hashid list is unsorted. Running in O(N) here!");
         whefs_hashid *H = src->list;
 	whefs_id_type i;
+        WHEFS_DBG_CACHE("Warning: hashid list is unsorted. Running in O(N) here!");
         for( i = 0; H && (i < src->count); ++i, ++H )
         {
             if( H->hash == val )
@@ -9302,15 +10027,19 @@ whefs_id_type whefs_hashid_list_index_of( whefs_hashid_list const * src, whefs_h
         return whefs_rc.IDTypeEnd;
 #endif
     }
-    whefs_hashid hv = whefs_hashid_init;
-    hv.hash = val;
-    void const * f = bsearch( &hv, src->list, src->count, sizeof(whefs_hashid), whefs_hashid_cmp );
-    if( ! f ) return whefs_rc.IDTypeEnd;
-    whefs_id_type ndx = (((unsigned char const *)f) -((unsigned char const *)src->list)) / sizeof(whefs_hashid);
-    while( ndx && (src->list[ndx-1].hash == val) ) --ndx;
-    // FIXME: check leftwards for more matches.
-    //++(src->list[ndx].hits);
-    return ndx;
+    else {
+        whefs_id_type ndx;
+        whefs_hashid hv = whefs_hashid_empty;
+        void const * f;
+        hv.hash = val;
+        f = bsearch( &hv, src->list, src->count, sizeof(whefs_hashid), whefs_hashid_cmp );
+        if( ! f ) return whefs_rc.IDTypeEnd;
+        ndx = (((unsigned char const *)f) -((unsigned char const *)src->list)) / sizeof(whefs_hashid);
+        while( ndx && (src->list[ndx-1].hash == val) ) --ndx;
+        ++(src->list[ndx].hits);
+        WHEFS_DBG_CACHE("Index of hash %"WHEFS_HASHVAL_TYPE_PFMT" = %"WHEFS_ID_TYPE_PFMT, val, ndx);
+        return ndx;
+    }
 }
 
 size_t whefs_hashid_list_sizeof( whefs_hashid_list const * li )
@@ -9324,84 +10053,46 @@ int whefs_hashid_list_wipe_index( whefs_hashid_list * tgt, whefs_id_type ndx )
 {
     if( ! tgt ) return whefs_rc.ArgError;
     if( tgt->count <= ndx ) return whefs_rc.RangeError;
-    tgt->list[ndx] = whefs_hashid_init;
+    tgt->list[ndx] = whefs_hashid_empty;
     tgt->isSorted = false;
     return whefs_rc.OK;
 }
 
 int whefs_hashid_list_add_slots( whefs_hashid_list * li, whefs_id_type pos, whefs_id_type count )
 {
-    //assert(0 && "Not finished!");
+    /*assert(0 && "Not finished!"); */
     if( ! li || !count ) return whefs_rc.ArgError;
     if( !li->count || (pos>li->count) ) return whefs_rc.RangeError;
-    const whefs_id_type last = pos+count;
-    const whefs_id_type asz = last+1;
-    if( asz < pos /* overflow */ ) return whefs_rc.RangeError;
-    if( li->alloced < asz )
-    {
-        int rc = whefs_hashid_list_alloc( &li, asz );
-        if( whefs_rc.OK != rc ) return rc;
-    }
-    li->isSorted = false;
-    void * from = &li->list[pos];
-    const whefs_id_type tondx = pos + (li->count-pos);
-    li->count += count;
-    const whefs_id_type howmany = tondx - pos;
-    void * to = &li->list[last];
-    memmove( to, from, sizeof(whefs_hashid) * howmany );
-    whefs_id_type i;
-    for( i = pos; i < last; ++i )
-    {
-        li->list[i] = whefs_hashid_init;
-    }
-    return whefs_rc.OK;
-}
-
-
-#if 0 // unused code
-
-/**
-   Swaps the contents of rhs and lhs.
-*/
-void whefs_hashid_swap( whefs_hashid * lhs, whefs_hashid * rhs );
-void whefs_hashid_swap( whefs_hashid * lhs, whefs_hashid * rhs )
-{
-    if( lhs && rhs )
-    {
-        whefs_hashid tmp = *lhs;
-        *lhs = *rhs;
-        *rhs = tmp;
+    else {
+        whefs_id_type last = pos+count;
+        whefs_id_type asz = last+1;
+        void * from;
+        void * to;
+        whefs_id_type tondx;
+        whefs_id_type howmany;
+        whefs_id_type i;
+        if( asz < pos /* overflow */ ) return whefs_rc.RangeError;
+        if( li->alloced < asz )
+        {
+            int rc = whefs_hashid_list_alloc( &li, asz );
+            if( whefs_rc.OK != rc ) return rc;
+        }
+        li->isSorted = false;
+        from = &li->list[pos];
+        tondx = pos + (li->count-pos);
+        li->count += count;
+        howmany = tondx - pos;
+        to = &li->list[last];
+        memmove( to, from, sizeof(whefs_hashid) * howmany );
+        for( i = pos; i < last; ++i )
+        {
+            li->list[i] = whefs_hashid_empty;
+        }
+        return whefs_rc.OK;
     }
 }
 
 
-int whefs_hashid_list_check_bogo( whefs_hashval_type hash,
-                                  whefs_id_type id,
-                                  void const * data )
-{
-    return 0;
-}
-// e.g. whefs_hashid_list_search(src, hash, whefs_hash_list_inode_name_is, "searched-for-name")
-
-whefs_id_type whefs_hashid_list_search( whefs_hashid_list const * src,
-                                        whefs_hashval_type hash,
-                                        whefs_hashid_list_search_cmp checkval,
-                                        void const * checkvalData
-                                        )
-{
-    whefs_id_type ndx = whefs_hashid_list_index_of( src, hash );
-    if( whefs_rc.IDTypeEnd == ndx ) return ndx;
-    whefs_hashid const * h = &src->list[ndx];
-    while( 1 )
-    {
-        if( 0 == checkval( hash, h->id, checkvalData ) ) return h->id;
-        if( src->count <= ++ndx ) break;
-        if( src->list[ndx].hash != h->hash ) break;
-        h = &src->list[ndx];
-    }
-    return whefs_rc.IDTypeEnd;
-}
-#endif // unused code
 /* end file src/whefs_hash.c */
 /* begin file src/whefs_nodedev.c */
 #line 8 "src/whefs_nodedev.c"
@@ -9436,27 +10127,30 @@ static int whefs_inode_block_list_reserve( whefs_fs * fs,
 					whefs_id_type count )
 {
     if( ! ino ) return whefs_rc.ArgError;
-    if( ino->blocks.alloced >= count ) return whefs_rc.OK;
     else if( 0 == count )
     {
 	free( ino->blocks.list );
-	ino->blocks = whefs_block_list_init;
+	ino->blocks = whefs_block_list_empty;
 	return whefs_rc.OK;
     }
-    //WHEFS_DBG("(Re)sizing inode block cache to %u items for inode #%u[%s].", count, ino->id, ino->name );
-    whefs_block * li = (whefs_block *)realloc( ino->blocks.list, count * sizeof(whefs_block) );
-    if( ! li )
-    {
-	return whefs_rc.AllocError;
+    else if( ino->blocks.alloced >= count ) return whefs_rc.OK;
+    else {
+        /*WHEFS_DBG("(Re)sizing inode block cache to %u items for inode #%u[%s].", count, ino->id, ino->name ); */
+        whefs_id_type i;
+        whefs_block * li = (whefs_block *)realloc( ino->blocks.list, count * sizeof(whefs_block) );
+        if( ! li )
+        {
+            return whefs_rc.AllocError;
+        }
+        ino->blocks.alloced = count;
+        ino->blocks.list = li;
+        i = ino->blocks.count;
+        for( ; i < count; ++i )
+        {
+            li[i] = whefs_block_empty;
+        }
+        return whefs_rc.OK;
     }
-    ino->blocks.alloced = count;
-    ino->blocks.list = li;
-    whefs_id_type i = ino->blocks.count;
-    for( ; i < count; ++i )
-    {
-	li[i] = whefs_block_init;
-    }
-    return whefs_rc.OK;
 }
 
 /**
@@ -9481,7 +10175,7 @@ static int whefs_inode_block_list_append( whefs_fs * fs,
     }
     ino->blocks.list[ino->blocks.count] = *bl;
     if( 0 < ino->blocks.count )
-    { // append block to the list
+    { /* append block to the list */
 	whefs_block * prev = &ino->blocks.list[ino->blocks.count-1];
 	if( ! prev->next_block )
 	{
@@ -9497,7 +10191,7 @@ static int whefs_inode_block_list_append( whefs_fs * fs,
 	}
     }
     else
-    { // set bl as the first block...
+    { /* set bl as the first block... */
 	if( ino->first_block )
 	{
 	    if( ino->first_block != bl->id )
@@ -9515,7 +10209,7 @@ static int whefs_inode_block_list_append( whefs_fs * fs,
 	}
     }
     ++ino->blocks.count;
-    //WHEFS_DBG("Appended block #%"WHEFS_ID_TYPE_PFMT" to chain (of %"WHEFS_ID_TYPE_PFMT" item(s)) for inode #%"WHEFS_ID_TYPE_PFMT"[%s].", bl->id, ino->blocks.count, ino->id, ino->name );
+    /*WHEFS_DBG("Appended block #%"WHEFS_ID_TYPE_PFMT" to chain (of %"WHEFS_ID_TYPE_PFMT" item(s)) for inode #%"WHEFS_ID_TYPE_PFMT"[%s].", bl->id, ino->blocks.count, ino->id, ino->name ); */
     return whefs_rc.OK;
 }
 
@@ -9540,6 +10234,8 @@ static int whefs_inode_block_list_append( whefs_fs * fs,
 static int whefs_inode_block_list_load( whefs_fs * fs,
 					whefs_inode * ino )
 {
+    whefs_block bl = whefs_block_empty;
+    int rc;
     if( ! whefs_inode_is_valid(fs,ino) ) return whefs_rc.ArgError;
     if( ! ino->first_block ) return whefs_rc.OK;
     if( ino->blocks.count )
@@ -9548,8 +10244,7 @@ static int whefs_inode_block_list_load( whefs_fs * fs,
 		       ino->id);
 	return whefs_rc.OK;
     }
-    whefs_block bl = whefs_block_init;
-    int rc = whefs_block_read( fs, ino->first_block, &bl );
+    rc = whefs_block_read( fs, ino->first_block, &bl );
     if( whefs_rc.OK != rc ) return rc;
 #if 0
     if( ! ino->blocks.list )
@@ -9567,7 +10262,7 @@ static int whefs_inode_block_list_load( whefs_fs * fs,
         rc = whefs_inode_block_list_append( fs, ino, &bl );
 	if( whefs_rc.OK != rc ) return rc;
     }
-    //WHEFS_DBG("Loaded block chain of %u block(s) for inode #%u[%s].", ino->blocks.count, ino->id, ino->name );
+    /*WHEFS_DBG("Loaded block chain of %u block(s) for inode #%u[%s].", ino->blocks.count, ino->id, ino->name ); */
     return whefs_rc.OK;
 }
 
@@ -9632,17 +10327,23 @@ static int whefs_inode_block_list_load( whefs_fs * fs,
    it does).
 
 */
-static int whefs_block_for_pos( whefs_fs * restrict fs, whefs_inode * restrict ino, whio_size_t pos, whefs_block * restrict tgt, bool expand )
+static int whefs_block_for_pos( whefs_fs * fs, whefs_inode * ino, whio_size_t pos, whefs_block * tgt, bool expand )
 {
-    //if(  !tgt || !whefs_inode_is_valid( fs, ino ) ) return whefs_rc.ArgError;
-    if( (ino->data_size < pos) && !expand )
+    whefs_id_type bc;
+    whio_size_t bs;
+    int rc = whefs_rc.OK;
+    whefs_block bl = whefs_block_empty;
+    whefs_block * blP = 0;
+    /*if(  !tgt || !whefs_inode_is_valid( fs, ino ) ) return whefs_rc.ArgError; */
+    if( (ino->data_size <= pos) && !expand )
     {
-	//WHEFS_DBG("return whefs_rc.RangeError");
+	/*WHEFS_DBG("return whefs_rc.RangeError"); */
 	return whefs_rc.RangeError;
     }
-    const whio_size_t bs = whefs_fs_options_get(fs)->block_size;
-    const whefs_id_type bc = /* how many blocks will we need? */
-        1 + (pos / bs);
+    bs = whefs_fs_options_get(fs)->block_size;
+    bc = /* how many blocks will we need? */
+        1+(pos/bs)
+        ;
     if(0) WHEFS_DBG("pos=%"WHIO_SIZE_T_PFMT" bs=%"WHIO_SIZE_T_PFMT" bc=%"WHEFS_ID_TYPE_PFMT,pos,bs,bc);
     /** ^^^ does this leave us with one too many blocks when we truncate() to
         an exact multiple of blocksize? */
@@ -9655,7 +10356,6 @@ static int whefs_block_for_pos( whefs_fs * restrict fs, whefs_inode * restrict i
                        whefs_fs_options_get(fs)->block_count, pos, ino->id );
         return whefs_rc.RangeError;
     }
-    int rc = whefs_rc.OK;
     if( ! ino->blocks.list )
     {
 	rc = whefs_inode_block_list_load( fs, ino );
@@ -9665,26 +10365,25 @@ static int whefs_block_for_pos( whefs_fs * restrict fs, whefs_inode * restrict i
     { /* can't grow list for this request. */
 	return whefs_rc.RangeError;
     }
-    // TODO: check number of available inodes here, and don't try to expand if we can't reach the end
-    whefs_block bl = whefs_block_init;
-    //WHEFS_DBG("About to search inode #%u for %u block(s) (size=%u) to find position %u", ino->id, bc, bs, pos );
+    /* TODO: check number of available inodes here, and don't try to expand if we can't reach the end */
+    /*WHEFS_DBG("About to search inode #%u for %u block(s) (size=%u) to find position %u", ino->id, bc, bs, pos ); */
     rc = whefs_rc.OK;
-    whefs_block * blP = 0;
     if( bc <= ino->blocks.count)
     {
 	blP = &ino->blocks.list[bc-1]; /* jump right to it */;
     }
     else
     { /* expand the list */
+        whefs_id_type i;
 	if( ! expand )
 	{
 	    if(0) WHEFS_DBG("Cannot expand to %"WHEFS_ID_TYPE_PFMT" blocks for position %"WHIO_SIZE_T_PFMT" because [expand] parameter is false.",
 			    bc, pos );
 	    return whefs_rc.RangeError;
 	}
-	//bl = ino->blocks.list[ino->blocks.count-1];
-	whefs_id_type i = ino->blocks.count;
-	blP = 0;
+	/*bl = ino->blocks.list[ino->blocks.count-1]; */
+	i = ino->blocks.count;
+	blP = NULL;
 	for( ; i < bc; ++i )
 	{
 	    rc = whefs_block_next_free( fs, &bl, true );
@@ -9702,7 +10401,7 @@ static int whefs_block_for_pos( whefs_fs * restrict fs, whefs_inode * restrict i
     {
 	*tgt = *blP;
     }
-    //WHEFS_DBG("Using block id #%u for pos %u of inode #%u", blP->id, pos, ino->id );
+    /*WHEFS_DBG("Using block id #%u for pos %u of inode #%u", blP->id, pos, ino->id ); */
     return rc;
 }
 
@@ -9737,7 +10436,7 @@ false, /* read/write */ \
 0 /* inode */  \
 }
 
-static const whio_dev_inode_meta whio_dev_inode_meta_init = WHIO_DEV_INODE_META_INIT;
+static const whio_dev_inode_meta whio_dev_inode_meta_empty = WHIO_DEV_INODE_META_INIT;
 
 
 #if WHEFS_CONFIG_ENABLE_STATIC_MALLOC /* see whio_common.h for details */
@@ -9771,13 +10470,13 @@ static whio_dev_inode_meta * whio_dev_inode_meta_alloc()
     }
 #endif /* WHEFS_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whio_dev_inode_meta *) malloc( sizeof(whio_dev_inode_meta) );
-    if( obj ) *obj = whio_dev_inode_meta_init;
+    if( obj ) *obj = whio_dev_inode_meta_empty;
     return obj;
 }
 
 static void whio_dev_inode_meta_free( whio_dev_inode_meta * obj )
 {
-    if( obj ) *obj = whio_dev_inode_meta_init;
+    if( obj ) *obj = whio_dev_inode_meta_empty;
     else return;
 #if WHEFS_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whio_dev_inode_meta_alloc_slots.objs[0]) ||
@@ -9804,7 +10503,7 @@ static void whio_dev_inode_meta_free( whio_dev_inode_meta * obj )
    parameter be-a whio_dev and that that device is-a whio_dev_inode_meta.
  */
 #define WHIO_DEV_DECL(RV) whio_dev_inode_meta * meta = (dev ? (whio_dev_inode_meta*)dev->impl.data : 0); \
-    if( !meta || ((void const *)&whio_dev_inode_meta_init != dev->impl.typeID) ) return RV
+    if( !meta || ((void const *)&whio_dev_inode_meta_empty != dev->impl.typeID) ) return RV
 
 /**
    Internal implementation of whio_dev_inode_read(). All arguments
@@ -9821,6 +10520,8 @@ static whio_size_t whio_dev_inode_read_impl( whio_dev * dev,
 					whio_size_t n,
 					bool * keepGoing )
 {
+    int rc = 0;
+    whefs_block block = whefs_block_empty;
 #if 0
     if( ! dev || !meta || !dest || !n || ! keepGoing )
     {
@@ -9831,16 +10532,14 @@ static whio_size_t whio_dev_inode_read_impl( whio_dev * dev,
     *keepGoing = false;
     if( ! n ) return 0U;
     else if( meta->posabs >= meta->inode->data_size ) return 0;
-    int rc = 0;
-    //whio_size_t eofpos = meta->inode->data_size;
-    whefs_block block = whefs_block_init;
+    /*whio_size_t eofpos = meta->inode->data_size; */
     rc = whefs_block_for_pos( meta->fs, meta->inode, meta->posabs, &block, false );
     if( whefs_rc.OK != rc )
     {
 #if 0
         if( !(meta->posabs % meta->fs->options.block_size) )
         {
-            // FIXME: ensure that meta->inode->blocks[end] is really the end block that should line up here.
+            /* FIXME: ensure that meta->inode->blocks[end] is really the end block that should line up here. */
             /**
                This is an unusual special case. Directly at the EOF boundary we want to return
                a non-error code. We're at EOF. whefs_block_for_pos() isn't quite smart enough
@@ -9867,56 +10566,60 @@ static whio_size_t whio_dev_inode_read_impl( whio_dev * dev,
     if(0) WHEFS_DBG("inode #%"WHEFS_ID_TYPE_PFMT" will be using block #%"WHEFS_ID_TYPE_PFMT" for a read at pos %"WHIO_SIZE_T_PFMT, meta->inode->id, block.id, meta->posabs );
 
     if( meta->posabs >= meta->inode->data_size ) return 0;
-    const whio_size_t rdpos = (meta->posabs % meta->bs);
-    const whio_size_t left = meta->bs - rdpos;
-    const whio_size_t bdpos = whefs_block_data_pos( meta->fs, &block );
-    whio_size_t rdlen = ( n > left ) ? left : n;
-    if( (rdlen + meta->posabs) >= meta->inode->data_size )
-    {
-	rdlen = meta->inode->data_size - meta->posabs;
-    }
-    //WHEFS_DBG("rdpos=%u left=%u bdpos=%u rdlen=%u", rdpos, left, bdpos, rdlen );
-    whio_dev * fd = meta->fs->dev;
-    fd->api->seek( fd, bdpos + rdpos, SEEK_SET );
-    const whio_size_t sz = fd->api->read( fd, dest, rdlen );
-    if( ! sz ) return 0;
-    const whio_size_t szCheck = meta->posabs + sz;
-    if( szCheck > meta->posabs )
-    {
-	meta->posabs = szCheck;
-    }
-    else
-    {
-	WHEFS_DBG_ERR("Numeric overflow in read! (pos=%"WHIO_SIZE_T_PFMT" + readLength=%"WHIO_SIZE_T_PFMT") = overflow", meta->posabs, sz );
-        return 0;
-    }
-    //whefs_block_flush( meta->fs, &block );
-    if(0) WHEFS_DBG("Read %"WHIO_SIZE_T_PFMT" of %"WHEFS_ID_TYPE_PFMT" (n=%"WHIO_SIZE_T_PFMT") bytes "
-		    "from inode #%"WHEFS_ID_TYPE_PFMT"'s block #%"WHEFS_ID_TYPE_PFMT". "
-		    "fs pos=%"WHIO_SIZE_T_PFMT", block offset=%"WHIO_SIZE_T_PFMT" file pos=%"WHIO_SIZE_T_PFMT", file eof=%"WHIO_SIZE_T_PFMT,
-		    sz, rdlen, n,
-		    meta->inode->id, block.id,
-		    bdpos, rdpos, meta->posabs, meta->inode->data_size );
-    if( sz < rdlen )
-    { /* short write! */
-	return sz;
-    }
-    else if( rdlen < n )
-    { /* Wrap to next block and continue... */
-	*keepGoing = true;
-	return sz;
-    }
-    else
-    { /* got the exact right amount */
-	return sz;
+    else {
+        const whio_size_t rdpos = (meta->posabs % meta->bs);
+        const whio_size_t left = meta->bs - rdpos;
+        const whio_size_t bdpos = whefs_block_data_pos( meta->fs, &block );
+        whio_size_t rdlen = ( n > left ) ? left : n;
+        whio_dev * fd;
+        whio_size_t sz, szCheck;
+        if( (rdlen + meta->posabs) >= meta->inode->data_size )
+        {
+            rdlen = meta->inode->data_size - meta->posabs;
+        }
+        /*WHEFS_DBG("rdpos=%u left=%u bdpos=%u rdlen=%u", rdpos, left, bdpos, rdlen ); */
+        fd = meta->fs->dev;
+        fd->api->seek( fd, bdpos + rdpos, SEEK_SET );
+        sz = fd->api->read( fd, dest, rdlen );
+        if( ! sz ) return 0;
+        szCheck = meta->posabs + sz;
+        if( szCheck > meta->posabs )
+        {
+            meta->posabs = szCheck;
+        }
+        else
+        {
+            WHEFS_DBG_ERR("Numeric overflow in read! (pos=%"WHIO_SIZE_T_PFMT" + readLength=%"WHIO_SIZE_T_PFMT") = overflow", meta->posabs, sz );
+            return 0;
+        }
+        /*whefs_block_flush( meta->fs, &block ); */
+        if(0) WHEFS_DBG("Read %"WHIO_SIZE_T_PFMT" of %"WHEFS_ID_TYPE_PFMT" (n=%"WHIO_SIZE_T_PFMT") bytes "
+                        "from inode #%"WHEFS_ID_TYPE_PFMT"'s block #%"WHEFS_ID_TYPE_PFMT". "
+                        "fs pos=%"WHIO_SIZE_T_PFMT", block offset=%"WHIO_SIZE_T_PFMT" file pos=%"WHIO_SIZE_T_PFMT", file eof=%"WHIO_SIZE_T_PFMT,
+                        sz, rdlen, n,
+                        meta->inode->id, block.id,
+                        bdpos, rdpos, meta->posabs, meta->inode->data_size );
+        if( sz < rdlen )
+        { /* short write! */
+            return sz;
+        }
+        else if( rdlen < n )
+        { /* Wrap to next block and continue... */
+            *keepGoing = true;
+            return sz;
+        }
+        else
+        { /* got the exact right amount */
+            return sz;
+        }
     }
 }
 
 static whio_size_t whio_dev_inode_read( whio_dev * dev, void * dest, whio_size_t n )
 {
-    WHIO_DEV_DECL(0);
     bool keepGoing = true;
     whio_size_t total = 0;
+    WHIO_DEV_DECL(0);
     while( keepGoing )
     {
 	const whio_size_t sz = whio_dev_inode_read_impl( dev, meta, WHIO_VOID_PTR_ADD(dest,total), n - total, &keepGoing );
@@ -9935,60 +10638,63 @@ static whio_size_t whio_dev_inode_write_impl( whio_dev * dev,
 					 void const * src, whio_size_t n,
 					 bool * keepGoing )
 {
+    whefs_block block = whefs_block_empty;
+    int rc = 0;
     if( ! dev || !meta || !src || !n || !keepGoing )
     {
 	if( keepGoing ) *keepGoing = false;
 	return 0;
     }
     *keepGoing = false;
-    int rc = 0;
-    //whio_size_t eofpos = meta->inode->data_size;
-    whefs_block block = whefs_block_init;
+    /*whio_size_t eofpos = meta->inode->data_size; */
     rc = whefs_block_for_pos( meta->fs, meta->inode, meta->posabs, &block, true );
     if( whefs_rc.OK != rc )
     {
 	WHEFS_DBG("Error #%d getting block for meta->posabs==%u", rc, meta->posabs );
 	return 0;
     }
-    const whio_size_t wpos = (meta->posabs % meta->bs);
-    const whio_size_t left = meta->bs - wpos;
-    const whio_size_t bdpos = whefs_block_data_pos( meta->fs, &block );
-    const whio_size_t wlen = ( n > left ) ? left : n;
-    //WHEFS_DBG("wpos=%u left=%u bdpos=%u wlen=%u", wpos, left, bdpos, wlen );
-    whio_dev * fd = meta->fs->dev;
-    fd->api->seek( fd, bdpos + wpos, SEEK_SET );
-    whio_size_t sz = fd->api->write( fd, src, wlen );
-    if( ! sz ) return 0;
-    whefs_inode_update_mtime( meta->fs, meta->inode );
-    whio_size_t szCheck = meta->posabs + sz;
-    if( szCheck > meta->posabs )
-    {
-	meta->posabs = szCheck;
-    }
-    if( meta->inode->data_size < meta->posabs )
-    {
-	meta->inode->data_size = meta->posabs;
-	//whefs_inode_flush( meta->fs, &meta->inode ); // we should do this, really.
-    }
-    //whefs_block_flush( meta->fs, &block );
-    if(0) WHEFS_DBG("Wrote %u of %u (n=%u) bytes "
-		    "to inode #%u's block #%u. "
-		    "fs pos=%u, block offset=%u file pos=%u, file eof=%u",
-		    sz, wlen, n,
-		    meta->inode->id, block.id,
-		    bdpos, wpos, meta->posabs, meta->inode->data_size );
-    if( sz < wlen )
-    { /* short write! */
-	return sz;
-    }
-    else if( wlen < n )
-    { /* Wrap to next block and continue... */
-	*keepGoing = true;
-	return sz;
-    }
-    else
-    {
-	return sz;
+    else {
+        const whio_size_t wpos = (meta->posabs % meta->bs);
+        const whio_size_t left = meta->bs - wpos;
+        const whio_size_t bdpos = whefs_block_data_pos( meta->fs, &block );
+        const whio_size_t wlen = ( n > left ) ? left : n;
+        /*WHEFS_DBG("wpos=%u left=%u bdpos=%u wlen=%u", wpos, left, bdpos, wlen ); */
+        whio_dev * fd = meta->fs->dev;
+        whio_size_t sz, szCheck;
+        fd->api->seek( fd, bdpos + wpos, SEEK_SET );
+        sz = fd->api->write( fd, src, wlen );
+        if( ! sz ) return 0;
+        whefs_inode_update_mtime( meta->fs, meta->inode );
+        szCheck = meta->posabs + sz;
+        if( szCheck > meta->posabs )
+        {
+            meta->posabs = szCheck;
+        }
+        if( meta->inode->data_size < meta->posabs )
+        {
+            meta->inode->data_size = meta->posabs;
+            /*whefs_inode_flush( meta->fs, &meta->inode ); // we should do this, really. */
+        }
+        /*whefs_block_flush( meta->fs, &block ); */
+        if(0) WHEFS_DBG("Wrote %u of %u (n=%u) bytes "
+                        "to inode #%u's block #%u. "
+                        "fs pos=%u, block offset=%u file pos=%u, file eof=%u",
+                        sz, wlen, n,
+                        meta->inode->id, block.id,
+                        bdpos, wpos, meta->posabs, meta->inode->data_size );
+        if( sz < wlen )
+        { /* short write! */
+            return sz;
+        }
+        else if( wlen < n )
+        { /* Wrap to next block and continue... */
+            *keepGoing = true;
+            return sz;
+        }
+        else
+        {
+            return sz;
+        }
     }
 }
 
@@ -9996,14 +10702,16 @@ static whio_size_t whio_dev_inode_write( whio_dev * dev, void const * src, whio_
 {
     WHIO_DEV_DECL(0);
     if( ! meta->rw ) return 0;
-    bool keepGoing = true;
-    whio_size_t total = 0;
-    while( keepGoing )
-    {
-	const whio_size_t sz = whio_dev_inode_write_impl( dev, meta, WHIO_VOID_CPTR_ADD(src,total), n - total, &keepGoing );
-	total += sz;
+    else {
+        bool keepGoing = true;
+        whio_size_t total = 0;
+        while( keepGoing )
+        {
+            const whio_size_t sz = whio_dev_inode_write_impl( dev, meta, WHIO_VOID_CPTR_ADD(src,total), n - total, &keepGoing );
+            total += sz;
+        }
+        return total;
     }
-    return total;
 }
 
 static int whio_dev_inode_error( whio_dev * dev )
@@ -10032,10 +10740,11 @@ static whio_size_t whio_dev_inode_tell( whio_dev * dev )
     return meta->posabs;
 }
 
-static whio_size_t whio_dev_inode_seek( whio_dev * dev, off_t pos, int whence )
+static whio_size_t whio_dev_inode_seek( whio_dev * dev, whio_off_t pos, int whence )
 {
+    whio_size_t too;
     WHIO_DEV_DECL(whio_rc.SizeTError);
-    whio_size_t too = meta->posabs;
+    too = meta->posabs;
     switch( whence )
     {
       case SEEK_SET:
@@ -10044,11 +10753,15 @@ static whio_size_t whio_dev_inode_seek( whio_dev * dev, off_t pos, int whence )
 	  break;
       case SEEK_END:
 	  too = meta->inode->data_size + pos;
-	  //if( too < meta->inode->data_size )  /* overflow! */ return whio_rc.SizeTError;
+#if 0
+	  if( too < meta->inode->data_size )  /* overflow! */ return whio_rc.SizeTError;
+#endif
 	  break;
       case SEEK_CUR:
 	  too += pos;
+#if 0
 	  if( too < meta->posabs )  /* overflow! */ return whio_rc.SizeTError;
+#endif
 	  break;
       default:
 	  return whio_rc.SizeTError;
@@ -10059,19 +10772,22 @@ static whio_size_t whio_dev_inode_seek( whio_dev * dev, off_t pos, int whence )
 
 static int whio_dev_inode_flush( whio_dev * dev )
 {
+    int rc;
     WHIO_DEV_DECL(whio_rc.ArgError);
     if(0) WHEFS_DBG_FYI("Flushing i/o %s device for inode #%"WHIO_SIZE_T_PFMT". "
 			"inode->data_size=%"WHIO_SIZE_T_PFMT" posabs=%"WHIO_SIZE_T_PFMT,
 			meta->rw ? "read/write" : "read-only", meta->inode->id,
 			meta->inode->data_size, meta->posabs
 			);
-    int rc = meta->rw
+    rc = meta->rw
 	? whefs_inode_flush( meta->fs, meta->inode )
 	: whefs_rc.OK;
+#if 0 /* having this decreases performance by 50% or so in my simple tests. */
     if( meta->rw )
     {
         whefs_fs_flush( meta->fs );
     }
+#endif
     if(0) WHEFS_DBG_FYI("Flushed (rc=%d) i/o %s device for inode #%"WHEFS_ID_TYPE_PFMT". "
 			"inode->data_size=%"WHIO_SIZE_T_PFMT" posabs=%"WHIO_SIZE_T_PFMT,
 			rc, meta->rw ? "read/write" : "read-only", meta->inode->id,
@@ -10080,24 +10796,24 @@ static int whio_dev_inode_flush( whio_dev * dev )
     return rc;
 }
 
-static int whio_dev_inode_trunc( whio_dev * dev, off_t len )
+static int whio_dev_inode_trunc( whio_dev * dev, whio_off_t len )
 {
     /* Man, this was a bitch to do! */
+    whio_size_t off;
+    int rc = whio_rc.OK;
     WHIO_DEV_DECL(whio_rc.ArgError);
-    if( len < 0 ) return whio_rc.AccessError;
+    if( len < 0 ) return whio_rc.ArgError;
     if( ! meta->rw ) return whio_rc.AccessError;
-    const whio_size_t off = (whio_size_t)len;
+    off = (whio_size_t)len;
     if( off > len ) return whio_rc.RangeError; /* overflow */
     if( off == meta->inode->data_size ) return whefs_rc.OK;
-
     if( 0 == len )
     { /* special (simpler) case for 0 byte truncate */
-	if( ! meta->inode->first_block ) return whefs_rc.OK;
-	// (WTF?) FIXME: update ino->blocks.list[0]
+	/* (WTF?) FIXME: update ino->blocks.list[0] */
         if( meta->inode->first_block ) 
         {
-            whefs_block block = whefs_block_init;
-            int rc = whefs_block_read( meta->fs, meta->inode->first_block, &block ); // ensure we pick up whole block chain
+            whefs_block block = whefs_block_empty;
+            rc = whefs_block_read( meta->fs, meta->inode->first_block, &block ); /* ensure we pick up whole block chain */
             if( whefs_rc.OK != rc )
             {
                 rc = whefs_block_wipe( meta->fs, &block, true, true, true );
@@ -10110,115 +10826,119 @@ static int whio_dev_inode_trunc( whio_dev * dev, off_t len )
 	whefs_inode_flush(meta->fs, meta->inode );
 	return whio_rc.OK;
     }
+    else {
+        /*const size_t oldSize = off>meta->inode->data_size; */
+        whefs_block bl = whefs_block_empty;
+        const short dir = (off < meta->inode->data_size)
+            ? -1
+            : ((off>meta->inode->data_size) ? 1 : 0);
+        assert( (0 != off) && "This shouldn't be able to happen!" );
 
-    int rc = whio_rc.OK;
-    //const size_t oldSize = off>meta->inode->data_size;
-    const short dir = (off < meta->inode->data_size)
-	? -1
-	: ((off>meta->inode->data_size) ? 1 : 0);
-    assert( (0 != off) && "This shouldn't be able to happen!" );
-
-    /* Update inode metadata... */
-    //WHEFS_DBG("truncating from %u to %u bytes",meta->inode->data_size, off);
-    meta->inode->data_size = off;
-    rc = whefs_inode_flush( meta->fs, meta->inode );
-    if( whefs_rc.OK != rc )
-    {
-	WHEFS_DBG_ERR("Flush failed for inode #%u. Error code=%d.",
-		      meta->inode->id, rc );
-	return rc;
-    }
-    /* Update block info... */
-    whefs_block bl = whefs_block_init;
-    rc = whefs_block_for_pos( meta->fs, meta->inode, off, &bl, true );
-    if( whefs_rc.OK != rc )
-    {
-	WHEFS_DBG_ERR("Could not get block for write position %u of inode #%u. Error code=%d.",
-		      off, meta->inode->id, rc );
-	return rc;
-    }
-    //const size_t dest = meta->inode->data_size;
-    if( dir < 0 )
-    { /* we shrunk */
+        /* Update inode metadata... */
+        /*WHEFS_DBG("truncating from %u to %u bytes",meta->inode->data_size, off); */
+        meta->inode->data_size = off;
+        rc = whefs_inode_flush( meta->fs, meta->inode );
+        if( whefs_rc.OK != rc )
+        {
+            WHEFS_DBG_ERR("Flush failed for inode #%u. Error code=%d.",
+                          meta->inode->id, rc );
+            return rc;
+        }
+        /* Update block info... */
+        rc = whefs_block_for_pos( meta->fs, meta->inode, off-1, &bl, true );
+        if( whefs_rc.OK != rc )
+        {
+            WHEFS_DBG_ERR("Could not get block for write position %u of inode #%u. Error code=%d.",
+                          off, meta->inode->id, rc );
+            return rc;
+        }
+        /*const size_t dest = meta->inode->data_size; */
+        if( dir < 0 )
+        { /* we shrunk */
 #if 1
-	/*
-	  We'll be nice and zero the remaining bytes... We do this
-	  partially for consistency with how blocks will get removed
-	  (they get wiped as well).  Theoretically we don't need this
-	  because they get wiped when created and when unlinked, but a
-	  failed unlink could leave data lying around, so we clean it
-	  here. Maybe we should consider a 'dirty' flag for blocks,
-	  wiping only dirty blocks, but that could get messy (no pun
-	  intended).
-	*/
-	const uint32_t bs = whefs_fs_options_get( meta->fs )->block_size;
-	rc = whefs_block_wipe_data( meta->fs, &bl, ( off % bs ) );
-	if( whefs_rc.OK != rc ) return rc;
+            /*
+              We'll be nice and zero the remaining bytes... We do this
+              partially for consistency with how blocks will get removed
+              (they get wiped as well).  Theoretically we don't need this
+              because they get wiped when created and when unlinked, but a
+              failed unlink could leave data lying around, so we clean it
+              here. Maybe we should consider a 'dirty' flag for blocks,
+              wiping only dirty blocks, but that could get messy (no pun
+              intended).
+            */
+            const uint32_t bs = whefs_fs_options_get( meta->fs )->block_size;
+            whefs_block * blP;
+            whefs_block * nblP;
+            uint32_t x;
+            rc = whefs_block_wipe_data( meta->fs, &bl, ( off % bs ) );
+            if( whefs_rc.OK != rc ) return rc;
 #endif
-	if( ! bl.next_block )
-	{ /* Lucky for us! No more work to do! */
-	    meta->inode->blocks.count = 1;
-	    return whefs_rc.OK;
-	}
+            if( ! bl.next_block )
+            { /* Lucky for us! No more work to do! */
+                meta->inode->blocks.count = 1;
+                return whefs_rc.OK;
+            }
 
-	whefs_block * blP = &meta->inode->blocks.list[0];
-	whefs_block * nblP = blP + 1;
-	uint32_t x = 1;
-	for( ; (x < meta->inode->blocks.count)
-		 && (nblP->id != bl.next_block)
-		 ; ++nblP, ++x )
-	{
-	    /* Skip to bl.next_block */
-	}
-	if( (x == meta->inode->blocks.count) || (nblP->id != bl.next_block) )
-	{
-	    WHEFS_DBG_ERR("nblP->id=%u, bl.next_block=%u", nblP->id, bl.next_block );
-	    WHEFS_DBG_ERR("Internal block cache for inode #%u is not as "
-			  "long as we expect it to be or is missing entries!",
-			  meta->inode->id );
-	    return whefs_rc.InternalError;
-	}
-	blP = nblP - 1;
-	meta->inode->blocks.count = x;
-	whefs_block_wipe( meta->fs, nblP, true, true, true );
-	blP->next_block = 0;
-	return whefs_block_flush( meta->fs, blP );
+            blP = &meta->inode->blocks.list[0];
+            nblP = blP + 1;
+            x = 1;
+            for( ; (x < meta->inode->blocks.count)
+                     && (nblP->id != bl.next_block)
+                     ; ++nblP, ++x )
+            {
+                /* Skip to bl.next_block */
+            }
+            if( (x == meta->inode->blocks.count) || (nblP->id != bl.next_block) )
+            {
+                WHEFS_DBG_ERR("nblP->id=%u, bl.next_block=%u", nblP->id, bl.next_block );
+                WHEFS_DBG_ERR("Internal block cache for inode #%u is not as "
+                              "long as we expect it to be or is missing entries!",
+                              meta->inode->id );
+                return whefs_rc.InternalError;
+            }
+            blP = nblP - 1;
+            meta->inode->blocks.count = x;
+            whefs_block_wipe( meta->fs, nblP, true, true, true );
+            blP->next_block = 0;
+            return whefs_block_flush( meta->fs, blP );
+        }
+        else if( dir > 0 )
+        { /* we grew - fill the new bytes with zeroes */
+            /*
+              Actually... since we zero these when shrinking and during mkfs(),
+              we probably don't need to do this.
+            */
+            enum { bufSize = 1024 * 4 };
+            unsigned char buf[bufSize];
+            const whio_size_t PosAbs = meta->posabs;
+            const whio_size_t orig = meta->inode->data_size;
+            const whio_size_t dest = off;
+            whio_size_t wlen, iorc, wsz;
+            memset( buf, 0, bufSize );
+            dev->api->seek( dev, orig, SEEK_SET );
+            wlen = dest - orig;
+            iorc = 0;
+            wsz = 0;
+            do
+            {
+                wsz = (wlen < bufSize) ? wlen : bufSize;
+                iorc = dev->api->write( dev, buf, wsz );
+                wlen -= iorc;
+            }
+            while( iorc && (iorc == wsz) );
+            iorc = dev->api->seek( dev, PosAbs, SEEK_SET );
+            return (iorc == PosAbs)
+                ? whefs_rc.OK
+                : whefs_rc.IOError;
+        }
+        else
+        {
+            /* cannot happen due to special-case handling of truncate(0), above. */
+            assert( 0 && "This is impossible!" );
+        }
+        WHEFS_DBG("You should never have gotten to this line!");
+        return whefs_rc.InternalError;
     }
-    else if( dir > 0 )
-    { /* we grew - fill the new bytes with zeroes */
-	/*
-	  Actually... since we zero these when shrinking and during mkfs(),
-	   we probably don't need to do this.
-	*/
-	enum { bufSize = 1024 * 4 };
-	unsigned char buf[bufSize];
-	memset( buf, 0, bufSize );
-	const whio_size_t PosAbs = meta->posabs;
-	const whio_size_t orig = meta->inode->data_size;
-	const whio_size_t dest = off;
-	dev->api->seek( dev, orig, SEEK_SET );
-	whio_size_t wlen = dest - orig;
-	whio_size_t iorc = 0;
-        whio_size_t wsz = 0;
-	do
-	{
-            wsz = (wlen < bufSize) ? wlen : bufSize;
-	    iorc = dev->api->write( dev, buf, wsz );
-	    wlen -= iorc;
-	}
-	while( iorc && (iorc == wsz) );
-	iorc = dev->api->seek( dev, PosAbs, SEEK_SET );
-	return (iorc == PosAbs)
-	    ? whefs_rc.OK
-	    : whefs_rc.IOError;
-    }
-    else
-    {
-	/* cannot happen due to special-case handling of truncate(0), above. */
-	assert( 0 && "This is impossible!" );
-    }
-    WHEFS_DBG("You should never have gotten to this line!");
-    return whefs_rc.InternalError;
 }
 
 short whio_dev_inode_iomode( whio_dev * dev )
@@ -10244,16 +10964,17 @@ static int whio_dev_inode_ioctl( whio_dev * dev, int arg, va_list vargs )
 
 static bool whio_dev_inode_close( whio_dev * dev )
 {
-    if( dev && ((void const *)&whio_dev_inode_meta_init == dev->impl.typeID))
+    if( dev && ((void const *)&whio_dev_inode_meta_empty == dev->impl.typeID))
     {
+        whio_dev_inode_meta * meta;
 	if( dev->client.dtor ) dev->client.dtor( dev->client.data );
-	dev->client = whio_client_data_init;
-	whio_dev_inode_meta * meta = (whio_dev_inode_meta*)dev->impl.data;
+	dev->client = whio_client_data_empty;
+	meta = (whio_dev_inode_meta*)dev->impl.data;
 	if( meta )
 	{
             whefs_fs_closer_dev_remove( meta->fs, dev );
-	    dev->impl.data = 0;
             if( meta->rw ) dev->api->flush(dev);
+	    dev->impl.data = 0;
 	    if(0) WHEFS_DBG_FYI("Closing i/o %s device for inode #%u. "
 				"inode->data_size=%u posabs=%u",
 				meta->rw ? "read/write" : "read-only",
@@ -10271,7 +10992,7 @@ static bool whio_dev_inode_close( whio_dev * dev )
 
 static void whio_dev_inode_finalize( whio_dev * dev )
 {
-    if( dev && ((void const *)&whio_dev_inode_meta_init == dev->impl.typeID))
+    if( dev && ((void const *)&whio_dev_inode_meta_empty == dev->impl.typeID))
     {
 	if(0)
 	{
@@ -10288,7 +11009,7 @@ static void whio_dev_inode_finalize( whio_dev * dev )
     }
 }
 
-static const whio_dev_api whio_dev_api_inode_init =
+static const whio_dev_api whio_dev_api_inode_empty =
     {
     whio_dev_inode_read,
     whio_dev_inode_write,
@@ -10305,12 +11026,12 @@ static const whio_dev_api whio_dev_api_inode_init =
     whio_dev_inode_iomode
     };
 
-static const whio_dev whio_dev_inode_init =
+static const whio_dev whio_dev_inode_empty =
     {
-    &whio_dev_api_inode_init,
+    &whio_dev_api_inode_empty,
     { /* impl */
     0, /* data. Must be-a (whio_dev_inode_meta*) */
-    (void const *)&whio_dev_inode_meta_init /* typeID */
+    (void const *)&whio_dev_inode_meta_empty /* typeID */
     }
     };
 
@@ -10320,29 +11041,34 @@ static const whio_dev whio_dev_inode_init =
 
 whio_dev * whefs_dev_for_inode( whefs_fs * fs, whefs_id_type nid, bool writeMode )
 {
-    //WHEFS_DBG("trying to open dev for inode #%u", nid );
+    /*WHEFS_DBG("trying to open dev for inode #%u", nid ); */
+    whio_dev * dev;
+    whefs_inode * ino;
+    void const * writeKey;
+    int rc;
+    whio_dev_inode_meta * meta;
     if( ! whefs_inode_id_is_valid( fs, nid ) ) return 0;
-    whio_dev * dev = whio_dev_alloc();
+    dev = whio_dev_alloc();
     if( ! dev ) return 0;
-    whefs_inode * ino = 0;
-    void const * writeKey = (writeMode ? dev : 0);
-    int rc = whefs_inode_open( fs, nid, &ino, writeKey );
+    ino = NULL;
+    writeKey = (writeMode ? dev : 0);
+    rc = whefs_inode_open( fs, nid, &ino, writeKey );
     if( rc != whefs_rc.OK )
     {
 	WHEFS_DBG_ERR("whefs_inode_open(fs,[inode #%"WHEFS_ID_TYPE_PFMT"],inode,%d) failed with rc %d!", nid, writeMode, rc );
 	whio_dev_free( dev );
 	return 0;
     }
-    //WHEFS_DBG("Opened inode #%u[%s]", ino->id, ino->name );
-    whio_dev_inode_meta * meta = whio_dev_inode_meta_alloc();
+    /*WHEFS_DBG("Opened inode #%u[%s]", ino->id, ino->name ); */
+    meta = whio_dev_inode_meta_alloc();
     if( ! meta )
     {
 	whefs_inode_close( fs, ino, writeKey );
 	whio_dev_free(dev);
 	return 0;
     }
-    *dev = whio_dev_inode_init;
-    *meta = whio_dev_inode_meta_init;
+    *dev = whio_dev_inode_empty;
+    *meta = whio_dev_inode_meta_empty;
     dev->impl.data = meta;
     meta->fs = fs;
     meta->rw = writeMode;
@@ -10371,14 +11097,14 @@ whio_dev * whefs_dev_for_inode( whefs_fs * fs, whefs_id_type nid, bool writeMode
 #include <stdlib.h> /* malloc() and friends */
 #include <string.h> /* strchr() */
 
-#define whefs_file_init_m { \
+#define whefs_file_empty_m { \
     0, /* fs */ \
     0, /* flags */ \
     0, /* dev */ \
     0 /* inode_id */                       \
     }
 
-const whefs_file whefs_file_init = whefs_file_init_m;
+const whefs_file whefs_file_empty = whefs_file_empty_m;
 #define WHEFS_FILE_ISOPENED(F) ((F) && ((F)->flags & WHEFS_FLAG_Opened))
 #define WHEFS_FILE_ISRO(F) ((F) && ((F)->flags & WHEFS_FLAG_Read))
 #define WHEFS_FILE_ISRW(F) ((F) && ((F)->flags & WHEFS_FLAG_Write))
@@ -10399,7 +11125,7 @@ static struct
 {
     whefs_file objs[whefs_file_alloc_count];
     char used[whefs_file_alloc_count];
-} whefs_file_alloc_slots = { {whefs_file_init_m}, {0} };
+} whefs_file_alloc_slots = { {whefs_file_empty_m}, {0} };
 #endif
 
 static whefs_file * whefs_file_alloc()
@@ -10411,7 +11137,7 @@ static whefs_file * whefs_file_alloc()
     {
 	if( whefs_file_alloc_slots.used[i] ) continue;
 	whefs_file_alloc_slots.used[i] = 1;
-	whefs_file_alloc_slots.objs[i] = whefs_file_init;
+	whefs_file_alloc_slots.objs[i] = whefs_file_empty;
 	obj = &whefs_file_alloc_slots.objs[i];
 	break;
     }
@@ -10419,31 +11145,31 @@ static whefs_file * whefs_file_alloc()
     if( ! obj )
     {
         obj = (whefs_file *) malloc( sizeof(whefs_file) );
-        if( obj ) *obj = whefs_file_init;
+        if( obj ) *obj = whefs_file_empty;
     }
     return obj;
 }
 
-static void whefs_file_free( whefs_file * restrict obj )
+static void whefs_file_free( whefs_file * obj )
 {
     if(obj) whefs_string_clear( &obj->name, false );
 #if WHEFS_CONFIG_ENABLE_STATIC_MALLOC
     if( (obj < &whefs_file_alloc_slots.objs[0]) ||
 	(obj > &whefs_file_alloc_slots.objs[whefs_file_alloc_count-1]) )
     { /* it does not belong to us */
-        *obj = whefs_file_init;
+        *obj = whefs_file_empty;
 	free(obj);
 	return;
     }
     else
     {
 	const size_t ndx = (obj - &whefs_file_alloc_slots.objs[0]);
-	whefs_file_alloc_slots.objs[ndx] = whefs_file_init;
+	whefs_file_alloc_slots.objs[ndx] = whefs_file_empty;
 	whefs_file_alloc_slots.used[ndx] = 0;
 	return;
     }
 #else
-    *obj = whefs_file_init;
+    *obj = whefs_file_empty;
     free(obj);
 #endif /* WHEFS_CONFIG_ENABLE_STATIC_MALLOC */
 }
@@ -10456,9 +11182,9 @@ static void whefs_file_free( whefs_file * restrict obj )
    This routine has an embarassing intimate relationship with
    whefs_fopen().
 */
-static int whefs_fopen_ro( whefs_file * restrict f, char const * name )
+static int whefs_fopen_ro( whefs_file * f, char const * name )
 {
-    whefs_inode n = whefs_inode_init;
+    whefs_inode n = whefs_inode_empty;
     int rc = whefs_inode_by_name( f->fs, name, &n );
     if( whefs_rc.OK == rc )
     {
@@ -10481,15 +11207,17 @@ static int whefs_fopen_ro( whefs_file * restrict f, char const * name )
 /**
    Like whefs_fopen_ro(), but sets up f in read/write mode.
 */
-static int whefs_fopen_rw( whefs_file * restrict f, char const * name )
+static int whefs_fopen_rw( whefs_file * f, char const * name )
 {
+    whefs_inode n;
+    int rc;
     if( ! f || ! name ) return whefs_rc.ArgError;
     if( ! whefs_fs_is_rw(f->fs) ) return whefs_rc.AccessError;
-    whefs_inode n = whefs_inode_init;
-    int rc = whefs_inode_by_name( f->fs, name, &n );
+    n = whefs_inode_empty;
+    rc = whefs_inode_by_name( f->fs, name, &n );
     if( whefs_rc.OK != rc ) do
     {
-        //WHEFS_DBG_FYI("whefs_inode_by_name(fs,[%s]) found no inode. Trying to create one...",name);
+        /*WHEFS_DBG_FYI("whefs_inode_by_name(fs,[%s]) found no inode. Trying to create one...",name); */
 	/**
 	   Create new entry...
 	*/
@@ -10499,10 +11227,10 @@ static int whefs_fopen_rw( whefs_file * restrict f, char const * name )
 	if( rc != whefs_rc.OK ) break;
 	whefs_inode_update_mtime( f->fs, &n );
 	rc = whefs_inode_flush( f->fs, &n );
-	//if( rc != whefs_rc.OK ) break;
+	/*if( rc != whefs_rc.OK ) break; */
 	break;
     } while(1);
-    //WHEFS_DBG("f->flags = 0x%04x", f->flags );
+    /*WHEFS_DBG("f->flags = 0x%04x", f->flags ); */
     if( rc != whefs_rc.OK )
     {
 	WHEFS_DBG_ERR("open-for-write (%s) failed with rc %d\n!",name,rc);
@@ -10525,10 +11253,12 @@ static int whefs_fopen_rw( whefs_file * restrict f, char const * name )
 
 whefs_file * whefs_fopen( whefs_fs * fs, char const * name, char const * mode )
 {
-    if( ! fs || !name || !*name || !mode || !*mode ) return 0;
     unsigned int flags = 0;
+    int rc;
+    whefs_file * f;
+    if( ! fs || !name || !*name || !mode || !*mode ) return 0;
     if( 0 && (0 != strchr( mode, 'w' )) )
-    { // FIXME: add support for mode 'w' and 'w+'
+    { /* FIXME: add support for mode 'w' and 'w+' */
 	flags = WHEFS_FLAG_ReadWrite;
     }
     else if( 0 != strchr( mode, 'r' ) )
@@ -10542,13 +11272,13 @@ whefs_file * whefs_fopen( whefs_fs * fs, char const * name, char const * mode )
 	WHEFS_DBG_WARN("EFS is opened read-only, so we cannot open files in read/write mode.");
 	return 0;
     }
-    whefs_file * f = whefs_file_alloc();
+    f = whefs_file_alloc();
     if( ! f ) return 0;
-    *f = whefs_file_init;
+    *f = whefs_file_empty;
     f->fs = fs;
     f->flags = flags;
-    int rc = whefs_rc.IOError;
-    //WHEFS_DBG_FYI("fopen(fs,[%s],[%s]) flags=0x%08x ISRW=%d", name, mode, flags, WHEFS_FILE_ISRW(f) );
+    rc = whefs_rc.IOError;
+    /*WHEFS_DBG_FYI("fopen(fs,[%s],[%s]) flags=0x%08x ISRW=%d", name, mode, flags, WHEFS_FILE_ISRW(f) ); */
     rc = WHEFS_FILE_ISRW(f)
 	? whefs_fopen_rw( f, name )
 	: whefs_fopen_ro( f, name );
@@ -10562,45 +11292,48 @@ whefs_file * whefs_fopen( whefs_fs * fs, char const * name, char const * mode )
         
         whefs_fs_closer_file_add( fs, f );
     }
-    //WHEFS_DBG("opened whefs_file [%s]. mode=%s, flags=%08x", name, mode, f->flags );
+    /*WHEFS_DBG("opened whefs_file [%s]. mode=%s, flags=%08x", name, mode, f->flags ); */
     return f;
 }
 
 whio_dev * whefs_dev_open( whefs_fs * fs, char const * name, bool writeMode )
 {
     if( ! fs || !name ) return 0;
-    if( writeMode && ! whefs_fs_is_rw(fs) )
+    else if( writeMode && ! whefs_fs_is_rw(fs) )
     {
 	return 0;
     }
-    whefs_inode ino = whefs_inode_init;
-    if( whefs_rc.OK != whefs_inode_by_name( fs, name, &ino ) )
-    { // Try to create one...
-	if( ! writeMode )
-	{
-	    WHEFS_DBG_WARN("Open for read failed: did not find pseudofile named [%s].",name);
-	    return 0;
-	}
-	if( whefs_rc.OK != whefs_inode_next_free( fs, &ino, true ) )
-	{
-	    WHEFS_DBG_WARN("Opening inode for [%s] failed! EFS is likely full.", name );
-	    return 0;
-	}
-	if( whefs_rc.OK != whefs_inode_name_set( fs, ino.id, name ) )
-	{
-	    WHEFS_DBG_WARN("Setting inode #%"WHEFS_ID_TYPE_PFMT" name to [%s] failed!", ino.id, name );
-	    return 0;
-	}
-	whefs_inode_flush( fs, &ino );
+    else {
+        whefs_inode ino = whefs_inode_empty;
+        whio_dev * dev;
+        if( whefs_rc.OK != whefs_inode_by_name( fs, name, &ino ) )
+        { /* Try to create one... */
+            if( ! writeMode )
+            {
+                WHEFS_DBG_WARN("Open for read failed: did not find pseudofile named [%s].",name);
+                return 0;
+            }
+            if( whefs_rc.OK != whefs_inode_next_free( fs, &ino, true ) )
+            {
+                WHEFS_DBG_WARN("Opening inode for [%s] failed! EFS is likely full.", name );
+                return 0;
+            }
+            if( whefs_rc.OK != whefs_inode_name_set( fs, ino.id, name ) )
+            {
+                WHEFS_DBG_WARN("Setting inode #%"WHEFS_ID_TYPE_PFMT" name to [%s] failed!", ino.id, name );
+                return 0;
+            }
+            whefs_inode_flush( fs, &ino );
+        }
+        dev = whefs_dev_for_inode( fs, ino.id, writeMode );
+        if( ! dev )
+        {
+            WHEFS_FIXME("Creation of i/o device for inode #%"WHEFS_ID_TYPE_PFMT" failed - "
+                        "be sure we delete the inode entry if it didn't exist before this call!",
+                        ino.id );
+        }
+        return dev;
     }
-    whio_dev * dev = whefs_dev_for_inode( fs, ino.id, writeMode );
-    if( ! dev )
-    {
-	WHEFS_FIXME("Creation of i/o device for inode #%"WHEFS_ID_TYPE_PFMT" failed - "
-		    "be sure we delete the inode entry if it didn't exist before this call!",
-		    ino.id );
-    }
-    return dev;
 }
 
 
@@ -10624,7 +11357,7 @@ static void whefs_stream_closer_kludge_dtor( void * v )
     if(0) whefs_stream_closer_kludge_dtor(0); /* avoid "static func defined but not used" warning. */
     if(v)
     {
-        //WHEFS_DBG("Removing whio_stream from closer list.");
+        /*WHEFS_DBG("Removing whio_stream from closer list."); */
         whefs_stream_closer_kludge * k = (whefs_stream_closer_kludge*)v;
         whefs_fs_closer_stream_remove( k->fs, k->stream );
         free( k );
@@ -10634,6 +11367,8 @@ static void whefs_stream_closer_kludge_dtor( void * v )
 whio_stream * whefs_stream_open( whefs_fs * fs, char const * name, bool writeMode, bool append )
 {
     whio_dev * d = whefs_dev_open( fs, name, writeMode );
+    whefs_stream_closer_kludge * k;
+    whio_stream * s;
     if( ! d ) return 0;
     if( writeMode )
     {
@@ -10646,13 +11381,13 @@ whio_stream * whefs_stream_open( whefs_fs * fs, char const * name, bool writeMod
             d->api->truncate( d, 0 );
         }
     }
-    whefs_stream_closer_kludge * k = (whefs_stream_closer_kludge*)malloc(sizeof(whefs_stream_closer_kludge));
+    k = (whefs_stream_closer_kludge*)malloc(sizeof(whefs_stream_closer_kludge));
     if( ! k )
     {
         d->api->finalize(d);
         return 0;
     }
-    whio_stream * s = whio_stream_for_dev( d, true );
+    s = whio_stream_for_dev( d, true );
     if( ! s )
     {
         free(k);
@@ -10670,26 +11405,26 @@ whio_stream * whefs_stream_open( whefs_fs * fs, char const * name, bool writeMod
 }
 
 
-whio_dev * whefs_fdev( whefs_file * restrict f )
+whio_dev * whefs_fdev( whefs_file * f )
 {
     return f ? f->dev : 0;
 }
 
-whio_size_t whefs_fseek( whefs_file * restrict f, size_t pos, int whence )
+whio_size_t whefs_fseek( whefs_file * f, size_t pos, int whence )
 {
     return (f && f->dev)
 	? f->dev->api->seek( f->dev, pos, whence )
 	: whefs_rc.SizeTError;
 }
 
-int whefs_frewind( whefs_file * restrict f )
+int whefs_frewind( whefs_file * f )
 {
     return (f)
 	? whio_dev_rewind( f->dev )
 	: whefs_rc.ArgError;
 }
 
-int whefs_ftrunc( whefs_file * restrict f, size_t pos )
+int whefs_ftrunc( whefs_file * f, size_t pos )
 {
     return (f && f->dev)
 	? f->dev->api->truncate( f->dev, pos )
@@ -10697,12 +11432,12 @@ int whefs_ftrunc( whefs_file * restrict f, size_t pos )
 }
 
 
-whefs_fs * whefs_file_fs( whefs_file * restrict f )
+whefs_fs * whefs_file_fs( whefs_file * f )
 {
     return f ? f->fs : 0;
 }
 
-int whefs_fclose( whefs_file * restrict f )
+int whefs_fclose( whefs_file * f )
 {
     int rc = f ? whefs_rc.OK : whefs_rc.ArgError;
     if( whefs_rc.OK == rc )
@@ -10715,7 +11450,7 @@ int whefs_fclose( whefs_file * restrict f )
     return rc;
 }
 
-int whefs_fflush( whefs_file * restrict f )
+int whefs_fflush( whefs_file * f )
 {
     if( ! f ) return whefs_rc.ArgError;
     else
@@ -10728,7 +11463,7 @@ int whefs_fflush( whefs_file * restrict f )
     }
 }
 
-int whefs_dev_close( whio_dev * restrict dev )
+int whefs_dev_close( whio_dev * dev )
 {
     int rc = dev ? whefs_rc.OK : whefs_rc.ArgError;
     if( whefs_rc.OK == rc )
@@ -10738,10 +11473,10 @@ int whefs_dev_close( whio_dev * restrict dev )
     return rc;
 }
 
-size_t whefs_fread( whefs_file * restrict f, size_t size, size_t count, void * dest )
+size_t whefs_fread( whefs_file * f, size_t size, size_t count, void * dest )
 {
-    if( ! f || !count || (count && !dest) || !size || !f->dev ) return 0;
     size_t x = 0;
+    if( ! f || !count || (count && !dest) || !size || !f->dev ) return 0;
     for( ; x < count; ++x )
     {
 	size_t rsz = f->dev->api->read( f->dev, WHIO_VOID_PTR_ADD(dest,(x*size)), size );
@@ -10750,25 +11485,25 @@ size_t whefs_fread( whefs_file * restrict f, size_t size, size_t count, void * d
     return x;
 }
 
-size_t whefs_fwrite( whefs_file * restrict f, size_t sz, size_t count, void const * src )
+size_t whefs_fwrite( whefs_file * f, size_t sz, size_t count, void const * src )
 {
-    if( ! f || !count || (count && !src) || !sz || !f->dev ) return 0;
     size_t x = 0;
+    if( ! f || !count || (count && !src) || !sz || !f->dev ) return 0;
     for( ; x < count; ++x )
     {
 	size_t wsz = f->dev->api->write( f->dev, WHIO_VOID_CPTR_ADD(src,(x*sz)), sz );
 	if( sz != wsz ) break;
     }
-    //if( x ) f->dev->api->flush(f->dev);
+    /*if( x ) f->dev->api->flush(f->dev); */
     return x;
 }
 
-size_t whefs_fwritev( whefs_file * restrict f, char const * fmt, va_list vargs )
+size_t whefs_fwritev( whefs_file * f, char const * fmt, va_list vargs )
 {
     return f ? whio_dev_writefv( f->dev, fmt, vargs ) : 0;
 }
 
-size_t whefs_fwritef( whefs_file * restrict f, char const * fmt, ... )
+size_t whefs_fwritef( whefs_file * f, char const * fmt, ... )
 {
     size_t rc;
     va_list vargs;
@@ -10778,14 +11513,14 @@ size_t whefs_fwritef( whefs_file * restrict f, char const * fmt, ... )
     return rc;
 }
 
-size_t whefs_file_write( whefs_file * restrict f, void const * src, size_t n  )
+size_t whefs_file_write( whefs_file * f, void const * src, size_t n  )
 {
     return (f && f->dev)
 	? f->dev->api->write( f->dev, src, n )
 	: 0;
 }
 
-size_t whefs_file_read( whefs_file * restrict f, void * dest, size_t n  )
+size_t whefs_file_read( whefs_file * f, void * dest, size_t n  )
 {
     return (f && f->dev)
 	? f->dev->api->read( f->dev, dest, n )
@@ -10794,12 +11529,12 @@ size_t whefs_file_read( whefs_file * restrict f, void * dest, size_t n  )
 
 #if 0
 not sure about this one;
-int whefs_unlink_file( whefs_file * restrict )
+int whefs_unlink_file( whefs_file * )
 {
     if( ! f ) return whefs_rc.ArgError;
     f->dev->api->finalize(f->dev);
     f->dev = 0;
-    whefs_inode ino = whefs_inode_init;
+    whefs_inode ino = whefs_inode_empty;
     ino.id = f->inode;
     whefs_inode_read( f->fs, &ino );
     int rc = whefs_inode_unlink( f->fs, &ino );
@@ -10811,13 +11546,15 @@ int whefs_unlink_file( whefs_file * restrict )
 int whefs_unlink_filename( whefs_fs * fs, char const * fname )
 {
     if( ! fs || !fname ) return whefs_rc.ArgError;
-    whefs_inode ino = whefs_inode_init;
-    int rc = whefs_inode_by_name( fs, (char const *) /* FIXME: signedness*/ fname, &ino );
-    if( whefs_rc.OK == rc )
-    {
-	rc = whefs_inode_unlink( fs, &ino );
+    else {
+        whefs_inode ino = whefs_inode_empty;
+        int rc = whefs_inode_by_name( fs, (char const *) /* FIXME: signedness*/ fname, &ino );
+        if( whefs_rc.OK == rc )
+        {
+            rc = whefs_inode_unlink( fs, &ino );
+        }
+        return rc;
     }
-    return rc;
 }
 
 /**
@@ -10826,7 +11563,7 @@ int whefs_unlink_filename( whefs_fs * fs, char const * fname )
    state. Relying on compiler default values is a bad idea
    (been there, done that).
 */
-static const whefs_file_stats whefs_file_stats_init =
+static const whefs_file_stats whefs_file_stats_empty =
     {
     0, /* bytes */
     0, /* inode */
@@ -10835,16 +11572,16 @@ static const whefs_file_stats whefs_file_stats_init =
 
 int whefs_fstat( whefs_file const * f, whefs_file_stats * st )
 {
+    whefs_inode ino = whefs_inode_empty;
+    int rc;
+    whefs_id_type bid = ino.first_block;
+    whefs_block bl = whefs_block_empty;
     if( ! f || !st ) return whefs_rc.ArgError;
-    *st = whefs_file_stats_init;
+    *st = whefs_file_stats_empty;
     st->inode = f->inode;
-    whefs_inode ino = whefs_inode_init;
-    ino.id = f->inode;
-    int rc = whefs_inode_read( f->fs, &ino );
+    rc = whefs_inode_id_read( f->fs, f->inode, &ino );
     if( whefs_rc.OK != rc ) return rc;
     st->bytes = ino.data_size;
-    whefs_id_type bid = ino.first_block;
-    whefs_block bl = whefs_block_init;
     bl.id = bid;
     while( bl.id )
     {
@@ -10856,12 +11593,13 @@ int whefs_fstat( whefs_file const * f, whefs_file_stats * st )
     return rc;
 }
 
-int whefs_file_name_set( whefs_file * restrict f, char const * newName )
+int whefs_file_name_set( whefs_file * f, char const * newName )
 {
+    whefs_inode * ino = 0;
+    int rc;
     if( ! f || (! newName || !*newName) ) return whefs_rc.ArgError;
     if( ! WHEFS_FILE_ISRW(f) ) return whefs_rc.AccessError;
-    whefs_inode * ino = 0;
-    int rc = whefs_inode_search_opened( f->fs, f->inode, &ino );
+    rc = whefs_inode_search_opened( f->fs, f->inode, &ino );
     if( whefs_rc.OK != rc )
     {
 	WHEFS_DBG_ERR("This should never ever happen: f appears to be a valid whefs_file, but we could find no associated opened inode!");
@@ -10869,11 +11607,11 @@ int whefs_file_name_set( whefs_file * restrict f, char const * newName )
     }
     rc = whefs_inode_name_set( f->fs, ino->id, newName );
     if( whefs_rc.OK != rc ) return rc;
-    //whefs_inode_flush( f->fs, ino );
+    /*whefs_inode_flush( f->fs, ino ); */
     return whefs_rc.OK;
 }
 
-char const * whefs_file_name_get( whefs_file * restrict f )
+char const * whefs_file_name_get( whefs_file * f )
 {
 #if 0
     if( ! f ) return 0;
@@ -10898,12 +11636,13 @@ char const * whefs_file_name_get( whefs_file * restrict f )
 #endif
 }
 
-whio_size_t whefs_fsize( whefs_file const * restrict f )
+whio_size_t whefs_fsize( whefs_file const * f )
 {
 #if 1
-    if( ! f ) return whefs_rc.SizeTError;
     whefs_inode * ino = 0;
-    int rc = whefs_inode_search_opened( f->fs, f->inode, &ino );
+    int rc;
+    if( ! f ) return whefs_rc.SizeTError;
+    rc = whefs_inode_search_opened( f->fs, f->inode, &ino );
     return (whefs_rc.OK == rc)
 	? ino->data_size
 	: whefs_rc.SizeTError;
@@ -10924,12 +11663,18 @@ whio_size_t whefs_fsize( whefs_file const * restrict f )
   This file contiains most of the name-cache-related functionality.
 */
 
-#include <stdlib.h> // free()
-#include <string.h> // memset()
+#include <stdlib.h> /* free() */
+#include <string.h> /* memset() */
 #include <assert.h>
 
 int whefs_inode_hash_cache_load( whefs_fs * fs )
 {
+    whefs_string name = whefs_string_empty;
+    enum { bufSize = WHEFS_MAX_FILENAME_LENGTH+1 };
+    unsigned char buf[bufSize];
+    int rc = 0;
+    whefs_id_type i;
+    whefs_id_type count = 0;
     if( ! WHEFS_FS_HASH_CACHE_IS_ENABLED(fs) ) return whefs_rc.OK;
     if( ! fs->cache.hashes )
     {
@@ -10943,19 +11688,13 @@ int whefs_inode_hash_cache_load( whefs_fs * fs )
         fs->cache.hashes->maxAlloc = fs->options.inode_count;
     }
 
-    //whefs_hashid h = whefs_hashid_init;
-    whefs_string name = whefs_string_init;
-    enum { bufSize = WHEFS_MAX_FILENAME_LENGTH+1 };
-    unsigned char buf[bufSize];
+    /*whefs_hashid h = whefs_hashid_empty; */
     memset( buf, 0, bufSize );
-    // ensure that whefs_inode_name_get() won't malloc():
+    /* ensure that whefs_inode_name_get() won't malloc(): */
     name.string = (char *)buf;
     name.alloced = bufSize;
     name.length = 0;
-    int rc = 0;
-    whefs_id_type i;
-    whefs_id_type count = 0;
-    fs->cache.hashes->skipAutoSort = true; // optimization to avoid extra sorting via whefs_inode_name_get()
+    fs->cache.hashes->skipAutoSort = true; /* optimization to avoid extra sorting via whefs_inode_name_get() */
     for( i = fs->options.inode_count; i >=1 ; --i )
     {
         /**
@@ -10977,8 +11716,8 @@ int whefs_inode_hash_cache_load( whefs_fs * fs )
                 continue;
             }
 	}
-#endif // WHEFS_CONFIG_ENABLE_BITSET_CACHE
-        rc = whefs_inode_name_get( fs, i, &name ); // this caches the name hash
+#endif /* WHEFS_CONFIG_ENABLE_BITSET_CACHE */
+        rc = whefs_inode_name_get( fs, i, &name ); /* this caches the name hash */
         assert( (name.string == (char *)buf) && "Internal memory management foo-foo." );
         if( whefs_rc.OK != rc ) break;
         ++count;
@@ -11003,19 +11742,37 @@ whefs_id_type whefs_inode_hash_cache_search_ndx(whefs_fs * fs, char const * name
         WHEFS_DBG_CACHE("Achtung: auto-sorting dirty name cache before search starts.");
         whefs_inode_hash_cache_sort(fs);
     }
+#if 0
     return ( ! fs->cache.hashes )
         ? whefs_rc.IDTypeEnd
         : whefs_hashid_list_index_of( fs->cache.hashes, fs->cache.hashfunc(name) );
+#else
+    if( ! fs->cache.hashes )
+    {
+        WHEFS_DBG_CACHE("Cache check failed (cache is empty) for name [%s].",name);
+        return whefs_rc.IDTypeEnd;
+    }
+    else
+    {
+        whefs_id_type const rc = whefs_hashid_list_index_of( fs->cache.hashes, fs->cache.hashfunc(name) );
+        WHEFS_DBG_CACHE("Cache %s for name [%s].",((rc==whefs_rc.IDTypeEnd) ? "miss" : "hit"), name);
+        return rc;
+    }
+#endif    
 }
 
 whefs_id_type whefs_inode_hash_cache_search_id(whefs_fs * fs, char const * name )
 {
     if( ! WHEFS_FS_HASH_CACHE_IS_ENABLED(fs) ) return 0;
     if( ! fs->cache.hashes ) return 0;
-    whefs_id_type n = whefs_inode_hash_cache_search_ndx( fs, name );
-    return ( n == whefs_rc.IDTypeEnd )
-        ? 0
-        : fs->cache.hashes->list[n].id;
+    else
+    {
+        whefs_id_type n = whefs_inode_hash_cache_search_ndx( fs, name );
+        WHEFS_DBG_CACHE("Cache %s for name [%s].",((n==whefs_rc.IDTypeEnd) ? "miss" : "hit"), name);
+        return ( n == whefs_rc.IDTypeEnd )
+            ? 0
+            : fs->cache.hashes->list[n].id;
+    }
 }
 
 
@@ -11032,22 +11789,27 @@ void whefs_inode_hash_cache_sort(whefs_fs * fs )
 void whefs_inode_name_uncache(whefs_fs * fs, char const * name )
 {
     if( !fs->cache.hashes || ! name || !*name  ) return;
-    const whefs_id_type ndx = whefs_inode_hash_cache_search_ndx( fs, name );
-    if( whefs_rc.IDTypeEnd != ndx )
-    {
-        fs->cache.hashes->list[ndx] = whefs_hashid_init;
-        fs->cache.hashes->isSorted = false;
+    else {
+        const whefs_id_type ndx = whefs_inode_hash_cache_search_ndx( fs, name );
+        if( whefs_rc.IDTypeEnd != ndx )
+        {
+            fs->cache.hashes->list[ndx] = whefs_hashid_empty;
+            fs->cache.hashes->isSorted = false;
+        }
     }
 }
 
 int whefs_inode_hash_cache( whefs_fs * fs, whefs_id_type id, char const * name )
 {
+    int rc = whefs_rc.OK;
+    whefs_hashval_type h;
+    whefs_hashid H;
+    whefs_id_type ndx;
     if( ! WHEFS_FS_HASH_CACHE_IS_ENABLED(fs) )
     {
         return whefs_rc.OK;
     }
     if( ! fs || !name || !*name ) return whefs_rc.ArgError;
-    int rc = whefs_rc.OK;
     if( ! fs->cache.hashes )
     {
         const whefs_id_type max = fs->options.inode_count;
@@ -11060,9 +11822,9 @@ int whefs_inode_hash_cache( whefs_fs * fs, whefs_id_type id, char const * name )
         }
     }
     if( whefs_rc.OK != rc ) return rc;
-    whefs_hashval_type h = fs->cache.hashfunc( name );
+    h = fs->cache.hashfunc( name );
 #if 1
-    const whefs_id_type ndx = whefs_hashid_list_index_of( fs->cache.hashes, h );
+    ndx = whefs_hashid_list_index_of( fs->cache.hashes, h );
     if( whefs_rc.IDTypeEnd != ndx )
     {
         if(0) WHEFS_DBG("CHECKING: name cache count[%"WHEFS_ID_TYPE_PFMT"], alloced=[%"WHEFS_ID_TYPE_PFMT"], hash [%"WHEFS_HASHVAL_TYPE_PFMT"] for name [%s], ndx=[%"WHEFS_ID_TYPE_PFMT"]",
@@ -11076,10 +11838,10 @@ int whefs_inode_hash_cache( whefs_fs * fs, whefs_id_type id, char const * name )
                       h, id, ndx );
         return whefs_rc.InternalError;
     }
-    WHEFS_DBG_CACHE("ADDING: name cache count[%"WHEFS_ID_TYPE_PFMT"], alloced=[%"WHEFS_ID_TYPE_PFMT"], hash [%"WHEFS_HASHVAL_TYPE_PFMT"] for name [%s], ndx=[%"WHEFS_ID_TYPE_PFMT"]",
-                          fs->cache.hashes->count, fs->cache.hashes->alloced, h, name, ndx );
+    WHEFS_DBG_CACHE("ADDING: name cache count[%"WHEFS_ID_TYPE_PFMT"], alloced=[%"WHEFS_ID_TYPE_PFMT"], hash [%"WHEFS_HASHVAL_TYPE_PFMT"] for name [%s]",
+                          fs->cache.hashes->count, fs->cache.hashes->alloced, h, name );
 #endif
-    whefs_hashid H = whefs_hashid_init;
+    H = whefs_hashid_empty;
     H.hash = h;
     H.id = id;
     rc = whefs_hashid_list_add( fs->cache.hashes, &H );
@@ -11096,7 +11858,7 @@ int whefs_inode_hash_cache( whefs_fs * fs, whefs_id_type id, char const * name )
 */
 #include <stdlib.h> /* malloc() and co. */
 
-const whefs_fs_closer_list whefs_fs_closer_list_init = whefs_fs_closer_list_init_m;
+const whefs_fs_closer_list whefs_fs_closer_list_empty = whefs_fs_closer_list_empty_m;
 
 
 /**
@@ -11104,8 +11866,9 @@ const whefs_fs_closer_list whefs_fs_closer_list_init = whefs_fs_closer_list_init
 */
 static void whefs_fs_closer_list_unlink( whefs_fs_closer_list * x )
 {
-    if( x->prev ) { x->prev->next = x->next; x->prev = 0; }
-    if( x->next ) { x->next->prev = x->prev; x->next = 0; }
+    if( x->prev ) { x->prev->next = x->next; }
+    if( x->next ) { x->next->prev = x->prev; }
+    x->prev = x->next = NULL;
 }
 
 
@@ -11123,7 +11886,7 @@ static struct
     char used[whefs_fs_closer_list_alloc_count];
     size_t next;
     const size_t count;
-} whefs_fs_closer_list_alloc_slots = { { whefs_fs_closer_list_init_m }, {0}, 0, whefs_fs_closer_list_alloc_count };
+} whefs_fs_closer_list_alloc_slots = { { whefs_fs_closer_list_empty_m }, {0}, 0, whefs_fs_closer_list_alloc_count };
 #endif
 /**
    Allocates a new zero-initialized object. Ownership is passed
@@ -11144,7 +11907,7 @@ whefs_fs_closer_list * whefs_fs_closer_list_alloc()
     }
 #endif /* WHEFS_CONFIG_ENABLE_STATIC_MALLOC */
     if( ! obj ) obj = (whefs_fs_closer_list *) malloc( sizeof(whefs_fs_closer_list) );
-    if( obj ) *obj = whefs_fs_closer_list_init;
+    if( obj ) *obj = whefs_fs_closer_list_empty;
     return obj;
 }
 
@@ -11160,14 +11923,14 @@ void whefs_fs_closer_list_free( whefs_fs_closer_list * obj )
 	(obj > &whefs_fs_closer_list_alloc_slots.objs[whefs_fs_closer_list_alloc_slots.count-1]) )
     { /* it does not belong to us */
         whefs_fs_closer_list_unlink( obj );
-        *obj = whefs_fs_closer_list_init;
+        *obj = whefs_fs_closer_list_empty;
 	free(obj);
 	return;
     }
     else
     {
         whefs_fs_closer_list_unlink( obj );
-        *obj = whefs_fs_closer_list_init;
+        *obj = whefs_fs_closer_list_empty;
 	const size_t ndx = (obj - &whefs_fs_closer_list_alloc_slots.objs[0]);
 	whefs_fs_closer_list_alloc_slots.used[ndx] = 0;
 	if( ndx < whefs_fs_closer_list_alloc_slots.next ) whefs_fs_closer_list_alloc_slots.next = ndx;
@@ -11175,7 +11938,7 @@ void whefs_fs_closer_list_free( whefs_fs_closer_list * obj )
     }
 #else
     whefs_fs_closer_list_unlink( obj );
-    *obj = whefs_fs_closer_list_init;
+    *obj = whefs_fs_closer_list_empty;
     free(obj);
 #endif /* WHEFS_CONFIG_ENABLE_STATIC_MALLOC */
 }
@@ -11183,24 +11946,23 @@ void whefs_fs_closer_list_free( whefs_fs_closer_list * obj )
 
 int whefs_fs_closer_list_close( whefs_fs_closer_list * head, bool right )
 {
-    if( ! head ) return whefs_rc.ArgError;
     int rc = whefs_rc.OK;
     whefs_fs_closer_list * x = head;
+    if( ! head ) return whefs_rc.ArgError;
     for( ; x; head = x )
     {
         x = head->next;
+        /* We unlink head before closing b/c the close routines may update the list indirectly. */
+        whefs_fs_closer_list_unlink(head);
         switch( head->type )
         {
           case WHEFS_CLOSER_TYPE_FILE:
-              whefs_fs_closer_list_unlink(head);
               whefs_fclose( head->item.file );
               break;
           case WHEFS_CLOSER_TYPE_DEV:
-              whefs_fs_closer_list_unlink(head);
               head->item.dev->api->finalize( head->item.dev );
               break;
           case WHEFS_CLOSER_TYPE_STREAM:
-              whefs_fs_closer_list_unlink(head);
               head->item.stream->api->finalize( head->item.stream );
               break;
           default:
@@ -11223,12 +11985,15 @@ int whefs_fs_closer_list_close( whefs_fs_closer_list * head, bool right )
 */
 static int whefs_fs_closer_remove( whefs_fs * fs, char type, void const * obj )
 {
+    whefs_fs_closer_list * li;
+    int rc;
+    bool foundOne;
     if( ! fs || ! obj ) return whefs_rc.ArgError;
-    whefs_fs_closer_list * li = fs->closers;
+    li = fs->closers;
     if( ! li ) return whefs_rc.RangeError;
     while( li->prev ) li = li->prev;
-    int rc = whefs_rc.OK;
-    bool foundOne = false;
+    rc = whefs_rc.OK;
+    foundOne = false;
     for( ; li ; li = li->next )
     {
         if( li->type != type ) continue;
@@ -11272,8 +12037,9 @@ static int whefs_fs_closer_remove( whefs_fs * fs, char type, void const * obj )
 */
 static whefs_fs_closer_list * whefs_fs_closer_add( whefs_fs * fs )
 {
+    whefs_fs_closer_list * li;
     if( ! fs ) return NULL;
-    whefs_fs_closer_list * li = whefs_fs_closer_list_alloc();
+    li = whefs_fs_closer_list_alloc();
     if( ! li ) return NULL;
     if( ! fs->closers )
     {
@@ -11291,8 +12057,9 @@ static whefs_fs_closer_list * whefs_fs_closer_add( whefs_fs * fs )
 
 int whefs_fs_closer_file_add( whefs_fs * fs, whefs_file * f )
 {
+    whefs_fs_closer_list * li;
     if( ! fs || ! f ) return whefs_rc.ArgError;
-    whefs_fs_closer_list * li = fs->closers;
+    li = fs->closers;
     if( li )
     { /** If we find f->dev in the list then we
           promote the entry to type WHEFS_CLOSER_TYPE_FILE.
@@ -11309,7 +12076,7 @@ int whefs_fs_closer_file_add( whefs_fs * fs, whefs_file * f )
     }
     else
     {
-        whefs_fs_closer_list * li = whefs_fs_closer_add(fs);
+        li = whefs_fs_closer_add(fs);
         if( ! li ) return whefs_rc.AllocError /* that's a guess */;
         li->type = WHEFS_CLOSER_TYPE_FILE;
         li->item.file = f;
@@ -11324,8 +12091,9 @@ int whefs_fs_closer_file_remove( whefs_fs * fs, whefs_file const * f )
 
 int whefs_fs_closer_dev_add( whefs_fs * fs, whio_dev * d )
 {
+    whefs_fs_closer_list * li;
     if( ! fs || ! d ) return whefs_rc.ArgError;
-    whefs_fs_closer_list * li = whefs_fs_closer_add(fs);
+    li = whefs_fs_closer_add(fs);
     if( ! li ) return whefs_rc.AllocError /* that's a guess */;
     li->type = WHEFS_CLOSER_TYPE_DEV;
     li->item.dev = d;
@@ -11339,8 +12107,9 @@ int whefs_fs_closer_dev_remove( whefs_fs * fs, whio_dev const * d )
 
 int whefs_fs_closer_stream_add( whefs_fs * fs, whio_stream * s, whio_dev const * d )
 {
+    whefs_fs_closer_list * li;
     if( ! fs || ! s || !d ) return whefs_rc.ArgError;
-    whefs_fs_closer_list * li = fs->closers;
+    li = fs->closers;
     if( li )
     { /** If we find f->dev in the list then we
           promote the entry to type WHEFS_CLOSER_TYPE_STREAM.
@@ -11358,7 +12127,7 @@ int whefs_fs_closer_stream_add( whefs_fs * fs, whio_stream * s, whio_dev const *
     }
     else
     { /* re-evaluate this. Is this sane? */
-        whefs_fs_closer_list * li = whefs_fs_closer_add(fs);
+        li = whefs_fs_closer_add(fs);
         if( ! li ) return whefs_rc.AllocError /* that's a guess */;
         li->type = WHEFS_CLOSER_TYPE_STREAM;
         li->item.stream = s;
@@ -11381,11 +12150,14 @@ const whbits whbits_init_obj = WHBITS_INIT;
 
 int whbits_init( whbits * b, whbits_count_t bitCount, unsigned char initialState )
 {
+    size_t lenB;
+    whbits old;
+    unsigned char * x;
     if( ! bitCount || !b ) return -1;
-    const size_t lenB = (bitCount / 8) + ((bitCount%8) ? 1 : 0);
+    lenB = (bitCount / 8) + ((bitCount%8) ? 1 : 0);
     if( b->sz_alloc >= lenB )
     { /* re-use the memory */
-        //memset( b->bytes+b->sz_bytes, initialState, b->sz_bytes - lenB );
+        /*memset( b->bytes+b->sz_bytes, initialState, b->sz_bytes - lenB ); */
         if( b->sz_bytes == lenB )
         {
             b->sz_bits = bitCount;
@@ -11404,8 +12176,8 @@ int whbits_init( whbits * b, whbits_count_t bitCount, unsigned char initialState
         b->sz_bits = bitCount;
         return 0;
     }
-    whbits old = *b;
-    unsigned char * x = realloc( b->bytes, lenB );
+    old = *b;
+    x = realloc( b->bytes, lenB );
     if( ! x )
     {
         return -1;
@@ -11542,7 +12314,7 @@ void whdbgv( unsigned int condition,
 	fflush(whdbg_stream);
 #undef VAPARGS
     }
-#endif // WHDBG_CONFIG_ENABLE
+#endif /* WHDBG_CONFIG_ENABLE */
 }
 
 void whdbg(  unsigned int condition,
@@ -11824,8 +12596,6 @@ static int patternCompare(
           return 0;
         }
       }else if( c==matchSet ){
-	  //assert( esc==0 );         /* This is GLOB, not LIKE */
-	  //assert( matchSet<0x80 );  /* '[' is a single-byte character */
 	  if( (esc==0) || (matchSet<0x80) ) return 0;
         while( *zString && patternCompare(&zPattern[-1],zString,pInfo,esc)==0 ){
           SQLITE_SKIP_UTF8(zString);
@@ -11855,7 +12625,6 @@ static int patternCompare(
       }
     }else if( c==matchSet ){
       int prior_c = 0;
-      //assert( esc==0 );    /* This only occurs for GLOB, not LIKE */
       if( esc == 0 ) return 0;
       seen = 0;
       invert = 0;
@@ -11909,7 +12678,7 @@ int whglob_matches( char const * pattern, char const * str )
     return patternCompare( (unsigned char *)pattern, (unsigned char *) str, &cinfo, '\\' );
 }
 
-int whglob_matches_like( char const * str, char const * pattern, char caseSensitive )
+int whglob_matches_like( char const *pattern, char const * str, char caseSensitive )
 {
     /* The correct SQL-92 behavior is for the LIKE operator to ignore
     ** case.  Thus  'a' LIKE 'A' would be true. */
@@ -11918,7 +12687,7 @@ int whglob_matches_like( char const * str, char const * pattern, char caseSensit
     ** is case sensitive causing 'a' LIKE 'A' to be false */
     static const sqlite3CompareInfo likeInfoAlt = { '%', '_',   0, 0 };
     return patternCompare( (unsigned char *)pattern, (unsigned char *) str,
-			   caseSensitive ? &likeInfoNorm : &likeInfoAlt,
+			   caseSensitive ? &likeInfoAlt : &likeInfoNorm,
 			   '%' );
 }
 
@@ -11939,17 +12708,22 @@ int whglob_matches_like( char const * str, char const * pattern, char caseSensit
 /* end file src/whglob.c */
 /* begin file src/whefs_client_util.c */
 #line 8 "src/whefs_client_util.c"
-#include <string.h> // memset()
+#include <string.h> /* memset() */
 
 int whefs_test_insert_dummy_files( whefs_fs * fs )
 {
-    if( ! fs || ! fs->dev ) return whefs_rc.ArgError;
     int rc = whefs_rc.OK;
     whefs_file * F = 0;
     whefs_file_stats st;
     size_t nid = 0;
     char const * fname = "test_file_number_1";
     size_t szrc = 0;
+    whefs_inode ino;
+    whio_dev * dev = 0;
+    size_t i = 0;
+    size_t total = 0;
+
+    if( ! fs || ! fs->dev ) return whefs_rc.ArgError;
 
 #define INSERT(FN) \
     fname = FN; \
@@ -11968,12 +12742,10 @@ int whefs_test_insert_dummy_files( whefs_fs * fs )
     INSERT("test_file_number_2");
 #undef INSERT
 
-    whefs_inode ino;
-    whio_dev * dev = 0;
 #if 1
     whefs_inode_id_read( fs, nid, &ino );
     whefs_inode_name_set( fs, ino.id, "will be renamed");
-    //whefs_inode_save( fs, &ino );
+    /*whefs_inode_save( fs, &ino ); */
     dev = whefs_dev_for_inode( fs, ino.id, true );
     WHEFS_DBG("dev=%p",(void const *)dev);
     assert( dev && "opening of device for inode failed!" );
@@ -11985,9 +12757,9 @@ int whefs_test_insert_dummy_files( whefs_fs * fs )
 #endif
 
 #if 1
-    //whefs_inode_next_free( fs, &ino, true );
-    //ino = whefs_inode_init; ino.id = nid;
-    whefs_inode_read( fs, &ino );
+    /*whefs_inode_next_free( fs, &ino, true ); */
+    /*ino = whefs_inode_empty; ino.id = nid; */
+    whefs_inode_id_read( fs, ino.id, &ino );
     WHEFS_DBG("Trampling over inode #%u", ino.id );
     fname = "via whio_dev_inode";
     whefs_inode_name_set( fs, ino.id, fname );
@@ -11996,8 +12768,6 @@ int whefs_test_insert_dummy_files( whefs_fs * fs )
     assert( dev && "couldn't re-open device!");
     dev->api->flush(dev);
     assert( dev && "opening of device for inode failed!" );
-    size_t i = 0;
-    size_t total = 0;
     for( ; i < 10; ++i )
     {
 	nid = whio_dev_writef( dev, "Test #%02u", i );
@@ -12015,17 +12785,19 @@ int whefs_test_insert_dummy_files( whefs_fs * fs )
     F = whefs_fopen( fs, fname, "r+" );
     assert( F && "re-open of inode failed!" );
     dev = whefs_fdev( F );
-    char const * str = "...And now a final word.";
-    size_t slen = strlen(str);
-    size_t dsize = whefs_fseek( F, 0, SEEK_END );
-    WHEFS_DBG("F size=%u, slen=%u", dsize, slen );
-    nid = whefs_fwrite( F, slen, 1, str );
-    //WHEFS_DBG("whefs_fwrite() rc=%u", nid );
-    assert( (1 == nid) && "write failed!" );
-    dev->api->seek( dev, dsize + slen + 10, SEEK_SET );
-    dev->api->write( dev, "!", 1 );
-    //nid = whefs_fwrite( F, 1, 1, "!" );
-    WHEFS_DBG("dev size=%u", whio_dev_size(dev) );
+    {
+        char const * str = "...And now a final word.";
+        size_t slen = strlen(str);
+        size_t dsize = whefs_fseek( F, 0, SEEK_END );
+        WHEFS_DBG("F size=%u, slen=%u", dsize, slen );
+        nid = whefs_fwrite( F, slen, 1, str );
+        /*WHEFS_DBG("whefs_fwrite() rc=%u", nid ); */
+        assert( (1 == nid) && "write failed!" );
+        dev->api->seek( dev, dsize + slen + 10, SEEK_SET );
+        dev->api->write( dev, "!", 1 );
+        /*nid = whefs_fwrite( F, 1, 1, "!" ); */
+        WHEFS_DBG("dev size=%u", whio_dev_size(dev) );
+    }
     whefs_fclose( F );
 #endif
 
@@ -12038,11 +12810,11 @@ int whefs_fs_stats_get( whefs_fs * fs, whefs_fs_stats * st )
     WHEFS_DBG_ERR("NYI!");
 
     st->size = fs->filesize;
-    // FIXME: calculate used nodes.
+    /* FIXME: calculate used nodes. */
     st->used_inodes = 1; /* root node is always considered used. */
-    // FIXME: calculate used blocks
+    /* FIXME: calculate used blocks */
     st->used_blocks = 0;
-    // FIXME: calculate used bytes
+    /* FIXME: calculate used bytes */
     st->used_bytes = 0;
 
     return whefs_rc.OK;
@@ -12052,14 +12824,13 @@ int whefs_fs_stats_get( whefs_fs * fs, whefs_fs_stats * st )
 
 int whefs_fs_dump_to_FILE( whefs_fs * fs, FILE * out )
 {
-    if( ! fs || !out || !fs->dev ) return whefs_rc.ArgError;
     int rc = whefs_rc.OK;
     enum { bufSize = (1024 * 4) };
     unsigned char buf[bufSize];
     size_t rlen = 0;
+    if( ! fs || !out || !fs->dev ) return whefs_rc.ArgError;
     fs->dev->api->seek( fs->dev, 0L, SEEK_SET );
     while( (rlen = fs->dev->api->read( fs->dev, buf, bufSize ) ) )
-	//#undef bufSize
     {
 	if( 1 != fwrite( buf, rlen, 1, out ) )
 	{
@@ -12072,10 +12843,13 @@ int whefs_fs_dump_to_FILE( whefs_fs * fs, FILE * out )
 
 int whefs_import_dev( whefs_fs * fs, whio_dev * src, char const * fname, bool overwrite )
 {
-    if( ! fs || !src || !fname || !*fname ) return whefs_rc.ArgError;
     int rc = whefs_rc.OK;
-    whefs_inode ino = whefs_inode_init;
+    whefs_inode ino = whefs_inode_empty;
     bool existed = false;
+    whio_dev * imp;
+    whio_size_t oldPos, szrc;
+    size_t oldFSize, newFSize;
+    if( ! fs || !src || !fname || !*fname ) return whefs_rc.ArgError;
     rc = whefs_inode_by_name( fs, fname, &ino );
     if( rc == whefs_rc.OK )
     {
@@ -12090,11 +12864,10 @@ int whefs_import_dev( whefs_fs * fs, whio_dev * src, char const * fname, bool ov
 	if( whefs_rc.OK != rc ) return rc;
 	whefs_inode_flush( fs, &ino );
     }
-    whio_dev * imp = whefs_dev_for_inode( fs, ino.id, true );
+    imp = whefs_dev_for_inode( fs, ino.id, true );
     if( ! imp ) return whefs_rc.InternalError;
-
-    const whio_size_t oldPos = src->api->tell( src );
-    const whio_size_t szrc = src->api->seek( src, 0, SEEK_SET );
+    oldPos = src->api->tell( src );
+    szrc = src->api->seek( src, 0, SEEK_SET );
     if( whio_rc.SizeTError == szrc )
     {
 	imp->api->finalize( imp );
@@ -12105,8 +12878,8 @@ int whefs_import_dev( whefs_fs * fs, whio_dev * src, char const * fname, bool ov
 	return whefs_rc.RangeError;
     }
 
-    const size_t oldFSize = ino.data_size;
-    const size_t newFSize = whio_dev_size( src );
+    oldFSize = ino.data_size;
+    newFSize = whio_dev_size( src );
     rc = imp->api->truncate( imp, newFSize );
     if( rc != whefs_rc.OK )
     {
@@ -12123,83 +12896,88 @@ int whefs_import_dev( whefs_fs * fs, whio_dev * src, char const * fname, bool ov
     imp->api->flush( imp );
     if( 0 == newFSize )
     {
-	//WHEFS_DBG("Importing 0-byte file.");
+	/*WHEFS_DBG("Importing 0-byte file."); */
 	src->api->seek( src, oldPos, SEEK_SET );
 	imp->api->finalize(imp);
 	return whefs_rc.OK;
     }
-    enum { bufSize = 1024 * 8 };
-    unsigned char buf[bufSize];
-    memset( buf, 0, bufSize );
-    size_t wlen = newFSize;
-    size_t totalR = 0;
-    size_t totalW = 0;
-    size_t rrc = 0;
-    size_t wrc = 0;
-    imp->api->seek( imp, 0, SEEK_SET );
-    do
-    {
-	rrc = src->api->read( src, buf, bufSize );
-	totalR += rrc;
-	if( ! rrc ) break;
-	if( (wlen - rrc) > wlen )
-	{
-	    WHEFS_DBG_ERR("Read an unexpected length (%u)! Continuing would cause an underflow!", rrc);
-	    break;
-	}
-	wlen -= rrc;
-	wrc = imp->api->write( imp, buf, rrc );
-	//WHEFS_DBG("wrc=%u, rrc=%u, xoimp->tell=%u",wrc, rrc, imp->api->tell(imp));
-	totalW += wrc;
-	if( wrc != rrc ) break;
+    else {
+        enum { bufSize = 1024 * 8 };
+        unsigned char buf[bufSize];
+        size_t impSize;
+        size_t wlen = newFSize;
+        size_t totalR = 0;
+        size_t totalW = 0;
+        size_t rrc = 0;
+        size_t wrc = 0;
+        memset( buf, 0, bufSize );
+        imp->api->seek( imp, 0, SEEK_SET );
+        do
+        {
+            rrc = src->api->read( src, buf, bufSize );
+            totalR += rrc;
+            if( ! rrc ) break;
+            if( (wlen - rrc) > wlen )
+            {
+                WHEFS_DBG_ERR("Read an unexpected length (%u)! Continuing would cause an underflow!", rrc);
+                break;
+            }
+            wlen -= rrc;
+            wrc = imp->api->write( imp, buf, rrc );
+            /*WHEFS_DBG("wrc=%u, rrc=%u, xoimp->tell=%u",wrc, rrc, imp->api->tell(imp)); */
+            totalW += wrc;
+            if( wrc != rrc ) break;
+        }
+        while( rrc && wrc );
+        src->api->seek( src, oldPos, SEEK_SET );
+        impSize = whio_dev_size( imp );
+        imp->api->finalize(imp);
+        imp = 0;
+        
+        rc = whefs_rc.OK;
+        if( totalR != totalW )
+        {
+            WHEFS_DBG_ERR("Pseudofile [%s]: Total read bytes (%u) != total written bytes (%u)", fname, totalR, totalW );
+            rc = whefs_rc.IOError;
+        }
+        else if( impSize != newFSize )
+        {
+            WHEFS_DBG_ERR("Pseudofile [%s]: Imported file size (%u) does not match the source's size (%u)", fname, totalR, totalW );
+            rc = whefs_rc.IOError;
+        }
+        if( whefs_rc.OK != rc )
+        {
+            if( ! existed )
+            {
+                whefs_inode_unlink( fs, &ino );
+            }
+        }
+        return rc;
     }
-    while( rrc && wrc );
-    src->api->seek( src, oldPos, SEEK_SET );
-    const size_t impSize = whio_dev_size( imp );
-    imp->api->finalize(imp);
-    imp = 0;
-
-    rc = whefs_rc.OK;
-    if( totalR != totalW )
-    {
-	WHEFS_DBG_ERR("Pseudofile [%s]: Total read bytes (%u) != total written bytes (%u)", fname, totalR, totalW );
-	rc = whefs_rc.IOError;
-    }
-    else if( impSize != newFSize )
-    {
-	WHEFS_DBG_ERR("Pseudofile [%s]: Imported file size (%u) does not match the source's size (%u)", fname, totalR, totalW );
-	rc = whefs_rc.IOError;
-    }
-    if( whefs_rc.OK != rc )
-    {
-	if( ! existed )
-	{
-	    whefs_inode_unlink( fs, &ino );
-	}
-    }
-    return rc;
 }
 
 int whefs_fs_dump_to_filename( whefs_fs * fs, char const * filename )
 {
+    FILE * f;
+    int rc;
     if( ! fs || !filename || !fs->dev ) return whefs_rc.ArgError;
-    FILE * f = fopen( filename, "w+" );
+    f = fopen( filename, "w+" );
     if( ! f ) return whefs_rc.AccessError;
-    int rc = whefs_fs_dump_to_FILE( fs, f );
+    rc = whefs_fs_dump_to_FILE( fs, f );
     fclose( f );
     return rc;
 }
 
-const whefs_fs_entry whefs_fs_entry_init = whefs_fs_entry_init_m;
+const whefs_fs_entry whefs_fs_entry_empty = whefs_fs_entry_empty_m;
 int whefs_fs_entry_foreach( whefs_fs * fs, whefs_fs_entry_foreach_f func, void * foreachData )
 {
-    if( ! fs || !func ) return whefs_rc.ArgError;
-    whefs_id_type i = 2;// skip root inode
-    whefs_inode n = whefs_inode_init;
+    whefs_id_type i = 2/* skip root inode */;
+    whefs_inode n = whefs_inode_empty;
     int rc = whefs_rc.OK;
-    whefs_fs_entry ent = whefs_fs_entry_init;
+    whefs_fs_entry ent = whefs_fs_entry_empty;
     enum { bufSize = whefs_sizeof_max_filename + 1 };
     char buf[bufSize];
+    if( ! fs || !func ) return whefs_rc.ArgError;
     memset(buf,0,bufSize);
     ent.name.string = buf;
     ent.name.alloced = bufSize;
@@ -12237,17 +13015,17 @@ int whefs_fs_entry_foreach( whefs_fs * fs, whefs_fs_entry_foreach_f func, void *
 
 whefs_string * whefs_ls( whefs_fs * fs, char const * pattern, whefs_id_type * count  )
 {
-    // FIXME: reimplement in terms of whefs_fs_entry_foreach().
-    if( ! fs ) return 0;
+    /* FIXME: reimplement in terms of whefs_fs_entry_foreach(). */
     const whefs_id_type nc = whefs_fs_options_get(fs)->inode_count;
     whefs_id_type id = 2; /* ID 1 is reserved for root node entry. */
     int rc = whefs_rc.OK;
     whefs_string * head = 0;
     whefs_string * str = 0;
     whefs_string * prev = 0;
+    whefs_string theString = whefs_string_empty;
+    whefs_inode tmpn = whefs_inode_empty;
+    if( ! fs ) return 0;
     if( count ) *count = 0;
-    whefs_string theString = whefs_string_init;
-    whefs_inode tmpn = whefs_inode_init;
     for( ; id <= nc; ++id )
     {
 #if WHEFS_CONFIG_ENABLE_BITSET_CACHE
@@ -12255,7 +13033,7 @@ whefs_string * whefs_ls( whefs_fs * fs, char const * pattern, whefs_id_type * co
 	{
 	    continue;
 	}
-	//WHEFS_DBG("Cache says inode #%i is used.", i );
+	/*WHEFS_DBG("Cache says inode #%i is used.", i ); */
 #endif
 	rc = whefs_inode_name_get( fs, id, &theString );
 	if( whefs_rc.OK != rc )
@@ -12271,7 +13049,7 @@ whefs_string * whefs_ls( whefs_fs * fs, char const * pattern, whefs_id_type * co
 	    continue;
 	}
         if(1)
-        {// make sure it's marked as used, or skip it
+        {/* make sure it's marked as used, or skip it */
 #if 0
             uint32_t flagcheck = 0;
             whefs_inode_read_flags( fs, id, &flagcheck );
@@ -12286,7 +13064,7 @@ whefs_string * whefs_ls( whefs_fs * fs, char const * pattern, whefs_id_type * co
 	if( ! str ) return head;
 	if( ! head ) head = str;
 	*str = theString;
-        theString = whefs_string_init; // take over ownership of theString.string
+        theString = whefs_string_empty; /* take over ownership of theString.string */
 	if( prev ) prev->next = str;
 	prev = str;
 	if( count ) ++(*count);
