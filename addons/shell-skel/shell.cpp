@@ -64,7 +64,9 @@ static int v8_main(int argc, char const * const * argv)
     assert( argc >= 2 );
     cv::Shell shell(NULL, argc, argv);
     shell.SetupDefaultBindings()
+#if 0 // v8 devs changed the signature AGAIN:
         ("gc", cv::FunctionToInCa<bool (),v8::V8::IdleNotification>::Call )
+#endif
     ;
     try
     {
@@ -79,7 +81,8 @@ static int v8_main(int argc, char const * const * argv)
         }
 #endif
         char const * fname = argv[1];
-        v8::Handle<v8::Value> rc = shell.ExecuteFile( fname );
+        //v8::Handle<v8::Value> rc =
+        shell.ExecuteFile( fname );
     }
     catch(std::exception const & ex)
     {
