@@ -18,6 +18,7 @@ ENABLE_DEBUG ?= $(DEBUG)
 GCC_CFLAGS := -pedantic -Wall -Werror -fPIC -ansi
 # gcc 4.6+ breaks much of the template test code with -Wall:
 GCC_CFLAGS += -Wno-error=unused-but-set-variable
+GCC_CFLAGS += -Wno-unused-but-set-variable
 
 # argh: -Wextra causes build errors b/c v8.h has lots of unused-but-named parameters
 CFLAGS += $(GCC_CFLAGS)
@@ -34,7 +35,9 @@ CPPFLAGS += -I$(V8_PREFIX)/include
 ifeq (0,$(ENABLE_DEBUG))
     LDFLAGS_V8 += -lv8
 else
-    LDFLAGS_V8 += -lv8_g
+#    LDFLAGS_V8 += -lv8_g
+# the gyp v8 build now uses the same names for the debug/non-debug builds :(
+    LDFLAGS_V8 += -lv8
 endif
 
 
