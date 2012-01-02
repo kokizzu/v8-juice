@@ -19,6 +19,11 @@ majority of the cvv8 testing and debugging happens.
 
 int BoundNative::publicStaticInt = 42;
 
+bool RunV8GC()
+{
+    return v8::V8::IdleNotification();
+}
+
 void doFoo()
 {
     CERR << "hi!\n";
@@ -408,6 +413,8 @@ namespace cvv8 {
             // Bind some member functions...
             cc("cputs",
                FunctionToInCa<int (char const *),::puts>::Call )
+                ("runGC",
+                 FunctionToInCa< bool (), RunV8GC>::Call )
                 ("overloaded",
                   OverloadInCas::Call )
                 ("doFoo",

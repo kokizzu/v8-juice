@@ -29,6 +29,14 @@ void doFoo();
 void doNothing();
 int doSomething(int x);
 ValueHandle sampleCallback( v8::Arguments const & argv );
+/**
+   Binding kludge for v8::V8::IdleNotification() because the v8 devs keep
+   changing that function's signature, breaking the places where we bind
+   directly to that function.
+
+   Return value is that of IdleNotification().
+ */
+bool RunV8GC();
 
 /**
    Class to bind to JS space.
@@ -311,15 +319,6 @@ namespace cvv8 {
         static char const * Value;
     };
 #endif
-    /**
-        This is required by subclasses for certain constellations of internal
-        fields/type-safety options. It is always optional for base classes,
-        since the default implementation is reasonable for non-subclassing
-        cases.
-    */
-    template <>
-    struct ClassCreator_TypeID<BoundSubNative> : ClassCreator_TypeID<BoundNative>
-    {};
 
     /**
        Optional: customize internal field layout for the JS class.
