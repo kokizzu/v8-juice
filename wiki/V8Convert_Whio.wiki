@@ -59,6 +59,11 @@ So, the important thing to remember here is that when a constructor (or function
 
 All APIs in this add-on are added to the `whio` object which, in turn, gets added to the client's global object (whichever object he passes to `SetupBindings()`).
 
+|| *Member* || *Description* ||
+|| Object `iomode` || See below. ||
+|| bool `zlibEnabled` || True if the library was compiled with zlib support, else false. ||
+
+
 == whio.!ByteArray ==
 
 The `whio.ByteArray` class is identical to the class described on the [V8Convert_ByteArray] page.
@@ -305,7 +310,7 @@ The library currently supports the namers described below. The names shown here 
 
 *The `ht` namer* stores inode-to-name mappings in a hashtable which is itself stored in the EPFS. Has constant memory costs and amortized O(1) insert/search/remove costs. Insertions _sometimes_ (depending on usage patterns) have an associated O(N) cost, where N is some function of the number of _free_ blocks in the storage which must be considered for re-allocation. The "ht" namer imposes no name length limits but reserves names matching `<([NUMBER])>` for its internal use.
 
-*The `array` namer* is a _non-persistent_ namer, meaning that the names set in a given EPFS session are not stored to disk and _are lost_ when the EPFS instance is closed. This is intended mainly as (A) a proof-of-concept namer and (B) as an alternative namer for in-memory EPFS instances (those created using the special filename `:memory:`). It has O(N) memory costs (N=inode count times average name length)), O(N) search performance for name-to-inode-id operations, but effectively O(1) for inode-id-to-name operations. This namer imposes no specific name length limits.
+*The `array` namer* is a _non-persistent_ namer, meaning that the names set in a given EPFS session are not stored to disk and _are lost_ when the EPFS instance is closed. This is intended mainly as (A) a proof-of-concept namer and (B) as an alternative namer for in-memory EPFS instances (those created using the special filename `:memory:`). It has O(N) memory costs (N=inode count times average name length), O(N) search performance for name-to-inode-id operations, but effectively O(1) for inode-id-to-name operations. This namer imposes no specific name length limits.
 
 For example:
 
