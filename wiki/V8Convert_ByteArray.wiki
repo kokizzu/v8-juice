@@ -26,3 +26,8 @@ Note that this class _does not_ implement the [http://www.commonjs.org/specs/ Co
 || `string stringValue()` || Converts the data to a JS string. Results are undefined if the data is not UTF8-encoded string data. This is a function instead of a property because it has to perform the conversion to a string each time it is accessed. ||
 ||*Property* || *Description* ||
 || `int length` || The length of the object's data, in bytes. May be modified. When growing, new bytes have the value `0`. ||
+|| `bool isGzipped` || Is true if this object _appears to_ contain gzip-compressed data, else false. It throws if set by client code. ||
+
+Class-level members:
+
+|| bool `zlibEnabled` || True if this library was compiled with zlib support, else false. ||
