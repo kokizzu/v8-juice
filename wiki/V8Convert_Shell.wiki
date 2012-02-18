@@ -1,5 +1,5 @@
 #summary V8Convert's basic shell class
-#labels Phase-UserDocs,Topic-JS-API
+#labels Phase-UserDocs,Topic-JS-API,Topic-cvv8
 <wiki:toc/>
 
 One of the minorly problematic things in integrating v8 into an application is the setup needed to get v8 initialized. We've got to create a context, a global object template, and a global object. We have to set up those objects (in the right order) and possibly make sure that we have the proper locking in place (this is app-specific and the documentation on the topic is sparse).
@@ -23,10 +23,7 @@ int main(int argc, char const * const * argv) {
     //  ^^^^^ Shell is a convenience typedef for V8Shell<>, by the way.
     // All argv args after "--" are passed on to the script in the global
     // 'arguments' array. e.g. ./shell script.js -- these go to JS
-    shell.SetupDefaultBindings()
-        // Bind a gc() function to JS:
-        ("gc", cv::FunctionToInCa<bool (),v8::V8::IdleNotification>::Call )
-    ;
+    shell.SetupDefaultBindings();
     // If we want to customize the environment (e.g. add more functions)
     // we should do it here.
     try {
@@ -51,3 +48,5 @@ int main(int argc, char const * const * argv) {
 
 For a more complete demonstration 
 see [http://code.google.com/p/v8-juice/source/browse/convert/addons/shell-skel/shell.cpp shell.cpp].
+
+`V8Shell` is intended to be used in single-JS-context applications. It is untested in multi-context environments (e.g. multiple `V8Shell` instances) and will possibly not work properly on such setups due (at least partly) to is locking requirements.
