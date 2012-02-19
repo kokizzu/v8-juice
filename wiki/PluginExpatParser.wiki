@@ -5,6 +5,8 @@
 
 <wiki:toc max_depth='3'/>
 
+*cvv8 users:* As of 20120219 [V8Convert] also has a port of this plugin, available in [http://code.google.com/p/v8-juice/source/browse/#svn%2Fconvert%2Faddons%2Fexpat the source repo].
+
 = XML Parser Plugin (a.k.a. !ExpatParser) =
 
 Added 20091114.
@@ -253,10 +255,6 @@ function XMLToObject(xml)
     try
     {
         p.parse( xml, true );
-    }
-    catch(e)
-    {
-        throw e;
     }
     finally
     {
