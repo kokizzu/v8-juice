@@ -1,5 +1,5 @@
 #summary V8Convert ByteArray class
-#labels Phase-UserDocs,Topic-JS-API
+#labels Phase-UserDocs,Topic-JS-API,Topic-cvv8
 <wiki:toc/>
 
 =!ByteArray Class=
@@ -11,6 +11,10 @@ It is visible to client code via `ByteArray`, but it might not be global scope, 
 `ByteArray` implements the index-of operator like arrays to, but each value at a given index is a single byte (a small integer).
 
 Note that this class _does not_ implement the [http://www.commonjs.org/specs/ CommonJS ByteArray interface], though it is incidentally superficially similar.
+
+==Source Code==
+
+[http://code.google.com/p/v8-juice/source/browse/#svn%2Fconvert%2Faddons%2Fbytearray]
 
 ==API Overview==
 
