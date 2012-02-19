@@ -1,7 +1,7 @@
 #summary JS API reference for Curl plugin
 #labels Topic-cvv8,Topic-JS-API,Phase-UserDocs
 
-*See also:* [v8Convert]
+*See also:* [V8Convert]
 
 <wiki:toc max_depth='3'></wiki:toc>
 
