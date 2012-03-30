@@ -18,7 +18,8 @@ This class is synonymous with a database connection. Its main responsibilities a
 || *Method* || *Description* ||
 || `JSPDO(dsn[,userName,password])` || Connects to the database described in the given DSN string. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki for details]. ||
 || `void exec(string|Object)` || Executes simple SQL string statements (those not returning values) or, if passed an Object, allows executing a callback for each returned row. Described in detail below. ||
-|| `Statement prepare(string)` || "Prepares" SQL code for execution. This is the only legal way to construct Statement objects. ||
+|| `Statement prepare(string sql[, objectOrArray bindData])` || "Prepares" SQL code for execution. This is the only legal way to construct Statement objects. If `bindData` is provided then `bind(bindData)` is called to bind any parameters. ||
+|| `Statement prepare(Object opt)` || Equivalent to `prepare(opt.sql,opt.bind)`. ||
 || `void close()` || Closes the db connection and frees any C-level resources allocated for the connection, _except_ for Statements, which _must_ be `finalize()`d _before_ their db is closed. ||
 || `int lastInsertId()` || Returns the "most recent" insertion ID for this connection, but this might not be the ID one may expect (triggers can cause IDs to be updated in ways opaque to the client application). ||
 || `void begin()` || Starts a transaction. Nested transactions are not supported. ||
@@ -177,6 +178,7 @@ This class represents both prepared SQL statements and result-set data. This mer
 These objects are _only_ to be created by calling `JSPDO.prepare()`, and not via a constructor call. The constructor is visible as `JSPDO.Statement`, but it is only in the public API so that clients may use it for `instanceof` checks. It should not be called by client code and the constructor's arguments are not publicly documented.
 
 || *Method* || *Description* ||
+|| `void finalize()` || Frees all resources associated with the statement. All statements _must_ be finalized after use or the db handle might get in an unusable state. ||
 || `void bind(index[,value])` || Binds a value (default=NULL) to the given _1-based_ parameter index or name (in the form `:paramName`). The _type_ of the given value determines how the value is bound (e.g. as an integer, double, string, or BLOB ([V8Convert_ByteArray ByteArray]). ||
 || `void bind(Array)` || Binds each value in the given array to the next subsequent bindable parameter. e.g. `bind([7,null,11])` binds parameters 1 to 3 with the given values. ||
 || `void bind(Object)` || Binds each key/value pair in the given object, treating the object's keys as bound parameter names. e.g. `bind({':p1',':p2':...})` ||
