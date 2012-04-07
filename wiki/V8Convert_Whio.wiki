@@ -1,5 +1,5 @@
 #summary V8Convert libwhio bindings
-#labels Phase-UserDocs,Topic-JS-API
+#labels Phase-UserDocs,Topic-JS-API,Topic-cvv8
 
 <wiki:toc/>
 
@@ -225,6 +225,7 @@ This API wraps most of the [http://whiki.wanderinghorse.net/wikis/whio/?page=whi
 || `void foreachInode(function callback [, any clientData=undefined])` || For each _used_ inode in the EFS, `callback(inodeData,clientData)` is called. See below. ||
 || `bool hasNamer()` || Returns true if this EFS has a namer installed. ||
 || `void installNamer(string)` || Installs a "namer" implementation in the EFS. See below. ||
+|| `void removeNamer()` || Removes any installed namer (throws if there is no namer). ||
 || `bool isRW()` || Returns true if the EFS is operating in read/write mode. ||
 || `int inodeId(string fname)` || Returns the inode ID for the given name _if_ a namer is installed. ||
 || `void label(string)` || Sets the EPFS label. The property `label.maxLength` Specifies the maximum legal length (in bytes) of a label string (this is a compile-time constant and cannot be changed without invaliding EFS files created using other values). ||
@@ -301,6 +302,12 @@ There is currently no way to remove or replace a namer once it is installed (asi
 Note that a given namer implementation might not support all optional operations provided by that interface. Namers _may_ provide both inode-id-to-name and name-to-inode-id mappings, but are not required to perform both (the "ht" namer does).
 
 Each namer may impose limitations on the length and name patterns of inode names.
+
+To remove a namer:
+
+{{{
+fs.removeNamer();
+}}}
 
 === Supported Namer Implementations ===
 
