@@ -16,7 +16,7 @@ Unless noted otherwise, the API reports any errors via exceptions. Some types of
 This class is synonymous with a database connection. Its main responsibilities are establishing a connection and doling out "statement" objects via its `prepare()` method.
 
 || *Method* || *Description* ||
-|| `JSPDO(dsn[,userName,password])` || Connects to the database described in the given DSN string. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki for details]. ||
+|| `JSPDO(dsn[,userName,password])` || Connects to the database described in the given DSN string. See [http://fossil.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki for details]. ||
 || `void exec(string|Object)` || Executes simple SQL string statements (those not returning values) or, if passed an Object, allows executing a callback for each returned row. Described in detail below. ||
 || `Statement prepare(string sql[, objectOrArray bindData])` || "Prepares" SQL code for execution. This is the only legal way to construct Statement objects. If `bindData` is provided then `bind(bindData)` is called to bind any parameters. ||
 || `Statement prepare(Object opt)` || Equivalent to `prepare(opt.sql,opt.bind)`. ||
@@ -190,7 +190,7 @@ These objects are _only_ to be created by calling `JSPDO.prepare()`, and not via
 || `string columnName(index)` || The name of the 0-based result set column. ||
 || `int columnType(index)` || The cpdo-defined type ID for row data from the given 0-based column index. (Do not rely on stable values between releases!) ||
 || `void reset()` || Re-sets a statement so that it can be re-executed. Call this after each iteration when changing the values of bound parameters in a loop. ||
-|| `int paramIndex(string)` || Returns the 1-based index of the given named bound parameter, or 0 if no such parameter is found. When using MySQL (which doesn't natively support named parameters), please read [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 the fine manual] regarding potential caveats. ||
+|| `int paramIndex(string)` || Returns the 1-based index of the given named bound parameter, or 0 if no such parameter is found. When using MySQL (which doesn't natively support named parameters), please read [http://fossil.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 the fine manual] regarding potential caveats. ||
 || `string paramName(index)` || Returns the bound parameter name at the given 1-based index, or null if the index is out of bounds (it does not throw on out-of-bounds like most other functions). ||
 
 Instance properties (read-only!):
