@@ -1,5 +1,5 @@
 #summary How to use JSPDO
-#labels Phase-UserDocs,Topic-JS-API
+#labels Phase-UserDocs,Topic-JS-API,Topic-cvv8
 
 <wiki:toc/>
 
@@ -371,7 +371,7 @@ if( ba instanceof JSPDO.ByteArray ) {
 
 Note that a 0-byte BLOB value is returned as `null`, not as an empty `ByteArray`.
 
-If (and only if!) a `ByteArray` contains UTF-8 value is it legal to convert the contents to a string:
+If, and only if, a `ByteArray` contains a UTF-8 value is it legal to convert the contents to a string:
 
 {{{
 var str = ba.stringValue();
