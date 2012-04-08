@@ -31,6 +31,7 @@ So far they include:
   * [http://wanderinghorse.net/home/stephan Stephan Beal] is the primary architect and author.
   * Anton Yemelyan joined the project in March 2011 to try to get the code working on Windows, and is using it in projects developed at [http://www.smartvision.com/ LSI SACO Technologies Inc].
   * Rob Tsuk has contributed several fixes and made a number of suggestions which led to new features or fundamental improvements.
+  * James Pike, author of [https://github.com/tsa/vu8 vu8], helped me through the learning curve of getting function-pointer-style template arguments working for the [V8Convert] API. These allow for more readable templates when compared to the v8-juice API.
   * Coen "The Pipe" Campman got [V8Convert] running on Windows for us.
   * Bionic Badger provided several Windows portability patches to [V8Convert_Whio].
   * The folks at [http://groups.google.com/group/v8-users] have been very helpful in all things related to v8.
