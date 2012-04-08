@@ -32,4 +32,5 @@ So far they include:
   * Anton Yemelyan joined the project in March 2011 to try to get the code working on Windows, and is using it in projects developed at [http://www.smartvision.com/ LSI SACO Technologies Inc].
   * Rob Tsuk has contributed several fixes and made a number of suggestions which led to new features or fundamental improvements.
   * Coen "The Pipe" Campman got [V8Convert] running on Windows for us.
+  * Bionic Badger provided several Windows portability patches to [V8Convert_Whio].
   * The folks at [http://groups.google.com/group/v8-users] have been very helpful in all things related to v8.
