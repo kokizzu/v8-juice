@@ -161,7 +161,7 @@ Examples:
 var count = db.selectValue("SELECT COUNT(*) FROM T");
 var otherCount = db.selectValue({sql:"SELECT A, B, COUNT(*) FROM T", column:2});
 
-hasObject42 = db.selectValue({
+var hasObject42 = db.selectValue({
     sql: db.prepare("SELECT COUNT(*) FROM T WHERE ID=?"),
     bind:[42]
 });
