@@ -1,12 +1,14 @@
 #summary V8Convert ClassCreator class-binding mechanism
-#labels Phase-UserDocs,Topic-JS-API
+#labels Phase-UserDocs,Topic-JS-API,Topic-cvv8
 
 <wiki:toc/>
 
 
 =Introduction=
 
-[V8Convert]'s `ClassCreator` API is an easy-to-use template-based mechanism for binding native classes to JS. It was originally derived from [ClassWrap], making it the 3rd generation of class-binding mechanism since this project was started, and it is very similar to that binding mechanism. !ClassCreator's source code can be found [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp here].
+[V8Convert]'s `ClassCreator` API is a template-based mechanism for binding native classes to JS. It was originally derived from [ClassWrap], making it the 3rd generation of class-binding mechanism since this project was started, and it is very similar to that binding mechanism. !ClassCreator's source code can be found [http://code.google.com/p/v8-juice/source/browse/convert/include/v8/convert/ClassCreator.hpp here].
+
+  Note: this API represents _one_ possible solution (of many, many possible solutions) to the problem of binding classes to JS, and it is primarily targeted at binding C++ classes which the v8 user cannot modify to make them more binding-friendly. For many client types, custom v8-aware classes, or a base v8-aware class which is subclassed by bound types, would probably be more suitable/easier to use. 
 
 To allow customization of the binding process, `ClassCreator` uses so-called policy classes. These are templates which clients may specialize to customize various aspects of the bindings without having to touch the `ClassCreator` code. In effect they are "hooks" into various specific points of the class-binding mechanism, and every part of the class-binding machinery which can conceivably be customizable has an associated policy class to which that customization is delegated. e.g. one policy determines how we actually associate the native and JS objects with one another ("quick-and-easy" vs. "slower but typesafe"). Most, but not all, policies have reasonable default implementations, but a small number of them require clients to provide their own specializations (this is demonstrated below).
 
@@ -234,7 +236,7 @@ This is not a CC policy, but CC clients can plug in their natives so that a `Nat
 Note that a `NativeToJS` conversion is generally only required when binding any of:
 
   * Functions which return the bound type, e.g. `T * T::self()`
-  * Member properties of the bound, e.g. `T * T::*selfPtr`
+  * Member properties of the bound type, e.g. `T * T::*selfPtr`
 
 For most binding cases such conversions are not necessary, and thus no specialization of `NativeToJS` is required.
 
