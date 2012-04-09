@@ -1,9 +1,9 @@
 #summary V8Convert's native function-binding API
-#labels Topic-CPlusPlus,Phase-UserDocs
+#labels Topic-CPlusPlus,Phase-UserDocs,Topic-cvv8
 
 <wiki:toc/>
 
-See also: [V8Convert_Overloading], [V8Convert_PropertyBinding], [V8Convert_XTo]
+See also: [V8Convert], [V8Convert_Overloading], [V8Convert_PropertyBinding], [V8Convert_XTo]
 
 = Introduction to Function Binding =
 
@@ -156,10 +156,10 @@ If the function returns dynamically-allocated memory, or transfers ownership of 
 
 == The (`char [const] *`) Problem ==
 
-Because of issues regarding the ownership and lifetimes of raw C-style string, functions taking `(char const *)` have a few relatively minor limitations:
+Because of issues regarding the ownership and lifetimes of raw C-style string, functions taking `(char [const] *)` have a few relatively minor limitations:
 
   * The C-strings _must_ be `NULL` or nul-terminated. It cannot be used with binary data because they are converted to JS strings.
-  * Non-const (`char *`) is not supported. We could partially implement it using a proxy, but the changes would get lost on their way back to JS space because the JS calling conventions do not allow us to pass changes to strings back this way.
+  * Non-const (`char *`) ~~is not supported~~ support was added 20120408, with the caveat that changes made to the string contents by the called function cannot be passed back to JS space because the JS calling conventions do not allow us to pass changes to strings back this way.
   * The bound function _must not_ hold the pointer it is passed after it returns. It must either consume or ignore the input, and keep no copy of the pointer itself. It is also illegal (it was determined only after a debugging session) to _return_ the pointer passed to the function, as that indirectly extends its lifetime past its legal point. That particular case actually works on some platforms but that only exemplifies the evil nature of Undefined Behaviour.
   * The internal conversion process uses `v8::String::Utf8Value`, and "should" be safe for use with functions accepting ASCII or UTF8 input. Behaviour with any other encodings is undefined.
   * If passed a JS `null` or `undefined`, it converts to a literal `NULL`, otherwise it will convert to a string (though possibly empty). This is significant for functions which treat `NULL` different than an empty string (like `strlen()`, which may crash your app if passed `NULL`).
