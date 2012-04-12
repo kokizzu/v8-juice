@@ -1,9 +1,7 @@
 #summary A PDO-like db access abstraction binding for v8.
-#labels Phase-UserDocs,Topic-JS-API
+#labels Phase-UserDocs,Topic-JS-API,Topic-cvv8
 
 <wiki:toc max_depth='4'></wiki:toc>
-
-*Achtung:* JSPDO is very new (born on 2011-06-11), thus it is beta. i may still randomly change how it behaves and it is possibly missing some significant features. That said, it seems to work as advertised here in the wiki pages (they are updated as changes are committed, and represent the current checked-in state of the code).
 
 See also: [JSPDO_API], [JSPDO_HowTo]
 
