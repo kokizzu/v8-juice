@@ -26,7 +26,7 @@ See the [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/RE
 
 ==Connecting==
 
-To connect to a database we need a so-called DSN string and possibly user credentials. See [http://whiki.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full description of the DSN string format.
+To connect to a database we need a so-called DSN string and possibly user credentials. See [http://fossil.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full description of the DSN string format.
 
 Examples:
 
@@ -149,7 +149,7 @@ st.bind(2,"JSPDO");
 
 *Achtung #1:* though `bind(Object)` allows object keys to be missing the `:` prefix character, `bind(string,value)` _does not_. e.g. `bind({p1:...})` and `bind({":p1":...})` are equivalent, but `bind('p1',...)` will not work (use `bind(':p1',...)` instead).
 
-*Achtung #2:* named parameters support is an _optional_ feature for the underlying db drivers. Both of the current drivers support them, however (it can optionally be _disabled_ [http://whiki.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 in the MySQL driver]).
+*Achtung #2:* named parameters support is an _optional_ feature for the underlying db drivers. Both of the current drivers support them, however (it can optionally be _disabled_ [http://fossil.wanderinghorse.net/wikis/cpdo/?page=cpdo_mysql5 in the MySQL driver]).
 
 To get the index of a given parameter name:
 
