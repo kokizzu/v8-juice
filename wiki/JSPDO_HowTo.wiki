@@ -44,6 +44,8 @@ db = new JSPDO("mysql5:dbname=abc;host=localhost",
                    "user", "password");
 }}}
 
+ACHTUNG: as of 20120630, sqlite4 itself is still very much beta and up for change. See the [http://fossil.wanderinghorse.net/wikis/cpdo/?page=cpdo_sqlite4 cpdo_sqlite4] page for the known caveats, bugs, and limitations regarding the sqlite4 support.
+
 ==Disconnecting==
 
 It is imperative that client code always close a db handle when he is done with it, as opposed to relying on the garbage collector (which may literally never be called).
