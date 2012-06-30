@@ -14,13 +14,14 @@ Requirements:
   * libv8, of course
   * [V8Convert] (it's a header-only library, so there are no major installation hassles).
   * The [V8Convert_ByteArray] code (only two files).
-  * At least one of sqlite3 or MySQLv5.
+  * At least one of sqlite3, sqlite4, or MySQLv5.
   * Some patience - the build tree is currently only designed to build directly from [http://code.google.com/p/v8-juice/source/browse/#svn/convert/addons/jspdo the original source tree] packaged together with [V8Convert]. i hope to modularize it someday to make it easy to drop in to arbitrary `v8::convert`-using clients.
 
 See [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/README.txt the README file] for much more detail about the requirements and building the sources outside of their native source tree. 
 
 Supported Drivers:
   * sqlite3
+  * [http://sqlite.org/src4 sqlite4] (added 20120630), but sqlite4 itself is still pre-release and very much beta, subject still to much change.
   * MySQLv5
 
 See the [http://fossil.wanderinghorse.net/repos/cpdo/ cpdo home page] for more info than you could possibly want to know about it. JSPDO's source tree includes a complete copy of the cpdo library - it does not need to be installed separately.
