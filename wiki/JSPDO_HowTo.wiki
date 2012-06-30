@@ -26,17 +26,21 @@ See the [http://code.google.com/p/v8-juice/source/browse/convert/addons/jspdo/RE
 
 ==Connecting==
 
-To connect to a database we need a so-called DSN string and possibly user credentials. See [http://fossil.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full description of the DSN string format.
+To connect to a database we need a so-called DSN string and possibly user credentials. See [http://fossil.wanderinghorse.net/wikis/cpdo/?page=DSN the cpdo wiki] for the full description of the DSN string format and details regarding to the various driver-specific configuration options.
 
 Examples:
 
 {{{
 // For sqlite3:
-var db = new JSPDO("sqlite3:/path/to/db.sqlite3");
+var db;
+db = new JSPDO("sqlite3:/path/to/db.sqlite3;openmode=rwc");
 // For an in-memory database use: "sqlite3::memory:"
 
+// For sqlite4:
+db = new JSPDO("sqlite4:/path/to/db.sqlite4");
+
 // For MySQLv5:
-var db = new JSPDO("mysql5:dbname=abc;host=localhost",
+db = new JSPDO("mysql5:dbname=abc;host=localhost",
                    "user", "password");
 }}}
 
