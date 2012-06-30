@@ -11,6 +11,9 @@ are at the top. Dates written extra large are release dates. This contains only 
 
 ----
 
+*2012 June 30:*
+  * Added initial support for [http://sqlite.org/src4 sqlite4] (which hasn't yet been released) to [JSPDO].
+
 *2011 Aug 15:*
   * Added [V8Convert_Whio].
 
