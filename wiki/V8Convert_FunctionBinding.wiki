@@ -514,12 +514,12 @@ rc =
 
 = Converting Functors to Callbacks =
 
-We can also bind functors to v8, with the following limitations:
+Interestingly, binding C++ functors to v8 turns out to be a special case of binding a member method, and the implementation for it is just a thin wrapper around the member method binding. However, the extra level of abstraction adds a couple limitations on such bindings. Functors can be bound to v8 provided they can meet the following requirements:
 
   * They are assumed to be stateless. The library makes no guarantees about the lifetime of any given functor instance.
-  * The must have one or more _const_ `operator()`s.
+  * The must have one or more _const_ `operator()`s. The `const` requirement is an unfortunate side-effect of the level of abstraction. Maybe we can template our way around it, but so far there has been no pressing need to do so.
 
-The can be converted to `v8::InvocationCallback`s like:
+Functors can be converted to `v8::InvocationCallback`s like:
 
 {{{
 struct MyFunctor {
