@@ -2,7 +2,7 @@
 #labels Phase-UserDocs,Topic-CPlusPlus
 
 
-See also: [V8Convert_Overloading], [V8Convert_PropertyBinding], [V8Convert_FunctionBinding]
+See also: [V8Convert], [V8Convert_Overloading], [V8Convert_PropertyBinding], [V8Convert_FunctionBinding]
 
 <wiki:toc/>
 
@@ -111,8 +111,7 @@ You can read more about the meaning of the `UnlockV8` option on the [V8Convert_F
 
 The expanded `XyzTo` templates evaluate to types which contain a specific function, depending on the conversion tag type:
 
-  * `InCa` and `InCaVoid`: `Call()`, implementing the `v8::InvocationCallback` interface.
-  * `InCaVoid` is like `InCa` but explicitly does _not_ invoke a conversion of the native return type. This it can be used to bind functions/methods with void or non-convertible types, or to ignore return values which we don't _want_ to convert for some reason.
+  * `InCa` and `InCaVoid`: `Call()`, implementing the `v8::InvocationCallback` interface. `InCaVoid` is like `InCa` but explicitly does _not_ invoke a conversion of the native return type. This means it can be used to bind functions/methods with void or non-convertible types, or to ignore return values which we don't _want_ to convert for some reason.
   * `Getter`: `Get()`, implementing the `v8::AccessorGetter` interface.
   * `Setter`: `Set()`, implementing the `v8::AccessorSetter` interface.
   * `Accessors`: as for `Getter` and `Setter` combined.
