@@ -5,7 +5,7 @@
 =Welcome to v8-juice!=
 v8-juice (v8 (J)avaScript (U)serland (I)ntegratable (C)omponents (E)mporium) is a C++ library for extending the [http://code.google.com/p/v8 v8 JavaScript engine]. It includes components such as [Plugins a plugins API], [ConvertingTypes a type-conversion API], utilities for [CreatingJSClasses creating new JS-side classes from C++], and for [BindingFunctions binding near-arbitrary native functions to arbitrary JS objects]. It has extensive API documentation, and supplemental documentation can be found via the Wiki link at the top of this page.
 
-Alternately, the [V8Convert] API provides a header-only library which implements the core type conversions and class binding features, omitting features which would require non-header implementations.
+Alternately, the [V8Convert] API provides a header-only library which implements extended/improved versions of the v8-juice core type conversions and function/property/class binding features, omitting features which would require non-header implementations. As of mid-2011, the vast majority (over 99%) of the development is happening in the [V8Convert] tree, and v8-juice is being touched only for bugfixes and an occasional back-port of v8-convert features.
 
 To any members of the Campbell Soup Company: i would really appreciate it if you guys [http://en.wikipedia.org/wiki/V8_(beverage) don't sue me over this project's name] :-D.  It's all in good fun! (And it took me 10 minutes to come up with a project name for which 'JUICE' is an appropriate acronym. So i beg you, please don't let that effort be in vain!)
 
@@ -15,7 +15,7 @@ v8-juice is primarily an experimentation ground, and not a product which aims to
 
 v8-juice is believed to work well, without any undocumented crash conditions and whatnot. It is used in at least one high-profile commercial product (which i unfortunately am not at liberty to name) to simplify the C++/JS binding process. In particular, the newer [V8Convert] API makes binding C/C++ functions and classes to !JavaScript really simple (making it any simpler would probably require a code generator).
 
-Having said that: since mid-2011, v8-juice itself is relatively static. It _is_ actively maintained and reported bugs will be fixed insofar as is possible within the library's current architecture and compatibility constraints. Future work is going mostly into the [V8Convert] API, however, and at some point the main `v8::juice` API will likely be re-based on top of `v8::convert`, in effect becoming a 3rd-party user of the `v8::convert` API. [V8Convert] focuses primarily on the conversion of types and functions between C++/JS. `v8::juice` does that, plus adds several "heavy-weight" features like [Plugins a plugins API]. The main difference between the two APIs is that [V8Convert] is header-only, whereas v8-juice is much more heavyweight and cannot realistically be implemented as a header-only library.
+*Having said that:* since mid-2011, v8-juice itself is relatively static. It _is_ actively maintained and reported bugs will be fixed insofar as is possible within the library's current architecture and compatibility constraints. Future work is going into the [V8Convert] API, however, and at some point the main `v8::juice` API "might" be re-based on top of `v8::convert`, in effect becoming a 3rd-party user of the `v8::convert` API. [V8Convert] focuses primarily on the conversion of types and functions between C++/JS. `v8::juice` does that, plus adds several "heavy-weight" features like [Plugins a plugins API]. The main difference between the two APIs is that [V8Convert] is header-only, whereas v8-juice is much more heavyweight and cannot realistically be implemented as a header-only library.
 
 ==Related work==
 
@@ -42,13 +42,7 @@ Users needing other license conditions may request them from the code author(s).
 
 ==Contributors==
 
-v8-juice's primary author is Stephan Beal ([http://wanderinghorse.net/home/stephan/]).
-
-Anton Yemelyanov works on [http://code.google.com/p/v8-juice/source/browse/#svn/branches/win the Windows port], and has introduced several portability fixes.
-
-v8-juice user Rob Tsuk contributed insightful suggestions which lead to new features and improvements in older features. e.g. the [ClassWrap] API was developed in response to his input.
-
-Coen Campman provided the support needed to get [V8Convert] working on MSVC 2010.
+Please see the [Contributing] page.
 
 ==Mailing List==
 
