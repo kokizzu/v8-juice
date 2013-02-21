@@ -7,9 +7,12 @@ v8-juice (v8 (J)avaScript (U)serland (I)ntegratable (C)omponents (E)mporium) is 
 
 Alternately, the [V8Convert] API provides a header-only library which implements extended/improved versions of the v8-juice core type conversions and function/property/class binding features, omitting features which would require non-header implementations. As of mid-2011, the vast majority (over 99%) of the development is happening in the [V8Convert] tree, and v8-juice is being touched only for bugfixes and an occasional back-port of v8-convert features.
 
+
 To any members of the Campbell Soup Company: i would really appreciate it if you guys [http://en.wikipedia.org/wiki/V8_(beverage) don't sue me over this project's name] :-D.  It's all in good fun! (And it took me 10 minutes to come up with a project name for which 'JUICE' is an appropriate acronym. So i beg you, please don't let that effort be in vain!)
 
 ==Code/Project status==
+
+*ACHTUNG ACHTUNG ACHTUNG: a series of incompatible deprecations and behaviour changes made to v8 in late 2012 and early 2013 have broken the "classic" v8-juice library and _no effort will be made to update it to accommodate v8's changes_. [V8Convert], on the other hand, has been/is being updated to work with newer v8 versions.*
 
 v8-juice is primarily an experimentation ground, and not a product which aims to have a "1.0" release (it uses the release date as its version number). That said, i like to keep my own client code working, and will try not to make any major changes which break things unless there is a good reason to do so. Also, the core library parts (primarily the [ConvertingTypes type conversions], which are the most-central component) are based off of [http://SpiderApe.sourceforge.net much older implementations i wrote for SpiderMonkey], and they've had a stable interface for some years now.
 
